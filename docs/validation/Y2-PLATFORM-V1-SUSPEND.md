@@ -136,10 +136,20 @@ voltage/SOC observations are proxies only; no standby-current number is claimed.
 Fresh production-config ARM kernel Image, zImage and modules build in the pinned
 host environment. Final kernel hashes and logs are under
 `out/platform-v1-suspend/`; build artifacts under `out/platform-v1-suspend-build/`.
-132 targeted source tests pass (three emitted-DTB checks skipped). They cover suspend policy and failures, CPU/idle/timers/CIRQ,
-storage/MMC context, USB, connectivity/radio, GPU and audio. Three emitted-DTB
-checks are not part of the source-only build and remain skipped. Reborn fmt and clippy pass; 243 workspace tests pass, run with the locked dependency tree; temporary
-paths are isolated to avoid another session's test fixture collision.
+The 132-test targeted source run passes: 129 passed, three emitted-DTB checks
+skipped. Coverage includes suspend policy and failures, CPU/idle/timers/CIRQ,
+storage/MMC context, USB, connectivity/radio, GPU and audio. The later 23-test
+policy run passes, including two added charging/preparation-refusal checks.
+Reborn fmt and strict all-target Clippy pass; all 243 workspace tests pass with
+locked dependencies and isolated temporary paths. The ARM release build passes
+against the exact Baseline02 SDK; Reborn SHA256 is
+`673f8c18d293101102e9768076e5429968f71ecee17121eb38aa0d3172418a09`.
+A native headless process passes explicit prepare/checkpoint, prepared mutation
+refusal, restore/control admission and a second prepare/restore in the same
+process. This is an application IPC test, not physical GPU/audio/input proof.
+
+Wake-input reset is scheduled before fallible display restoration, so even a
+failed display restore discards the prior gesture before accepting input again.
 
 The ordinary product request still preserves its existing physical-qualification
 refusal. It must not enable unqualified full suspend simply because runtime C3
@@ -149,4 +159,13 @@ checks likewise require owner installation, which this pass does not perform.
 The historical stalled instruction and complete physical restoration remain
 open until installed-image evidence establishes their current state.
 
-Commits: pending final physical receipt and review. No push or flash.
+Implementation commits:
+
+- Linux `69fa2c7`: checked full-suspend restoration, retained device resume errors,
+  explicit Reborn acknowledgement, one-shot observer and regression tests.
+- Linux `c73cd83`: charging and preparation failure policy.
+- Linux `50cc218`: temporary Wi-Fi observer port and verified host-key support.
+- Reborn `4544b1a`: typed preparation/restoration and Power/input semantics.
+- Reborn `f69c3c4`: discard wake input before fallible display restoration.
+
+The physical receipt remains pending. No push or flash.
