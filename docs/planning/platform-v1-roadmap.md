@@ -2,6 +2,12 @@
 
 ## Wired precision source boundary — 2026-10-04
 
+The source-only diagram correction includes live post-conversion f64 volume and
+integer rounding. Low-bit proof is for unity user gain; decode/DSP/packing CPU
+benchmarking excludes Reborn's live gain/ALSA pacing. Future wider work must
+resolve that final quantization placement as well as MT6582 transport evidence.
+No gain, pacing, format, buffer or hardware policy is changed by this correction.
+
 [Completion-pass audit](roadmap-gap-audit.md#wired-precision-source-boundary--2026-10-04)
 and [exact research/implementation report](../validation/Y2-PLATFORM-V1-HIGHRES-AUDIO.md)
 record **MORE_HARDWARE_EVIDENCE_REQUIRED**. The complete admitted path remains

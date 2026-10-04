@@ -67,5 +67,18 @@
     "Y2_BUILDROOT_OUTPUT=EXISTING_SDK sh tools/build/cross.sh",
     "cargo test --release -p reborn-media -p reborn-audio --target armv7-unknown-linux-gnueabihf --no-run --locked (with production SDK environment)",
     "qemu-arm -cpu cortex-a7 -L SDK_SYSROOT ARM_TEST_BINARY --test-threads=1"
-  ]
+  ],
+  "software_precision_scope": {
+    "fixture_user_gain": "neutral/unity",
+    "native_DMA_I2S_wider_proof": false,
+    "live_VolumeRamp": "post-membrane integer to f64 gain to integer; existing unity/sign/partial-frame tests retained",
+    "benchmark_includes": "FFmpeg demux/decode/filters/final membrane packing only",
+    "benchmark_excludes": [
+      "live VolumeRamp",
+      "Playback queue/control",
+      "ALSA pacing",
+      "physical output"
+    ],
+    "documentation_correction": "source-only 2026-10-04; no implementation/build/device evidence changed"
+  }
 }

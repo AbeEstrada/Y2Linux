@@ -15,7 +15,7 @@ See the [admission audit](../planning/roadmap-gap-audit.md#wired-precision-compl
 | Classification | Result |
 | --- | --- |
 | PROVEN | Exact current source contract, vendor register definitions, stock width-function stubs, CS43131 receiver capabilities. No proof of a wider MT6582 fetch/interconnect contract. |
-| IMPLEMENTED | Kernel precision contract, platform diagnostics/export, packed24 constraint query, stronger 24/32 fixtures, unbiased saturating final integer quantization, reproducible CPU benchmark. Native wider modes remain disabled. |
+| IMPLEMENTED | Kernel precision contract, platform diagnostics/export, packed24 constraint query, stronger 24/32 fixtures, saturating ties-even membrane integer narrowing, reproducible decode/DSP/packing CPU benchmark. Existing post-conversion live gain remains a separate quantization stage. Native wider modes remain disabled. |
 | SOFTWARE_VALIDATED | Real decode/DSP/packing low24 bits, full32 loss detection, quantization boundaries, host/ARM/QEMU, kernel/config/DT/module ABI and packaging source checks. |
 | PHYSICALLY_OBSERVED | Locked Baseline02 identity, taint 0, direct constraint intersections, idle AFE register snapshot and suspended runtime PM. Prior bounded S16 headphone results remain valid for their artifacts. Fresh playback and CPU measurements: NOT_RUN because the device lock remained occupied. |
 | REQUIRES_EXTERNAL_CAPTURE | Meaningful wire payload/alignment/padding, measured serial clocks, independent DAC input bit proof. A verified MT6582 wider fetch/interconnect configuration is additionally required before a wider capture can be attempted. |
@@ -32,15 +32,24 @@ source: signed PCM24 L/R (WAV: 3 little-endian bytes/sample, 6 bytes/frame)
   -> canonical_swr: stereo AV_SAMPLE_FMT_FLTP, same source rate
      channel layout stereo, separate L/R planes, stride 4 bytes/sample/plane
      signed Q31 / 2^31; binary32 has a 24-bit significand
-  -> FFmpeg graph: FLTP -> optional volume/ReplayGain/headroom -> optional EQ
+  -> FFmpeg graph: FLTP -> ReplayGain/headroom -> optional EQ
      -> alimiter(limit=.98, latency compensation, no automatic level gain)
      -> FLTP sink; individual filters may internally negotiate another float type
+     Playback::begin_start_with_gapless forces decoder user volume100; standalone
+     and benchmark callers can apply their configured volume inside this graph
   -> output_swr: stereo, negotiated sink rate; same rate for these fixtures
      ordinary native sink: float -> signed S16 (scale 2^15, round, saturate)
      interleaved little-endian L/R; 2 bytes/sample, 4 bytes/frame
      crossfade: temporary S32 Q31 -> float acrossfade -> S32 -> final S16
      final integer narrowing now uses nearest/ties-even and saturation
-  -> Rust byte queue (no Rust integer conversion)
+  -> Rust byte queue (no conversion while enqueuing)
+  -> live VolumeRamp immediately before ALSA: <=512 stereo frames/render
+     user gain=(min(volume,100)/100)^2, f64, five-ms ramp (220/240 frames)
+     S16 LE -> f64 multiply -> round nearest, ties away from zero
+     -> clamp[-32768,32767] -> S16 LE; same 4-byte stereo frame stride
+     settled unity gain copies bytes exactly; settled zero gain emits exact silence
+     gain.advance(n) and byte offset advance only for n accepted ALSA frames;
+     rejected/unaccepted suffix is rendered again from original queued PCM
   -> rb_sink_write -> snd_pcm_writei (frame counts, stereo stride 4)
      direct hw:Y2Audio,0; no plug/plughw implicit format conversion
   -> ALSA RW_INTERLEAVED copy -> managed coherent DMA ring
@@ -57,11 +66,19 @@ source: signed PCM24 L/R (WAV: 3 little-endian bytes/sample, 6 bytes/frame)
      DAC internal 32-bit processing cannot restore the discarded source bits
 ```
 
+Source anchors: `Y2Reborn/crates/reborn-media/native/media.c`,
+`app/reborn/src/playback.rs` (`begin_start_with_gapless`, sink worker),
+`app/reborn/src/volume.rs` (`VolumeRamp::render/advance`),
+`crates/reborn-audio/src/native.rs` (`AlsaSink::write`), native `audio.c`,
+`Y2Linux/kernel/audio/mt6582-afe.c` and Linux6.18 `cs43130.c`.
+
 Loss points: signed PCM32 is rounded during S32→FLTP at ordinary amplitudes;
 channel downmix/resampling and DSP modify samples; DSP operations round their
-working float values; final quantization discards precision below the admitted
-sink grid. Current 24-bit sources lose their low8 source bits at final S16
-conversion, before DMA. Crossfade previously also truncated its Q31→S16/S24
+working float values; output_swr quantizes to the admitted sink grid before
+live user gain. Non-unity live gain adds f64 multiply and another integer
+quantization in VolumeRamp::render. Current 24-bit sources lose their low8 source
+bits at output_swr S16 conversion, before live gain and DMA. Crossfade previously
+also truncated its Q31→S16/S24
 conversion toward negative infinity. The correction fixes that bias.
 Source precision is separate from `decoder_sample_fmt`, `internal_sample_fmt`,
 `final_sample_fmt` and ALSA `valid_bits` diagnostics.
@@ -145,7 +162,7 @@ is needed to advertise a capability it already has. SoC admission remains the ga
 | ALSA format | Container bits | Userspace representation | Native Y2 meaningful bits/admission |
 | --- | ---: | --- | --- |
 | S16_LE | 16 | Signed LE, interleaved stereo, 4 bytes/frame | 16; enabled 44100/48000 |
-| S24_LE | 32 | Signed24 in low24; fourth byte padding, software normalizes to zero; 8 bytes/frame | Rejected; no native24 proof |
+| S24_LE | 32 | Signed24 in low24; fourth byte unused padding (zero from membrane, sign-extended after non-unity live gain); 8 bytes/frame | Rejected; no native24 proof |
 | S24_3LE | 24 | Three packed LE bytes/sample, 6 bytes/frame | Rejected; no DMA packing implementation |
 | S32_LE | 32 | Signed Q31, 8 bytes/frame; decoded24 shifted left8 | Rejected; no native24/32 proof; FLTP also prevents general full32 source preservation |
 
@@ -162,17 +179,24 @@ not normal Reborn UI. It is compiled/tested but not installed by this pass.
 
 Reborn already queries exact ALSA intersections, gates wired modes through the
 platform enablement profile, and selects S32→S24→S16 among admitted formats.
-The profile remains S16-only because wider transport is unproven. Decode/DSP
-stays float until final conversion; active crossfade retains a wider temporary
+The profile remains S16-only because wider transport is unproven. Decode/EQ/
+limiter stays float until membrane conversion; live user volume follows that
+conversion, as detailed above. Active crossfade retains a wider temporary
 representation. Future admitted24 should also benefit <=16 sources when gain/EQ
 creates fractional values. Source depth alone should not force a narrower sink.
+Future precision work must also evaluate carrying float/wider queued samples
+through live gain until one final sink quantizer, while preserving accepted-frame
+ramp advancement. Current source must not be described as wholly float through
+the last user gain stage. No gain/ramp policy changes are made in this pass.
 Opening failure retains the existing rate-family/S16 fallback and reports the
 actual negotiation error. Observed Bluetooth contracts remain strict and unchanged.
 
 Float→S16/S32 uses FFmpeg scaling, nearest rounding and clipping. Integer
 S32→S16 and S32→S24 now round to nearest with ties to even and saturate, including
 positive-full-scale overflow. Sign handling and padding are covered by exact
-boundary cases. Dither remains disabled: TPDF at final S16 would decorrelate
+boundary cases. Live gain separately uses f64, nearest/ties-away and saturation;
+S24 derives its sign from bit23 before multiplying, S32 from bit31. Dither
+remains disabled: TPDF at final S16 would decorrelate
 low-level quantization error and merits a separate measured policy; noise shaping
 and expensive processing are unwarranted. No dither is used to disguise discarded
 source precision. The new quantizer fixes bias without adding noise or changing
@@ -185,7 +209,10 @@ At44100/48000 in both packed24 WAV and checked-in lossless FLAC fixtures
 0x234500/0x234501/0x23457f/0x234580/0x2345ff share upper16 bits.
 Negative counterparts and independent channel phase are tested. Decode→FLTP
 DSP→S24_LE and S32_LE final software bytes match every reference sample exactly.
-No DMA/I2S24 result is claimed because no such mode is admitted.
+These fixtures use neutral user gain. Existing VolumeRamp unity/low-bit/sign and
+partial-write tests validate its separate byte-copy and accepted-frame behavior;
+no bit-identical preservation is expected under non-unity gain or EQ. No
+DMA/I2S24 result is claimed because no such mode is admitted.
 
 Separate signed PCM32 pairs 0x23450001/0x23450002 and their negative counterparts
 prove the decoder reports s32/source32 while FLTP collapses the differing low
@@ -219,9 +246,11 @@ DAC lock register readback remain unclaimed without that evidence.
 `Y2Reborn/tools/build/precision-bench.c` compiles the actual media membrane,
 uses process CPU time, five complete decodes, a negligible endpoint checksum and
 three deterministic five-second FLAC inputs:16/44100,24/48000,24/96000→48000.
-It compares S16/S24/S32 packing with optional gain plus three EQ bands off/on,
-retaining the limiter. It writes no ALSA output: wider results measure software
-cost only. **Physical Cortex-A7 CPU overhead: NOT_RUN while lock unavailable.**
+It compares S16/S24/S32 packing with decoder gain plus three EQ bands off/on,
+retaining the limiter. It excludes Playback's live VolumeRamp, queue/control and
+ALSA pacing, so it cannot stand in for complete Reborn playback CPU/headroom.
+It writes no ALSA output: wider results measure membrane software cost only.
+**Physical Cortex-A7 CPU overhead: NOT_RUN while lock unavailable.**
 QEMU is used for ABI/correctness, never real CPU-headroom claims.
 
 ## External capture and remaining work

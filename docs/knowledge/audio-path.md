@@ -10,6 +10,10 @@ S16 is the admitted path, not an immutable hardware ceiling. Stock fetch and
 connection width functions return ENOSYS. CS43131 independently accepts32-bit
 input. New source diagnostics and low-bit WAV/FLAC tests distinguish24 software
 packing from unproven wider DL1/I2S; full32 source precision is lost in FLTP.
+The complete path also includes live VolumeRamp after integer sink conversion:
+f64 gain then another integer quantization, advanced only by accepted frames.
+The low-bit fixtures use unity gain; the membrane benchmark excludes live gain
+and ALSA pacing. See the corrected diagram and software-proof scope in that report.
 Locked Baseline02 reads observe S16 44100/48000 constraints and idle runtime PM;
 fresh playback/CPU measurements remain NOT_RUN due to lock contention.
 

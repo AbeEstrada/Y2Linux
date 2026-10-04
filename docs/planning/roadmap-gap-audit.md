@@ -2,6 +2,14 @@
 
 ## Wired precision source boundary — 2026-10-04
 
+Source-only review correction: the complete diagram now includes live VolumeRamp
+after FFmpeg integer packing, with f64 gain and a second nearest/ties-away integer
+quantizer. Unity-volume low-bit fixture proof is not proof for non-unity gain;
+the membrane CPU benchmark excludes that live gain and ALSA pacing. Exact accepted
+frames alone advance ramp/offset, including zero/partial writes. This correction
+uses retained source/tests, does not repeat builds or device access, changes no
+implementation/policy or hardware admission, and keeps all coverage gates below.
+
 The isolated completion pass reaches **MORE_HARDWARE_EVIDENCE_REQUIRED**, not
 a high-resolution milestone closure. Exact MT6582 BSP, retained Y2 HAL/kernel
 and CS43131 receiver research are reconciled in the
