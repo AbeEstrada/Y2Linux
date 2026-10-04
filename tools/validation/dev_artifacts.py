@@ -36,8 +36,16 @@ def rescue_entries(raw):
 
 def userspace_config(config):
     require(config['CONFIG_PAGE_OFFSET']=='0xC0000000' and config['CONFIG_HIGHMEM']=='y','ARM split/HIGHMEM')
-    for key in ('CONFIG_ARM_THUMB','CONFIG_KUSER_HELPERS','CONFIG_FB_DEVICE','CONFIG_DEBUG_USER','CONFIG_VFP','CONFIG_NEON','CONFIG_EXT4_FS','CONFIG_MMC_BLOCK','CONFIG_USB_CDC_COMPOSITE','CONFIG_INET','CONFIG_UNIX98_PTYS'):
+    for key in ('CONFIG_ARM_THUMB','CONFIG_KUSER_HELPERS','CONFIG_FB_DEVICE','CONFIG_DEBUG_USER','CONFIG_VFP','CONFIG_NEON','CONFIG_EXT4_FS','CONFIG_MMC_BLOCK','CONFIG_INET','CONFIG_UNIX98_PTYS'):
         require(config.get(key)=='y','missing development prerequisite '+key)
+    if config.get('CONFIG_USB_CONFIGFS_F_FS') == 'y':
+        for key in ('CONFIG_USB_CONFIGFS','CONFIG_USB_CONFIGFS_ACM','CONFIG_USB_CONFIGFS_ECM'):
+            require(config.get(key)=='y','missing product USB prerequisite '+key)
+        require(config.get('CONFIG_USB_CDC_COMPOSITE')=='m','legacy developer gadget module')
+        require(config.get('CONFIG_USB_CONFIGFS_MASS_STORAGE')!='y' and config.get('CONFIG_USB_MASS_STORAGE') not in ('y','m'),'no block storage export')
+    else:
+        require(config.get('CONFIG_USB_CDC_COMPOSITE')=='y','missing development prerequisite CONFIG_USB_CDC_COMPOSITE')
+
 
 
 def check(root,project,production=False):
@@ -112,8 +120,14 @@ def check(root,project,production=False):
     for number in (11,14,19,21,54,114,120,192,221,240,241,281,282,284,379):
         entry=struct.unpack_from('<I',kernel.data,slot_offset(kernel,number))[0]
         require(entry!=kernel.sym('sys_ni_syscall'),'missing development syscall '+str(number))
-    for name in ('y2_usb_worker','y2_musb_init','y2_musb_interrupt','musb_start','musb_g_disconnect','cdc_bind','ecm_bind','acm_bind','msdc_drv_probe','mtk_i2c_probe'):
+    for name in ('y2_usb_worker','y2_musb_init','y2_musb_interrupt','musb_start','musb_g_disconnect','ecm_bind','acm_bind','msdc_drv_probe','mtk_i2c_probe'):
         require(kernel.sym(name)>=text,'missing subsystem '+name)
+    if config.get('CONFIG_USB_CONFIGFS_F_FS') == 'y':
+        for name in ('ffs_func_bind', 'configfs_composite_bind'):
+            require(kernel.sym(name) >= text, 'missing consumer USB path '+name)
+        require(config.get('CONFIG_USB_CONFIGFS_MASS_STORAGE') != 'y', 'raw block export excluded')
+    else:
+        require(kernel.sym('cdc_bind') >= text, 'legacy CDC gadget linked')
     if config.get('CONFIG_Y2_POWER')=='y':
         for name in ('y2_adc_probe','y2_charger_probe','y2_thermal_probe','y2_cpu_set','y2_enter_idle','mt6323_irq_suspend','y2_boot_init','y2_spm_enter','y2_spm_cpu_kill'):
             require(kernel.sym(name)>=text,'missing power subsystem '+name)

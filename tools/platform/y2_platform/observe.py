@@ -522,7 +522,7 @@ def system(ctx):
     sources = ctx.glob('/sys/bus/platform/drivers/y2-usb/*/status')
     if len(sources) == 1:
         text = read(sources[0], limit=8192) or ''
-        fields = dict(re.findall(r'\b(transfer|dma_[a-z_]+)=([a-z_]+|-?\d+)\b', text))
+        fields = dict(re.findall(r'\b(transfer|dma_[a-z_]+|pio_[a-z_]+|irq_[a-z_]+)=([a-z_]+|-?\d+)\b', text))
         dma = {key: value if key == 'transfer' else number(value) for key, value in fields.items()}
     return {'uptime_seconds': (ctx.read('/proc/uptime') or '').split(' ')[0] or None,
             'versions': ctx.json('/etc/y2linux/versions.json'),
@@ -540,7 +540,8 @@ def system(ctx):
             'pstore_files': [p.name for p in ctx.glob('/sys/fs/pstore/*')],
             'rtc': rtcs, 'time': clock, 'ssh': ssh,
             'entropy_available_bits': ctx.integer('/proc/sys/kernel/random/entropy_avail'),
-            'crng_ready': clock['entropy_ready'], 'usb': {'mode': 'peripheral', 'udcs': udcs, 'dma': dma},
+            'crng_ready': clock['entropy_ready'], 'usb': {'mode': 'peripheral', 'udcs': udcs, 'dma': dma,
+                        'file_transfer': ctx.json('/run/y2/usb-transfer.json', {})},
             'update': update_status(ctx),
             'reborn_supervisor': ctx.json('/data/reborn/logs/supervisor-last.json')}
 

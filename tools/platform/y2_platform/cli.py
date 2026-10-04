@@ -35,6 +35,8 @@ def main():
     sleep.add_argument('action', choices=['request', 'status'])
     sub.add_parser('power-daemon')
     sub.add_parser('service-daemon')
+    usb_mode = sub.add_parser('usb-mode')
+    usb_mode.add_argument('mode', choices=['mtp', 'developer'])
     codec_runtime = sub.add_parser('codec-runtime')
     codec_runtime.add_argument('--record', action='store_true')
     codec_settings = sub.add_parser('codec-settings')
@@ -105,6 +107,10 @@ def main():
     collect.add_argument('--reborn', action='store_true')
     args = parser.parse_args()
     ctx = Context()
+    if args.command == 'usb-mode':
+        from .usb import request_mode
+        print(json.dumps(request_mode(ctx, args.mode)))
+        return 0
     if args.command == 'cpu-idle-policy':
         from .cpu_idle import apply
         result = apply(ctx, args.action)

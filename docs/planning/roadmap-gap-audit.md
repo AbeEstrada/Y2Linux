@@ -1,3 +1,65 @@
+## USB MTP architecture and candidate-build admission — 2026-10-04
+
+The owner-authorized desktop pass selects MTP + ECM, with disconnected-session
+ACM + ECM for advanced use. Kernel/root scope changes are now explicit: configfs/
+FunctionFS, a bounded pinned C responder, Linux-only user-file views and a narrow
+PIO progress fix. No MSC, block handoff, filesystem migration, FIFO/memory layout,
+charging-current or radio-policy change. The [USB report](../validation/Y2-PLATFORM-V1-USB.md)
+records rejected alternatives and host/product limits. Source/native tests cover
+actual responder transfers/descriptors and data-integrity failures; software
+verification precedes one fresh ARM/package candidate.
+
+All standing coverage rows are refreshed against retained UART01 Linux e9e8d63 /
+Reborn b71b4688, boot fd955840-35d9-47db-83e0-ff47d6bb2d2b, taint0; fresh access
+remains refused by the shared nonblocking device lock. The retained receipt remains
+real hardware authority; new protocol/speed/throughput/host behavior is NOT_RUN.
+
+| Coverage | Classification / remaining gate |
+| --- | --- |
+| Boot/PID1/internal root, SMP, diagnostics/display/input, eMMC/SD, AFE/headphones | CONFIRMED retained bounded behavior; exact new root/kernel regression remains PHYSICAL_NOT_RUN. |
+| CPU/timers/clocks/C1/C2/C3 | CONFIRMED bounded UART01; candidate automatic cold boot/full suspend/endurance remain PARTIAL #28. |
+| USB logs/network/transfer and desktop discovery | PARTIAL #27/#28/#31/#33; safe MTP software implementation/tested descriptors, physical composite/desktop/throughput acceptance missing. |
+| Wi-Fi/BT/firmware/calibration/thermal/battery/charger/backlight/watchdog/wake | PARTIAL retained scope #28/#29/#31; no new electrical/radio/deep-suspend claim. |
+| RAM/reservations/recovery/update/security/services/time/identity/privacy | PARTIAL existing release gates #28/#32/#33; 64 MiB MTP address-space bound added, measured RAM and release qualification pending; memory/reservation map unchanged. |
+| Physical UART crash capture; host/VBUS; FM | UNKNOWN crash capture; host/VBUS PHYSICAL_GATE; FM excluded. |
+
+Existing issues remain OPEN and unchanged remotely; no milestone closes. The next
+smallest boundary is one fresh kernel/Buildroot/Reborn ARM candidate and config/DT/
+modules/ABI/source/legal/package checks, only BOOTIMG/Y2ROOT with Y2DATA preserved.
+Then owner installation enables exact-image desktop, ten-session and integrity/
+performance harness acceptance. No flash or push is authorized for this agent.
+
+## USB desktop file-transfer activation audit — 2026-10-04
+
+Owner explicitly authorizes implementation/research/performance and a single
+preserving candidate on `codex/platform-v1-usb`; no flash or push. Entry source
+Linux `b5aea93` / Reborn `b71b4688`, isolated sibling worktrees. GitHub #27/#28/#31/
+#32/#33/#34 refreshed read-only and remain OPEN; this local branch does not alter
+parallel work or remote milestone status.
+
+Real hardware authority is retained UART01 Linux `e9e8d63` / Reborn `b71b4688`,
+boot `fd955840-35d9-47db-83e0-ff47d6bb2d2b`, taint 0:
+[physical receipt](../validation/Y2-CPU-C3-UART-PHYSICAL.md). Fresh access was
+refused by the shared nonblocking `/tmp/y2-platform-v1-device.lock`; availability
+is retried in bounded batches. No new physical result is inferred.
+
+| Coverage (all standing rows reviewed) | Classification / boundary |
+| --- | --- |
+| Boot/PID1/internal root, SMP, diagnostic/display/input, internal eMMC/SD, AFE/headphones | CONFIRMED within retained bounded receipts; new transfer candidate remains untested. No hardware, partition or memory changes authorized by this audit. |
+| CPU/timers/clocks/runtime idle | CONFIRMED bounded C1/C2/C3 UART01; Baseline02 cold boot and full-system suspend remain separate PARTIAL gates (#28). |
+| USB logs/network/file transfer | PARTIAL (#27/#28/#33). Existing ACM+ECM plus owner-key SFTP has bounded 1 MiB hash proof; no desktop storage function or current throughput proof. Current progress-aware DMA guard is retained pending source/live audit. |
+| Radio, firmware/calibration, thermal/battery/charger/backlight/watchdog/wake | PARTIAL in their retained scope (#29/#31/#28); no new radio/electrical/charging claim or current-limit change. |
+| RAM/reservations/recovery/update/security/services/time/identity/privacy | PARTIAL in existing release gates (#28/#32/#33); unchanged protected-data/recovery provenance carries forward. |
+| Physical UART early-crash capture; host/VBUS; FM | UNKNOWN UART capture; host/VBUS PHYSICAL_GATE; FM remains excluded on this board. |
+| Desktop discovery/consumer transfer | MISSING: evaluate MSC, MTP, composite and existing SFTP from current ext4/private-data layout before selecting. Linux desktop plus Windows/macOS requirements and new-image evidence are mandatory limitations. |
+
+Next smallest boundary: choose a file-safe protocol with protected partition
+exclusion and current endpoint budget; implement typed product/library integration,
+automated failure tests and bounded current-image scratch baselines. New kernel/
+root changes require coherent implementation and one ARM/package candidate before
+owner installation. Y2DATA is preserved, never reformatted and never concurrently
+mounted as host block storage. No milestone closure or physical-ready verdict.
+
 # Roadmap gap audit
 
 ## Baseline02 source integration into main — 2026-10-03

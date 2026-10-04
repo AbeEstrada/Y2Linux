@@ -129,6 +129,11 @@ def operation(ctx, action):
             if len(old) > 1:
                 state.update(state='Failed', reason='ambiguous_mount_stack')
             elif old:
+                from .usb import release_sd
+                if not release_sd(ctx, old[0]['mount_id']):
+                    state.update(state='Failed', reason='usb_transfer_connected_or_busy')
+                    atomic_json(runtime / 'media.json', state)
+                    return state
                 result = ctx.command(['umount', '/media/sd'], timeout=3)
                 if not result['ok'] or mounts(ctx):
                     state.update(state='Failed', reason=result['reason'] or 'unmount_busy')

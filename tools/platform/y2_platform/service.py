@@ -4,6 +4,7 @@ import fcntl
 import os
 import signal
 import time
+import threading
 from .boot import private_directory
 import json
 from .common import atomic_json, read
@@ -62,20 +63,28 @@ def serve(ctx):
     fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     monitor = EventMonitor(ctx)
     running = [True]
-    signal.signal(signal.SIGTERM, lambda *_: running.__setitem__(0, False))
-    signal.signal(signal.SIGINT, lambda *_: running.__setitem__(0, False))
+    wake = threading.Event()
+    def stop(*_):
+        running[0] = False
+        wake.set()
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+    signal.signal(signal.SIGUSR1, lambda *_: wake.set())
     next_probe = next_maintenance = next_ntp = 0
     associating_since = None
     from .radio_policy import Coexistence, wifi_policy
     coexistence = Coexistence()
     next_radio_policy = 0
     settled = False
+    from .usb import USBService
+    usb = USBService(ctx)
     try:
         while running[0]:
             before = time.monotonic()
             dark = display_dark(ctx)
             interval, maintenance = cadence(dark, settled)
             monitor.poll()
+            usb.tick()
             value = wifi(ctx)
             if value['state'] == 'Associating':
                 associating_since = before if associating_since is None else associating_since
@@ -111,7 +120,9 @@ def serve(ctx):
                 if (ready.get('boot_id') == ctx.read('/proc/sys/kernel/random/boot_id') and
                         ready.get('first_frame') is True and journal.get('last_stage') in ('platform_start', 'services_started')):
                     ctx.command(['/usr/sbin/y2-platform', 'boot-stage', 'application_ready'], timeout=2)
-            time.sleep(max(.05, interval - (time.monotonic() - before)))
+            wake.wait(max(.05, interval - (time.monotonic() - before)))
+            wake.clear()
     finally:
+        usb.stop()
         monitor.close()
         os.close(fd)

@@ -71,7 +71,7 @@ static inline int y2_usb_reconnect_terminal(struct y2_usb_tolerance *t, int rc, 
  * (an endpoint and a DMA interrupt per packet). Both physical faults showed
  * ISR, DMA-interrupt and DMA-programming totals matching that per-packet
  * pattern with no excess: legitimate throughput, not a stuck source. A stuck
- * source makes no progress, so only interrupts without new DMA programming
+ * source makes no progress, so only interrupts without new DMA programming or PIO FIFO movement
  * count towards the storm limit. A hard per-jiffy ceiling well above the HS
  * bulk maximum (13 packets/125 us, two interrupts each, ~2080 per jiffy)
  * still bounds any pathological rate. Both remain terminal. */
@@ -81,7 +81,7 @@ struct y2_usb_irq_guard {
     unsigned long tick;
     unsigned progress, burst, jiffy, max_burst, max_jiffy;
 };
-/* Called once per interrupt with the current jiffy and DMA-programming count.
+/* Called once per interrupt with the current jiffy and DMA/PIO forward-progress count.
  * Returns nonzero when the interrupt source must be treated as a storm. */
 static inline int y2_usb_irq_storm(struct y2_usb_irq_guard *g, unsigned long tick,
                                    unsigned progress)

@@ -12,7 +12,7 @@ qualification fallback, not a new persistent listener. See
 [UART01 hardware](../validation/Y2-CPU-C3-UART-PHYSICAL.md) and
 [Baseline02](../validation/Y2-BASELINE-02.md).
 
-DONE_SOFTWARE / HOST_VALIDATED. ACM + ECM stay on the existing peripheral-only
+Historical SFTP implementation: DONE_SOFTWARE / HOST_VALIDATED. ACM + ECM used the existing peripheral-only
 MUSB/PHY path. The session runtime-PM reference correction already exists; this
 pass does not duplicate it. USB host/OTG and USB Audio host remain PHYSICAL_GATE:
 MT6582 MAC host capability is not board ID/role wiring, VBUS sourcing, current
@@ -27,8 +27,11 @@ Use authenticated SFTP over the existing USB ECM link, 10.42.0.1:22, with the
 provisioned owner public key. Linux/macOS OpenSSH and Windows OpenSSH/WinSCP are
 client options; platform-specific ECM enumeration/address setup still needs
 qualification. The candidate retains ECM and does not claim universal Windows
-plug-and-play or add an unqualified RNDIS gadget. MTP/WebDAV/HTTP/rsync are not
-needed for v1. No writable Linux filesystem is exported as USB mass storage.
+plug-and-play or add an unqualified RNDIS gadget. The new desktop-transfer candidate supersedes SFTP as the normal product path:
+MTP + ECM by default, ACM + ECM as an advanced disconnected-session choice.
+[USB Platform 1.0 report](../validation/Y2-PLATFORM-V1-USB.md) records architecture,
+file confinement and qualification limits. No writable Linux filesystem is
+exported as USB mass storage. The following authenticated SFTP contract remains.
 
 Dropbear 2026.94 is restricted to both that address and usb0 using SO_BINDTODEVICE.
 Its existing warning-and-continue failure is patched to close the socket instead.

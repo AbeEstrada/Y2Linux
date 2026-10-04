@@ -5,3 +5,5 @@ source "$BR2_EXTERNAL_Y2LINUX_PATH/package/y2-update/Config.in"
 source "$BR2_EXTERNAL_Y2LINUX_PATH/package/libfreeaptx/Config.in"
 source "$BR2_EXTERNAL_Y2LINUX_PATH/package/libldac/Config.in"
 source "$BR2_EXTERNAL_Y2LINUX_PATH/package/y2-codec-experiments/Config.in"
+
+source "$BR2_EXTERNAL_Y2LINUX_PATH/package/y2-mtp/Config.in"

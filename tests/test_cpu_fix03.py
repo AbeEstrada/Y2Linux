@@ -132,6 +132,27 @@ int main(void){
 }
 ''')
 
+    def test_pio_fifo_progress_uses_the_same_stall_guard(self):
+        run_c(USB_GUARD + r'''
+int main(void){
+ struct y2_usb_irq_guard g={0}; unsigned packet,progress=0;
+ for(packet=0;packet<2000;packet++){
+  assert(!y2_usb_irq_storm(&g,7,progress)); progress++; /* actual PIO FIFO move */
+ }
+ assert(g.max_jiffy==2000 && g.max_burst<=2);
+ for(packet=0;packet<Y2_USB_IRQ_BURST_LIMIT;packet++)assert(!y2_usb_irq_storm(&g,7,progress));
+ assert(y2_usb_irq_storm(&g,7,progress));
+ /* A cable session/new IRQ epoch has independent guard state. */
+ struct y2_usb_irq_guard reconnect={0};
+ assert(!y2_usb_irq_storm(&reconnect,8,progress));
+}
+''')
+        source=overlay('drivers/usb/musb/musb_gadget.c')
+        self.assertEqual(source.count('y2_musb_pio_progress(musb, fifo_count,'),2)
+        for name in ('txstate','rxstate'):
+            body=function(source,name)
+            self.assertLess(body.index('request->actual += fifo_count;'),body.index('y2_musb_pio_progress('))
+
     def test_stuck_source_without_progress_is_terminal(self):
         run_c(USB_GUARD + r'''
 int main(void){
