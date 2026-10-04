@@ -1,5 +1,39 @@
 # Roadmap gap audit
 
+## Platform 1.0 input pass end boundary — 2026-10-04
+
+Owner instruction “come to an end” terminates further device waiting after
+source validation and one bounded read-only hardware observation. This boundary
+closes the work session, not input acceptance or a Platform 1.0 milestone.
+Reborn `e51a335`, Linux `95ed509`: fmt/strict Clippy,257 workspace tests
+(37 input/40 UI), ARM build and5 targeted Linux tests pass. Candidate userspace
+is built and hashed, never installed/executed. Kernel/DT/images remain unchanged.
+
+Fresh hardware identity is Baseline02 compiled Linux8584ccd8/Rebornb71b468,
+boot27e6d684-3794-4490-95db-a489027cd4f4,taint0. The120.289s observer recorded
+0events; owner operation was not confirmed before window end. Subsequent
+wheel/I2C0/Power/keypad IRQ deltas0, but four cores remained online and dormant
+entry rejected topology; C2/C3 counts0. Retained UART01 proves bounded older
+C1/C2/C3 behavior, not this unexecuted input candidate. Helper removed, original
+service/binary untouched, lock normally released; input reservation cancelled.
+
+| Coverage / dependency | Final classification | Remaining gate |
+| --- | --- | --- |
+| APT32F/filter/cadence, #28 | CONFIRMED retained218 pulses; PARTIAL physical accuracy |100CW/100CCW counted detents, measured bounce and owner feel |
+| Reborn timing/recovery, #28 | CONFIRMED deterministic software; PARTIAL hardware | All buttons>=20 presses; holds/repeats/reopen/drop acceptance |
+| Action/state/frame, #34 | IMPLEMENTED bounded diagnostics; NOT_MEASURED current latency | Candidate kernel->state/page-flip median/p95/worst; physical origin separate |
+| Input idle/C1/C2/C3, #28 | CONFIRMED zero input IRQ delta in bounded snapshots; PARTIAL candidate compatibility | Qualified topology and per-process wake attribution;50Hz navigation poll retained |
+| Power/full suspend, #28 | CONFIRMED software gesture/reset contract; PARTIAL physical wake | Suspend-owner integration and actual wake suppression |
+| Product v2 physical UX | CONFIRMED host navigation invariants; PARTIAL owner acceptance | Every screen, large lists, audio volume and human feel |
+
+Verdict **MORE_WORK_REQUIRED**. Existing issue/epic states are retained from the
+read-only admission snapshot (#28/#34 OPEN); no remote status write or milestone
+promotion. Source handoff is ready; the next smallest blocker is an owner-counted
+physical window and candidate runtime tracing. No new hardware, memory,
+protected-data or production scope is authorized by this closure. Full fixes,
+exact artifacts and acceptance limits: [input report](../validation/Y2-PLATFORM-V1-INPUT.md).
+
+
 ## Platform 1.0 input software candidate boundary — 2026-10-04
 
 The admitted input-only source pass is software complete: Reborn `e51a335`,

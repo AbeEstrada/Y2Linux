@@ -1,5 +1,19 @@
 # Platform v1 roadmap
 
+## Platform 1.0 input source handoff — 2026-10-04
+
+Owner ended device waiting. Reborn `e51a335` / Linux `95ed509` source and software
+validation pass; ARM userspace candidate exists, never installed/executed.
+**MORE_WORK_REQUIRED** for physical acceptance:100CW/100CCW,20/button,
+input->frame percentiles, candidate idle/wake/recovery and owner feel. First
+read-only Baseline02 capture had0events; subsequent input IRQ deltas0, while
+current four-core topology rejected C2/C3. Preserve qualified older UART01
+CPU evidence without promoting this candidate. Lock released, helper removed,
+input reservation cancelled; no flash/push/main-worktree changes.
+[End-boundary audit](roadmap-gap-audit.md#platform-10-input-pass-end-boundary--2026-10-04).
+[Full input report](../validation/Y2-PLATFORM-V1-INPUT.md). No milestone closed.
+
+
 ## Platform 1.0 input software candidate — 2026-10-04
 
 Reborn `e51a335` / Linux input tooling `99087ba`: source and software checks

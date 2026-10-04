@@ -1,9 +1,11 @@
 # Y2 Platform 1.0 input validation
 
-2026-10-04. **IN_PROGRESS; physical acceptance pending.** Work is isolated to
+2026-10-04. **SOURCE_PASS; physical acceptance incomplete; MORE_WORK_REQUIRED.** Work is isolated to
 `codex/platform-v1-input` in both repositories at
 `/home/luca/Dokumente/Code/worktrees/platform-v1-input/{Y2Linux,Y2Reborn}`.
 No flash, push, unrelated merge, identity change or main-worktree write.
+The owner ended this pass after the implementation and bounded observation;
+continued device waiting and the reserved capture slot are cancelled.
 
 ## Identity and evidence boundary
 
@@ -26,9 +28,11 @@ and removed before normal lock release. No service stop or hardware mutation
 occurred. Boot, taint and installed Reborn hash were unchanged at release.
 
 The first 120.289-second window recorded **zero events**; the owner's readiness
-reply arrived after it ended. This is valid untouched observation, not a
-100-detent test. The owner is now ready; counted tests await a coordinated
-window after other sessions. Current counted accuracy and input-to-frame
+reply arrived after it ended. This is a complete zero-event observation, not a
+100-detent test; physical operation during that window was not confirmed.
+The owner subsequently offered readiness but ended the pass when a prior
+suspend reservation required a further 20–35-minute wait. Counted acceptance
+remains for a future coordinated owner window. Current counted accuracy and input-to-frame
 latency must not be inferred from software tests or historical logs.
 [Current observation receipt](evidence/platform-v1-input-live.json).
 
@@ -184,7 +188,7 @@ per second, even when initially absent; they no longer retry sysfs every loop
 when missing. No CPU governor, core-parking, C1/C2/C3 or radio policy was changed.
 
 The 120.289-second observer recorded zero input records. In the subsequent
-untouched snapshots wheel EINT55, I2C0, PMIC Power and keypad IRQ counts each
+snapshots while the owner was waiting for the capture announcement wheel EINT55, I2C0, PMIC Power and keypad IRQ counts each
 stayed unchanged. Aggregate CPU deltas were user 211, system 86, idle 9,027
 ticks, and 9,174 context switches. The snapshots were not synchronized;
 9,324 aggregate ticks over four CPUs at USER_HZ=100 indicate approximately
@@ -261,7 +265,9 @@ wake-batch cadence, bounded diagnostics and visible focus at both ends of
 
 Commits: Linux `99087ba` (tools/admission), `44f8d9b` (candidate/retained receipt);
 Reborn `a701e0b` (source/tests/contract), `e51a335` (malformed-key guard).
-Current observation/helper/report follow-up is recorded by the next Linux commit.
+Linux `95ed509` records current observation, graceful observer stop and
+line buffering before capture announcements. The final documentation-only
+commit records the owner-requested end; it does not change candidate bytes.
 Candidate manifest retains exact compiled-source and binary SHA256 values:
 `out/platform-v1-input-candidate/manifest.json`. Reborn binary SHA256
 `783291dc4b41257038d122875543fddf662e0d859e1c29c3fce0ccdaed4fbc64`;
@@ -271,8 +277,9 @@ other Platform 1.0 subsystem work remains a separate owner boundary.
 
 ## 23–24. Remaining physical owner test and verdict
 
-Await the next coordinated nonblocking shared-device lock. Recheck installed
-identity against the first observation and controller inventory. Upload only the bounded observer to private
+Future acceptance needs a new coordinated owner window and nonblocking
+shared-device lock. Recheck installed identity and controller inventory; no
+input waiter or lock remains from this pass. Upload only the bounded observer to private
 `/run` storage, retain records locally and remove it afterwards; never grab
 input devices, flash, probe undocumented I2C or disturb another session.
 
@@ -289,6 +296,8 @@ installed code can establish raw events but not its improved state/frame trace.
 Device rebind/full resume are separate guarded destructive-to-service tests;
 software cancellation tests do not replace their physical acceptance.
 
-**Provisional verdict: MORE_WORK_REQUIRED.** Coherent implementation and software
-validation are complete; current counted detent/button, actual UI latency, candidate deep-idle
-and owner feel evidence remain open. No input or full-system milestone is closed.
+**Final pass verdict: MORE_WORK_REQUIRED.** Coherent implementation and software
+validation are complete. Counted detents/buttons, actual UI latency, candidate
+deep-idle compatibility and owner feel remain open. The candidate was never
+installed or executed; no input or full-system milestone is closed. Device
+lock released, temporary observer removed, no queued reacquisition remains.

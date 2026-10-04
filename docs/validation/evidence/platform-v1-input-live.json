@@ -7,7 +7,7 @@
   "installed_reborn_sha256": "4cf77a6b94e6efa298bf43d9b530f36998535c308ddee8542b1c3ae7ddb6e463",
   "candidate_executed": false,
   "helper_removed": true,
-  "physical_detent_accuracy": "NOT_RUN; owner response after observer window",
+  "physical_detent_accuracy": "NOT_RUN; no owner count or confirmed operation in capture window",
   "idle_capture": {
     "collection_valid": true,
     "duration_us": 120289278,
@@ -101,5 +101,8 @@
       "sha256": "f3b017324cdacdb855a54c9cbe5894775d5e0a4a1e3925b059effdba5c865045",
       "bytes": 127
     }
-  ]
+  ],
+  "pass_status": "Owner ended waiting; MORE_WORK_REQUIRED",
+  "input_reservation_cancelled": true,
+  "lock_released": true
 }
