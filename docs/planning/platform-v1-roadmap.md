@@ -1,13 +1,12 @@
 # Platform v1 roadmap
 
-Wired precision completion has reached owner Outcome B: meaningful24/32 PCM
-is HARDWARE_PROVEN_UNSUPPORTED on the documented MT6582 DL1 chain. The complete
-exact-SoC contract resolves the former unknown fetch field; safe live tests
-verify S16 DMA/AFE/I2S/DAC state and software24 packing separately. No wide
-format or image candidate is admitted. Review [the completion record](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
-and [the repeated scoped boundary audit](roadmap-gap-audit.md#wired-high-resolution-completion-boundary).
-Independent serial/analog capture remains unperformed; no wider physical PASS,
-remote issue closure or other subsystem/milestone promotion is claimed.
+Wired precision remains open. The prior HARDWARE_PROVEN_UNSUPPORTED verdict
+is withdrawn: a16-bit monitor field does not conclusively define the complete
+silicon data path. Installed S16 and software24 preservation are observed;
+a meaningful24/32 hardware route and an absolute hardware limit are both
+unproven. Neither owner Outcome A nor B is achieved. See [the corrected record](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
+and [the scoped boundary correction](roadmap-gap-audit.md#wired-precision-evidence-correction).
+No unsupported format, candidate, flash or other subsystem promotion is admitted.
 
 ## Baseline01 installed physical admission — 2026-10-04
 

@@ -1,5 +1,29 @@
 # Y2 wired high-resolution PCM completion
 
+## Evidence correction: hardware impossibility is not established
+
+The previous **HARDWARE_PROVEN_UNSUPPORTED** verdict is withdrawn. The manual
+defines two 16-bit fields in a DL1 *monitor register*. That definition does not,
+by itself, specify the full internal data bus width in every possible mode.
+Finding no documented wider fetch selector strengthens the case for a narrow
+documented interface, but does not prove that all silicon modes or alternative
+routes are incapable of wider PCM. The earlier conclusion exceeded the evidence.
+
+Current findings: installed playback is S16 throughout ALSA/DMA; software24
+packing preserves the tested low bits; CS43131 accepts wider PCM; MT6582 I2S
+has 16/32-bit serialization. No complete meaningful24/32 hardware path has
+been established. **Neither owner Outcome A nor Outcome B has been met.**
+24-bit feasibility remains open. True32 also encounters the independently
+verified binary32 DSP precision loss. No unsupported register write or format
+enablement is authorized by this correction.
+
+The initial report below is retained as a historical record of the tests and
+the withdrawn interpretation. Its register values, bytes, source hashes and
+measurements remain evidence; statements deriving a universal DL1 precision
+ceiling from MON0 must not be treated as proven hardware capability.
+
+## Initial report — hardware-limit interpretation superseded
+
 Owner task: establish and implement the strongest real MT6582 → DL1 → AFE →
 second I2S → CS43131 PCM path. **Outcome B: HARDWARE_PROVEN_UNSUPPORTED on
 the DL1 path for both meaningful 24-bit and meaningful 32-bit PCM.**

@@ -133,10 +133,10 @@ static int highres_show(struct seq_file *s, void *unused)
 
 	seq_puts(s, "observer_version=1 read_only=true physical_serial_capture=false\n");
 	seq_puts(s, "source_contract=MT6582_Functional_Specification_v0.91_ch53 "
-		 "dl1_output_bits_per_channel=16 "
-		 "dl1_fetch_format=packed_le_s16_stereo "
+		 "dl1_monitor_bits_per_channel=16 "
+		 "installed_dl1_fetch_format=packed_le_s16_stereo "
 		 "pbuf_bits_19_16=DL_ULTRA_TH_not_HD "
-		 "wide_pcm_unavailable_stage=DL1_memory_interface\n");
+		 "wide_pcm_contract=NOT_ESTABLISHED silicon_precision_ceiling=UNPROVEN\n");
 	device_lock(machine);
 	card = machine->driver ? dev_get_drvdata(machine) : NULL;
 	if (!card || strcmp(card->name, "Y2Audio")) {

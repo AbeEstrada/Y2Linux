@@ -11,16 +11,17 @@
       "archive_sha256": "7b749bf45520e1c8cc3a00cea689bce2136b59d745699ad76b20f9a796b94886",
       "pdf_sha256": "7cf9294f2e9d7ae264e8bf98ddc8083ef0368ecdc57e2601eaefeef6c8a68fe6",
       "evidence": "PROVEN_SOURCE",
-      "scope": "Audio chapter53 complete register/interface contract; mirrored primary document, not a forum technical claim",
+      "scope": "Complete audio chapter53 register map: authoritative monitor/control definitions; no explicit all-mode internal DL1-width exclusion established",
       "references": {
-        "DL1_output": "AFE_MEMIF_MON0 0x112200d0 p2741 bits31:16 right /15:0 left; DL2 equivalent p2742",
         "DL1_control": "AFE_DAC_CON1 0x11220014 pp2716-18: bit21 mono/stereo, low4 rate",
         "DMA": "AFE_DL1_BASE/CUR/END 0x11220040/44/48 pp2734-35",
         "AFE_route": "Figure53-1 p2706 and Table53-1 p2707; AFE_CONN0 pp2719-22",
         "I2S": "AFE_I2S_CON3 0x1122004c pp2735-36; WLEN16/32",
         "prefetch": "AFE_MEMIF_PBUF_SIZE 0x112203d8 p2768: bits19:16 DL_ULTRA_TH, low2 DL1_PBUF_SIZE bytes16/32/64/128",
-        "rates": "Features53.2 p2705; rate enums pp2718,2736"
-      }
+        "rates": "Features53.2 p2705; rate enums pp2718,2736",
+        "DL1_monitor": "AFE_MEMIF_MON0 0x112200d0 p2741 bits31:16 right /15:0 left; DL2 equivalent p2742"
+      },
+      "interpretation_correction": "Two16-bit monitor fields do not themselves specify the complete internal bus width in every mode. Absence of documented wide selection is not conclusive silicon impossibility."
     },
     {
       "source": "Exact MT6582 training archive",

@@ -1165,13 +1165,14 @@
       "area": "AUDIO",
       "capability": "S24_LE internal output",
       "starting_state": "Not established end-to-end",
-      "implementation": "Not exposed: documented MT6582 DL1 hardware output is 16 bits per channel; read-only observer and low-bit probes implemented",
+      "implementation": "No native wide mode implemented; actual S16 and software packing verified, hardware-wide representation unresolved",
       "commits": [
         "648fbea"
       ],
       "tests": "Complete exact-SoC register contract; actual ARM software packing; live S16 DMA/DL1/I2S/DAC observations",
       "workflow_status": [
-        "HARDWARE_PROVEN_UNSUPPORTED_ON_DL1_PATH"
+        "BLOCKED_BY_EVIDENCE",
+        "PHYSICAL_GATE"
       ],
       "evidence_levels": [
         "PROVEN_SOURCE",
@@ -1182,20 +1183,21 @@
       "image_validation": "Unavailable or disabled as documented; no functionality qualification claimed",
       "physically_qualified": false,
       "endurance_qualified": false,
-      "remaining_risk": "No native 24/32 hardware functionality claim. External serial/analog capture not performed; all-block AFE internal maximum not independently specified.",
+      "remaining_risk": "Prior hardware impossibility verdict withdrawn:16-bit monitor fields do not prove complete internal bus width; exact wider fetch/AFE contract remains unestablished",
       "completion_record": "docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md"
     },
     {
       "area": "AUDIO",
       "capability": "S32_LE internal output",
       "starting_state": "Not established end-to-end",
-      "implementation": "Not exposed: documented MT6582 DL1 hardware output is 16 bits per channel; read-only observer and low-bit probes implemented",
+      "implementation": "No native wide mode implemented; actual S16 and software packing verified, hardware-wide representation unresolved",
       "commits": [
         "648fbea"
       ],
       "tests": "Complete exact-SoC register contract; actual ARM software packing; live S16 DMA/DL1/I2S/DAC observations",
       "workflow_status": [
-        "HARDWARE_PROVEN_UNSUPPORTED_ON_DL1_PATH"
+        "BLOCKED_BY_EVIDENCE",
+        "PHYSICAL_GATE"
       ],
       "evidence_levels": [
         "PROVEN_SOURCE",
@@ -1206,7 +1208,7 @@
       "image_validation": "Unavailable or disabled as documented; no functionality qualification claimed",
       "physically_qualified": false,
       "endurance_qualified": false,
-      "remaining_risk": "No native 24/32 hardware functionality claim. External serial/analog capture not performed; all-block AFE internal maximum not independently specified.",
+      "remaining_risk": "Prior hardware impossibility verdict withdrawn:16-bit monitor fields do not prove complete internal bus width; exact wider fetch/AFE contract remains unestablished",
       "completion_record": "docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md"
     },
     {
@@ -1220,7 +1222,7 @@
       "tests": "Native probe at 44.1/48 plus QEMU and existing workspace low-bit packing tests",
       "workflow_status": [
         "SOFTWARE_VALIDATED",
-        "HARDWARE_OUTPUT_LIMITED_TO_16"
+        "HARDWARE_OUTPUT_PRECISION_UNPROVEN"
       ],
       "evidence_levels": [
         "SOFTWARE_VALIDATED"
@@ -1229,7 +1231,7 @@
       "image_validation": "Unavailable or disabled as documented; no functionality qualification claimed",
       "physically_qualified": false,
       "endurance_qualified": false,
-      "remaining_risk": "Software neutral same-rate preservation is not native 24 DAC output; DSP/gain/resampling modify values; binary32 cannot preserve arbitrary full32",
+      "remaining_risk": "Software neutral same-rate preservation is not native24 DAC output; hardware capability unresolved; DSP/gain/resampling modify values; binary32 cannot preserve arbitrary full32",
       "completion_record": "docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md"
     },
     {

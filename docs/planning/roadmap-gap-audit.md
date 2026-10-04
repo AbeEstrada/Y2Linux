@@ -1,5 +1,28 @@
 # Roadmap gap audit
 
+<a id="wired-precision-evidence-correction"></a>
+## Wired precision evidence correction
+
+The standing boundary review is repeated for the owner's clarification about
+physical impossibility. No hardware operation or image change is made. The
+same retained Baseline01 register/DMA results prove the tested S16 path; exact
+software24 bytes remain validated. The manual defines two16-bit MON0 fields,
+not an explicit all-mode internal bus-width maximum. The previous inference
+from monitor width plus an absent documented fetch selector is insufficient
+for owner Outcome B. That closure and HARDWARE_PROVEN_UNSUPPORTED verdict are
+withdrawn; neither A nor B is established. The former boundary below is
+historical, with its raw measurements retained.
+
+Coverage now separates PROVEN_SOURCE monitor/control definitions,
+PHYSICALLY_OBSERVED installed S16, SOFTWARE_VALIDATED24 packing, and UNKNOWN
+wider-memory/AFE transport. I2S/DAC wider reception remains source-backed.
+Next evidence must establish actual fetch/output representation and a viable
+route or an explicit exclusion, rather than treating a monitor field as the
+bus contract. F075 hardware condition returns to pending decision. Original
+hardware safety restrictions and audio-only scope persist; no new source
+controls, candidate, flash, radio audit or remote milestone change is admitted.
+See [the corrected report](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md).
+
 <a id="wired-high-resolution-completion-boundary"></a>
 ## Wired high-resolution completion boundary — 2026-10-04
 

@@ -240,7 +240,7 @@
   "artifacts": {
     "observer": {
       "sha256": "fe090d9c54cf67ef363f1e5eedf8908094d260ee16421aec16599eb74cb267b2",
-      "path": "out/highres-observer-build/observer/y2_audio_observer.ko"
+      "path": "out/highres-audio/software/observer-initial.ko"
     },
     "native_probe": {
       "sha256": "0b5b1a452bae1896a31d94834db74667ab6d745fe10469a057aa60d0114dbdd9",
@@ -400,5 +400,12 @@
       "sha256": "eecda0e90305fe4ae48be090713ce474ce654eaba0930df68bd7dfb8402c0518",
       "physical_output": false
     }
-  ]
+  ],
+  "observer_interpretation_correction": {
+    "module_build": "PASS",
+    "physical_deployment": false,
+    "sha256": "ee76801a00d483608449ea85b2d1644853c4d2b0421d847a83494f9366b9b9c2",
+    "scope": "Diagnostic text now distinguishes16-bit monitor fields from an unproven silicon precision ceiling; register read behavior unchanged",
+    "retained_observation_tests": "4 PASS"
+  }
 }

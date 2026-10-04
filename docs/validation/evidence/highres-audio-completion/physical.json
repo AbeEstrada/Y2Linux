@@ -1,6 +1,6 @@
 {
   "schema": "org.y2linux.highres-completion/v1",
-  "decision": "HARDWARE_PROVEN_UNSUPPORTED_ON_DL1_PATH",
+  "decision": "PRECISION_LIMIT_NOT_PROVEN",
   "installed_versions": {
     "release_version": "1.0.0-platform-v1-baseline-candidate.1",
     "rootfs_version": "2025.02.18-platform-v1.24",
@@ -884,5 +884,7 @@
       "elapsed_seconds": 14.14,
       "log": "out/highres-audio/software/reborn-3.log"
     }
-  ]
+  ],
+  "withdrawn_decision": "HARDWARE_PROVEN_UNSUPPORTED_ON_DL1_PATH",
+  "interpretation_correction": "Actual installed S16 parameters/DMA/register values are valid. Initial module source_contract/output_bits label was an inference from monitor fields, not physical bit-width proof."
 }

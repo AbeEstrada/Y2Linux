@@ -1,11 +1,10 @@
 # Y2 Platform 1.0 wired PCM precision completion pass
 
-Superseded for the hardware precision question by
-[the connected-Y2 completion](Y2-HIGHRES-AUDIO-COMPLETION.md): the complete
-MT6582 specification establishes a fixed16-bit DL1 output contract, and new
-live PCM/DMA/DAC/CPU observations are retained there. The earlier unresolved
-verdict below is historical. The completion also corrects the ordinary ARM
-stereo FLTP→S16 rounding description; no24/32 physical success is claimed.
+Wired-precision correction: [the current evidence record](Y2-HIGHRES-AUDIO-COMPLETION.md)
+withdraws the HARDWARE_PROVEN_UNSUPPORTED conclusion. MON0 defines16-bit
+monitor fields; an absolute silicon transport ceiling does not follow from
+that alone. Installed S16 and software24 preservation remain validated;
+wider hardware feasibility is open. No native24/32 qualification is claimed.
 
 2026-10-04. Verdict: **MORE_HARDWARE_EVIDENCE_REQUIRED**.
 Highest admitted complete native path: **S16_LE, 16 meaningful bits, stereo,

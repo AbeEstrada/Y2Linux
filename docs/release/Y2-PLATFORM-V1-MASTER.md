@@ -1,11 +1,10 @@
 # Y2 + Reborn Platform 1.0 master report
 
-Wired-precision update: [the connected-Y2 completion](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
-resolves F075 as HARDWARE_PROVEN_UNSUPPORTED on the exact MT6582 DL1 route.
-Software24 packing and native S16 register/DMA observations pass; native24/32
-output is not qualified or advertised. No high-resolution candidate or owner
-flash action exists. This scoped update does not change the dated platform-wide
-qualification state or other subsystem gates below.
+Wired-precision correction: [the current evidence record](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
+withdraws the HARDWARE_PROVEN_UNSUPPORTED conclusion. MON0 defines16-bit
+monitor fields; an absolute silicon transport ceiling does not follow from
+that alone. Installed S16 and software24 preservation remain validated;
+wider hardware feasibility is open. No native24/32 qualification is claimed.
 
 ## Independent final baseline — 2026-10-04
 

@@ -21,8 +21,12 @@ does not capture external I2S or measure analog precision.
 
 The allowlists and the DL1 source contract are explained in
 [the completion report](../../../docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md).
-`AFE_MEMIF_MON0` exposes the documented left/right 16-bit DL1 outputs;
+`AFE_MEMIF_MON0` exposes documented left/right 16-bit monitor fields. Their
+width does not establish the full internal bus width in every silicon mode;
 `AFE_MEMIF_PBUF_SIZE[19:16]` is the prefetch threshold, not an HD fetch mode.
+The initial live module's `dl1_output_bits_per_channel=16` label was an
+overinterpretation, corrected to `dl1_monitor_bits_per_channel=16` in source.
+Raw physical register/DMA observations remain valid independently of that label.
 
 Generate the conservative fixtures without playing anything:
 

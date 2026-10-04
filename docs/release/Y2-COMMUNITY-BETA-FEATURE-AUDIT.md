@@ -1,10 +1,10 @@
 # Y2Linux + Reborn community beta feature audit
 
-F075 wired-precision update: [complete exact-MT6582 evidence and live observations](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
-resolve its hardware condition as HARDWARE_PROVEN_UNSUPPORTED on the DL1 path.
-Native24/32 remains NOT_IMPLEMENTED and physically unqualified; software24
-packing passes. The JSON records this scoped decision separately from the
-historical integration snapshots and other feature/milestone states below.
+Wired-precision correction: [the current evidence record](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
+withdraws the HARDWARE_PROVEN_UNSUPPORTED conclusion. MON0 defines16-bit
+monitor fields; an absolute silicon transport ceiling does not follow from
+that alone. Installed S16 and software24 preservation remain validated;
+wider hardware feasibility is open. No native24/32 qualification is claimed.
 
 ## Independent final baseline — 2026-10-04
 

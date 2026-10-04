@@ -6494,7 +6494,7 @@
       ],
       "automated_test_result": "Four new fixture/DMA observations tests, six audio/clock/ALSA contract tests, 324 Reborn tests and matching ARM/kernel/DT/ABI checks PASS; hardware-wide playback remains unsupported.",
       "diagnostics": "Read-only matching audio observer plus native conversion probe; actual playback/DMA evidence retained",
-      "known_limitation": "Complete MT6582 Functional Specification v0.91 documents two 16-bit DL1 channel outputs and no wide fetch selector; PBUF[19:16] is DL_ULTRA_TH, not HD. The specified DL1 wired path cannot preserve 24/32 PCM.",
+      "known_limitation": "Installed DL1 wired playback is verified S16. Exact manual MON0 fields are16-bit, but no conclusive all-mode internal-width contract or viable wider fetch/AFE route has been established. Hardware24/32 impossibility is not proven.",
       "failure_mode": "False high-resolution claim or distorted samples if forced",
       "safe_fallback": "Float processing converted to S16",
       "source_paths": [
@@ -6522,8 +6522,8 @@
       "release_required": "REQUIRED_IF_HARDWARE_SUPPORTED",
       "release_requirement": "REQUIRED_IF_HARDWARE_SUPPORTS_IT",
       "public_distribution_state": "NOT_SEPARATELY_ASSESSED",
-      "current_limitation": "Complete MT6582 Functional Specification v0.91 documents two 16-bit DL1 channel outputs and no wide fetch selector; PBUF[19:16] is DL_ULTRA_TH, not HD. The specified DL1 wired path cannot preserve 24/32 PCM.",
-      "next_action": "Review documented hardware-conditional Outcome B; no wide format/candidate or owner flash is admitted on this DL1 route.",
+      "current_limitation": "Installed DL1 wired playback is verified S16. Exact manual MON0 fields are16-bit, but no conclusive all-mode internal-width contract or viable wider fetch/AFE route has been established. Hardware24/32 impossibility is not proven.",
+      "next_action": "Continue exact fetch/interconnect research; require explicit representation or exclusion evidence, not monitor width alone.",
       "release_completion_groups": [
         "C",
         "A",
@@ -6532,7 +6532,7 @@
       "priority_changed": true,
       "priority_change_reason": "Former limitation/post-beta priority now required or hardware-conditional under owner feature-complete target",
       "ownership_note": "Kernel AFE/I2S/clock completion with Reborn sink/conversion and external CS43131 driver integration",
-      "hardware_question": "RESOLVED for DL1: exact complete register contract fixes each channel output at 16 bits. Independent maximum precision of all AFE gain blocks is not claimed.",
+      "hardware_question": "OPEN: can exact MT6582 memory/AFE output transport meaningful24 bits? A16-bit monitor plus absent documented width selector does not conclusively prove impossibility.",
       "proof_required": "Exact MT6582 register or proven stock programming, low-bit DMA fixtures, I2S word capture demonstrating bits beyond16, correct ALSA layout and DAC reception;32-bit slots alone insufficient.",
       "investigation_source_paths": [
         "kernel/audio/mt6582-afe.c",
@@ -6542,7 +6542,7 @@
         "Y2Reborn:app/reborn/src/playback.rs"
       ],
       "fallback_is_release_waiver": false,
-      "completion_status": "DOCUMENTED_SCOPE_DISPOSITION",
+      "completion_status": "PENDING_HARDWARE_DECISION",
       "implementation_pass": "2026-10-02-feature-completion",
       "platform_v1_integration": {
         "implementation_state": "NOT_IMPLEMENTED",
@@ -6566,15 +6566,15 @@
         "implementation_state": "NOT_IMPLEMENTED",
         "software_evidence": "Fresh candidate source/config/contract, kernel/ARM/QEMU/package validation PASS; feature-specific implementation/runtime limits are retained, not individually promoted by global tests",
         "physical_evidence": "PHYSICALLY_OBSERVED Baseline01: six S16 playback/DMA comparisons, DL1_MON0 and AFE/I2S/CS43131 readback; no external serial/analog capture and no native 24/32 physical PASS.",
-        "hardware_condition": "Complete MT6582 Functional Specification v0.91 documents two 16-bit DL1 channel outputs and no wide fetch selector; PBUF[19:16] is DL_ULTRA_TH, not HD. The specified DL1 wired path cannot preserve 24/32 PCM.",
+        "hardware_condition": "Installed DL1 wired playback is verified S16. Exact manual MON0 fields are16-bit, but no conclusive all-mode internal-width contract or viable wider fetch/AFE route has been established. Hardware24/32 impossibility is not proven.",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
-        "release_status": "DOCUMENTED_SCOPE_DISPOSITION",
+        "release_status": "PENDING_HARDWARE_DECISION",
         "current_candidate_physically_qualified": false,
         "endurance_qualified": false
       },
-      "hardware_admission_decision": "HARDWARE_PROVEN_UNSUPPORTED_ON_DL1_PATH",
+      "hardware_admission_decision": "PENDING_HARDWARE_DECISION",
       "wired_precision_completion": {
-        "decision": "HARDWARE_PROVEN_UNSUPPORTED_ON_DL1_PATH",
+        "decision": "PENDING_HARDWARE_DECISION",
         "evidence_levels": [
           "PROVEN_SOURCE",
           "SOFTWARE_VALIDATED",
@@ -6584,7 +6584,9 @@
         "native_highres_physically_qualified": false,
         "source_record": "docs/validation/evidence/highres-audio-completion/sources.json",
         "physical_record": "docs/validation/evidence/highres-audio-completion/physical.json",
-        "source_evidence": "PROVEN_SOURCE"
+        "source_evidence": "PROVEN_SOURCE",
+        "withdrawn_decision": "HARDWARE_PROVEN_UNSUPPORTED_ON_DL1_PATH",
+        "interpretation_correction": "Monitor width is not an all-mode internal data-path width proof; actual S16 register/DMA observations remain valid."
       }
     },
     {
