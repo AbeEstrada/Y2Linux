@@ -55,6 +55,14 @@ int main(int argc, char **argv)
     u=y2_upload_begin(other,6); assert(u); assert(!y2_upload_write(u,"abcdef",6)); sync_fault=1;
     assert(y2_upload_finish(u)<0); sync_fault=0; assert(access(other,F_OK));
     space_fault=1; assert(!y2_upload_begin(other,6)); space_fault=0;
+    fd=open(eventfile,O_RDONLY); assert(fd>=0); char eventdata[256]={0};
+    assert(read(fd,eventdata,sizeof eventdata-1)>0); close(fd);
+    assert(strstr(eventdata,"\"error\":28") && strstr(eventdata,"\"active\":false"));
+    snprintf(path,sizeof path,"%s/one-MiB.flac",argv[1]);
+    u=y2_upload_begin(path,1024*1024); assert(u); char block[65536]; memset(block,'a',sizeof block);
+    for(unsigned i=0;i<16;i++) assert(!y2_upload_write(u,block,sizeof block));
+    assert(!y2_upload_finish(u));
+
     /* Replacing the path cannot overwrite a racing writer. */
     u=y2_upload_begin(other,6); assert(u); assert(!y2_upload_write(u,"abcdef",6));
     fd=open(other,O_CREAT|O_EXCL|O_WRONLY,0600); assert(fd>=0); close(fd);

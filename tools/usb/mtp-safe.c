@@ -183,7 +183,7 @@ static int space(int fd, uint64_t size)
 struct y2_upload *y2_upload_begin(const char *path, uint64_t size)
 {
     struct y2_upload *u = calloc(1, sizeof *u);
-    if (!u) return NULL;
+    if (!u) { event(0, ENOMEM, 0); return NULL; }
     u->fd = -1; u->parent = -1; u->size = size;
     u->parent = parent(path, &u->name);
     if (u->parent < 0 || space(u->parent, size == UINT32_MAX ? 0 : size)) goto fail;
@@ -195,11 +195,13 @@ struct y2_upload *y2_upload_begin(const char *path, uint64_t size)
     event(1, 0, 0);
     return u;
 fail:
-    { int error = errno; y2_upload_abort(u); errno = error; return NULL; }
+    { int error = errno; y2_upload_abort(u); event(0, error, 0); errno = error; return NULL; }
 }
 int y2_upload_write(struct y2_upload *u, const void *data, size_t length)
 {
-    if (!u || space(u->fd, length) || (u->size != UINT32_MAX && length > u->size-u->written)) { errno = ENOSPC; return -1; }
+    if (!u) { errno = EINVAL; return -1; }
+    if (space(u->fd, length)) return -1;
+    if (u->size != UINT32_MAX && length > u->size-u->written) { errno = EMSGSIZE; return -1; }
     const char *bytes = data;
     size_t left = length;
     while (left) {

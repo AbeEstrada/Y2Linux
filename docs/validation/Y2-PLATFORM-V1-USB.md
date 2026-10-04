@@ -7,12 +7,17 @@ Software evidence and candidate identity are recorded in `out/usb-validation/`.
 
 ## Evidence and previous behavior
 
-The installed qualified reference is UART01 Linux `e9e8d63`, Reborn `b71b4688`,
+The preceding qualified hardware reference is UART01 Linux `e9e8d63`, Reborn `b71b4688`,
 kernel `6.18.0-y2linux-cpu-c3-uart-01`, root v1.20, boot
 `fd955840-35d9-47db-83e0-ff47d6bb2d2b`, taint 0. Its retained receipt proves three
 bounded 1 MiB bidirectional checksum rounds and C1/C2/C3, not throughput or a
 portable-media device. Baseline02 software qualification is separate from that
-installed image. See [UART01 physical evidence](Y2-CPU-C3-UART-PHYSICAL.md).
+preceding image. A later retained locked Bluetooth receipt now identifies installed
+Baseline02, compiled Linux `8584ccd8` / Reborn `b71b4688`, root v1.21, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, taint0. Its saved identity receipt SHA256
+`eb2fd0f0377e25c5a848b6aa02e9cabe3bf6af4a2089ed146670d36f6999f07d` matches
+the subsystem evidence. This is another session’s locked observation, not a USB
+benchmark or a new automatic C3 cold-boot qualification. See [UART01 physical evidence](Y2-CPU-C3-UART-PHYSICAL.md).
 
 Previously the built-in `g_cdc` exposed ACM serial and ECM networking. Dropbear
 and OpenSSH SFTP served authenticated root access over usb0. Those descriptors
@@ -119,7 +124,9 @@ exactly; cancellation, short/disconnected input, write failures and low-space
 failures abort staging. Unknown-size uploads use 64-bit counters and short/ZLP
 termination. Before success: fsync file, atomic no-replace rename, fsync parent.
 A racing writer/existing destination is preserved. The 96 MiB and 128-inode
-reserve is checked at admission and every write. Replacing an existing filename
+reserve is checked at admission and every write. Storage-full/read-only causes
+are preserved across cleanup and mapped to protocol errors; admission failures
+also publish a bounded error receipt for Reborn. Replacing an existing filename
 requires an explicit delete or a new name; no in-place truncating overwrite.
 
 Downloads use a pinned verified inode, range checks, checked pread/write loops

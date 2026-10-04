@@ -188,10 +188,18 @@ index 02b1608..1c3bbbb 100644
  	{
  		if (((mtp_ctx *)db->mtp_ctx)->sync_when_close)
 diff --git a/src/mtp.c b/src/mtp.c
-index 97b8b6c..f8318dc 100644
+index 97b8b6c..523e697 100644
 --- a/src/mtp.c
 +++ b/src/mtp.c
-@@ -205,7 +205,6 @@ int parse_incoming_dataset(mtp_ctx * ctx,void * datain,int size,uint32_t * newha
+@@ -31,6 +31,7 @@
+ #include <fcntl.h>
+ #include <stdio.h>
+ #include <limits.h>
++#include <errno.h>
+ #include <stdlib.h>
+ #include <string.h>
+ 
+@@ -205,7 +206,6 @@ int parse_incoming_dataset(mtp_ctx * ctx,void * datain,int size,uint32_t * newha
  	uint32_t storage_flags;
  	int i,ret_code,ret;
  	fs_entry * entry;
@@ -199,7 +207,7 @@ index 97b8b6c..f8318dc 100644
  	filefoundinfo tmp_file_entry;
  
  	ret_code = MTP_RESPONSE_GENERAL_ERROR;
-@@ -294,7 +293,7 @@ int parse_incoming_dataset(mtp_ctx * ctx,void * datain,int size,uint32_t * newha
+@@ -294,7 +294,7 @@ int parse_incoming_dataset(mtp_ctx * ctx,void * datain,int size,uint32_t * newha
  
  							if(!set_storage_giduid(ctx, entry->storage_id))
  							{
@@ -208,7 +216,7 @@ index 97b8b6c..f8318dc 100644
  							}
  
  							restore_giduid(ctx);
-@@ -390,33 +389,15 @@ int parse_incoming_dataset(mtp_ctx * ctx,void * datain,int size,uint32_t * newha
+@@ -390,33 +390,16 @@ int parse_incoming_dataset(mtp_ctx * ctx,void * datain,int size,uint32_t * newha
  							strcpy(tmp_file_entry.filename,tmp_str);
  							tmp_file_entry.size = objectsize;
  
@@ -244,14 +252,15 @@ index 97b8b6c..f8318dc 100644
 +                                entry->y2_upload = y2_upload_begin(tmp_path, objectsize);
 +                                if (!entry->y2_upload) {
 +                                    entry->flags |= ENTRY_IS_DELETED;
++                                    int failure=errno;
 +                                    free(tmp_path); free(parent_folder);
-+                                    return MTP_RESPONSE_ACCESS_DENIED;
++                                    return posix_to_mtp_errcode(failure);
 +                                }
 +                            }
  
  							free(tmp_path);
  						}
-@@ -591,10 +572,13 @@ int process_in_packet(mtp_ctx * ctx,MTP_PACKET_HEADER * mtp_packet_hdr, int raws
+@@ -591,10 +574,13 @@ int process_in_packet(mtp_ctx * ctx,MTP_PACKET_HEADER * mtp_packet_hdr, int raws
  			response_code = mtp_op_SendObjectInfo(ctx,mtp_packet_hdr,&size,(uint32_t*)&params,&params_size);
  		break;
  
@@ -268,7 +277,7 @@ index 97b8b6c..f8318dc 100644
  
  		case MTP_OPERATION_DELETE_OBJECT:
  			response_code = mtp_op_DeleteObject(ctx,mtp_packet_hdr,&size,(uint32_t*)&params,&params_size);
-@@ -625,15 +609,15 @@ int process_in_packet(mtp_ctx * ctx,MTP_PACKET_HEADER * mtp_packet_hdr, int raws
+@@ -625,15 +611,15 @@ int process_in_packet(mtp_ctx * ctx,MTP_PACKET_HEADER * mtp_packet_hdr, int raws
  		break;
  
  		case MTP_OPERATION_BEGIN_EDIT_OBJECT:
@@ -290,7 +299,7 @@ index 97b8b6c..f8318dc 100644
  
  		default:
 diff --git a/src/mtp_operations/mtp_op_sendobject.c b/src/mtp_operations/mtp_op_sendobject.c
-index 08f6848..733a8dc 100644
+index 08f6848..9c7343e 100644
 --- a/src/mtp_operations/mtp_op_sendobject.c
 +++ b/src/mtp_operations/mtp_op_sendobject.c
 @@ -32,6 +32,7 @@
@@ -301,7 +310,7 @@ index 08f6848..733a8dc 100644
  
  #include "logs_out.h"
  
-@@ -42,159 +43,64 @@
+@@ -42,159 +43,68 @@
  
  #include "usb_gadget_fct.h"
  
@@ -509,11 +518,15 @@ index 08f6848..733a8dc 100644
 +    response = MTP_RESPONSE_OK;
 +    goto done;
 +abort:
++    ; /* preserve the cause across staging cleanup */
++    int failure = ctx->cancel_req ? ECANCELED : (errno ? errno : EIO);
 +    y2_upload_abort(entry->y2_upload);
 +    entry->y2_upload = NULL;
 +    entry->flags |= ENTRY_IS_DELETED;
-+    y2_transfer_activity(0, ctx->cancel_req ? ECANCELED : (errno ? errno : EIO));
-+    response = ctx->cancel_req ? MTP_RESPONSE_NO_RESPONSE : MTP_RESPONSE_INCOMPLETE_TRANSFER;
++    y2_transfer_activity(0, failure);
++    response = ctx->cancel_req ? MTP_RESPONSE_NO_RESPONSE :
++               failure == ENOSPC ? MTP_RESPONSE_STORAGE_FULL :
++               failure == EROFS ? MTP_RESPONSE_STORE_READ_ONLY : MTP_RESPONSE_INCOMPLETE_TRANSFER;
 +done:
 +    ctx->transferring_file_data = 0;
 +    ctx->cancel_req = 0;

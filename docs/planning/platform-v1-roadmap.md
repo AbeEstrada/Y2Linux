@@ -1,3 +1,29 @@
+## USB candidate freeze: latest retained installed identity — 2026-10-04
+
+The parallel integration review provides a newer retained locked hardware
+observation: installed Baseline02, Linux 8584ccd8 / Reborn b71b4688, rootv1.21,
+boot 27e6d684-3794-4490-95db-a489027cd4f4, taint0. The saved Bluetooth identity
+receipt hash eb2fd0f0377e25c5a848b6aa02e9cabe3bf6af4a2089ed146670d36f6999f07d
+matches its evidence inventory. USB work still cannot obtain the physical lock;
+this is retained evidence, not direct new USB observation or CPU cold-boot proof.
+
+Every coverage row in the preceding admission remains unchanged in classification:
+boot/display/input/storage/audio and C1/C2/C3 retain bounded UART01 CONFIRMED
+proof; Baseline02 installed identity is CONFIRMED while new cold-boot/full-suspend/
+endurance remain PARTIAL #28; USB/radio/desktop/performance remain PARTIAL
+#27/#28/#31/#33; firmware/calibration/power/electrical/thermal/wake and security/
+services/time/RAM/recovery/update/production remain PARTIAL #28/#29/#32/#33;
+UART crash capture UNKNOWN, host/VBUS PHYSICAL_GATE, FM excluded. The 64 MiB
+responder bound and unchanged protected partition/memory/charger policy persist.
+
+The first ARM attempt exposed legacy g_cdc module linkage to unexported boot
+policy symbols; production now uses only configfs for both selections. The kernel
+build passes. Supervisor restart/unbind and parent-death FD release, and correct
+space/read-only error receipts are included before final candidate freeze. Resume
+the same fresh build workspace for the coherent source pair; publish only one
+final preserving candidate after all software checks. Parallel owner-main planning
+edits were read for evidence and remain untouched/unmerged. No flash/push/closure.
+
 ## USB MTP architecture and candidate-build admission — 2026-10-04
 
 The owner-authorized desktop pass selects MTP + ECM, with disconnected-session

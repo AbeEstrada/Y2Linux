@@ -258,6 +258,7 @@ class USBFiles(unittest.TestCase):
             expected=hashlib.sha256(b'abcdef').hexdigest()
             for file in media.glob('*.mp3'):
                 if file.name!='partial.mp3': self.assertEqual(hashlib.sha256(file.read_bytes()).hexdigest(),expected)
+            self.assertEqual(hashlib.sha256((media/'one-MiB.flac').read_bytes()).hexdigest(),hashlib.sha256(b'a'*1024**2).hexdigest())
             self.assertFalse(list(media.glob('.y2-mtp-*')))
 
 
