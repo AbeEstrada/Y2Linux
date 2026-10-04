@@ -1,5 +1,16 @@
 # Current Y2Linux platform state
 
+2026-10-04 [wired precision source/evidence update](validation/Y2-PLATFORM-V1-HIGHRES-AUDIO.md):
+locked read-only access now observes installed Baseline02 Linux8584ccd8 /
+Rebornb71b4688, boot27e6d684-3794-4490-95db-a489027cd4f4, taint0. This supersedes
+the earlier installed-image identity below, while UART01 remains the retained
+CPU hardware qualification. No new cold-boot/CPU qualification follows from the
+identity read. Native wired admission remains S16_LE stereo44100/48000,
+16 meaningful bits in32-bit slots; the MT6582 silicon maximum is unresolved.
+Precision diagnostics/quantization/fixtures are validated in isolated worktrees,
+not installed; fresh playback and CPU costs are NOT_RUN due to device-lock
+contention. No flash, push, merge or hardware milestone closure.
+
 Updated 2026-10-03 from the sealed Baseline02 receipts and retained UART01
 hardware evidence. This synchronization changes documentation only; it does
 not build, flash, push or run a new physical qualification.

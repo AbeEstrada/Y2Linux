@@ -24,6 +24,7 @@ struct mt6582_afe {
 	int irq;
 	bool running, irq_ready;
 	unsigned long periods;
+	unsigned configured_rate;
 };
 
 static const struct snd_pcm_hardware mt6582_hw = {
@@ -110,6 +111,7 @@ static int mt6582_free(struct snd_pcm_substream *substream, struct snd_soc_dai *
 
 	spin_lock_irqsave(&afe->lock, flags);
 	mt6582_stop(afe);
+	afe->configured_rate = 0;
 	spin_unlock_irqrestore(&afe->lock, flags);
 	synchronize_irq(afe->irq);
 	return 0;
@@ -130,7 +132,11 @@ static int mt6582_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int fs = mt6582_rate_code(params_rate(params)), ret;
 	unsigned bytes = params_buffer_bytes(params);
+	unsigned long flags;
 
+	spin_lock_irqsave(&afe->lock, flags);
+	afe->configured_rate = 0;
+	spin_unlock_irqrestore(&afe->lock, flags);
 	if (fs < 0 || params_channels(params) != 2 ||
 	    params_format(params) != SNDRV_PCM_FORMAT_S16_LE ||
 	    !mt6582_dma_valid(runtime->dma_addr, bytes))
@@ -143,6 +149,11 @@ static int mt6582_params(struct snd_pcm_substream *substream,
 		return ret;
 	/* S16 stereo: DL1 rate field, mono disabled; no unimplemented HD format. */
 	ret = regmap_update_bits(afe->regmap, AFE_DAC_CON1, 0xf | BIT(21), fs);
+	if (!ret) {
+		spin_lock_irqsave(&afe->lock, flags);
+		afe->configured_rate = params_rate(params);
+		spin_unlock_irqrestore(&afe->lock, flags);
+	}
 	if (!ret)
 		dev_info(afe->dev, "DL1 %u Hz S16_LE stereo DMA=%pad bytes=%u period=%u frames\n",
 			 params_rate(params), &runtime->dma_addr, bytes, params_period_size(params));
@@ -422,7 +433,49 @@ static ssize_t state_show(struct device *dev, struct device_attribute *attr, cha
 	return ret < 0 ? ret : len;
 }
 static DEVICE_ATTR_RO(state);
-static struct attribute *mt6582_attrs[] = { &dev_attr_state.attr, NULL };
+
+/* Software contract, not a silicon maximum or an electrical I2S capture.
+ * No MMIO and no runtime-PM wake: polling diagnostics must not start clocks.
+ * Only hw_params success publishes a configured stream; hw_free clears it.
+ * ALSA's format width, the 32-bit DMA address mask and serial slots are
+ * deliberately separate from the admitted meaningful payload precision.
+ */
+static ssize_t pcm_contract_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct mt6582_afe *afe = dev_get_drvdata(dev);
+	unsigned long flags;
+	unsigned rate;
+	bool running;
+
+	spin_lock_irqsave(&afe->lock, flags);
+	rate = afe->configured_rate;
+	running = afe->running;
+	spin_unlock_irqrestore(&afe->lock, flags);
+	return sysfs_emit(buf,
+		"{\"schema\":\"org.y2linux.pcm-contract/v1\","
+		"\"evidence\":\"driver_contract\",\"physical_bit_capture\":false,"
+		"\"hardware_max_meaningful_bits\":null,"
+		"\"supported_modes\":[{\"alsa_format\":\"S16_LE\","
+		"\"container_bits\":16,\"meaningful_bits\":16,\"channels\":2,"
+		"\"dma_format\":\"interleaved_s16_le\",\"dl1_format\":\"s16_stereo\","
+		"\"afe_format\":\"I05_I06_to_O00_O01_s16\","
+		"\"afe_interconnect_physical_bits\":null,\"i2s_slot_bits\":32,"
+		"\"i2s_payload_bits\":16,\"dac_input_word_bits\":16,"
+		"\"rates_hz\":[44100,48000]}],"
+		"\"current\":{\"configured\":%s,\"running\":%s,\"rate_hz\":%u,"
+		"\"alsa_format\":\"%s\",\"container_bits\":%u,\"meaningful_bits\":%u,"
+		"\"dma_format\":\"%s\",\"dl1_format\":\"%s\",\"afe_format\":\"%s\","
+		"\"i2s_slot_bits\":%u,\"i2s_payload_bits\":%u,\"dac_input_word_bits\":%u}}\n",
+		rate ? "true" : "false", running ? "true" : "false", rate,
+		rate ? "S16_LE" : "NONE", rate ? 16 : 0, rate ? 16 : 0,
+		rate ? "interleaved_s16_le" : "NONE", rate ? "s16_stereo" : "NONE",
+		rate ? "I05_I06_to_O00_O01_s16" : "NONE",
+		rate ? 32 : 0, rate ? 16 : 0, rate ? 16 : 0);
+}
+static DEVICE_ATTR_RO(pcm_contract);
+static struct attribute *mt6582_attrs[] = {
+	&dev_attr_state.attr, &dev_attr_pcm_contract.attr, NULL
+};
 ATTRIBUTE_GROUPS(mt6582);
 static const struct of_device_id mt6582_match[] = { { .compatible = "mediatek,mt6582-afe" }, {} };
 MODULE_DEVICE_TABLE(of, mt6582_match);

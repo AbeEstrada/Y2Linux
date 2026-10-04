@@ -4,6 +4,15 @@
 
 ## Current Baseline02 / UART01 scope
 
+2026-10-04 [wired precision pass](../validation/Y2-PLATFORM-V1-HIGHRES-AUDIO.md):
+exact BSP and stock HAL research leaves the MT6582 silicon maximum unresolved;
+S16 is the admitted path, not an immutable hardware ceiling. Stock fetch and
+connection width functions return ENOSYS. CS43131 independently accepts32-bit
+input. New source diagnostics and low-bit WAV/FLAC tests distinguish24 software
+packing from unproven wider DL1/I2S; full32 source precision is lost in FLTP.
+Locked Baseline02 reads observe S16 44100/48000 constraints and idle runtime PM;
+fresh playback/CPU measurements remain NOT_RUN due to lock contention.
+
 UART01 bounded real FFmpeg/ALSA fixture playback and demand wake pass with no recorded decode/filter/XRUN errors. Wired hardware output remains S16 stereo 44.1/48 kHz; native wider/high-rate output, perceptual fidelity and endurance remain separate. Baseline02 retains the paired current Reborn source and ARM checks.
 
 [Baseline02 seal](../validation/Y2-BASELINE-02.md),

@@ -591,6 +591,7 @@ def snapshot(ctx, pids=(), pss=False, interval=0):
                         'headphone_jack_reason': 'codec_irq_not_qualified',
                         'qualified_profile': ctx.json('/etc/y2linux/audio-qualified.json'),
                         'enabled_profile': ctx.json('/etc/y2linux/audio-enabled.json'),
+                        'pcm_contract': ctx.json('/sys/devices/platform/11220000.audio-controller/pcm_contract'),
                         'hw_params': {str(p.relative_to(ctx.root)): read(p)
                                       for p in ctx.glob('/proc/asound/card*/pcm*/sub*/hw_params')}}}
     result['readiness'] = readiness(result)

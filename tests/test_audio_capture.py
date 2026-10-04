@@ -18,7 +18,7 @@ class Capture(unittest.TestCase):
                         writer = csv.writer(stream)
                         writer.writerow(('time_s', 'left_s24', 'right_s24'))
                         for frame in range(128):
-                            values = [PATTERN[frame % 16], PATTERN[(frame + 5) % 16]]
+                            values = [PATTERN[frame % len(PATTERN)], PATTERN[(frame + 5) % len(PATTERN)]]
                             if truncate: values = [(value >> 8) << 8 for value in values]
                             writer.writerow((frame / (rate * clock_factor), *values))
                     value = verify_capture(path, rate)

@@ -23,18 +23,20 @@ int main(int argc, char **argv)
         snd_pcm_hw_params_any(pcm, base) < 0) {
         snd_pcm_hw_params_free(base); snd_pcm_hw_params_free(params); snd_pcm_close(pcm); return 1;
     }
-    const snd_pcm_format_t formats[] = { SND_PCM_FORMAT_S16_LE, SND_PCM_FORMAT_S24_LE, SND_PCM_FORMAT_S32_LE };
+    const snd_pcm_format_t formats[] = { SND_PCM_FORMAT_S16_LE, SND_PCM_FORMAT_S24_LE,
+                                       SND_PCM_FORMAT_S32_LE, SND_PCM_FORMAT_S24_3LE };
     const unsigned rates[] = {44100, 48000, 88200, 96000};
     printf("{\"schema\":\"org.y2linux.audio-query/v1\",\"state\":\"Observed\",\"device\":\"%s\","
-           "\"physical_qualification\":false,\"pcm_started\":false,\"combinations\":[", device);
-    for (unsigned f=0; f<3; f++) for (unsigned r=0; r<4; r++) {
+           "\"physical_qualification\":false,\"pcm_started\":false,"
+           "\"constraint_bits_are_hardware_precision\":false,\"combinations\":[", device);
+    for (unsigned f=0; f<sizeof(formats)/sizeof(formats[0]); f++) for (unsigned r=0; r<4; r++) {
         snd_pcm_hw_params_copy(params, base);
         int ok = snd_pcm_hw_params_set_access(pcm,params,SND_PCM_ACCESS_RW_INTERLEAVED)==0 &&
                  snd_pcm_hw_params_set_format(pcm,params,formats[f])==0 &&
                  snd_pcm_hw_params_set_channels(pcm,params,2)==0 &&
                  snd_pcm_hw_params_set_rate(pcm,params,rates[r],0)==0;
         printf("%s{\"format\":\"%s\",\"physical_bits\":%d,\"valid_bits\":%d,\"rate_hz\":%u,"
-               "\"channels\":2,\"accepted_constraints\":%s}",f||r?",":"",snd_pcm_format_name(formats[f]),
+               "\"meaningful_bits\":null,\"channels\":2,\"accepted_constraints\":%s}",f||r?",":"",snd_pcm_format_name(formats[f]),
                snd_pcm_format_physical_width(formats[f]),snd_pcm_format_width(formats[f]),rates[r],ok?"true":"false");
     }
     puts("]}");

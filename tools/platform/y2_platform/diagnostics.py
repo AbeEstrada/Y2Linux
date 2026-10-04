@@ -42,6 +42,7 @@ PUBLIC_WORDS |= frozenset(('idle requested refused sleeping restoring restored r
     'PLATFORM_ENTER TEST_RETURN SELFTEST_A SELFTEST_B BACKSTOP_STARTED EXIT DEVICES_RESUMED '
     'CONSOLE_RESUMED PLATFORM_ENDED TASKS_THAWED FILESYSTEMS_THAWED POST_SUSPEND_NOTIFIED '
     'CONSOLE_RESTORED').split())
+PUBLIC_WORDS |= frozenset(("driver_contract", "interleaved_s16_le", "s16_stereo", "I05_I06_to_O00_O01_s16"))
 PRIVATE_KEYS = re.compile(r'(password|passphrase|secret|credential|ssid|bssid|address|mac$|cid$|serial|calibration|nvram|bond|link.?key|identity|filename|track|title|artist|album|path|cmdline)', re.I)
 IDENTITY_KEYS = frozenset(('build_git_commit', 'reborn_source_commit', 'y2linux_commit', 'reborn_commit', 'sha256'))
 VERSION_KEYS = frozenset(('kernel_version', 'kernel', 'rootfs_version', 'rootfs_release', 'release_version', 'reborn_version', 'build_id'))
