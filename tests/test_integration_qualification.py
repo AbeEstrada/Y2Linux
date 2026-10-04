@@ -7,7 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools/development'))
@@ -66,7 +66,8 @@ class Coordinator(unittest.TestCase):
         campaign.args = argparse.Namespace(cpu=True, smoke_only=False, usb=None, suspend_stage='none',
             package=Path('package'), ssh_config=Path('config'), host='usb', wifi_host='wifi',
             output=Path('output'), suspend_host=None, key=Path('key'), wake_source='power')
-        campaign.lease = None
+        campaign.lease = Mock()
+        campaign.lease.fileno.return_value = 7
         with patch.object(campaign, 'observe'), patch.object(campaign, 'smoke'), patch.object(campaign, 'child') as child:
             campaign.run()
             argv = child.call_args_list[-1].args[1]
