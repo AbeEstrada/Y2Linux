@@ -49,6 +49,18 @@ def delta(before, after, seconds):
             'cpu_scope': 'all CPUs aggregate average; no peak-memory claim'}
 
 
+def validate_volume(volumes, volume):
+    selected=volumes[1 if volume=='internal' else 2]
+    if selected.get('state')!='Ready':
+        raise RuntimeError('media_not_ready_or_writable')
+    if volume=='internal' and (selected.get('uuid')!='79324c69-6e75-4801-8000-000000000102' or
+            selected.get('start')!='2104320' or selected.get('sectors')!='1638400' or selected.get('filesystem')!='ext4'):
+        raise RuntimeError('internal_user_partition_identity_invalid')
+    if volume=='sd' and selected.get('filesystem') not in ('vfat','exfat','ext4'):
+        raise RuntimeError('unsupported_sd_filesystem')
+    return selected
+
+
 class Harness:
     def __init__(self, args):
         self.args = args
@@ -123,6 +135,8 @@ class Harness:
         else:
             self.remote(['python3','-c','import pathlib; p=pathlib.Path('+repr(self.device_dir)+'); [(p/n).unlink() for n in '+repr([f.name for f in files])+']'])
         return {'files':len(files),'bytes':total,'write':write,'read':read,'sha256':'MATCH',
+                'hashes':{f.name:{'host_before':digest(f),'device_after_write':hashes[f.name],
+                    'host_after_read':digest(local/('returned-'+f.name))} for f in files},
                 'before':before,'after':after}
 
     def matrix(self):
@@ -132,14 +146,16 @@ class Harness:
             installed=json.loads(self.identity['versions'])
             for field in ('build_git_commit','reborn_source_commit','kernel_version','rootfs_version'):
                 if installed.get(field)!=expected.get(field): raise RuntimeError('wrong_installed_candidate:'+field)
+        script='import sys,json,pathlib;sys.path.insert(0,"/usr/lib/y2-platform");from y2_platform.common import Context,read;from y2_platform.observe import storage;v=storage(Context())["volumes"];p=pathlib.Path("/sys/dev/block")/v[1].get("device_id","absent");v[1].update(start=read(p/"start"),sectors=read(p/"size"));print(json.dumps(v))'
+        self.volume_identity=validate_volume(json.loads(self.remote(['python3','-c',script])),self.args.volume)
         self.folder='Y2-USB-check-'+uuid.uuid4().hex
-        base='/data/music' if self.args.protocol=='mtp' else '/data'
+        base='/media/sd' if self.args.volume=='sd' else '/data/music' if self.args.protocol=='mtp' else '/data' 
         self.device_dir=base+'/'+self.folder
         # mkdir refuses a collision. No owner-selected destination path.
         if self.args.protocol=='mtp': run(['gio','mkdir',self.device_url('')])
         else: self.remote(['mkdir','-m','700',self.device_dir])
         report={'schema':'org.y2linux.usb-physical/v1','protocol':self.args.protocol,'identity':self.identity,
-                'scratch':self.device_dir,'cases':[],'result':'RUNNING','host':run(['uname','-a']),
+                'scratch':self.device_dir,'volume':self.args.volume,'volume_identity':self.volume_identity,'cases':[],'result':'RUNNING','host':run(['uname','-a']),
                 'host_desktop_discovery': 'GIO MTP URI usable' if self.args.protocol=='mtp' else 'ECM/SFTP only'}
         deadline=time.monotonic()+240
         self.deadline=deadline
@@ -196,6 +212,7 @@ def main():
     parser.add_argument('--run',action='store_true',help='perform bounded physical matrix')
     parser.add_argument('--protocol',choices=['sftp','mtp'],default='sftp')
     parser.add_argument('--host',default='root@10.42.0.1')
+    parser.add_argument('--volume',choices=['internal','sd'],default='internal')
     parser.add_argument('--ssh-config',type=Path)
     parser.add_argument('--mtp-uri',help='GIO URI of Y2 Internal Storage, e.g. mtp://[usb:003,012]/Internal Storage')
     parser.add_argument('--package',type=Path)

@@ -211,6 +211,19 @@ class PhysicalHarness(unittest.TestCase):
         with patch.object(harness,'snapshot',return_value={'boot':'one','mounts':'6 1 179:2 / /data rw - ext4 /dev/data rw'}):
             with self.assertRaisesRegex(RuntimeError,'identity_changed'): harness.guard()
 
+    def test_benchmark_requires_the_exact_writable_user_partition(self):
+        good={'state':'Ready','uuid':'79324c69-6e75-4801-8000-000000000102',
+              'start':'2104320','sectors':'1638400','filesystem':'ext4'}
+        self.assertEqual(self.module.validate_volume([{},good,{}],'internal'),good)
+        for changes in ({'uuid':'system'},{'start':'0'},{'state':'Degraded'}):
+            with self.assertRaises(RuntimeError):self.module.validate_volume([{},dict(good,**changes),{}],'internal')
+
+    def test_sd_benchmark_refuses_missing_dirty_or_readonly_media(self):
+        for state in ('Unavailable','Failed','Degraded'):
+            with self.assertRaises(RuntimeError):self.module.validate_volume([{}, {}, {'state':state,'filesystem':'exfat'}],'sd')
+        for filesystem in ('vfat','exfat','ext4'):
+            self.assertEqual(self.module.validate_volume([{}, {}, {'state':'Ready','filesystem':filesystem}],'sd')['filesystem'],filesystem)
+
     def test_deadline_prevents_copy_and_many_files_use_one_sftp_batch(self):
         import time
         from types import SimpleNamespace

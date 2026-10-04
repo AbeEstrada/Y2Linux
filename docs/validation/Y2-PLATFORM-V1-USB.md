@@ -209,7 +209,24 @@ rendered ready/copying/error/refresh fixtures are part of software verification.
 
 ## Candidate and owner acceptance boundary
 
-Build one fresh source candidate in `out/y2linux-platform-v1-usb-candidate/`.
+Fresh kernel/Buildroot/Reborn ARM build and config/DT/modules/ABI checks PASS.
+Compiled Linux `08019df44c8a7fbc249fc49a5a41f7ac906429ba`, Reborn
+`51d477b2f30edfc90418d8d0c3fa5fad8de6f581`. Kernel
+`6.18.0-y2linux-platform-v1-usb`, root `2025.02.18-platform-v1.22`, release
+`1.0.0-usb-candidate.1`, build `Y2LINUX-PLATFORM-V1-USB`.
+The responder ARM binary is 96,092 bytes; runtime RSS remains unmeasured.
+
+411 production checks: 406 PASS, 5 minimal-host dependency skips. Separate native
+host filesystem/GIO (27) and ALSA (3) checks cover those dependencies. Focused
+USB/storage/DMA/platform tests (79), final harness guards (5), Reborn tests (240),
+fmt/clippy, Cortex-A7 QEMU, installed ARM tools/library scan, ELF dependencies,
+release inventory and legal-info PASS. UI detection found no reported issues;
+rendered ready/copying/error/refresh fixtures were inspected. No warning-free,
+public-distribution or physical acceptance claim follows from legal collection.
+
+One final preserving candidate: `out/y2linux-platform-v1-usb-candidate/`.
+The compiled source pair remains the image identity. Later documentation and
+qualification-harness revisions are attached separately and do not change images.
 Only BOOTIMG and ANDROID/Y2ROOT are selected; preserve USRDATA/Y2DATA and every
 protected partition. Keep the accepted UART01 fallback pair. No agent flash/push.
 Candidate software/package receipts do not qualify new-image hardware.
@@ -221,6 +238,9 @@ python3 tools/usb/qualify.py --run --protocol sftp --package out/y2linux-platfor
 python3 tools/usb/qualify.py --run --protocol mtp --mtp-uri 'mtp://[usb:BUS,DEVICE]/Internal Storage' --package out/y2linux-platform-v1-usb-candidate --music-corpus /owner/test-music --output out/usb-validation/installed-mtp
 ```
 
+To measure SD, add `--volume sd` and use the SD Card URI. Writable validated
+mount identity is required before creating scratch directories. The harness
+records each file's host-before, device-after-write and host-after-read SHA256.
 Use the actual GIO URI shown by the desktop, pinned owner SSH config if needed
 (`--ssh-config PATH`), and a fresh output each run. The four-minute batch deadline
 may report partial coverage; run remaining cases separately with `--sizes` /
@@ -239,4 +259,6 @@ charger/idle measurements remain separate platform gates.
 Until those exact-image checks pass: **MORE_WORK_REQUIRED**. MTP/macOS client
 support, existing-file no-overwrite behavior, external Linux directory changes
 requiring host refresh/reconnect (inotify disabled to hide staging) and public USB
-identity allocation remain explicit product limitations.
+identity allocation remain explicit product limitations. Five consecutive
+responder/bind failures exhaust the retry budget; restart Y2/readiness to retry
+a persistent service failure. Ordinary interrupted sessions recover on reconnect.

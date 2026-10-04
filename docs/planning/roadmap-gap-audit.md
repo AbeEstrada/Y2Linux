@@ -1,3 +1,34 @@
+## USB software-qualified candidate sealing admission — 2026-10-04
+
+The source pair Linux 08019df44c8a7fbc249fc49a5a41f7ac906429ba / Reborn
+51d477b2f30edfc90418d8d0c3fa5fad8de6f581 builds fresh kernel6.18.0-y2linux-platform-v1-usb,
+rootv1.22, release1.0.0-usb-candidate.1. 411 production checks (406 pass/5
+minimal-host dependency skips with separate 27 filesystem/GIO and3 ALSA checks),
+79 focused tests,240 Reborn tests/fmt/clippy, ARM/Cortex-A7/QEMU, config/DT/modules/
+ABI/dependencies/inventory/legal checks pass. Final harness guards pass before
+packaging. No flash/push or physical promotion; detailed [USB report](../validation/Y2-PLATFORM-V1-USB.md).
+
+Every coverage row is refreshed: boot/display/input/storage/audio/CPU/timers/
+clocks/C1/C2/C3 remain CONFIRMED only within retained UART01 bounded proof;
+installed Baseline02 identity is CONFIRMED by another locked session’s saved
+receipt, boot27e6d684…/taint0; USB product implementation is SOFTWARE_VALIDATED
+but USB/desktop/large-transfer/PIO-disabling/ten-session acceptance is PARTIAL
+#27/#28/#31/#33. Radio/firmware/calibration/thermal/battery/charger/backlight/
+watchdog/wake and new-image cold boot/full suspend/endurance remain PARTIAL
+#28/#29/#31. RAM/reservations/recovery/update/security/services/time/identity/
+privacy/release remain PARTIAL #28/#32/#33 with unchanged memory/protected-data
+contracts; measured MTP memory remains missing. UART crash capture UNKNOWN,
+host/VBUS PHYSICAL_GATE, FM excluded. Existing issues stay OPEN remotely.
+
+Three further scratch-baseline attempts remain NOT_RUN_DEVICE_LOCK_BUSY. No
+USB speed, throughput, transfer CPU/IRQ or host discovery result is invented.
+Proceed to seal only BOOTIMG/Y2ROOT with accepted UART01 fallback, source/legal
+archives, evidence and the single guarded qualification harness. Y2DATA and all
+protected partitions remain preserved. Subsequent qualification-only docs/harness
+revisions are separate from compiled identity. After owner installation, exact-image
+host/file/library/eject/performance acceptance is the next smallest blocker;
+verdict MORE_WORK_REQUIRED. Parallel owner-main integration work remains untouched.
+
 ## USB candidate freeze: latest retained installed identity — 2026-10-04
 
 The parallel integration review provides a newer retained locked hardware
