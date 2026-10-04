@@ -61,7 +61,8 @@ and kernel exit; historical failure locations are not assumed current.
    hold opens the existing shutdown confirmation even with the screen off; its
    release cannot request sleep. Normal copy contains no SPM/CIRQ/stage names.
 6. A one-shot resident qualification observer uses the existing SRAM receipt and
-   callback ring. Host entry is never retried after a lost acknowledgement. It
+   callback ring. Its coordinator can retain the checked shared device lease across
+   separately reviewed one-shot trials. Host entry is never retried after a lost acknowledgement. It
    separates staged tests from actual entry/resume counter deltas, verifies boot,
    taint, positive suspend residence, child IRQ attribution, alarm clearing and
    ext4 error counts. No reset or flash command is present.
@@ -140,7 +141,8 @@ The 132-test targeted source run passes: 129 passed, three emitted-DTB checks
 skipped. Coverage includes suspend policy and failures, CPU/idle/timers/CIRQ,
 storage/MMC context, USB, connectivity/radio, GPU and audio. The later 23-test
 policy run passes, including two added charging/preparation-refusal checks.
-Reborn fmt and strict all-target Clippy pass; all 243 workspace tests pass with
+The five full-path/observer fault tests also pass after adding inherited-lease
+exclusion and inode checks. Reborn fmt and strict all-target Clippy pass; all 243 workspace tests pass with
 locked dependencies and isolated temporary paths. The ARM release build passes
 against the exact Baseline02 SDK; Reborn SHA256 is
 `673f8c18d293101102e9768076e5429968f71ecee17121eb38aa0d3172418a09`.
@@ -166,6 +168,7 @@ Implementation commits:
   explicit Reborn acknowledgement, one-shot observer and regression tests.
 - Linux `c73cd83`: charging and preparation failure policy.
 - Linux `50cc218`: temporary Wi-Fi observer port and verified host-key support.
+- Linux `7e10bdc`: retained coordinator lease across staged and wake trials.
 - Reborn `4544b1a`: typed preparation/restoration and Power/input semantics.
 - Reborn `f69c3c4`: discard wake input before fallible display restoration.
 
