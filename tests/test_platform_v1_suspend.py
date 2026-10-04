@@ -1,5 +1,7 @@
 """Full-suspend checked unwind and observer proof. Host fixtures, no device I/O."""
 import importlib.util
+import fcntl
+import tempfile
 from pathlib import Path
 import unittest
 from test_audio import function
@@ -149,6 +151,25 @@ int main(void){
 
 
 class Observer(unittest.TestCase):
+    def test_inherited_lease_keeps_other_device_owners_excluded(self):
+        spec = importlib.util.spec_from_file_location('suspend_observer', ROOT/'tools/development/qualify-platform-v1-suspend.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            module.DEVICE_LOCK = str(Path(directory)/'device.lock')
+            with module.device_lock() as coordinator:
+                fcntl.flock(coordinator, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                with module.device_lock(coordinator.fileno()) as trial:
+                    fcntl.flock(trial, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                with module.device_lock() as other:
+                    with self.assertRaises(BlockingIOError):
+                        fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    with open(Path(directory)/'wrong.lock', 'w') as wrong:
+                        with self.assertRaises(ValueError):
+                            module.device_lock(wrong.fileno())
+            with module.device_lock() as after:
+                fcntl.flock(after, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
     def test_staged_pm_and_reset_are_not_deep_resume(self):
         spec = importlib.util.spec_from_file_location('suspend_observer', ROOT/'tools/development/qualify-platform-v1-suspend.py')
         module = importlib.util.module_from_spec(spec)

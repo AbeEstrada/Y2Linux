@@ -8,6 +8,7 @@ Physical Power gestures and repeated-cycle admission remain owner controlled.
 import argparse
 import fcntl
 import json
+import os
 from pathlib import Path
 import re
 import shlex
@@ -18,6 +19,20 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "platform"))
 from y2_platform.sleep import wake_irqs
+
+DEVICE_LOCK = '/tmp/y2-platform-v1-device.lock'
+
+
+def device_lock(inherited_fd=None):
+    """Retain a coordinator's lease across separately reviewed one-shot trials."""
+    if inherited_fd is None:
+        return open(DEVICE_LOCK, 'a')
+    lock = os.fdopen(os.dup(inherited_fd), 'r')
+    actual, expected = os.fstat(lock.fileno()), os.stat(DEVICE_LOCK)
+    if (actual.st_dev, actual.st_ino) != (expected.st_dev, expected.st_ino):
+        lock.close()
+        raise ValueError('inherited device lease does not name the shared lock')
+    return lock
 
 
 def fields(text):
@@ -65,6 +80,7 @@ def main():
     p.add_argument('--host', default='root@10.42.0.1')
     p.add_argument('--ssh-port', type=int, default=22)
     p.add_argument('--host-key-alias', help='verify a temporary Wi-Fi listener against the known USB host key')
+    p.add_argument('--device-lock-fd', type=int, help='inherited shared-lock descriptor from a retained coordinator lease')
     p.add_argument('--key', type=Path, default=Path('/home/luca/.ssh/y2linux_ed25519'))
     p.add_argument('--stage', choices=['inspect', 'freezer', 'devices', 'platform', 'processors', 'core', 'none'], default='inspect')
     p.add_argument('--alarm-seconds', type=int, default=0)
@@ -74,7 +90,7 @@ def main():
     if not 1 <= a.ssh_port <= 65535:
         p.error('--ssh-port must be 1..65535')
     # Hostnames and key paths are passed as argv, never interpolated into shell.
-    with open('/tmp/y2-platform-v1-device.lock', 'a') as lock:
+    with device_lock(a.device_lock_fd) as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
