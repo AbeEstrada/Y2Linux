@@ -4,22 +4,24 @@ from .common import Context, atomic_json, read
 from .boot import private_directory
 from .sleep import transition, wake_irqs
 import os
+import re
 import json
 import socket
 import sys
 import time
 
 
-def record(ctx, stage, result=None, reason=None):
+def record(ctx, stage, result=None, reason=None, reborn_ack=None):
     directory = private_directory(ctx.path('/data/system/platform'))
     path = directory / 'suspend-last.json'
     value = ctx.json('/data/system/platform/suspend-last.json', {})
     if not isinstance(value, dict):
         value = {}
-    if stage in ('requested', 'quiescing_radios') or stage.startswith('refused_'):
+    if stage == 'requested' or (stage == 'quiescing_radios' and not value.get('reborn_prepared')) or stage.startswith('refused_'):
         value = {'schema': 1, 'requested_mode': 'deep',
                  'request_boot_id': ctx.read('/proc/sys/kernel/random/boot_id'),
-                 'started': time.time(), 'stages': []}
+                 'started': time.time(), 'stages': [],
+                 'pm_test': next(iter(re.findall(r'\[(\w+)\]', ctx.read('/sys/power/pm_test') or '')), None)}
     value.update(stage=stage, result=result, updated=time.time(),
                  current_boot_id=ctx.read('/proc/sys/kernel/random/boot_id'),
                  persistent_kernel=ctx.read('/sys/firmware/y2_pm/state'),
@@ -31,29 +33,21 @@ def record(ctx, stage, result=None, reason=None):
         value['wake_irqs_before'] = wake_irqs(ctx.read('/proc/interrupts'))
     elif stage == 'restoring_radios':
         value['wake_irqs_after'] = wake_irqs(ctx.read('/proc/interrupts'))
+    if reborn_ack is not None:
+        value['reborn_prepared'] = reborn_ack
     value.setdefault('stages', []).append({'stage': stage, 'time': time.time(), 'result': result})
     value['stages'] = value['stages'][-32:]
-    if stage == 'complete_result_0' and result == 0:
+    if stage.startswith('complete_result_'):
         try:
-            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
-                client.settimeout(2)
-                client.connect(str(ctx.path('/run/reborn/control.sock')))
-                client.sendall(b'{"version":1,"id":6582,"command":{"op":"status"}}\n')
-                response = b''
-                while b'\n' not in response and len(response) < 131072:
-                    block = client.recv(4096)
-                    if not block:
-                        break
-                    response += block
-                answer = json.loads(response.split(b'\n')[0])
-                value['reborn_restore'] = answer.get('ok') is True and answer.get('id') == 6582
+            acknowledgement = application_rpc(ctx, 'sleep_restore')
+            value['reborn_restore'] = acknowledgement.get('sleep_ready') is True and acknowledgement.get('screen_off') is False
         except (OSError, ValueError):
             value['reborn_restore'] = False
         if not value['reborn_restore']:
-            value['result'] = 1
+            value['result'] = value['result'] or 1
             value['error'] = 'reborn_resume_probe_failed'
     value['product'] = transition(value, stage, value['result'], value['current_boot_id'], reason)
-    if stage == 'complete_result_0' and value['product']['state'] != 'restored':
+    if stage == 'complete_result_0' and value['product']['state'] not in {'restored', 'idle'}:
         value['result'] = 1
         value['error'] = value['product']['reason']
     if value['product']['state'] == 'restored':
@@ -66,6 +60,33 @@ def record(ctx, stage, result=None, reason=None):
         os.fsync(parent)
     finally:
         os.close(parent)
+    return value
+
+
+def application_rpc(ctx, operation, **fields):
+    """Bounded explicit application acknowledgement, never just process liveness."""
+    request = {'version': 1, 'id': 6582, 'command': {'op': operation, **fields}}
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+        client.settimeout(5)
+        client.connect(str(ctx.path('/run/reborn/control.sock')))
+        client.sendall((json.dumps(request) + '\n').encode())
+        response = b''
+        while b'\n' not in response and len(response) <= 131072:
+            block = client.recv(4096)
+            if not block:
+                break
+            response += block
+    if len(response) > 131072:
+        raise ValueError('reborn_sleep_response_too_large')
+    answer = json.loads(response.split(b'\n')[0])
+    if not isinstance(answer, dict) or answer.get('id') != 6582:
+        raise ValueError('reborn_sleep_acknowledgement_failed')
+    if answer.get('ok') is not True:
+        error = answer.get('error')
+        raise ValueError(error if isinstance(error, str) and len(error) <= 256 else 'reborn_sleep_acknowledgement_failed')
+    value = answer.get('result')
+    if not isinstance(value, dict):
+        raise ValueError('reborn_sleep_acknowledgement_invalid')
     return value
 
 

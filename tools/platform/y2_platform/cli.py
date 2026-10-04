@@ -32,7 +32,7 @@ def main():
     bt_power = sub.add_parser('bluetooth-power')
     bt_power.add_argument('value', choices=['on', 'off'])
     sleep = sub.add_parser('sleep')
-    sleep.add_argument('action', choices=['request', 'status'])
+    sleep.add_argument('action', choices=['request', 'status', 'prepare'])
     sub.add_parser('power-daemon')
     sub.add_parser('service-daemon')
     usb_mode = sub.add_parser('usb-mode')
@@ -118,7 +118,7 @@ def main():
         return 1 if result['state'] == 'Failed' else 0
     if args.command == 'sleep':
         from . import sleep
-        result = sleep.request(ctx) if args.action == 'request' else sleep.status(ctx)
+        result = {'request': sleep.request, 'prepare': sleep.prepare, 'status': sleep.status}[args.action](ctx)
         print(json.dumps(result, sort_keys=True))
         return 0
     if args.command == 'rtc-alarm':
