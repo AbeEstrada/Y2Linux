@@ -1,5 +1,57 @@
 # Y2 wired high-resolution PCM completion
 
+## Session 3 — all-playback-route study (live AFE experiments)
+
+Status: **in progress; no wide route found yet, no verdict.** Everything below
+was measured on the physical Y2 (Linux 6.18.0-y2linux-platform-v1-baseline-01)
+with the whitelisted, snapshot/restore lab module
+[`tools/development/afe-lab`](../../tools/development/afe-lab/README.md).
+Machine-readable log of every register write, readback and restore:
+[`afe-lab-experiments-session3.jsonl`](evidence/highres-audio-completion/afe-lab-experiments-session3.jsonl)
+(345 records; timestamp, kernel, register, mask, original, request, readback,
+restore readback, PM usage, DAC_CON0, I2S_CON3, IRQ status, abort flag).
+After every experiment `restore_all` returned all touched registers to their
+original values (restore readbacks verified) and the AFE returned to runtime
+suspend; reboot clears the (non-unloadable) module.
+
+### Experiments
+
+| ID | Hypothesis | Path / registers | Modification | Readback / observation | Restored | Result and implication |
+| --- | --- | --- | --- | --- | --- | --- |
+| E1a | Later-SoC `AFE_CONN_24BIT` (0x6C) exists on MT6582 | 0x6C, 19-bit mask, initial 0 | single-bit toggle of every candidate bit, restore after each | no bit changes | yes | **Absent** (fixed zero). |
+| E1b | `AFE_MEMIF_MSB` (0xCC), `CONN5` (0x5C), `CONN6` (0xBC) exist | 24/16/16-bit masks, initial 0 | same | no bit changes | yes | **Absent.** |
+| E1c | Second-DL1/VUL memif (0x340–0x358), HDMI memif/conn (0x370–0x390) exist | base/end/conn/con0 candidate masks, initial 0 | same | no bit changes | yes | **Absent** (later-SoC blocks not implemented). |
+| E1d | `MEMIF_MINLEN`/`MAXLEN` | 0x3D0 / 0x3D4, initial 0x11111111 | per-bit toggle | MINLEN fixed; every MAXLEN nibble bit writable | yes | MAXLEN is a real burst-length control, not a format control. |
+| E1e | `AFE_MEMIF_PBUF_SIZE` bits [19:16] are an HD fetch format (later-SoC meaning) | 0x3D8 bits 7:0, 23:16, initial 0xFF0000FF | per-bit toggle; then DL2→AWB with each of bits 16–19 set | all writable; AWB data and DL2 monitor identical for every value | yes | They are `DL_ULTRA_TH` as the manual says; **no fetch-format effect**. |
+| E2a | DL2 is a usable second playback memif | DL2 base/end, DAC_CON0.DL2_ON, DAC_CON1.DL2_MODE, CONN2 (I07→O05, I08→O06), AWB | DL2 stereo 48 kHz pattern L=1234,1235,ffff,8000 | AWB words bit-exact; `AFE_MEMIF_MON1` = L/R 16-bit; 4 bytes/frame | yes | DL2 is an independent 16-bit-per-channel memif; routable to O05/O06 (and per Table 53-1 to O00/O01). |
+| E2b | Gain/adder nodes keep >16 bits | GAIN1 in = I07+I08 (DL2 L+R = 0x7000), gain 0.5 → I10 → O05 | — | AWB L = 0xF000 (0xE000 wrapped at 16 bits, halved) | yes | The **gain-input adder is 16-bit modular**; no headroom. |
+| E2c | Main interconnect output saturates at 16 bits | I05 (DL1 L) + I07 (DL2 L), both 0x7000 → O05 | — | AWB L = 0x7FFF | yes | The **output node clamps at 16 bits**. |
+| E2d | Main adder keeps wider internal headroom | I05 + I07 (0x7000 each) + I10 (gain 1.0 of DL1 R = −0x7000) → O05 | — | AWB L = 0x7000 (not sequentially-saturated 0x0FFF) | yes | The output adder accumulates wider than 16 bits internally but **delivers a 16-bit saturated output**. Sub-LSB precision is not observable through AWB. |
+| E3 | Production wire format | read-only GPIO43/44/46 pad sampling during production S16 48 kHz playback of a constant pattern | none (read-only) | LRCK 47.89 kHz on GPIO44, BCLK on GPIO43, data on GPIO46 active; 3.07 MHz BCLK is under-sampled by the 425 ns/read sampler, decode unreliable | n/a | Pad sampling works; a slow lab-driven stream (8 kHz, BCLK 512 kHz) is needed for a decodable serializer capture. |
+
+Stock Y2 evidence (re-checked): the primary output profile is
+`AUDIO_FORMAT_PCM_16_BIT`, 44.1 kHz; `SetHiFiDACStatus` is an unsupported stub;
+stock DL1 used the 16 KiB AFE SRAM window at `0x11224000` (16-bit PCM); stock
+programs the CS43131 ASP for 24-bit reception only.
+
+### Route table (so far)
+
+| Route | Memory interface / width | Internal AFE width | I2S route / payload | Linux implementation | Live result |
+| --- | --- | --- | --- | --- | --- |
+| DL1 → I05/I06 → O00/O01 → I2S_CON3 | DL1 ring, 4 B/stereo frame, 16 b/channel, no format field | output node clamps to 16 b (E2c); adder wider internally (E2d) | second I2S, 32-bit slots; 16 data bits (S16) | production | works, S16 only |
+| DL2 → I07/I08 → O00/O01 → I2S_CON3 | DL2 ring (0x50/54/58), 4 B/frame, 16 b/channel (E2a, E1e) | same fabric | same serializer; 16 b | none (lab only) | AWB loopback bit-exact |
+| Later-SoC HD fetch / CONN_24BIT / memif MSB | — | — | — | — | **registers absent** (E1a–E1e) |
+| HDMI/IEC/second-DL1 memifs | — | — | — | — | **absent** (E1c) |
+| DL1 + DL2 split recombined in the fabric | two 16-bit memifs | output clamps at 16 b | cannot exceed 16 b if O00/O01 clamp like O05 | none | not yet measured at the serializer |
+
+### Open item
+
+The measurement that decides whether O00/O01 can deliver more than 16 bits to
+the serializer is the I2S pad itself, driven by a lab-controlled slow (8 kHz)
+stream with right-shifted / gained / summed patterns. That needs the lab module
+to enable `AFE_I2S_CON3.EN` explicitly (headphone amp off). The guard change
+for that was declined by the permission system and awaits owner confirmation.
+
 ## Evidence correction: hardware impossibility is not established
 
 The previous **HARDWARE_PROVEN_UNSUPPORTED** verdict is withdrawn. The manual
