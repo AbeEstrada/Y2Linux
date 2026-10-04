@@ -1,10 +1,12 @@
 # Platform v1 roadmap
 
-Wired precision remains open. The prior HARDWARE_PROVEN_UNSUPPORTED verdict
-is withdrawn: a16-bit monitor field does not conclusively define the complete
-silicon data path. Installed S16 and software24 preservation are observed;
-a meaningful24/32 hardware route and an absolute hardware limit are both
-unproven. Neither owner Outcome A nor B is achieved. See [the corrected record](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
+Wired precision is now measured: the MT6582 wired playback path carries at most
+16 meaningful bits to the CS43131. The earlier DL1-monitor argument was withdrawn
+and replaced by direct evidence: absent later-SoC wide-format registers, fixed
+16-bit DL1/DL2 memifs, 16-bit interconnect outputs and an on-device capture of the
+I2S serializer pad (low 16 bits of every 32-bit slot zero in every fixture). Wide
+S24/S32 hardware output is not available; S16 (44.1/48) is the platform maximum.
+See [the evidence record](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
 and [the scoped boundary correction](roadmap-gap-audit.md#wired-precision-evidence-correction).
 No unsupported format, candidate, flash or other subsystem promotion is admitted.
 

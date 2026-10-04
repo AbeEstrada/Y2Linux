@@ -6494,7 +6494,7 @@
       ],
       "automated_test_result": "Four new fixture/DMA observations tests, six audio/clock/ALSA contract tests, 324 Reborn tests and matching ARM/kernel/DT/ABI checks PASS; hardware-wide playback remains unsupported.",
       "diagnostics": "Read-only matching audio observer plus native conversion probe; actual playback/DMA evidence retained",
-      "known_limitation": "Installed DL1 wired playback is verified S16. Exact manual MON0 fields are16-bit, but no conclusive all-mode internal-width contract or viable wider fetch/AFE route has been established. Hardware24/32 impossibility is not proven.",
+      "known_limitation": "Measured Session 3: wired playback carries 16 meaningful bits maximum. Memory interfaces DL1/DL2 are fixed 16 bits per channel, no later-SoC wide-format register exists, interconnect outputs round/clamp to 16 bits, and the I2S serializer pad was captured at 8/11.025/12 kHz with low 16 bits of every 32-bit slot zero in every fixture. See docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md.",
       "failure_mode": "False high-resolution claim or distorted samples if forced",
       "safe_fallback": "Float processing converted to S16",
       "source_paths": [
@@ -6515,14 +6515,14 @@
       "legacy_release_classification": {
         "beta_state": "OPTIONAL_POST_BETA",
         "beta_priority": "D",
-        "recommended_next_action": "Do not add masks or native-HD claims"
+        "recommended_next_action": "Closed as hardware-limited (16 meaningful bits measured); do not add masks or native-HD claims"
       },
       "product_target": "FEATURE_COMPLETE_TARGET",
       "hardware_conditional": true,
       "release_required": "REQUIRED_IF_HARDWARE_SUPPORTED",
       "release_requirement": "REQUIRED_IF_HARDWARE_SUPPORTS_IT",
       "public_distribution_state": "NOT_SEPARATELY_ASSESSED",
-      "current_limitation": "Installed DL1 wired playback is verified S16. Exact manual MON0 fields are16-bit, but no conclusive all-mode internal-width contract or viable wider fetch/AFE route has been established. Hardware24/32 impossibility is not proven.",
+      "current_limitation": "Measured Session 3: wired playback carries 16 meaningful bits maximum. Memory interfaces DL1/DL2 are fixed 16 bits per channel, no later-SoC wide-format register exists, interconnect outputs round/clamp to 16 bits, and the I2S serializer pad was captured at 8/11.025/12 kHz with low 16 bits of every 32-bit slot zero in every fixture. See docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md.",
       "next_action": "Continue exact fetch/interconnect research; require explicit representation or exclusion evidence, not monitor width alone.",
       "release_completion_groups": [
         "C",
@@ -6566,7 +6566,7 @@
         "implementation_state": "NOT_IMPLEMENTED",
         "software_evidence": "Fresh candidate source/config/contract, kernel/ARM/QEMU/package validation PASS; feature-specific implementation/runtime limits are retained, not individually promoted by global tests",
         "physical_evidence": "PHYSICALLY_OBSERVED Baseline01: six S16 playback/DMA comparisons, DL1_MON0 and AFE/I2S/CS43131 readback; no external serial/analog capture and no native 24/32 physical PASS.",
-        "hardware_condition": "Installed DL1 wired playback is verified S16. Exact manual MON0 fields are16-bit, but no conclusive all-mode internal-width contract or viable wider fetch/AFE route has been established. Hardware24/32 impossibility is not proven.",
+        "hardware_condition": "Measured Session 3: wired playback carries 16 meaningful bits maximum. Memory interfaces DL1/DL2 are fixed 16 bits per channel, no later-SoC wide-format register exists, interconnect outputs round/clamp to 16 bits, and the I2S serializer pad was captured at 8/11.025/12 kHz with low 16 bits of every 32-bit slot zero in every fixture. See docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md.",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
         "release_status": "PENDING_HARDWARE_DECISION",
         "current_candidate_physically_qualified": false,

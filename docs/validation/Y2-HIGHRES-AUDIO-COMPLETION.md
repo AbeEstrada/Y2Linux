@@ -2,13 +2,16 @@
 
 ## Session 3 — all-playback-route study (live AFE experiments)
 
-Status: **in progress; no wide route found yet, no verdict.** Everything below
+Status: **concluded. Final verdict: `ALL_MT6582_WIDE_PLAYBACK_PATHS_PROVEN_IMPOSSIBLE`
+for the Y2 wired path: at most 16 meaningful bits reach the CS43131.** The
+earlier sections of this file (the withdrawn DL1-monitor argument and the first
+report) are historical; the measurements below replace them. Everything below
 was measured on the physical Y2 (Linux 6.18.0-y2linux-platform-v1-baseline-01)
 with the whitelisted, snapshot/restore lab module
 [`tools/development/afe-lab`](../../tools/development/afe-lab/README.md).
 Machine-readable log of every register write, readback and restore:
 [`afe-lab-experiments-session3.jsonl`](evidence/highres-audio-completion/afe-lab-experiments-session3.jsonl)
-(345 records; timestamp, kernel, register, mask, original, request, readback,
+(`afe-lab-experiments-session3.jsonl`, 473 records; timestamp, kernel, register, mask, original, request, readback,
 restore readback, PM usage, DAC_CON0, I2S_CON3, IRQ status, abort flag).
 After every experiment `restore_all` returned all touched registers to their
 original values (restore readbacks verified) and the AFE returned to runtime
@@ -27,32 +30,128 @@ suspend; reboot clears the (non-unloadable) module.
 | E2b | Gain/adder nodes keep >16 bits | GAIN1 in = I07+I08 (DL2 L+R = 0x7000), gain 0.5 → I10 → O05 | — | AWB L = 0xF000 (0xE000 wrapped at 16 bits, halved) | yes | The **gain-input adder is 16-bit modular**; no headroom. |
 | E2c | Main interconnect output saturates at 16 bits | I05 (DL1 L) + I07 (DL2 L), both 0x7000 → O05 | — | AWB L = 0x7FFF | yes | The **output node clamps at 16 bits**. |
 | E2d | Main adder keeps wider internal headroom | I05 + I07 (0x7000 each) + I10 (gain 1.0 of DL1 R = −0x7000) → O05 | — | AWB L = 0x7000 (not sequentially-saturated 0x0FFF) | yes | The output adder accumulates wider than 16 bits internally but **delivers a 16-bit saturated output**. Sub-LSB precision is not observable through AWB. |
-| E3 | Production wire format | read-only GPIO43/44/46 pad sampling during production S16 48 kHz playback of a constant pattern | none (read-only) | LRCK 47.89 kHz on GPIO44, BCLK on GPIO43, data on GPIO46 active; 3.07 MHz BCLK is under-sampled by the 425 ns/read sampler, decode unreliable | n/a | Pad sampling works; a slow lab-driven stream (8 kHz, BCLK 512 kHz) is needed for a decodable serializer capture. |
+| E3 | Production wire format, 48 kHz | read-only GPIO43/44/46 pad sampling during production S16 playback | none | pins identified (GPIO43 BCLK, 44 LRCK, 46 DATA); 3.07 MHz BCLK is under-sampled by the 425 ns/read sampler | n/a | Not decodable at 44.1/48 kHz; superseded by the slow lab-driven stream below. |
 
 Stock Y2 evidence (re-checked): the primary output profile is
 `AUDIO_FORMAT_PCM_16_BIT`, 44.1 kHz; `SetHiFiDACStatus` is an unsupported stub;
 stock DL1 used the 16 KiB AFE SRAM window at `0x11224000` (16-bit PCM); stock
 programs the CS43131 ASP for 24-bit reception only.
 
-### Route table (so far)
+### Serializer-pad measurement (`i2s_capture`)
 
-| Route | Memory interface / width | Internal AFE width | I2S route / payload | Linux implementation | Live result |
+A dedicated, one-shot, self-restoring lab operation drives a bounded stream from a
+DL1 and/or DL2 ring through programmed AFE routing into the real I2S serializer
+(`AFE_I2S_CON3`: I2S format, 32-bit slots, 8 / 11.025 / 12 kHz documented rate
+codes) and samples GPIO43 (BCLK), GPIO44 (LRCK) and GPIO46 (DATA) by polling the
+GPIO input register from the kernel. The generic write guard is unchanged. The
+operation refuses unless armed, no stream/PM reference exists (so no ALSA stream,
+Reborn playback or other lab experiment is active), DL1/DL2/AWB/I2S are idle and the
+kernel identity matches; it always disables I2S/memifs, restores and verifies every
+register it touched, frees DMA and releases clocks before returning. The headphone
+switch stayed off and no ALSA stream was open (DAPM powers the amplifier only for
+streams), so nothing was played acoustically. All 32 recorded runs (plus the in-kernel log of every run) ended with
+`restore_ok=1`, I2S and memifs off, no IRQ status, AFE runtime-suspended.
+
+Decoder: [`i2s_decode.py`](../../tools/development/afe-lab/i2s_decode.py) latches
+DATA/LRCK from the last sample before each rising BCLK edge (BCLK is the
+reference), finds I2S slots from LRCK transitions (MSB one BCLK after the change)
+and reproduces the full 32-bit slot per channel. Raw captures:
+[`i2s-captures/*.bin.gz`](evidence/highres-audio-completion/i2s-captures/),
+per-capture records: [`i2s-capture-records.jsonl`](evidence/highres-audio-completion/i2s-capture-records.jsonl).
+
+**Sampler validation (required before interpreting anything).** At 8 kHz the
+stream has 4.6 samples per BCLK (3–5 min/max), LRCK spacing exactly 32 BCLK, actual
+frame rate 8.0 kHz. Control fixture A (`0x0000, 0x0001, 0x1234, 0x7fff, 0x8000,
+0xffff, 0xa5c3, 0x5a3c` and complements) decodes with **0 mismatches over 443 frame
+pairs on DL1 and 441 on DL2**; 11.025 and 12 kHz also decode with 0 mismatches
+(3.1–3.2 samples/bit). 16 kHz (2.4 samples/bit) is below the sampler's reliable
+limit and is treated as inconclusive, not as evidence.
+
+| ID | Fixture (routing → pad) | Pad result | Meaning |
+| --- | --- | --- | --- |
+| A | DL1 → O00/O01 and DL2 → O00/O01, S16 test values | slot = `value << 16`; low 16 bits `0x0000` in every frame; 0 mismatches | Wire format: 16 payload bits MSB-first in a 32-bit I2S slot, 16 zero bits. |
+| B1 | `O00 = (L>>1)+(R>>1)`, `O01 = L>>1` (right-shift paths), 16-frame rotating pattern | all 429 frames match "exact sum of halves, then round-half-up to an integer" (`1,1→1`, `3,3→3`, `0x1235,0x1235→0x1235`); low 16 bits always 0 | The adder retains at least one sub-LSB bit, but the node is rounded to 16 bits before the serializer. |
+| B2/G | gain 0.5 (20-bit gain, target = current) on L/R, alone and mixed with shift paths, DC inputs | gain alone: `round(0.5·x)`; gain+shift: exact sum then round (`3,3→3`, `0x7fff→0x7fff`); low 16 bits 0 | Gain output also carries a fraction internally, but it never reaches the pad. |
+| C1 | DL1 L + DL2 L = 0x7000 + 0x7000 | `0x7fff` | Output clamps to 16 bits at the pad. |
+| C2 | DL1 L + DL2 L + gain(DL1 R = −0x7000) | `0x7000` | Internal accumulation is wider than 16 bits, the pad still gets the 16-bit result. |
+| D | DL2 source, shift+gain DC fixtures | same exact-then-round behavior; low 16 bits 0 | DL2 is not different from DL1 at the serializer. |
+| N | all `AFE_CONN0..4`/gain connections 0 with both memifs streaming non-zero data; positive control with routing on | pad silent (`0x00000000` slots) / data visible | No memif→serializer bypass; the serializer is fed only through the 16-bit interconnect outputs. |
+| R | control and shift fixtures at 11.025 and 12 kHz, DL1 and DL2 | identical results; 0 mismatches; low 16 bits 0 | Result is not specific to 8 kHz. |
+
+The required 24-bit test (two inputs with the same upper 16 bits that differ
+below that boundary) cannot even be formed in the source memifs (16 bits per
+channel). The adder's sub-LSB bits were created with shifts and gains as the
+nearest possible approximation; across B1/B2/G/D the serialized slots differ
+only through the rounded 16-bit result, **never in bits 15:0**.
+
+### Final architectural check (no bypass)
+
+* **Complete playback-memif inventory (manual chapter 53 and the exact MT6582
+  BSP `AudDrv_Afe.h`)**: DL1 and DL2 are the only memory-read playback
+  interfaces. AWB, VUL and MOD_PCM/DAI are write/capture interfaces. Both playback
+  memifs are 16 bits per channel with no format/width field (E1a–E2a).
+* **Later-SoC wide fields** (`AFE_CONN_24BIT`, `AFE_MEMIF_MSB`, extra DL1 data
+  memif, HDMI/IEC memif registers, PBUF HD bits): absent or ineffective (E1).
+* **Interconnect**: gain/summing nodes may carry internal fractions/headroom, but
+  every output node (AWB observed; serializer pad observed) is a 16-bit
+  rounded/clamped value (E2, B, C).
+* **Serializer sources**: only interconnect outputs (N). The ASRC blocks
+  (`0x500–0x570`) belong to the I2S/PCM input interfaces and are not memory
+  playback paths. The internal-DAC route (O03/O04 → DL SRC → PMIC) does not feed
+  the CS43131.
+* **Stock Y2**: PCM16 primary profile, `SetHiFiDACStatus` unsupported, DL1 16-bit.
+  The CS43131 ASP is configured for 24-bit reception, which is only a receiver
+  setting.
+* **CS43131**: supports wider PCM reception, but receives a 32-bit slot whose
+  low 16 bits are zero from every tested route; no DAC-side limitation is claimed
+  and none is relevant.
+
+Residual limits (stated, not hidden): the pad was decoded at 8, 11.025 and 12 kHz
+(the polling sampler cannot resolve 44.1/48 kHz BCLK); analog output was not
+measured. The serializer and interconnect are rate-independent hardware, the DL
+memifs have no format control at any rate, and the decoded wire format matches the
+installed S16 readback, so no rate-dependent wide mode is expected. An optional
+external logic-analyzer capture at 44.1/48 kHz would only confirm this; the
+procedure is in the owner handoff below.
+
+### Route table (final)
+
+| Route | Memory interface / width | Internal AFE | I2S route / payload | Linux implementation | Live result |
 | --- | --- | --- | --- | --- | --- |
-| DL1 → I05/I06 → O00/O01 → I2S_CON3 | DL1 ring, 4 B/stereo frame, 16 b/channel, no format field | output node clamps to 16 b (E2c); adder wider internally (E2d) | second I2S, 32-bit slots; 16 data bits (S16) | production | works, S16 only |
-| DL2 → I07/I08 → O00/O01 → I2S_CON3 | DL2 ring (0x50/54/58), 4 B/frame, 16 b/channel (E2a, E1e) | same fabric | same serializer; 16 b | none (lab only) | AWB loopback bit-exact |
-| Later-SoC HD fetch / CONN_24BIT / memif MSB | — | — | — | — | **registers absent** (E1a–E1e) |
-| HDMI/IEC/second-DL1 memifs | — | — | — | — | **absent** (E1c) |
-| DL1 + DL2 split recombined in the fabric | two 16-bit memifs | output clamps at 16 b | cannot exceed 16 b if O00/O01 clamp like O05 | none | not yet measured at the serializer |
+| DL1 → I05/I06 → O00/O01 → I2S_CON3 | DL1 ring, 4 B/frame, 16 b/channel, no format field | internal fractions possible, output rounded/clamped to 16 b | 32-bit slots, 16 MSB-aligned payload bits, low 16 = 0 (measured) | production | works, S16 maximum |
+| DL2 → I07/I08 → O00/O01 → I2S_CON3 | DL2 ring (0x50/54/58), 4 B/frame, 16 b/channel | same | same (measured) | none (lab only; no product benefit) | pad identical to DL1 |
+| DL1+DL2 split recombined in the fabric | two 16-bit memifs | exact accumulation, output rounded to 16 b | pad clamps/rounds to 16 b (measured, B/C) | none | cannot exceed 16 b |
+| Later-SoC HD fetch / CONN_24BIT / MEMIF_MSB / DL1_D2 / HDMI / IEC memifs | — | — | — | — | absent (E1) |
+| Direct memif → serializer bypass | — | — | — | — | none (N) |
+| Internal DAC route O03/O04 → DL SRC → PMIC | not the CS43131 path | — | — | — | out of scope |
 
-### Open item
+### Consequences
 
-The measurement that decides whether O00/O01 can deliver more than 16 bits to
-the serializer is the I2S pad itself, driven by a lab-controlled slow (8 kHz)
-stream with right-shifted / gained / summed patterns. That needs the lab module
-to enable `AFE_I2S_CON3.EN` explicitly (headphone amp off). The guard change
-for that was declined by the permission system and awaits owner confirmation.
+* Keep S16_LE 44.1/48 as the maximum wired output; **do not add S24/S32
+  masks** (they would be fake: the extra bits cannot reach the DAC).
+* Reborn's software S24/S32 conversion remains correct for other sinks; for the
+  wired sink the single final conversion is S16. Quality improvement within 16 bits
+  is limited to the conversion step itself (rounding/dither), not transport.
+* The lab module and decoder are development tools only; reboot removes the module.
+  No candidate or flash is required.
+
+### Owner handoff (optional external confirmation)
+
+If an external check is wanted: probe GPIO43 (BCLK), GPIO44 (LRCK), GPIO46 (DATA)
+of the second I2S output at the CS43131 side (voltage level not established in
+source/board evidence here; measure with a probe/analyzer threshold appropriate
+for the measured logic high). Play a constant S16 pattern (for example both
+channels `0x1235`) at 44.1 or 48 kHz. Expect BCLK = 64 × LRCK (2.8224 / 3.072 MHz),
+I2S format (MSB one BCLK after the LRCK edge), 32-bit slots, first 16 bits the
+sample, last 16 bits zero. Decoder settings: I2S, 32-bit word, MSB first, left =
+LRCK low. Any non-zero bit in slot bits 15:0 would contradict this record.
+
 
 ## Evidence correction: hardware impossibility is not established
+
+> Historical (Session 2). Superseded by the Session 3 measurements above, which
+> establish the 16-meaningful-bit limit from direct serializer-pad evidence and a
+> complete route inventory rather than from the DL1 monitor register.
 
 The previous **HARDWARE_PROVEN_UNSUPPORTED** verdict is withdrawn. The manual
 defines two 16-bit fields in a DL1 *monitor register*. That definition does not,

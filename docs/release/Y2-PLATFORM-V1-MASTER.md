@@ -1,10 +1,10 @@
 # Y2 + Reborn Platform 1.0 master report
 
-Wired-precision correction: [the current evidence record](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
-withdraws the HARDWARE_PROVEN_UNSUPPORTED conclusion. MON0 defines16-bit
-monitor fields; an absolute silicon transport ceiling does not follow from
-that alone. Installed S16 and software24 preservation remain validated;
-wider hardware feasibility is open. No native24/32 qualification is claimed.
+Wired-precision result: [the evidence record](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
+replaces the withdrawn DL1-monitor argument with direct measurements (register
+probing, DL2 loopback, interconnect arithmetic and an on-device I2S serializer-pad
+capture). The MT6582 wired path carries at most 16 meaningful bits; S16 44.1/48 is
+the platform maximum and no native 24/32 qualification is claimed or possible.
 
 ## Independent final baseline — 2026-10-04
 
@@ -175,9 +175,10 @@ Preserve good unchanged behavior: GPU/Lima/DRM runtime-PM and scanout architectu
 Bluetooth controller/CONSYS ownership and conservative reconnect budget;
 Wi-Fi fullmac/supplicant/DHCP ownership and disabled broken checksum offload;
 native S16/44.1/48 fallback; battery/charging/thermal policy; immutable fallback,
-Y2DATA/protected partitions and recovery. Highres owner has not established an
-exact wider MT6582 fetch/interconnect contract, so native highres remains an open
-requirement rather than a guessed enablement or an invented silicon ceiling.
+Y2DATA/protected partitions and recovery. The wired path is
+measured at 16 meaningful bits maximum (no wide memif, 16-bit interconnect outputs,
+serializer pad low 16 bits zero), so native highres is closed as hardware-limited
+rather than a pending requirement; S16 stays the maximum.
 These are current preservation decisions, not final no-change acceptances of
 all active sessions.
 

@@ -76,6 +76,8 @@ static const struct wl_entry wl[] = {
 	{ 0x418, "AFE_GAIN1_CON2",	0x000fffff },
 	{ 0x41c, "AFE_GAIN1_CON3",	0x000fffff },
 	{ 0x420, "AFE_GAIN1_CONN",	0x03ffffff },
+	{ 0x424, "AFE_GAIN1_CUR",	0x000fffff },
+	{ 0x43c, "AFE_GAIN2_CUR",	0x000fffff },
 	{ 0x428, "AFE_GAIN2_CON0",	0x0000ffff },
 	{ 0x42c, "AFE_GAIN2_CON1",	0x000fffff },
 	{ 0x430, "AFE_GAIN2_CON2",	0x000fffff },
@@ -102,6 +104,7 @@ static const struct wl_entry wl[] = {
 static struct device *afe;
 static void __iomem *base;
 static struct dentry *dir;
+static struct debugfs_blob_wrapper sla_blob;
 static DEFINE_MUTEX(lock);
 static bool held;
 static void __iomem *gpio_din;
@@ -288,6 +291,269 @@ static void restore_all(void)
 	ntouched = 0;
 }
 
+
+/* ---------------------------------------------------------------------------
+ * i2s_capture: dedicated, bounded, self-restoring serializer-pad experiment.
+ * NOT a relaxation of the generic guard: generic writes are still refused while
+ * I2S is enabled. This fixed sequence is the only place the lab asserts
+ * AFE_I2S_CON3.EN, always at 8 kHz (documented rate code 0), always torn down
+ * before the command returns, with every touched register snapshotted and
+ * verified after restore. One-shot arm; headphone output is never driven
+ * because no ALSA stream is open (DAPM powers the amplifier only for streams).
+ * ------------------------------------------------------------------------ */
+#define KNOWN_KERNEL "6.18.0-y2linux-platform-v1-baseline-01"
+#define CAP_MAX_REGS 24
+
+static bool armed;
+
+static const u16 cap_snapshot[] = {
+	0x010, 0x014, 0x020, 0x024, 0x028, 0x02c, 0x030, 0x040, 0x048, 0x04c,
+	0x050, 0x058, 0x410, 0x414, 0x418, 0x41c, 0x420, 0x424, 0x428, 0x42c,
+	0x430, 0x434, 0x438, 0x43c, 0x440,
+};
+
+/* Registers a fixture may program (all also in wl[]): routing and gain only.
+ * Memif base/end, rates, DAC_CON0, DAC_CON1 and I2S_CON3 belong to the op. */
+static bool cap_fixture_reg_ok(unsigned int off)
+{
+	switch (off) {
+	case 0x020: case 0x024: case 0x028: case 0x02c: case 0x030:
+	case 0x410: case 0x414: case 0x418: case 0x41c: case 0x420:
+	case 0x424: case 0x428: case 0x42c: case 0x430: case 0x434: case 0x438:
+	case 0x43c: case 0x440:
+		return true;
+	}
+	return false;
+}
+
+static void i2s_capture(char *line)
+{
+	struct { u16 off; u32 val; } regs[CAP_MAX_REGS];
+	u32 saved[ARRAY_SIZE(cap_snapshot)], pat[64], pat2[64];
+	unsigned int src = 0, nsamp = 65536, npat = 0, npat2 = 0, nregs = 0, rate = 0, i;
+	unsigned long a, flags;
+	u32 dl_base, dl_end, en_bit, rb, cur_dl = 0, mon0 = 0, mon1 = 0;
+	u32 irq_after, dac_after, i2s_after;
+	bool restore_ok = true, ok = false;
+	void *buf = NULL, *buf2 = NULL;
+	dma_addr_t addr = 0, addr2 = 0;
+	u64 t0 = 0;
+	char *tok;
+	int ret = 0;
+
+	/* ---- parse (no hardware access) ---- */
+	while ((tok = strsep(&line, " \n")) && *tok) {
+		if (!strncmp(tok, "src=", 4)) {
+			if (kstrtouint(tok + 4, 0, &src) || src < 1 || src > 3)
+				goto badarg;
+		} else if (!strncmp(tok, "rate=", 5)) {
+			/* documented AFE rate codes only: 0=8k 1=11.025k 2=12k 4=16k */
+			if (kstrtouint(tok + 5, 0, &rate) || (rate != 0 && rate != 1 && rate != 2 && rate != 4))
+				goto badarg;
+		} else if (!strncmp(tok, "n=", 2)) {
+			if (kstrtouint(tok + 2, 0, &nsamp) || nsamp < 1024 || nsamp > SLA_MAX)
+				goto badarg;
+		} else if (!strncmp(tok, "pat=", 4)) {
+			char *p = tok + 4, *w;
+
+			while ((w = strsep(&p, ",")) && *w && npat < ARRAY_SIZE(pat)) {
+				if (kstrtoul(w, 0, &a))
+					goto badarg;
+				pat[npat++] = a;
+			}
+			if (!npat || (npat & (npat - 1)))
+				goto badarg; /* power of two so the 1024-frame ring wraps cleanly */
+		} else if (!strncmp(tok, "pat2=", 5)) {
+			char *p = tok + 5, *w;
+
+			while ((w = strsep(&p, ",")) && *w && npat2 < ARRAY_SIZE(pat2)) {
+				if (kstrtoul(w, 0, &a))
+					goto badarg;
+				pat2[npat2++] = a;
+			}
+			if (!npat2 || (npat2 & (npat2 - 1)))
+				goto badarg;
+		} else if (!strncmp(tok, "w=", 2)) {
+			char *p = tok + 2, *w, *colon;
+			unsigned long off, val;
+
+			while ((w = strsep(&p, ",")) && *w && nregs < CAP_MAX_REGS) {
+				colon = strchr(w, ':');
+				if (!colon)
+					goto badarg;
+				*colon++ = 0;
+				if (kstrtoul(w, 0, &off) || kstrtoul(colon, 0, &val) ||
+				    !cap_fixture_reg_ok(off))
+					goto badarg;
+				regs[nregs].off = off;
+				regs[nregs].val = val;
+				nregs++;
+			}
+		} else {
+			goto badarg;
+		}
+	}
+	if (!src || !npat || (src == 3 && !npat2) || (src != 3 && npat2))
+		goto badarg;
+
+	/* ---- refusal checks (still no hardware access) ---- */
+	if (!armed) {
+		emit("refused: not armed (use 'arm 1' immediately before)\n");
+		return;
+	}
+	armed = false; /* one-shot */
+	if (strcmp(utsname()->release, KNOWN_KERNEL)) {
+		emit("refused: unknown kernel %s\n", utsname()->release);
+		return;
+	}
+	if (held || ntouched) {
+		emit("refused: another lab experiment is active (hold/touched)\n");
+		return;
+	}
+	if (atomic_read(&afe->power.usage_count) != 0 || !pm_runtime_suspended(afe)) {
+		emit("refused: AFE not idle (normal stream/PM reference present)\n");
+		return;
+	}
+	ret = pm_runtime_resume_and_get(afe);
+	if (ret < 0) {
+		emit("refused: AFE clocks %d\n", ret);
+		return;
+	}
+	if (atomic_read(&afe->power.usage_count) != 1 ||
+	    (rd(DAC_CON0) & 0x5f) != 0x01 || (rd(I2S_CON3) & 1)) {
+		emit("refused: AFE not in expected idle state (DAC_CON0=%08x I2S_CON3=%08x)\n",
+		     rd(DAC_CON0), rd(I2S_CON3));
+		pm_runtime_put(afe);
+		return;
+	}
+	for (i = 0; i < nregs; i++) {
+		const struct wl_entry *e = find_wl(regs[i].off);
+		u32 cur = rd(regs[i].off);
+
+		if (!e || ((cur ^ regs[i].val) & ~e->mask)) {
+			emit("refused: fixture value %03x=%08x outside mask\n", regs[i].off, regs[i].val);
+			pm_runtime_put(afe);
+			return;
+		}
+	}
+	buf = dma_alloc_coherent(afe, 4096, &addr, GFP_KERNEL);
+	if (!buf) {
+		emit("error: dma alloc\n");
+		pm_runtime_put(afe);
+		return;
+	}
+	for (i = 0; i < 4096 / 4; i++)
+		((u32 *)buf)[i] = pat[i % npat];
+	if (src == 3) {
+		buf2 = dma_alloc_coherent(afe, 4096, &addr2, GFP_KERNEL);
+		if (!buf2) {
+			emit("error: dma alloc 2\n");
+			dma_free_coherent(afe, 4096, buf, addr);
+			pm_runtime_put(afe);
+			return;
+		}
+		for (i = 0; i < 4096 / 4; i++)
+			((u32 *)buf2)[i] = pat2[i % npat2];
+	}
+	dl_base = lower_32_bits(addr);
+	dl_end = dl_base + 4096 - 1;
+	en_bit = src == 1 ? BIT(1) : src == 2 ? BIT(2) : (BIT(1) | BIT(2));
+
+	/* ---- snapshot, program, run, capture ---- */
+	for (i = 0; i < ARRAY_SIZE(cap_snapshot); i++)
+		saved[i] = rd(cap_snapshot[i]);
+
+	if (src == 1 || src == 3) {
+		writel(dl_base, base + 0x040);
+		writel(dl_end, base + 0x048);
+	}
+	if (src == 2) {
+		writel(dl_base, base + 0x050);
+		writel(dl_end, base + 0x058);
+	}
+	if (src == 3) {
+		writel(lower_32_bits(addr2), base + 0x050);
+		writel(lower_32_bits(addr2) + 4096 - 1, base + 0x058);
+	}
+	/* both memif rates = selected code (default 8 kHz), stereo */
+	writel((rd(0x014) & ~(0xfU | 0xf0U | BIT(21) | BIT(22))) | rate | (rate << 4), base + 0x014);
+	for (i = 0; i < nregs; i++)
+		writel(regs[i].val, base + regs[i].off);
+	/* I2S: format I2S (bit3), 32-bit word (bit1), rate code 0 (8 kHz), then enable */
+	writel(BIT(3) | BIT(1) | (rate << 8), base + I2S_CON3);
+	writel(BIT(3) | BIT(1) | (rate << 8) | 1, base + I2S_CON3);
+	writel(rd(DAC_CON0) | en_bit, base + DAC_CON0);
+	msleep(8); /* a few frames to settle */
+
+	local_irq_save(flags);
+	t0 = ktime_get_ns();
+	for (i = 0; i < nsamp; i++)
+		sla_buf[i] = readl(gpio_din + 0x20);
+	sla_ns = ktime_get_ns() - t0;
+	local_irq_restore(flags);
+	sla_n = nsamp;
+	cur_dl = rd(src == 2 ? 0x054 : 0x044);
+	mon0 = rd(0x0d0);
+	mon1 = rd(0x0d4);
+
+	/* ---- teardown (always) ---- */
+	writel(rd(DAC_CON0) & ~(BIT(1) | BIT(2) | BIT(6)), base + DAC_CON0);
+	writel(rd(I2S_CON3) & ~1U, base + I2S_CON3);
+	for (i = 0; i < ARRAY_SIZE(cap_snapshot); i++) {
+		u32 want = saved[i];
+
+		if (cap_snapshot[i] == 0x010)
+			want = (want & ~0x5eU) | 0x01; /* keep AFE_ON, all memif enables off */
+		writel(want, base + cap_snapshot[i]);
+	}
+	for (i = 0; i < ARRAY_SIZE(cap_snapshot); i++) {
+		rb = rd(cap_snapshot[i]);
+		if (cap_snapshot[i] == 0x010) {
+			if ((rb & 0x5f) != (saved[i] & 0x01))
+				restore_ok = false;
+		} else if (rb != saved[i]) {
+			restore_ok = false;
+		}
+	}
+	irq_after = rd(IRQ_STATUS);
+	dac_after = rd(DAC_CON0);
+	i2s_after = rd(I2S_CON3);
+	ok = restore_ok && !(i2s_after & 1) && !(dac_after & 0x5e) && !irq_after;
+	dma_free_coherent(afe, 4096, buf, addr);
+	if (buf2)
+		dma_free_coherent(afe, 4096, buf2, addr2);
+	pm_runtime_put(afe);
+
+	{
+		unsigned int rise = 0, lr = 0;
+
+		for (i = 1; i < nsamp; i++) {
+			if (((sla_buf[i] >> 11) & 1) && !((sla_buf[i - 1] >> 11) & 1))
+				rise++;
+			if (((sla_buf[i] ^ sla_buf[i - 1]) >> 12) & 1)
+				lr++;
+		}
+		emit("i2s_capture src=%u rate=%u n=%u elapsed_ns=%llu bclk_rising=%u lrck_toggles=%u "
+		     "dl_cur=%08x mon0=%08x mon1=%08x restore_ok=%d i2s_off=%d dac_off=%d irq=%08x\n",
+		     src, rate, nsamp, sla_ns, rise, lr, cur_dl, mon0, mon1, restore_ok,
+		     !(i2s_after & 1), !(dac_after & 0x5e), irq_after);
+	}
+	jlog("{\"ts_ns\":%llu,\"kernel\":\"%s\",\"kind\":\"i2s_capture\",\"src\":%u,\"rate_code\":%u,\"n\":%u,"
+	     "\"npat\":%u,\"npat2\":%u,\"pat0\":\"0x%08x\",\"nregs\":%u,\"elapsed_ns\":%llu,"
+	     "\"dl_cur\":\"0x%08x\",\"restore_ok\":%s,\"final_ok\":%s,\"irq_after\":\"0x%08x\","
+	     "\"dac_con0_after\":\"0x%08x\",\"i2s_con3_after\":\"0x%08x\"}\n",
+	     ktime_get_real_ns(), utsname()->release, src, rate, nsamp, npat, npat2, pat[0], nregs, sla_ns,
+	     cur_dl, restore_ok ? "true" : "false", ok ? "true" : "false", irq_after, dac_after,
+	     i2s_after);
+	for (i = 0; i < nregs; i++)
+		jlog("{\"kind\":\"i2s_capture_fixture_reg\",\"reg\":\"0x%03x\",\"value\":\"0x%08x\"}\n",
+		     regs[i].off, regs[i].val);
+	return;
+badarg:
+	emit("usage: i2s_capture src=1|2|3 [rate=0|1|2|4] [n=<samples>] pat=<w0,..(pow2)> [pat2=<..> for src=3] "
+	     "[w=<off>:<val>,...]\n");
+}
+
 static void do_cmd(char *line)
 {
 	char *tok = strsep(&line, " \t\n");
@@ -298,10 +564,19 @@ static void do_cmd(char *line)
 
 	if (!tok || !*tok)
 		return;
+	if (!strcmp(tok, "i2s_capture")) {
+		i2s_capture(line);
+		return;
+	}
 	s1 = strsep(&line, " \n");
 	s2 = strsep(&line, " \n");
 
-	if (!strcmp(tok, "hold")) {
+	if (!strcmp(tok, "arm")) {
+		if (!s1 || kstrtoul(s1, 0, &a))
+			goto usage;
+		armed = !!a;
+		emit("armed=%d (one-shot, consumed by i2s_capture)\n", armed);
+	} else if (!strcmp(tok, "hold")) {
 		int ret;
 
 		if (!s1 || kstrtoul(s1, 0, &a))
@@ -606,6 +881,9 @@ static int __init lab_init(void)
 	debugfs_create_file("cmd", 0200, dir, NULL, &cmd_fops);
 	debugfs_create_file("out", 0400, dir, NULL, &out_fops);
 	debugfs_create_file("log", 0400, dir, NULL, &log_fops);
+	sla_blob.data = sla_buf;
+	sla_blob.size = SLA_MAX * sizeof(*sla_buf);
+	debugfs_create_blob("sla.bin", 0400, dir, &sla_blob);
 	return 0;
 }
 module_init(lab_init);
