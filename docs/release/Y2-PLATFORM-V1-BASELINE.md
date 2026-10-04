@@ -320,8 +320,10 @@ Target inventory: 1413 regular files identical,
 Changes are release/kernel/root/build/commit epoch identity and absolute build/
 SDK paths in FFmpeg/Rust/codec rodata and GCC/Python metadata. Every changed
 userspace ELF executable .text is identical; seven CPU foundation objects match.
-This is explained rebuilding with a new identity, not an unexplained binary
-regression. Whole-image bit reproducibility is not claimed. Complete section/
+The 2,322 root tar members retain identical timestamps, modes, ownership and
+symlinks; only the same nineteen file contents change. Ext4 superblock fields
+are identical. This is an explained rebuild with a new identity, not an
+unexplained binary regression. Whole-image bit reproducibility is not claimed. Complete section/
 string/file differences are in `validation/master-candidate-comparison.json`.
 
 ## 24. FLASH PROCEDURE
@@ -370,3 +372,5 @@ This first invocation does not launch USB stress or full-system suspend.
 One canonical newest owner-local software baseline, exact preserving pair and
 one smoke-gated campaign. Integrated physical/endurance acceptance is NOT_RUN;
 main promotion and public release remain separate controlled boundaries.
+
+Final canonical seal: [independent machine receipt](../validation/evidence/platform-v1-baseline-final.json).

@@ -1,5 +1,18 @@
 # Roadmap gap audit
 
+## Independent baseline final closure check — 2026-10-04
++
++Before ending the software-seal boundary, retained real hardware and owner scope
++were reviewed again against the canonical copy. No hardware evidence changed:
++UART01 C1/C2/C3 is source-bound CONFIRMED, integrated physical/endurance remains
++NOT_RUN, Baseline02 RTC FAIL stays open, Power/RTC and electrical benefit remain
++separate PARTIAL/UNKNOWN gates. All 233 IDs, active issue states, hardware/memory/
++OPP/DATA scope and distribution limits remain as in the preceding audit. No new
++build, flash or unchanged ROM/recovery provenance audit is needed for this
++receipt-only documentation update. Canonical software/package/source/checksum
++verification PASS; next step remains owner-preserving flash and one smoke-first
++campaign. No main, public release or physical milestone is promoted.
++
 ## Independent baseline software seal / physical handoff audit — 2026-10-04
 
 Standing boundary audit repeated before canonical baseline promotion, using actual
