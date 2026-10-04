@@ -4,6 +4,14 @@ import subprocess
 from pathlib import Path
 
 
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source-version', type=Path, required=True)
+    args = parser.parse_args()
+    print(source_version(args.source_version.read_text()))
+
+
 def source_version(cargo_manifest):
     workspace = re.search(
         r"(?ms)^\[workspace\.package\]\s*(.*?)(?=^\[|\Z)", cargo_manifest
@@ -48,3 +56,7 @@ def validate(manifest):
     if manifest.get("application") != receipt(version):
         raise ValueError("application receipt does not identify the built-in Reborn files")
     return True
+
+
+if __name__ == '__main__':
+    main()

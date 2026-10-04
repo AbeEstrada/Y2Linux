@@ -1,8 +1,8 @@
 ################################################################################
 # Reborn: vendored, pinned Rust sources; Buildroot owns native dependencies/SDK.
 ################################################################################
-REBORN_VERSION = 0.1.0-premium.02
 REBORN_SITE = $(if $(Y2_REBORN_SOURCE),$(Y2_REBORN_SOURCE),$(BR2_EXTERNAL_Y2LINUX_PATH)/../../Y2Reborn)
+REBORN_VERSION = $(shell python3 "$(BR2_EXTERNAL_Y2LINUX_PATH)/../tools/production/application.py" --source-version "$(REBORN_SITE)/Cargo.toml")
 REBORN_SITE_METHOD = local
 REBORN_LICENSE = MIT
 REBORN_LICENSE_FILES = LICENSE

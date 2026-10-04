@@ -379,3 +379,5 @@ in private logs and corrected; no failure is reclassified as a pass.
 ## Final release-contract reconciliation
 
 C31 separates software S16/S24/S32 output conversion from deployed S16-only native AFE formats and zero new-image physical acceptance. C32 binds enabled MTP delivery to kernel configfs/FunctionFS/ECM, selected package, installed responder and one installed USB policy; a USB controller alone no longer satisfies the claim. Targeted release composition/fallback/privacy checks PASS. The first fresh build is intermediate; final source identity and regenerated root/version metadata will follow the reviewed packaging-contract commit before broad qualification/sealing.
+
+C33: actual Buildroot package version now uses the same workspace-package parser as application receipts; make show-info confirms0.2.0. C34: the minimal locked host lacks native GIO; new Bluetooth JSON/fake-peer cases now report this prerequisite and execute on the native packaging host. Their behavior is unchanged, source tests are retained, and fresh ARM observer build remains required. The initial namespace/GIO failures remain archived.
