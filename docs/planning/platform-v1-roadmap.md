@@ -1,5 +1,35 @@
 # Platform v1 roadmap
 
+## Reborn performance pass admission — 2026-10-04
+
+Owner authorizes measurement and localized Reborn responsiveness fixes on branch
+`codex/platform-v1-reborn-performance`, preserving Product v2. Fresh read-only
+USB SSH under `/tmp/y2-platform-v1-device.lock` observes installed
+Y2LINUX-BASELINE-02, Linux `8584ccd8`, Reborn `b71b4688`, kernel
+`6.18.0-y2linux-baseline-02`, boot `27e6d684-3794-4490-95db-a489027cd4f4`,
+taint 0, and automatic qualified CPU0 C3 policy Enabled/budget -1/disable 0.
+This supersedes installation-pending information only for device identity and
+boot-policy observation; it does not substitute for full Baseline02 qualification.
+Retained UART01 C1/C2/C3 evidence remains scoped to its tested image.
+
+| Coverage / existing dependency | Classification | Next boundary |
+| --- | --- | --- |
+| Product v2 UI, GPU #34 | PARTIAL | Measure 480x360 frame submission/presentation, navigation, wheel and artwork on installed hardware; preserve pixels and KMS ownership. |
+| Library/storage #33 | PARTIAL | Disposable 10k-track SQL and UI fixtures; distinguish fixture timings from owner-library/cold-storage results. |
+| CPU idle #28/#34 | CONFIRMED bounded UART01; PARTIAL current-image | Measure Reborn CPU/context switches and redraws under current guards; do not change C1/C2/C3 policy. |
+| Audio/radios #29/#31 | PARTIAL | Bounded playback/control regressions; audible response and external peer behavior require direct observation. |
+| Startup/splash #28/#34 | PARTIAL | Installed first-frame log 446 ms from process entry; boot application-ready 41.343 s. Measure app restart separately from cold boot. |
+
+Read-only GitHub refresh confirms #16/#27/#28/#29/#31/#32/#33/#34 OPEN.
+No remote status mutation, milestone closure, build image, flash, push, memory
+reservation, partition or production package change is authorized by this pass.
+Temporary executable/fixture runs are reversible hardware measurements; retain
+and restore the installed service and owner data. Next smallest boundary is a
+measured baseline before any optimization. Source/ROM/recovery provenance is
+unchanged and is not repeated. Report belongs in Reborn
+`docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md`.
+
+
 ## Baseline02 source integration into main — 2026-10-03
 
 Owner-authorized integration carries `cpu-idle-completion` at `acb5bb3` into
