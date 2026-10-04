@@ -53,3 +53,10 @@ rootfs and `qemu-arm`, and the production test environment marker. A missing
 prerequisite is an environment result, not a passing test and not a reason to
 silently skip the associated assertions. Physical-device tests are not part of
 this runner.
+
+`test_filesystems` adds scratch-image checks for ext4, FAT32 and exFAT. It needs
+native e2fsprogs, dosfstools, exfatprogs and mtools (`mcopy`). Missing tools are
+explicit dependency skips and require a packaging-host run. The storage pass
+ran all three on new host images; it did not format or repair device media.
+Actual card mounts, UTF-8 names and large-file behavior remain separate physical
+checks; see [the storage receipt](../docs/validation/Y2-PLATFORM-V1-STORAGE.md).

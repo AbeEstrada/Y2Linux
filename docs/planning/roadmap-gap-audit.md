@@ -1,5 +1,119 @@
 # Roadmap gap audit
 
+## Storage Platform 1.0 closing audit — 2026-10-04
+
+This boundary reviews the owner's isolated storage pass before local handoff.
+Actual installed Baseline02 is Linux `8584ccd85f052f351fe51650b2348c83ca894ed4`,
+Reborn `b71b468860233faa0a42b8448ec5777fa952b8e3`, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, taint 0. Final locked hardware receipts
+record clean scratch cleanup, mounted ext4 SD at SDR104, eMMC HS200, both clocks
+gated, zero PM mismatch/error and unchanged transport fault counters. The
+non-blocking lease was released normally before the reserved suspend lane;
+that lane's later qualification is separate from this pass. New source remains
+uninstalled: Linux implementation `2a603c1`, Reborn source identity `ee1c25a`
+and playback/sidecar guard `f726ae4`. Affected Reborn app38/platform77/library28/
+media22 plus architecture guards, denied-warning Clippy and pinned ARM build
+pass; final ARM ELF/dependency and QEMU pinned image pixels pass as emulation.
+See the [storage report](../validation/Y2-PLATFORM-V1-STORAGE.md) and
+[compact physical/software receipt](../validation/evidence/platform-v1-storage-20261004.json).
+
+| Coverage / existing gate | Closing classification and smallest remaining boundary |
+| --- | --- |
+| eMMC / #28, #33 | CONFIRMED bounded HS200 read/write/fsync/SHA/PM. Direct read 98.717 MB/s, guarded write 26.800; retain HS200. Mounted-root DDR52/HS52 renegotiation and repeated cold boots remain untested. |
+| SD / #28, #33 | CONFIRMED bounded one-card SDR104/DDR50/SDR50/HS, 4 GiB top-rung direct reads without CRC/timeouts; retain current ladder. Candidate3 failures remain historical, superseded only for installed later pads/card selection and this card. Card/temperature/endurance matrix remains PARTIAL. |
+| Filesystems/media / #32, #33 | CONFIRMED installed ext4 fsync/hash/eject/same-card reinsert and host scratch FAT32 Unicode/dirty-bit refusal/ext4/exFAT no-write checks. Paired stable claims/CID sources, dirty-mount gate and pinned playback admission are software-tested. Different-card/FAT/exFAT/large-file target acceptance remains PARTIAL. |
+| Music/scanning / #29, #32, #33 | CONFIRMED stock 1,000-file physical corpus on both volumes: all hashes match, initial scans 5.526/5.495 s, all incremental rows reused, zero failures/controller deltas. New app/native source guard still requires matching deployment and target acceptance; SQLite ownership remains separate. |
+| CPU idle / #28, #34 | CONFIRMED storage clock gating/retention and clear MSDC blocker bits; retain UART01 actual C2/C3/hash evidence. This USB/radio four-core boot has no new C2/C3 entries; intended-workload regression remains PARTIAL. No masks weakened. |
+| Suspend/power / #30, #34 | PARTIAL in this storage pass; no full sleep, electrical durability or power-loss claim. Reserved independent suspend lane owns its actual results. |
+| Release/security/boot/USB/radio/GPU / #16, #27–#29, #31–#34 | Existing scope retained; localized tests/config/DT/modules/ABI/offline BOOTIMG pass. No new paired release installation or broader acceptance, backup/calibration waiver or unchanged ROM/recovery recapture. |
+
+Fresh read-only GitHub refresh keeps #16/#27/#28/#29/#31/#32/#33/#34 OPEN and
+#30 CLOSED. No status mutation or milestone closure is warranted. Existing
+recovery/fallback, Y2DATA/protected partition, memory, supplies and firmware
+obligations remain unchanged. Final classification is **PARTIALLY READY**:
+local source/report handoff is ready, general Platform 1.0 qualification is not.
+Next boundary is paired Linux/Reborn/native integration with explicit source-key
+migration/media admission, then owner-supported repeated/absent boot, second-card
+and physical filesystem matrix. Do not infer hardware authorization from this
+planning row. No flash, push, autoformat, raw write or mounted-media reset.
+
+## Storage playback-source guard audit — 2026-10-04
+
+Final paired-source review finds C19's saved queue contains old Track snapshots,
+and `Runtime::load` checks only whether a pathname exists. SourceChanged pauses
+an unavailable current track, but a later manual resume or queued decoder can
+reopen a same-named file on a different card. The validated CID-qualified source
+must be checked at decoder admission, with pinned source directory and regular
+file descriptors so mountpoint/file-entry replacement cannot redirect the open.
+Reject symlinks and subordinate mounts while walking relative components;
+retain the pins through native close. Extension-free file-FD header probing
+requires direct-versus-pinned metadata/PCM tests across all valid fixtures;
+sidecar admission uses the same regular-file and pinned-parent boundary.
+Review found the local artwork loader selects codecs by suffix, so extension-free
+sidecar FDs need a bounded 12-byte JPEG/PNG/RIFF-WebP signature fallback. Preserve
+existing named-file behavior, image limits, codecs/protocols and native ABI;
+validate identical direct/pinned pixels and affected native tests. The app must
+ship its matching native media library; old installed binaries remain unchanged.
+
+This is within the owner's storage coordination for playback/media replacement
+and #32/#33; it does not change SQLite, FFmpeg/native ABI, DSP, sink configuration,
+MMC modes or memory/idle policy. Installed physical hotplug remains bounded old-
+source evidence; the new paired guard requires host fault tests, app/platform
+checks and ARM build, then later target acceptance. No old queues are rebound to
+unproven cards. Update the [storage report](../validation/Y2-PLATFORM-V1-STORAGE.md)
+before closing this review; no broader release/milestone acceptance is inferred.
+
+## Storage removable-mount gate audit — 2026-10-04
+
+A source review during the authorized filesystem pass found that `y2-media
+mount` identifies the card but does not run the existing read-only checker.
+The owned-host FAT32 test proves that a dirty clean-unmount bit produces a
+nonzero `fsck.fat -n` result without changing the image. Current physical media
+is clean ext4, with successful explicit `e2fsck -f -n` and remove/reinsert;
+no dirty user media is created. Adopt a bounded read-only preflight before SD
+mounts, reject checker faults/timeouts/source changes, and leave automatic
+repair/formatting disabled. Internal root/data boot gates stay unchanged.
+
+This is a localized production-admission change within #32/#33, not hardware,
+memory or filesystem-format expansion. Read-only checks may delay mounts or
+refuse media requiring journal recovery; that availability limit must remain
+visible. Existing MT6582 modes, fallback, runtime PM and C2/C3 guards remain
+unchanged. Paired claim/source-ID changes still require Linux/Reborn integration;
+new source is software-tested, not installed by this pass. Proceed with focused
+media/checker tests and update [the receipt](../validation/Y2-PLATFORM-V1-STORAGE.md).
+
+## Storage Platform 1.0 optimization admission — 2026-10-04
+
+Owner requests an isolated storage/filesystem pass from Linux `b5aea93` and
+Reborn `b71b4688` on `codex/platform-v1-storage`; no main-worktree edits, flash
+or push. This narrow review precedes implementation and physical measurement.
+Retained hardware authority: candidate3's 200 MHz SD data CRCs and clean bounded
+100 MHz reads ([SD characterization](../validation/Y2-SD-SDR104-DIAG.md));
+UART01's clean eMMC/SD SHA256 after real C2/C3 returns
+([physical receipt](../validation/Y2-CPU-C3-UART-PHYSICAL.md)). Candidate4's stock
+pad/card-driver changes are included in current source, but its original receipt
+is software-only. A read-only identity probe saw Baseline02 running at HS200 and
+SDR104 with zero counters, boot `27e6d684-3794-4490-95db-a489027cd4f4`;
+the lock acquisition raced another session, so no qualification is claimed from
+that probe and all further physical access requires the non-blocking device lock.
+
+| Coverage / existing gate | Admission classification and next evidence |
+| --- | --- |
+| eMMC / #28, #33 | CONFIRMED bounded HS200 negotiation/readback and post-idle integrity; PARTIAL sustained writes/fsync/performance/repeated boot |
+| SD / #28, #33 | PARTIAL: older 200 MHz CRC failures retained; candidate4/later pad and driver selection must be reconciled before choosing a production ceiling |
+| Filesystems/media / #32, #33 | PARTIAL ext4 physical evidence, FAT/exFAT source support; inode/ctime mount claims disagree with stable diskseq inventory and require a paired Reborn fix |
+| CPU idle / #28, #34 | CONFIRMED bounded C1/C2/C3 UART01; preserve every blocker mask; collect passive storage regression on installed Baseline02 |
+| Suspend/endurance/release / #30, #32, #34 | PARTIAL; full sleep/repeated boot/card matrix/endurance remain independent physical gates |
+
+Read-only GitHub refresh: #16/#27/#28/#29/#31/#32/#33/#34 OPEN, #30 CLOSED;
+no external status mutation or milestone closure. Preserve storage addressing,
+Y2DATA, recovery/backup/calibration obligations, exact fallback, memory map,
+regulators and idle guards. No raw writes, autoformat, mounted-media reset or
+SQLite optimization. Proceed with the smallest justified source fixes, targeted
+regressions and safe scratch measurement; owner is available for SD interaction.
+Final decisions and unobserved gates belong in
+[the storage report](../validation/Y2-PLATFORM-V1-STORAGE.md).
+
 ## Baseline02 source integration into main — 2026-10-03
 
 The owner authorizes merging and publishing the current Baseline02 source and

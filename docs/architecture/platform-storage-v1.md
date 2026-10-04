@@ -9,8 +9,41 @@
 The root/data identity checks and partition geometry remain unchanged. All SD
 mounts use the existing 11240000.mmc controller, one unique supported filesystem,
 and `nosuid,nodev,noexec`. FAT/exFAT also use private file/directory masks.
+FAT uses `utf8=1` for UTF-8 long filenames; the kernel retains CP437 short-name
+support.
 
-`y2-media mount|unmount|status|check` is the lifecycle interface. Mount publishes
+Mount claims use `block:<major>:<minor>:diskseq:<N>`. The Linux disk sequence
+number persists across kernfs inode reclamation and changes on every card
+re-enumeration, including reinsertion of the same CID. Missing diskseq fails
+closed. Reborn must ship the matching claim consumer; update both together.
+Managed SD library source keys include the validated CID/geometry/filesystem
+identity hash so two cards with the same filesystem UUID do not share a library
+source. Existing UUID-only source records are retained offline; the first scan
+with the paired update creates the physical-card source. UUID remains the
+user-visible filesystem identity. UUID-less whole-card FAT is identified by CID,
+size and a zero start offset. No data or schema migration is performed here.
+Playback checks the live validated source ID for the current and queued tracks,
+then walks from a pinned source directory without following symlinks. Root mount
+ID, each parent and final file must remain on that mount/device; only regular
+files are admitted, with nonblocking opens to reject FIFOs without waiting.
+The decoder opens the pinned file through `/proc/self/fd` and retains file/parent
+descriptors until native close. Header probing preserves all 33 valid audio
+fixtures without a filename extension. Sidecar artwork uses a similarly checked
+regular file in the pinned parent; JPEG/PNG/WebP decode identically. The bounded
+local image loader uses a 12-byte signature fallback for descriptor paths without
+a suffix, retaining the same codecs, limits and ABI. Ship app/native media together. An old
+UUID-only queue cannot reopen a same-named file on another card; no automatic
+rebinding. Symlink music/sidecars and nested mounts are deliberately unavailable
+through this managed-source admission.
+
+`y2-media mount|unmount|status|check` is the lifecycle interface. Before mounting,
+a bounded 60-second read-only filesystem check must pass; reported uncorrected
+faults, timeouts and card-instance changes prevent mounting. Mount preflight uses
+`e2fsck -n`, `fsck.fat -n` or `fsck.exfat -n`; explicit ext4 `check` forces a
+complete `e2fsck -f -n` pass. Checker success follows that tool's filesystem
+semantics; no repair command is invoked. Normal ext4 journal behavior remains
+the kernel's responsibility. Large media may require an owner-directed offline
+check when the bounded preflight times out. Mount publishes
 a boot-scoped mount ID, major/minor, UUID and CID claim. Status rejects missing
 sources, changed UUIDs, missing claims and replacement mounts. Failed unmount
 retains its claim and reports failure; there is no force/lazy unmount or new
@@ -60,6 +93,19 @@ is Unavailable, never a durability pass. Collection/identity-check overhead is
 included in throughput. An I/O error or deadline retains completed results and
 marks the run FAILED. Kernel uninterruptible I/O remains outside userspace
 deadline guarantees. Scratch remnants from killed runs are not auto-deleted.
+
+Each storage measurement records passive aggregate CPU busy percent (all
+cores, idle and iowait excluded), IRQ deltas and negotiated MMC state/error
+counter deltas. Missing/reset counters are unavailable, never zero. A positive
+fault/fallback/reset delta stops the benchmark even if kernel retries completed
+the request. Small-file creation includes file fsync and final directory fsync.
+Five distinct offset/size regions are fsynced, then file-scoped cache eviction is
+requested and SHA256 verified after all writes to detect address aliasing.
+Platform status also exposes cached media operation/checker failures, passive
+runtime-PM counters, runtime status and recorded tuning maps; it never reads
+the register diagnostic that resumes MMC.
+The driver's passive mode line includes fallback origin/reason and card driver
+type. Existing detailed raw register/fault diagnostics remain explicit reads.
 
 These are measurement tools, not target measurements. Physical SD removal,
 full media, filesystem errors, card compatibility, long I/O tails and flush /

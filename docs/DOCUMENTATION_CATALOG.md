@@ -352,3 +352,9 @@ Indexed pages: **289**. Explicit scope notices: **220**.
 | [Reborn and battery implementation](release/implementation-reborn-power.md) | Productv2 controls, power and exact sensor evidence |
 | [Community tester guide](release/Y2-COMMUNITY-TESTER-GUIDE.md) | First install, transfer, redacted report, update/recovery |
 | [Source delivery and distribution gate](release/Y2-COMMUNITY-SOURCE-DELIVERY.md) | Composition, privacy, sources and public-distribution blockers |
+
+## Storage optimization pass
+
+| Page | Scope |
+| --- | --- |
+| [Storage Platform 1.0](validation/Y2-PLATFORM-V1-STORAGE.md) | Current isolated storage/filesystem pass, exact hardware evidence and remaining gates |

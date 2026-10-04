@@ -1,6 +1,13 @@
 # Y2 SD SDR104 stability — research and diagnostic candidate 3
 
 <!-- knowledge-base-scope: scoped-validation-record -->
+> **Superseding physical evidence, 2026-10-04:** Baseline02 includes the later
+> stock-pad/card-driver policy and passes 4 GiB of SDR104 direct reads at four
+> offsets, scratch hashes, all four SD modes and physical remove/reinsert.
+> See [the Platform 1.0 storage pass](Y2-PLATFORM-V1-STORAGE.md). Candidate 3's
+> failures and the original candidate 4 software-only receipt remain historical
+> evidence; they do not describe the current installed configuration.
+
 > **Source and software record, 2026-10-02.** Candidate 2 negotiated SDR104 on a
 > real Y2 and fell back to DDR50 under sustained reads. This page records why
 > the old tuning could not have found a stable operating point, what the

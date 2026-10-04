@@ -1,6 +1,12 @@
 # Y2 storage hardware ceiling — eMMC and SD bus modes
 
 <!-- knowledge-base-scope: scoped-validation-record -->
+> **Superseding physical evidence, 2026-10-04:** the installed Baseline02 now
+> passes bounded HS200 and SDR104 read/write/hash, fsync and runtime-PM checks.
+> See [the Platform 1.0 storage pass](Y2-PLATFORM-V1-STORAGE.md) for exact modes,
+> measurements and remaining qualification gaps. The record below preserves
+> the source-only state at its original date.
+
 > **Source and software record, 2026-10-01.** The ceilings below come from
 > stock Y2 binaries, the MT6582 BSP source, the installed eMMC's EXT_CSD and
 > the MT6323 regulator tables. The implementation is software-validated.
