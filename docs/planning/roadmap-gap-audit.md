@@ -1,5 +1,38 @@
 # Roadmap gap audit
 
+## Platform 1.0 input pass admission — 2026-10-04
+
+Owner explicitly authorizes implementation, optimization and bounded physical
+input observation in isolated `codex/platform-v1-input` worktrees, based on Linux
+`b5aea93` and Reborn `b71b468`. No flash, push, main-worktree changes or full
+system-suspend implementation is authorized. The shared nonblocking device lock
+was busy on first attempt; no live access occurred.
+
+Retained UART01 hardware evidence remains authoritative for bounded C1/C2/C3:
+Linux `e9e8d63`, Reborn `b71b468`, boot `fd955840-35d9-47db-83e0-ff47d6bb2d2b`,
+taint 0, 3,647 checked C3 returns. Retained DEV02 and GPU01 evdev captures show
+APT32F press/release wheel records and all eight physical controls; they do not
+prove counted slow-detent accuracy, current-image bounce, presentation latency
+or human feel. Baseline02 new-image qualification remains PHYSICAL_NOT_RUN.
+
+| Coverage / dependency | Classification | Next evidence boundary |
+| --- | --- | --- |
+| APT32F IRQ/I2C/evdev, #28 | PARTIAL | Current installed identity, bounded capture and detent counters; preserve IRQ-only driver unless evidence requires change |
+| Reborn timing/actions/recovery, #28 | PARTIAL | Deterministic failure/timestamp/hold tests, targeted fixes, workspace checks and ARM build |
+| Display/presentation latency, #34 | PARTIAL | Correlated input/state/frame timestamps; physical actuation origin requires owner or external measurement |
+| C1/C2/C3 input compatibility, #28 | CONFIRMED bounded retained CPU scope; PARTIAL input scope | Observe untouched input IRQ/poll activity without changing CPU/radio policy |
+| Power/full suspend, #28 | PARTIAL | Typed Power and screen-state ownership here; full suspend belongs to another session |
+| Product v2 physical UX | PARTIAL | Counted detents/buttons, screen-off/wake and owner feel test on installed candidate |
+
+GitHub #28/#34 refreshed read-only: OPEN. No remote issue mutation or milestone
+closure; parallel sessions retain their ownership. Product v2 global controls,
+fine-control contexts and long-list acceleration remain the authority. Proceed
+with source mapping and deterministic reproduction while retrying the device
+lock. Recovery/protected partitions, memory, ROM provenance and production scope
+are unchanged. Admission is PARTIALLY READY: software work authorized, hardware
+counts and candidate acceptance pending. See
+[the input validation record](../validation/Y2-PLATFORM-V1-INPUT.md).
+
 ## Baseline02 source integration into main — 2026-10-03
 
 The owner authorizes merging and publishing the current Baseline02 source and

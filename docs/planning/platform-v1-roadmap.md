@@ -1,5 +1,21 @@
 # Platform v1 roadmap
 
+## Platform 1.0 input pass — 2026-10-04
+
+Input implementation and bounded physical observation are active only in the
+isolated `codex/platform-v1-input` Linux/Reborn worktrees (bases `b5aea93` /
+`b71b468`). [Admission audit](roadmap-gap-audit.md#platform-10-input-pass-admission--2026-10-04)
+preserves Product v2 semantic controls, the IRQ-driven APT32F driver and retained
+UART01 C1/C2/C3 evidence. #28/#34 remain OPEN after read-only refresh.
+
+Next: map timing/recovery ownership, reproduce concrete failures, capture current
+installed events under `/tmp/y2-platform-v1-device.lock`, fix justified bugs and
+run targeted Linux tests plus Reborn fmt/clippy/workspace/ARM checks. Physical
+counts, latency and owner feel remain separate acceptance gates; the initially
+busy lock does not authorize concurrent access. Build one coherent software
+candidate if needed. No flash, push, main-worktree edits, CPU-policy changes or
+full-suspend implementation. [Input receipt](../validation/Y2-PLATFORM-V1-INPUT.md).
+
 ## Baseline02 source integration into main — 2026-10-03
 
 Owner-authorized integration carries `cpu-idle-completion` at `acb5bb3` into
