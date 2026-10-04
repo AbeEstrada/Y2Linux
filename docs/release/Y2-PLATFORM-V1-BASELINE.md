@@ -1,8 +1,18 @@
 # Y2Linux + Reborn Platform 1.0 baseline
 
-Independent verification, 2026-10-04. **READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**.
+Independent software-seal verification, 2026-10-04. **READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**.
 One owner-local baseline; **SOFTWARE_VALIDATED / INTEGRATED_PHYSICAL_NOT_RUN**.
-This session did not access a device, flash, push, merge main or qualify public distribution.
+During software sealing this session did not access a device, flash, push, merge
+main or qualify public distribution.
+
+Later owner-installed qualification is **PARTIAL / INTERRUPTED**. Bounded
+smoke/C1/hotplug/OPPs/C2 and DATA/SD hashes pass. Owner restart interrupted an
+overlong intentional USB-off topology wait, with no recorded C3 armed/entered
+cycle. Earlier post-flash USB trouble and recovered-boot DRM WARNING/C3 policy
+Skipped remain open. The owner prioritizes completing a separate audio test;
+USB/boot diagnosis follows its lease release. Host-only qualification corrections
+do not change these sealed image/source identities. See the
+[current physical receipt](../validation/Y2-PLATFORM-V1-BASELINE-PHYSICAL.md).
 
 ## 1. PLATFORM 1.0 BASELINE IDENTITY
 

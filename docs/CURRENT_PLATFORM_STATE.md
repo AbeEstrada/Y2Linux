@@ -1,5 +1,27 @@
 # Current Y2Linux platform state
 
+## Baseline01 physical gate interrupted / USB diagnosis pending — 2026-10-04
+
+Exact installed Baseline01 Linux `98daf3f` / Reborn `9cd12bae`, kernel baseline-01
+and root v1.24 passes original machine/owner smoke on boot `ef2c8f2f…`, taint 0.
+All-four-core C1, 18 hotplug transitions, five OPP/voltage readbacks and natural
+parking/C2 pass; C2 has 4,857 entries and 85.4572% residency in 60.05534 seconds,
+zero restore faults. Eight scratch hash rounds each on DATA/SD after C2 pass.
+The owner restarted after an overlong deliberate USB-off C3 topology wait;
+C3 has no recorded armed/entered cycle and remains unqualified, not a proven
+C3 crash. Recovered boot `9d4d0245…` logs a DRM WARNING; automatic C3 correctly
+reports Skipped. Earlier post-flash USB disconnects remain independently open.
+Host ECM static-IP/autoconnect matching is corrected and saved; the host harness
+now keeps USB attached during parking and bounds its offline window to 180 s.
+Thirty affected host tests pass; installed firmware/images are unchanged.
+The owner prioritizes the separate wired-audio session holding the shared lock;
+USB diagnosis waits for its completion. No further CPU/transfer/suspend stress.
+Full Power and RTC wake remain separately NOT_RUN, historical Baseline02 RTC FAIL
+stays open, and endurance/electrical/distribution gates remain unqualified.
+See [the physical receipt](validation/Y2-PLATFORM-V1-BASELINE-PHYSICAL.md).
+All 233 feature identities are retained; sealed package metadata remains its
+seal-time record. No main merge, push, flash or public/physical promotion.
+
 ## Newest independent Platform 1.0 baseline — 2026-10-04
 
 `Y2LINUX-PLATFORM-V1-BASELINE-01`: compiled Linux `98daf3f0220f4a1580bb4893094ee9f0e02362a5` / Reborn `9cd12baeeb70b204e08299bd4c91c8c35604c304`;

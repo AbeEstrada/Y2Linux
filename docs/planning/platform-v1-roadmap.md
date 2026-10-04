@@ -1,5 +1,27 @@
 # Platform v1 roadmap
 
+## Baseline01 physical pause / USB diagnosis next — 2026-10-04
+
+The [standing audit](roadmap-gap-audit.md#baseline01-physical-pause--usb-observation-boundary--2026-10-04)
+uses exact installed Linux98daf3f/Reborn9cd12bae, original bootef2c8f2f/taint0.
+Smoke, all-core C1,18hotplug transitions,five OPP/voltage checks,CPU0-only parking,
+C2 4,857entries/85.4572%/zero restores failed and bounded DATA/SD hashes pass.
+C3 remains unqualified: owner restart interrupted a deliberately USB-off
+topology wait; there is no recorded armed/entered cycle or proved C3 crash.
+The host helper now waits for parking with USB attached and caps offline time
+at180s;30 targeted host tests pass without changing installed firmware.
+
+Owner's earlier post-flash USB disconnect report stays open. Verified persistent
+host static-IP/MAC/autoconnect fixes one reachability defect, not all reconnects.
+Recovered boot9d4d0245 has DRM WARNING/timeouts and automatic C3 safely Skipped.
+Next smallest gate is exclusive read-only USB/boot diagnosis after the separate
+wired-audio session finishes, as the owner requests. No new CPU/transfer/full-
+suspend stress until resolved. Baseline02 RTC FAIL, separate new-image Power/RTC,
+endurance/electrical, peers/audio/desktop matrices and distribution remain open.
+Readiness is PARTIAL_INTERRUPTED; no feature, issue or milestone is promoted.
+Images/233 IDs/OPPs/memory/partitions/fallback remain unchanged; no build/flash/
+push/main merge follows from this host-only correction and evidence update.
+
 ## Baseline01 installed physical admission — 2026-10-04
 
 Owner reports newest preserving firmware installed and authorizes its tests.

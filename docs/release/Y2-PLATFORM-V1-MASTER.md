@@ -1,5 +1,14 @@
 # Y2 + Reborn Platform 1.0 master report
 
+## Installed baseline physical follow-up — 2026-10-04
+
+The [exact-image physical receipt](../validation/Y2-PLATFORM-V1-BASELINE-PHYSICAL.md)
+records PARTIAL / INTERRUPTED qualification, bounded smoke/C1/hotplug/OPPs/C2
+and DATA/SD successes, no qualified C3 entry, owner-reported USB reconnect trouble
+and recovered-boot DRM WARNING / C3 safely Skipped. Firmware/software seal below
+is unchanged; it is not full hardware acceptance. Owner-prioritized audio testing
+finishes before exclusive USB diagnosis. No main/public promotion.
+
 ## Independent final baseline — 2026-10-04
 
 Current software handoff: **Y2LINUX-PLATFORM-V1-BASELINE-01 — READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**.

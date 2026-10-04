@@ -1,5 +1,16 @@
 # One Platform 1.0 integrated physical qualification campaign
 
+Installed Baseline01 follow-up (2026-10-04): the owner restarted during an
+overlong intentional USB-off C3 topology wait. C1/hotplug/OPPs/C2 and bounded
+post-C2 storage pass; C3 remains unqualified with no recorded armed/entered cycle.
+Recovered boot has a DRM WARNING and correctly refuses automatic C3. Owner also
+reports earlier post-flash USB reconnect problems. See the
+[physical receipt](../validation/Y2-PLATFORM-V1-BASELINE-PHYSICAL.md).
+Do not repeat the campaign before exclusive USB/boot diagnosis resolves these
+gates. The host helper now waits for parking while USB remains attached; offline
+topology/admission waits are bounded and a 180-second userspace alarm restores
+USB after timeout, without weakening the kernel's real-entry backstop.
+
 Host harness correction after Baseline01 installation (2026-10-04): CPU-idle
 qualification waits for Reborn's normal automatic display timeout when playback
 is stopped. Short Power now requests full-system sleep in that state and must
@@ -10,9 +21,10 @@ configurations as a bounded stop requiring owner observation. The normal short
 Power gesture remains the awake-from-screen-off test. Full Power wake and RTC
 wake remain separate staged qualification gates.
 
-The newest baseline starts **SOFTWARE_VALIDATED / INTEGRATED_PHYSICAL_NOT_RUN**.
+At software seal the baseline starts **SOFTWARE_VALIDATED / INTEGRATED_PHYSICAL_NOT_RUN**.
 Endurance and electrical battery benefit are NOT_RUN. The owner flashes; this
-verification session accessed no device. Source, capability and historical
+software verification session accessed no device. The later installed-image
+receipt above controls current physical state. Source, capability and historical
 physical evidence have separate identities. [Baseline](Y2-PLATFORM-V1-BASELINE.md).
 
 ## Installation and first smoke gate

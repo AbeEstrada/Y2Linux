@@ -1,5 +1,32 @@
 # Roadmap gap audit
 
+## Baseline01 physical pause / USB observation boundary — 2026-10-04
+
+Standing audit repeated on actual installed-image receipts before closing this
+partial test boundary. Compiled Linux98daf3f/Reborn9cd12bae and sealed images
+are unchanged. Original boot ef2c8f2f/taint0 passes owner/machine smoke, C1 on all
+four cores, 18 hotplug transitions, all five guarded OPPs/PWRAP readbacks and
+natural CPU0-only parking/C2 (4,857 entries,85.4572% in60.05534s,restore faults0).
+Eight fsynced128KiB hash rounds each on DATA/SD after C2 pass. These are bounded
+CONFIRMED successes, not integrated acceptance or electrical benefit.
+
+| Coverage / retained issue | New real evidence / next smallest boundary |
+| --- | --- |
+| CPU/idle/timer/parking; #28/#30 | C3 PARTIAL/NOT_QUALIFIED: deliberate USB-off topology wait lasted too long; last durable record budget0/entries0/no armed cycle. Owner confirms restart to recover USB, so changed boot is not proof of C3 crash. Preserve UART01 exact-image C1/C2/C3. Host-only parking-before-detach and180s alarm/cleanup correction passes30 affected tests; no hardware replay. |
+| USB/storage/recovery; #27/#28/#33 | Owner reports pre-test post-flash disconnects. Host DHCP profile did not fit static ECM/new interface; verified MAC/static-IP/autoconnect saved and return observed. Physical USB/MTP reconnect remains PARTIAL. No descriptor error in captured host interval. Diagnose exclusively after audio lane finishes. |
+| Graphics/boot/policy; #28/#34 | Recovered boot9d4d0245 logs DRM vblank WARNING/flip/commit timeout; C3 policy Skipped/kernel_tainted_or_unknown. Current taint/restore observation awaits lease. Never bypass that safety gate. |
+| Full sleep/radios/audio/endurance/distribution; #16/#29/#31/#32/#33 | Baseline02 RTC FAIL remains; new-image Power and RTC independently NOT_RUN. Separate wired-audio lane owns device; no claim about its result. Radio peer/coexistence, MTP, battery/electrical/endurance and firmware/codec/source/collector gates remain open. |
+
+Owner prioritizes finishing the wired-audio test before further USB diagnosis.
+This session respects its shared lease and makes no device command while held.
+No new CPU/suspend/transfer stress, production/hardware/memory/OPP/layout change,
+flash, push, main/public promotion or issue closure. All233feature IDs and
+retained issue states stay fixed. No unchanged ROM/stock/recovery provenance
+campaign is repeated. Next stage is partially ready for read-only USB/boot
+observation once the audio lease is released; integrated acceptance is blocked
+on those gates. [Physical receipt](../validation/Y2-PLATFORM-V1-BASELINE-PHYSICAL.md)
+and private owner out/platform-v1-physical/baseline-01-smoke-03 retain evidence.
+
 ## Baseline01 installed physical admission — 2026-10-04
 
 Owner reports newest preserving firmware installed and authorizes its tests.

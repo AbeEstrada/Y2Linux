@@ -1,9 +1,11 @@
 # Y2Linux complete document catalog
 
-Updated 2026-10-03 for Baseline02. Every project-owned Markdown page in this repository
+Updated 2026-10-04 for the installed Platform 1.0 baseline. Every project-owned Markdown page in this repository
 is listed once; vendored upstream package documentation is excluded.
-Platform 1.0 source composition is in progress; retained sealed Baseline02 is history; latest bounded CPU-idle hardware
-proof is UART01. Baseline02 new-image/cold-boot qualification remains NOT_RUN.
+Platform 1.0 Baseline01 is software-sealed and installed; its smoke/CPU campaign
+was interrupted by an owner restart during the USB-off prerequisite wait; USB
+diagnosis is pending. UART01 retains complete bounded CPU-idle proof and the fallback
+reference. Historical Baseline02 RTC wake failure remains open.
 Start with the current-state page; a historical
 report records its own build/session, not the presently installed image.
 Raw hardware and build evidence is preserved unchanged. The catalogs
@@ -11,7 +13,7 @@ document links, rather than relocating or deleting proof. See the
 [shared knowledge rules](KNOWLEDGE_BASE.md)
 and the other repository's catalog for product-wide context.
 
-Indexed pages: **302**. Explicit scope notices: **220**.
+Indexed pages: **307**. Explicit scope notices: **220**.
 
 ## Entry
 
@@ -389,5 +391,6 @@ Platform 1.0 parallel integration observation (2026-10-04):
 | --- | --- |
 | [Y2-PLATFORM-V1-FINAL-SESSION-RESULTS.md](release/Y2-PLATFORM-V1-FINAL-SESSION-RESULTS.md) | Independent final source/software/handoff; hardware pending |
 | [Y2-PLATFORM-V1-BASELINE.md](release/Y2-PLATFORM-V1-BASELINE.md) | Independent final source/software/handoff; hardware pending |
+| [Baseline01 installed physical qualification](validation/Y2-PLATFORM-V1-BASELINE-PHYSICAL.md) | Exact-image smoke/CPU results and preserved failures; overall acceptance remains partial |
 | [Y2-PLATFORM-V1-BASELINE-CHANGELOG.md](release/Y2-PLATFORM-V1-BASELINE-CHANGELOG.md) | Independent final source/software/handoff; hardware pending |
 | [Y2-PLATFORM-V1-INDEPENDENT-VERIFICATION.md](release/Y2-PLATFORM-V1-INDEPENDENT-VERIFICATION.md) | Independent final source/software/handoff; hardware pending |

@@ -39,15 +39,21 @@
       "public_distribution_ready": false
     },
     "latest_reported_installed_candidate": {
-      "linux": "8584ccd85f052f351fe51650b2348c83ca894ed4",
-      "reborn": "b71b468860233faa0a42b8448ec5777fa952b8e3",
-      "boot": "88b85fa3-2282-4d93-b0b8-818a105ddd0a",
-      "taint": 0,
-      "full_rtc_trial": "FAIL_NO_SAME_BOOT_COMPLETE_EXIT",
-      "name": "Y2LINUX-BASELINE-02",
-      "kernel": "6.18.0-y2linux-baseline-02",
-      "rootfs": "2025.02.18-platform-v1.21",
-      "release": "1.0.0-baseline-candidate.2"
+      "name": "Y2LINUX-PLATFORM-V1-BASELINE-01",
+      "linux": "98daf3f0220f4a1580bb4893094ee9f0e02362a5",
+      "reborn": "9cd12baeeb70b204e08299bd4c91c8c35604c304",
+      "kernel": "6.18.0-y2linux-platform-v1-baseline-01",
+      "rootfs": "2025.02.18-platform-v1.24",
+      "release": "1.0.0-platform-v1-baseline-candidate.1",
+      "boot": "9d4d0245-f1f0-45ef-abc9-f43234ae30de",
+      "taint": null,
+      "installed_identity": "INDEPENDENTLY_OBSERVED",
+      "integrated_physical_state": "PARTIAL_INTERRUPTED_USB_DIAGNOSIS_PENDING",
+      "full_rtc_trial": "NOT_RUN_NEW_IMAGE; historical Baseline02 FAIL remains unresolved",
+      "report": "docs/validation/Y2-PLATFORM-V1-BASELINE-PHYSICAL.md",
+      "admission_boot": "ef2c8f2f-56d9-418a-b8a8-2dfd329d0973",
+      "admission_taint": 0,
+      "taint_note": "Recovery dmesg contains DRM WARNING; automatic C3 Skipped/kernel_tainted_or_unknown. Direct current taint read awaits exclusive lease."
     },
     "previous_built_and_installed_candidate": {
       "name": "Y2LINUX-STORAGE-CEILING-02",
@@ -1225,7 +1231,7 @@
       "enabled_by_default": "Yes",
       "actually_used": "Path active when invoked; source/candidate scope, not proof of current runtime",
       "evidence": "PHYSICALLY_QUALIFIED",
-      "physical_evidence": "Fix02 per-core IRQs and nine re-onlines plus 4\u21921\u21924 pass",
+      "physical_evidence": "Fix02 per-core IRQs and nine re-onlines plus 4→1→4 pass",
       "automated_tests": [
         "tests/test_dev_foundation.py",
         "tests/test_dev_abi.py",
@@ -1269,7 +1275,7 @@
       "platform_v1_integration": {
         "implementation_state": "IMPLEMENTED_ENABLED",
         "software_evidence": "Source/config/contract tests and fresh ARM/kernel/QEMU/package composition PASS; retained feature-specific receipts apply; software success does not imply runtime/hardware qualification",
-        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Fix02 per-core IRQs and nine re-onlines plus 4\u21921\u21924 pass",
+        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Fix02 per-core IRQs and nine re-onlines plus 4→1→4 pass",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "hardware_condition": "No cross-revision qualification",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
@@ -2381,7 +2387,7 @@
       "enabled_by_default": "Yes",
       "actually_used": "Path active when invoked; source/candidate scope, not proof of current runtime",
       "evidence": "PHYSICALLY_QUALIFIED",
-      "physical_evidence": "UART01: GPT4 sole broadcast, highres/NO_HZ all cores, 21 guarded actual C3 wakes; future GPT4 deadlines 3.471384\u201318.392615 ms. The 2 ms / 26000 tick guard remains.",
+      "physical_evidence": "UART01: GPT4 sole broadcast, highres/NO_HZ all cores, 21 guarded actual C3 wakes; future GPT4 deadlines 3.471384–18.392615 ms. The 2 ms / 26000 tick guard remains.",
       "automated_tests": [
         "tests/test_cpu_final.py",
         "tests/test_slow_idle.py",
@@ -2431,7 +2437,7 @@
       "platform_v1_integration": {
         "implementation_state": "IMPLEMENTED_ENABLED",
         "software_evidence": "Source/config/contract tests and fresh ARM/kernel/QEMU/package composition PASS; retained feature-specific receipts apply; software success does not imply runtime/hardware qualification",
-        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: UART01: GPT4 sole broadcast, highres/NO_HZ all cores, 21 guarded actual C3 wakes; future GPT4 deadlines 3.471384\u201318.392615 ms. The 2 ms / 26000 tick guard remains.",
+        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: UART01: GPT4 sole broadcast, highres/NO_HZ all cores, 21 guarded actual C3 wakes; future GPT4 deadlines 3.471384–18.392615 ms. The 2 ms / 26000 tick guard remains.",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "hardware_condition": "20 requested 1 ms probes produced no C3 entry; receipt does not isolate governor versus individual guard. Wider deadline/endurance coverage and Baseline02 cold boot remain.",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
@@ -2647,7 +2653,7 @@
       "enabled_by_default": "Yes",
       "actually_used": "Candidate02 natural parking and screen/playback demand restore observed.",
       "evidence": "PHYSICALLY_QUALIFIED",
-      "physical_evidence": "UART01: natural screen-off parking reaches CPU0, owner mask 0xe and both physical secondary power copies 0; 18 supported hotplug transitions; order 3\u21922\u21921 off / 1\u21922\u21923 on, screen/playback demand restore.",
+      "physical_evidence": "UART01: natural screen-off parking reaches CPU0, owner mask 0xe and both physical secondary power copies 0; 18 supported hotplug transitions; order 3→2→1 off / 1→2→3 on, screen/playback demand restore.",
       "automated_tests": [
         "tests/test_cpu_final.py",
         "tests/test_slow_idle.py",
@@ -2701,7 +2707,7 @@
       "platform_v1_integration": {
         "implementation_state": "IMPLEMENTED_ENABLED",
         "software_evidence": "Source/config/contract tests and fresh ARM/kernel/QEMU/package composition PASS; retained feature-specific receipts apply; software success does not imply runtime/hardware qualification",
-        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: UART01: natural screen-off parking reaches CPU0, owner mask 0xe and both physical secondary power copies 0; 18 supported hotplug transitions; order 3\u21922\u21921 off / 1\u21922\u21923 on, screen/playback demand restore.",
+        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: UART01: natural screen-off parking reaches CPU0, owner mask 0xe and both physical secondary power copies 0; 18 supported hotplug transitions; order 3→2→1 off / 1→2→3 on, screen/playback demand restore.",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "hardware_condition": "Background activity legitimately resets eligibility; no forced perfect-zero or arbitrary power writes. Baseline02 regression pending.",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
@@ -2734,7 +2740,7 @@
       "user_visible": false,
       "owner": "Kernel",
       "implementation_state": "IMPLEMENTED_ENABLED",
-      "enabled_by_default": "Baseline02 S05y2-cpu-idle automatically enables qualified CPU0 C3 after static foundations/readback; kernel starts disabled/budget 0; CPU1\u20133 C3 stays off.",
+      "enabled_by_default": "Baseline02 S05y2-cpu-idle automatically enables qualified CPU0 C3 after static foundations/readback; kernel starts disabled/budget 0; CPU1–3 C3 stays off.",
       "actually_used": "UART01 real runtime entries observed; Baseline02 automatic cold boot PHYSICAL_NOT_RUN.",
       "evidence": "PHYSICALLY_QUALIFIED",
       "physical_evidence": "UART01: 21 guarded budget-1-entry reset-and-return trials with SRAM/RGU proof; then +3624 normal-policy entries / 39204662 us in 60.088343522 s = 65.2450%. Final 3647 entries=resumes=successes=UART ACKs=CIRQ clone/flushes=timer context save/restores, all restore failures 0; same boot fd955840-35d9-47db-83e0-ff47d6bb2d2b, taint 0.",
@@ -5178,14 +5184,14 @@
     {
       "id": "F059",
       "subsystem": "Display",
-      "feature": "Native panel / DRM KMS / framebuffer / 480\u00d7360",
+      "feature": "Native panel / DRM KMS / framebuffer / 480×360",
       "user_visible": true,
       "owner": "Kernel",
       "implementation_state": "IMPLEMENTED_ENABLED",
       "enabled_by_default": "Yes",
       "actually_used": "Path active when invoked; source/candidate scope, not proof of current runtime",
       "evidence": "PHYSICALLY_QUALIFIED",
-      "physical_evidence": "GPU01 and later menus visible at 480\u00d7360",
+      "physical_evidence": "GPU01 and later menus visible at 480×360",
       "automated_tests": [
         "tests/test_baseline_display.py",
         "tests/test_reborn_splash.py",
@@ -5230,7 +5236,7 @@
       "platform_v1_integration": {
         "implementation_state": "IMPLEMENTED_ENABLED",
         "software_evidence": "Source/config/contract tests and fresh ARM/kernel/QEMU/package composition PASS; retained feature-specific receipts apply; software success does not imply runtime/hardware qualification",
-        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: GPU01 and later menus visible at 480\u00d7360",
+        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: GPU01 and later menus visible at 480×360",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "hardware_condition": "One observed panel/revision; no interchangeable-panel promise",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
@@ -5820,7 +5826,7 @@
     {
       "id": "F067",
       "subsystem": "Input",
-      "feature": "APT32F I2C \u2192 evdev wheel \u2192 semantic navigation",
+      "feature": "APT32F I2C → evdev wheel → semantic navigation",
       "user_visible": true,
       "owner": "Reborn",
       "implementation_state": "IMPLEMENTED_ENABLED",
@@ -6230,7 +6236,7 @@
     {
       "id": "F072",
       "subsystem": "Audio",
-      "feature": "FFmpeg \u2192 float DSP \u2192 sink conversion \u2192 ALSA \u2192 AFE DL1 \u2192 I2S \u2192 CS43131",
+      "feature": "FFmpeg → float DSP → sink conversion → ALSA → AFE DL1 → I2S → CS43131",
       "user_visible": true,
       "owner": "Reborn",
       "implementation_state": "IMPLEMENTED_ENABLED",
@@ -6403,7 +6409,7 @@
       "enabled_by_default": "Enabled independently of qualification flag",
       "actually_used": "Path active when invoked; source/candidate scope, not proof of current runtime",
       "evidence": "PHYSICALLY_OBSERVED",
-      "physical_evidence": "Physical01 one minute + rate switches owner clean; Fix02 24/96\u219248 exercise",
+      "physical_evidence": "Physical01 one minute + rate switches owner clean; Fix02 24/96→48 exercise",
       "automated_tests": [
         "tests/test_audio.py",
         "tests/test_audio_clocks.py",
@@ -6431,7 +6437,7 @@
       "legacy_release_classification": {
         "beta_state": "BETA_READY_WITH_LIMITATION",
         "beta_priority": "B",
-        "recommended_next_action": "Include 44.1\u219448 transitions and one sustained segment"
+        "recommended_next_action": "Include 44.1↔48 transitions and one sustained segment"
       },
       "product_target": "CORE_RELEASE_FEATURE",
       "hardware_conditional": false,
@@ -6439,7 +6445,7 @@
       "release_requirement": "REQUIRED_FOR_FEATURE_COMPLETE_BETA",
       "public_distribution_state": "NOT_SEPARATELY_ASSESSED",
       "current_limitation": "audio-qualified.json still only lists 44.1; long Reborn listening pending",
-      "next_action": "Include 44.1\u219448 transitions and one sustained segment",
+      "next_action": "Include 44.1↔48 transitions and one sustained segment",
       "release_completion_groups": [
         "B"
       ],
@@ -6450,7 +6456,7 @@
       "platform_v1_integration": {
         "implementation_state": "IMPLEMENTED_ENABLED",
         "software_evidence": "Source/config/contract tests and fresh ARM/kernel/QEMU/package composition PASS; retained feature-specific receipts apply; software success does not imply runtime/hardware qualification",
-        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Physical01 one minute + rate switches owner clean; Fix02 24/96\u219248 exercise",
+        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Physical01 one minute + rate switches owner clean; Fix02 24/96→48 exercise",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "hardware_condition": "audio-qualified.json still only lists 44.1; long Reborn listening pending",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
@@ -6584,7 +6590,7 @@
       "diagnostics": "Not applicable; no implemented capability",
       "known_limitation": "Exact native MT6582 clock/rate route above48k remains unproven; family conversion stays44.1/48.",
       "failure_mode": "False native-rate claim",
-      "safe_fallback": "88.2\u219244.1; 96\u219248; 44.1 ultimate fallback",
+      "safe_fallback": "88.2→44.1; 96→48; 44.1 ultimate fallback",
       "source_paths": [
         "kernel/audio/mt6582-afe.c",
         "kernel/audio/y2-cs43131.c",
@@ -8261,7 +8267,7 @@
       "enabled_by_default": "When source/sink differ",
       "actually_used": "Path active when invoked; source/candidate scope, not proof of current runtime",
       "evidence": "PHYSICALLY_OBSERVED",
-      "physical_evidence": "24/96\u219248 physically exercised; native sample/24-bit sign tests",
+      "physical_evidence": "24/96→48 physically exercised; native sample/24-bit sign tests",
       "automated_tests": [
         "Y2Reborn:crates/reborn-media/src/native.rs",
         "Y2Reborn:app/reborn/src/playback.rs",
@@ -8305,7 +8311,7 @@
       "platform_v1_integration": {
         "implementation_state": "IMPLEMENTED_ENABLED",
         "software_evidence": "Source/config/contract tests and fresh ARM/kernel/QEMU/package composition PASS; retained feature-specific receipts apply; software success does not imply runtime/hardware qualification",
-        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: 24/96\u219248 physically exercised; native sample/24-bit sign tests",
+        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: 24/96→48 physically exercised; native sample/24-bit sign tests",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "hardware_condition": "No bit-perfect/24-bit DAC claim",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
@@ -10307,7 +10313,7 @@
       "enabled_by_default": "When Wi-Fi enabled",
       "actually_used": "Path active when invoked; source/candidate scope, not proof of current runtime",
       "evidence": "PHYSICALLY_QUALIFIED",
-      "physical_evidence": "Physical01 ordinary checked DNS + TCP; Fix02 4\u00d71 MiB each way SHA",
+      "physical_evidence": "Physical01 ordinary checked DNS + TCP; Fix02 4×1 MiB each way SHA",
       "automated_tests": [
         "tests/test_wifi.py",
         "tests/test_platform_network_time.py",
@@ -10354,7 +10360,7 @@
       "platform_v1_integration": {
         "implementation_state": "IMPLEMENTED_ENABLED",
         "software_evidence": "Source/config/contract tests and fresh ARM/kernel/QEMU/package composition PASS; retained feature-specific receipts apply; software success does not imply runtime/hardware qualification",
-        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Physical01 ordinary checked DNS + TCP; Fix02 4\u00d71 MiB each way SHA",
+        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Physical01 ordinary checked DNS + TCP; Fix02 4×1 MiB each way SHA",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "hardware_condition": "Readiness STATUS/DNS sampling can fail while link lives",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
@@ -10639,7 +10645,7 @@
       "enabled_by_default": "Existing TCP path",
       "actually_used": "Path active when invoked; source/candidate scope, not proof of current runtime",
       "evidence": "PHYSICALLY_QUALIFIED",
-      "physical_evidence": "Physical01 3 repeats ~45.15\u201345.60 receive /46.35\u201346.56 transmit Mb/s",
+      "physical_evidence": "Physical01 3 repeats ~45.15–45.60 receive /46.35–46.56 transmit Mb/s",
       "automated_tests": [
         "tests/test_wifi.py",
         "tests/test_platform_network_time.py",
@@ -10686,7 +10692,7 @@
       "platform_v1_integration": {
         "implementation_state": "IMPLEMENTED_ENABLED",
         "software_evidence": "Source/config/contract tests and fresh ARM/kernel/QEMU/package composition PASS; retained feature-specific receipts apply; software success does not imply runtime/hardware qualification",
-        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Physical01 3 repeats ~45.15\u201345.60 receive /46.35\u201346.56 transmit Mb/s",
+        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Physical01 3 repeats ~45.15–45.60 receive /46.35–46.56 transmit Mb/s",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "hardware_condition": "Not latest build or Internet rate; no coexistence ceiling",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
@@ -12436,7 +12442,7 @@
       "legacy_release_classification": {
         "beta_state": "BETA_READY_WITH_LIMITATION",
         "beta_priority": "B",
-        "recommended_next_action": "Wired\u2194SBC switching and peer-loss test"
+        "recommended_next_action": "Wired↔SBC switching and peer-loss test"
       },
       "product_target": "CORE_RELEASE_FEATURE",
       "hardware_conditional": false,
@@ -12444,7 +12450,7 @@
       "release_requirement": "REQUIRED_FOR_FEATURE_COMPLETE_BETA",
       "public_distribution_state": "NOT_SEPARATELY_ASSESSED",
       "current_limitation": "Peer loss/reconnect combinations not fully physical",
-      "next_action": "Wired\u2194SBC switching and peer-loss test",
+      "next_action": "Wired↔SBC switching and peer-loss test",
       "release_completion_groups": [
         "B"
       ],
@@ -15055,7 +15061,7 @@
       ],
       "automated_test_result": "Retained receipts only; no implementation tests rerun in this documentation audit",
       "diagnostics": "Platform status/health and UI source-specific counters/logs; see subsystem section",
-      "known_limitation": "Preview is not actual 480\u00d7360 readability or latency proof",
+      "known_limitation": "Preview is not actual 480×360 readability or latency proof",
       "failure_mode": "Clipped names, wrong focus, slow wheel list",
       "safe_fallback": "Full-value page and letter jump",
       "source_paths": [
@@ -15080,7 +15086,7 @@
       "release_required": "REQUIRED",
       "release_requirement": "REQUIRED_FOR_POLISHED_BETA",
       "public_distribution_state": "NOT_SEPARATELY_ASSESSED",
-      "current_limitation": "Preview is not actual 480\u00d7360 readability or latency proof",
+      "current_limitation": "Preview is not actual 480×360 readability or latency proof",
       "next_action": "Physical realistic10k navigation checklist",
       "release_completion_groups": [
         "B"
@@ -15094,7 +15100,7 @@
         "software_evidence": "Source/config/contract tests and fresh ARM/kernel/QEMU/package composition PASS; retained feature-specific receipts apply; software success does not imply runtime/hardware qualification",
         "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Every reachable route Back tests plus long-name/Unicode previews",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
-        "hardware_condition": "Preview is not actual 480\u00d7360 readability or latency proof",
+        "hardware_condition": "Preview is not actual 480×360 readability or latency proof",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
         "current_candidate_physically_qualified": false,
         "endurance_qualified": false,
@@ -15111,7 +15117,7 @@
         "implementation_state": "IMPLEMENTED_ENABLED",
         "software_evidence": "Fresh candidate source/config/contract, kernel/ARM/QEMU/package validation PASS; feature-specific implementation/runtime limits are retained, not individually promoted by global tests",
         "physical_evidence": "INTEGRATED_PHYSICAL_NOT_RUN. Inherited source/image-scoped evidence remains in the original physical_evidence and platform_v1_integration records.",
-        "hardware_condition": "Preview is not actual 480\u00d7360 readability or latency proof",
+        "hardware_condition": "Preview is not actual 480×360 readability or latency proof",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "current_candidate_physically_qualified": false,
@@ -15128,7 +15134,7 @@
       "enabled_by_default": "Yes voltage-derived profile",
       "actually_used": "Path active when invoked; source/candidate scope, not proof of current runtime",
       "evidence": "PHYSICALLY_OBSERVED",
-      "physical_evidence": "Real ADC/voltage readings; source provisional curve 3.4\u20134.175 V",
+      "physical_evidence": "Real ADC/voltage readings; source provisional curve 3.4–4.175 V",
       "automated_tests": [
         "tests/test_battery_soc.py",
         "tests/test_power_policy.py",
@@ -15174,7 +15180,7 @@
       "platform_v1_integration": {
         "implementation_state": "IMPLEMENTED_ENABLED",
         "software_evidence": "Source/config/contract tests and fresh ARM/kernel/QEMU/package composition PASS; retained feature-specific receipts apply; software success does not imply runtime/hardware qualification",
-        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Real ADC/voltage readings; source provisional curve 3.4\u20134.175 V",
+        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Real ADC/voltage readings; source provisional curve 3.4–4.175 V",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "hardware_condition": "Not coulomb counter, measured current or calibrated capacity",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
@@ -15214,7 +15220,7 @@
       "automated_tests": [],
       "automated_test_result": "No implemented feature to test; adjacent subsystem coverage is not evidence for this absent capability",
       "diagnostics": "Not applicable; no implemented capability",
-      "known_limitation": "68 m\u03a9/topology/offset and NTC wiring unproven",
+      "known_limitation": "68 mΩ/topology/offset and NTC wiring unproven",
       "failure_mode": "False safety assurance from fabricated values",
       "safe_fallback": "Not reported; die sensors separate",
       "source_paths": [
@@ -15240,7 +15246,7 @@
       "release_required": "REQUIRED_IF_HARDWARE_SUPPORTED",
       "release_requirement": "REQUIRED_IF_HARDWARE_SUPPORTS_IT",
       "public_distribution_state": "NOT_SEPARATELY_ASSESSED",
-      "current_limitation": "68 m\u03a9/topology/offset and NTC wiring unproven",
+      "current_limitation": "68 mΩ/topology/offset and NTC wiring unproven",
       "next_action": "Investigate exact MT6323/Y2 stock sense/coulomb/NTC path, calibration and net-current direction; implement real current/coulomb/pack temperature only where board-supported and prove against measurement.",
       "release_completion_groups": [
         "C",
@@ -15265,7 +15271,7 @@
         "software_evidence": "NOT_IMPLEMENTED; adjacent software tests do not implement this capability",
         "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Stock FG functions return zero; ISENSE/BATSNS and BATON acquisition not calibrated",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
-        "hardware_condition": "68 m\u03a9/topology/offset and NTC wiring unproven",
+        "hardware_condition": "68 mΩ/topology/offset and NTC wiring unproven",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
         "current_candidate_physically_qualified": false,
         "endurance_qualified": false,
@@ -15282,7 +15288,7 @@
         "implementation_state": "NOT_IMPLEMENTED",
         "software_evidence": "Fresh candidate source/config/contract, kernel/ARM/QEMU/package validation PASS; feature-specific implementation/runtime limits are retained, not individually promoted by global tests",
         "physical_evidence": "INTEGRATED_PHYSICAL_NOT_RUN. Inherited source/image-scoped evidence remains in the original physical_evidence and platform_v1_integration records.",
-        "hardware_condition": "68 m\u03a9/topology/offset and NTC wiring unproven",
+        "hardware_condition": "68 mΩ/topology/offset and NTC wiring unproven",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "current_candidate_physically_qualified": false,
@@ -15789,7 +15795,7 @@
       "enabled_by_default": "Charger enabled within source policy",
       "actually_used": "Path active when invoked; source/candidate scope, not proof of current runtime",
       "evidence": "PHYSICALLY_OBSERVED",
-      "physical_evidence": "1121.57 s voltage3.540\u21923.574 V under changing load; not net-current proof",
+      "physical_evidence": "1121.57 s voltage3.540→3.574 V under changing load; not net-current proof",
       "automated_tests": [
         "tests/test_charger.py",
         "tests/test_offline_charging.py",
@@ -15835,7 +15841,7 @@
       "platform_v1_integration": {
         "implementation_state": "PARTIALLY_IMPLEMENTED",
         "software_evidence": "Source/config/contract tests and fresh ARM/kernel/QEMU/package composition PASS; retained feature-specific receipts apply; software success does not imply runtime/hardware qualification",
-        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: 1121.57 s voltage3.540\u21923.574 V under changing load; not net-current proof",
+        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: 1121.57 s voltage3.540→3.574 V under changing load; not net-current proof",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "hardware_condition": "No controlled realistic load/thermal/charge balance acceptance",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
@@ -15871,7 +15877,7 @@
       "enabled_by_default": "rtc-policy write_enabled true",
       "actually_used": "Path active when invoked; source/candidate scope, not proof of current runtime",
       "evidence": "PHYSICALLY_OBSERVED",
-      "physical_evidence": "Hardware02 NTP\u2192RTC read/write/tick pass",
+      "physical_evidence": "Hardware02 NTP→RTC read/write/tick pass",
       "automated_tests": [
         "tests/test_platform_network_time.py",
         "tests/test_power.py"
@@ -15915,7 +15921,7 @@
       "platform_v1_integration": {
         "implementation_state": "IMPLEMENTED_ENABLED",
         "software_evidence": "Source/config/contract tests and fresh ARM/kernel/QEMU/package composition PASS; retained feature-specific receipts apply; software success does not imply runtime/hardware qualification",
-        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Hardware02 NTP\u2192RTC read/write/tick pass",
+        "physical_evidence": "PHYSICAL_NOT_RUN on integrated image. Retained earlier scope: Hardware02 NTP→RTC read/write/tick pass",
         "release_status": "PENDING_RELEASE_ACCEPTANCE",
         "hardware_condition": "Cold-power/reboot retention still separate",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
@@ -16762,7 +16768,7 @@
       "user_visible": true,
       "owner": "Y2Linux userspace",
       "implementation_state": "IMPLEMENTED_ENABLED",
-      "enabled_by_default": "Syslog2\u00d7256 KiB; bounded Reborn logs and bundles",
+      "enabled_by_default": "Syslog2×256 KiB; bounded Reborn logs and bundles",
       "actually_used": "Path active when invoked; source/candidate scope, not proof of current runtime",
       "evidence": "SOFTWARE_VALIDATED",
       "physical_evidence": "Physical boot history/SRAM receipts; host redaction/bounds tests",
@@ -108063,7 +108069,7 @@
     "source_license_records": 449,
     "package_records": 106,
     "source_tree": "/home/luca/Dokumente/Code/worktrees/platform-v1-integration/Y2Linux",
-    "next_owner_action": "SPFT Download Only; preserving scatter; BOOTIMG+ANDROID only; DATA/every other partition unselected; then one A\u2013J campaign"
+    "next_owner_action": "SPFT Download Only; preserving scatter; BOOTIMG+ANDROID only; DATA/every other partition unselected; then one A–J campaign"
   },
   "historical_release_completion_index_before_platform_v1_integration": {
     "A": [
@@ -109112,5 +109118,63 @@
       "docs/release/Y2-PLATFORM-V1-BASELINE-CHANGELOG.md",
       "docs/release/Y2-PLATFORM-V1-INDEPENDENT-VERIFICATION.md"
     ]
+  },
+  "historical_installed_before_platform_v1_physical": {
+    "linux": "8584ccd85f052f351fe51650b2348c83ca894ed4",
+    "reborn": "b71b468860233faa0a42b8448ec5777fa952b8e3",
+    "boot": "88b85fa3-2282-4d93-b0b8-818a105ddd0a",
+    "taint": 0,
+    "full_rtc_trial": "FAIL_NO_SAME_BOOT_COMPLETE_EXIT",
+    "name": "Y2LINUX-BASELINE-02",
+    "kernel": "6.18.0-y2linux-baseline-02",
+    "rootfs": "2025.02.18-platform-v1.21",
+    "release": "1.0.0-baseline-candidate.2"
+  },
+  "platform_v1_baseline_physical": {
+    "date": "2026-10-04",
+    "image": {
+      "name": "Y2LINUX-PLATFORM-V1-BASELINE-01",
+      "linux": "98daf3f0220f4a1580bb4893094ee9f0e02362a5",
+      "reborn": "9cd12baeeb70b204e08299bd4c91c8c35604c304",
+      "kernel": "6.18.0-y2linux-platform-v1-baseline-01",
+      "rootfs": "2025.02.18-platform-v1.24",
+      "release": "1.0.0-platform-v1-baseline-candidate.1",
+      "boot": "9d4d0245-f1f0-45ef-abc9-f43234ae30de",
+      "taint": null,
+      "installed_identity": "INDEPENDENTLY_OBSERVED",
+      "integrated_physical_state": "PARTIAL_INTERRUPTED_USB_DIAGNOSIS_PENDING",
+      "full_rtc_trial": "NOT_RUN_NEW_IMAGE; historical Baseline02 FAIL remains unresolved",
+      "report": "docs/validation/Y2-PLATFORM-V1-BASELINE-PHYSICAL.md",
+      "admission_boot": "ef2c8f2f-56d9-418a-b8a8-2dfd329d0973",
+      "admission_taint": 0,
+      "taint_note": "Recovery dmesg contains DRM WARNING; automatic C3 Skipped/kernel_tainted_or_unknown. Direct current taint read awaits exclusive lease."
+    },
+    "scope": "Owner-authorized installed baseline smoke and bounded CPU gate; no flash/main/push/public promotion",
+    "software_validation_unchanged": true,
+    "sealed_package_state_unchanged": true,
+    "smoke": "PASS machine geometry/kernel/app/policy and explicit owner wheel/display/basic audio/battery observation",
+    "C1": "PASS all four cores; 400 bounded wakes",
+    "hotplug": "PASS 18 transitions",
+    "DVFS": "PASS five guarded OPPs and admitted voltage readback",
+    "C3_cold_boot_policy": "OBSERVED Enabled/-1/disable0 before qualification mutation",
+    "harness_correction": "Host-only 3f35bc6 normal screen timeout plus local USB-attached parking/180-second offline timeout and automatic role restore; 16 CPU harness + 14 integration tests PASS; no firmware change",
+    "endurance_qualified": false,
+    "public_distribution_ready": false,
+    "C2": {
+      "state": "PASS_BOUNDED",
+      "entries": 4857,
+      "residency_us": 51321595,
+      "seconds": 60.055339628,
+      "residency_percent": 85.4571721980105,
+      "clock_restore_failures": 0,
+      "tested_boot": "ef2c8f2f-56d9-418a-b8a8-2dfd329d0973"
+    },
+    "storage_after_C2": "PASS eight fsynced 128 KiB scratch hash rounds on DATA and eight on installed SD; same admission boot/taint0",
+    "C3": "NOT_QUALIFIED_INTERRUPTED: last durable record topology wait/budget0/no entries; no armed cycle; owner restarted to recover intentionally detached USB",
+    "recovered_boot_policy": "Skipped/kernel_tainted_or_unknown after DRM vblank WARNING; do not force-enable",
+    "USB": "OWNER_REPORTED_POST_FLASH_RECONNECT_ISSUE_OPEN; host static IP/autoconnect MAC profile corrected and saved; deliberate CPU-test detach separately identified; physical MTP/reconnect unqualified",
+    "device_coordination": "Owner prioritizes separate wired-audio session; exclusive USB diagnosis follows its lease release",
+    "full_suspend": "NOT_RUN; Power and RTC separate; historical Baseline02 RTC FAIL remains unresolved",
+    "harness_usb_fix_commit": "7b80f3ec3bb910278742b87be3d7ae61a6ece76e"
   }
 }
