@@ -1,5 +1,42 @@
 # Platform v1 roadmap
 
+## Independent baseline software seal / physical handoff audit — 2026-10-04
+
+Standing boundary audit repeated before canonical baseline promotion, using actual
+retained hardware receipts rather than integrated source claims. Selected owner
+source, C01–C34 dispositions and the 233-feature scope remain unchanged. Final
+compiled pair Linux `98daf3f0220f4a1580bb4893094ee9f0e02362a5` / Reborn `9cd12baeeb70b204e08299bd4c91c8c35604c304` is
+CONFIRMED by fresh clean build and software/package tests: 475
+cases (465 passed, ten native-covered skips), 324 Reborn,
+384 ELF files/1411 edges, 106 packages. No runtime correction or expanded hardware,
+memory, OPP, partition, battery or production subsystem scope was admitted.
+
+Retained real hardware: UART01 e9e8d63/b71b4688, same boot fd955840…/taint 0,
+C1 WORKING, C2 84.3473%/zero clock restores failed, C3 21 guarded context-loss
+returns plus 3624 normal entries, total 3647 matching returns/ACK/CIRQ/timer
+restores and zero faults. Sixteen foundation source files/three idle functions
+directly match that physical implementation. Automatic new-image policy remains
+PARTIAL until cold boot and guarded runtime observation. Baseline02 boot 27→88
+RTC watchdog recovery is FAIL: DEVICES_RESUMING/wake 0x20/PCM 596/reset 0x59325253,
+CS43131 resume entry without leave; inner stall UNKNOWN. Power and RTC are
+separately NOT_RUN on the final baseline. New rollback/substep source is not
+physical fix evidence. Ordinary product full sleep remains guarded.
+
+Storage/radio/JPEG/DB/performance evidence retains exact earlier image/binary
+scope; integrated USB desktop, peer/coexistence, controls, wider AFE, recovery,
+endurance and battery/electrical benefit are PARTIAL / NOT_RUN or UNKNOWN.
+Firmware/optional codec rights and source/collector limitations remain PARTIAL;
+public release is NOT_READY, owner-local qualification proceeds separately.
+Retained issue snapshot #16/#27/#28/#29/#31/#32/#33/#34 OPEN; #30 historical CLOSED
+does not close full sleep. No remote issue or milestone was changed. No ROM,
+stock/recovery/source provenance campaign or device connection was repeated.
+
+Next smallest boundary: seal one owner-directory preserving baseline and let the
+owner flash BOOTIMG+ANDROID only, then run the smoke-first single campaign.
+Verdict **READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**, not physically qualified.
+No main merge, flash, push or milestone closure. Source/software CONFIRMED;
+integrated hardware/endurance/public distribution remain open.
+
 ## Independent baseline finalization admission — 2026-10-04
 
 Owner authorizes verification/reconciliation, fresh build/software qualification

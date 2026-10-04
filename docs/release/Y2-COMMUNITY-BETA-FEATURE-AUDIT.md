@@ -1,5 +1,28 @@
 # Y2Linux + Reborn community beta feature audit
 
+## Independent final baseline — 2026-10-04
+
+Current software handoff: **Y2LINUX-PLATFORM-V1-BASELINE-01 — READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**.
+Compiled Linux `98daf3f0220f4a1580bb4893094ee9f0e02362a5` / Reborn `9cd12baeeb70b204e08299bd4c91c8c35604c304`;
+kernel `6.18.0-y2linux-platform-v1-baseline-01`, root `2025.02.18-platform-v1.24`.
+Canonical owner candidate: `/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-baseline-candidate`.
+Fresh 475 production cases / 465 passed /
+ten dependency skips, all ten independently passed; 324
+Reborn tests, fmt/strict Clippy/fresh kernel/ARM/QEMU/package/source/privacy PASS.
+**SOFTWARE_VALIDATED / INTEGRATED_PHYSICAL_NOT_RUN; PUBLIC_DISTRIBUTION_NOT_READY**.
+UART01 CPU hardware is inherited; Baseline02 RTC FAIL remains unresolved.
+Policy-enabled C3, native S16, battery safeguards, DATA/layout and recovery stay.
+
+See [baseline](Y2-PLATFORM-V1-BASELINE.md), [twelve sessions](Y2-PLATFORM-V1-FINAL-SESSION-RESULTS.md),
+[independent integration review](Y2-PLATFORM-V1-INDEPENDENT-VERIFICATION.md) and
+[one smoke-gated physical campaign](Y2-PLATFORM-V1-PHYSICAL-QUALIFICATION.md).
+This current section supersedes candidate/build/acceptance wording in the dated
+master planning and execution record below. Older NOT_CREATED/NOT_BUILT/accepted-none
+and in-progress text describes its observation time, never the current baseline.
+No main merge, push, flash or physical/public milestone promotion occurred.
+
+## Historical feature/planning snapshots (retained)
+
 ## Sealed integration current state — 2026-10-04
 
 **READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**. Compiled Linux `4c72466f2f27ddf9f0ca18ba8ddc4d89c52599d2` / Reborn `dd73dcc3243045cd33e319dda2f76918ed37ea31`. One candidate `/home/luca/Dokumente/Code/worktrees/platform-v1-integration/Y2Linux/out/y2linux-platform-v1-integration-candidate`. All233feature IDs and50patches retain separate implementation/software/physical/release/hardware/distribution axes in the JSON; old census and source-bound receipts remain history.466production cases/456PASS/10exact native-covered dependency skips,324Reborn/fmt/Clippy, fresh kernel/ARM/QEMU/384ELFs/1411edges/106packages/449source-license records/package/privacy PASS. Integrated physical/endurance NOT_RUN, public distribution blocked. Later documentation commits are separate from the compiled pair. The [master](Y2-PLATFORM-V1-MASTER.md) and [boundary audit](../planning/roadmap-gap-audit.md#platform-10-software-exit--physical-qualification-preparation--2026-10-04) control current acceptance; the dated sections below remain retained progress/history.

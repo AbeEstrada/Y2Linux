@@ -382,3 +382,12 @@ Platform 1.0 parallel integration observation (2026-10-04):
 | Page | Scope |
 | --- | --- |
 | [Platform 1.0 integrated software qualification](validation/Y2-PLATFORM-V1-INTEGRATION.md) | Current integration software receipt or master plan; hardware scope explicit |
+
+## Independent Platform 1.0 baseline reports
+
+| Page | Scope |
+| --- | --- |
+| [Y2-PLATFORM-V1-FINAL-SESSION-RESULTS.md](release/Y2-PLATFORM-V1-FINAL-SESSION-RESULTS.md) | Independent final source/software/handoff; hardware pending |
+| [Y2-PLATFORM-V1-BASELINE.md](release/Y2-PLATFORM-V1-BASELINE.md) | Independent final source/software/handoff; hardware pending |
+| [Y2-PLATFORM-V1-BASELINE-CHANGELOG.md](release/Y2-PLATFORM-V1-BASELINE-CHANGELOG.md) | Independent final source/software/handoff; hardware pending |
+| [Y2-PLATFORM-V1-INDEPENDENT-VERIFICATION.md](release/Y2-PLATFORM-V1-INDEPENDENT-VERIFICATION.md) | Independent final source/software/handoff; hardware pending |

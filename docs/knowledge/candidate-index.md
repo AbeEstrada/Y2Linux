@@ -1,5 +1,15 @@
 # Candidate and fallback identity index
 
+## Newest independent Platform 1.0 baseline — 2026-10-04
+
+`Y2LINUX-PLATFORM-V1-BASELINE-01`: compiled Linux `98daf3f0220f4a1580bb4893094ee9f0e02362a5` / Reborn `9cd12baeeb70b204e08299bd4c91c8c35604c304`;
+root `2025.02.18-platform-v1.24`, kernel `6.18.0-y2linux-platform-v1-baseline-01`.
+SOFTWARE_VALIDATED / INTEGRATED_PHYSICAL_NOT_RUN; owner-local physical qualification
+ready, public distribution not ready. Baseline02 RTC FAIL remains open; UART01
+CPU evidence/fallback is historical. Owner main and earlier candidates preserved.
+Canonical candidate `/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-baseline-candidate`. Details in `docs/release/Y2-PLATFORM-V1-BASELINE.md`.
+Older current/next labels below belong to their recorded observation times.
+
 ## Current integrated software candidate — 2026-10-04
 
 Linux `4c72466f2f27ddf9f0ca18ba8ddc4d89c52599d2` / Reborn `dd73dcc3243045cd33e319dda2f76918ed37ea31`. One sealed `/home/luca/Dokumente/Code/worktrees/platform-v1-integration/Y2Linux/out/y2linux-platform-v1-integration-candidate`; kernel `6.18.0-y2linux-platform-v1-integration-01`, root `2025.02.18-platform-v1.23`. BOOTIMG `d2dec1a517a596861adb69b4c9aaab51e68d5caf46712a99dbd8607e9d8fbb06`, Y2ROOT `cd3c077fd6c4882c82b7c67c42266f5f0ddc04828ddc2af111434740153bd1dc`. **READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**; physical/endurance NOT_RUN, owner-local/public distribution blocked. UART01 matching fallback is separate. See [master](../release/Y2-PLATFORM-V1-MASTER.md) and [software receipt](../validation/Y2-PLATFORM-V1-INTEGRATION.md). Older rows below are retained candidate history.

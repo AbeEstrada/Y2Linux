@@ -1,82 +1,133 @@
-# One Platform 1.0 physical qualification campaign
+# One Platform 1.0 integrated physical qualification campaign
 
-2026-10-04. Integrated physical acceptance: **NOT_RUN**. Endurance: **NOT_RUN**.
-The master does not flash or test the device. The owner installs one sealed
-paired BOOTIMG/Y2ROOT candidate with the preserving scatter only after its broad
-software checks pass. Keep the previous matching pair and stock recovery files.
-Use Download Only, select BOOTIMG and ANDROID, leave USRDATA and every other
-partition unselected. Do not change the partition table, loader or calibration.
+The newest baseline starts **SOFTWARE_VALIDATED / INTEGRATED_PHYSICAL_NOT_RUN**.
+Endurance and electrical battery benefit are NOT_RUN. The owner flashes; this
+verification session accessed no device. Source, capability and historical
+physical evidence have separate identities. [Baseline](Y2-PLATFORM-V1-BASELINE.md).
 
-The [master](Y2-PLATFORM-V1-MASTER.md), [source inventory](Y2-PLATFORM-V1-INTEGRATION-STATUS.md)
-and [release matrix](Y2-COMMUNITY-BETA-FEATURES.json) retain old evidence at its
-actual image/binary scope. None supplies integrated physical acceptance.
+## Installation and first smoke gate
 
-## Coordinator and evidence gates
+Use the canonical owner candidate and its `MT6582_preserve_data_scatter.txt`.
+SP Flash Tool: **Download Only; BOOTIMG and ANDROID/Y2ROOT only**. USRDATA/Y2DATA,
+preloader, LK, NVRAM, PROTECT, calibration, factory, tables and every other row
+stay unselected. No data image is supplied. Retain the matching UART01 fallback.
 
-`tools/development/qualify-platform-v1-integration.py` prints an offline A–J plan
-by default. `--run` requires the owner's existing pinned SSH configuration and
-holds `/tmp/y2-platform-v1-device.lock` nonblocking for the entire run. Busy means
-NOT_RUN without device access. Child USB/suspend tools inherit the same lease;
-closing a child descriptor never releases the coordinator's lease. Temporary
-lock fixtures test this without touching the real device lock.
+MTP and Developer both include ECM. Connect the existing USB network and owner
+Wi-Fi. The retained pinned SSH config has aliases `y2` (10.42.0.1) and
+`y2-owner-wifi` (192.168.123.136). If DHCP has changed, correct that alias to the
+address observed on this same device, retaining its pinned host key and existing
+owner identity. A stale address must stop, never bypass host-key checking.
+No private key or Wi-Fi secret is included in the candidate.
 
-Every observation checks the full manifest Linux/Reborn pair, kernel, root,
-same boot and taint zero. Read-only observations may fall back from USB to
-independently pinned Wi-Fi. A mutating child is launched once and never replayed.
-A child exit zero needs its actual passing receipt; missing/failed receipts,
-source mismatch, unexpected reboot or taint stop later trials. Preserve all
-failures and hashes. A captured campaign always remains PENDING_EVIDENCE_REVIEW;
-no script promotes listening, actual desktop, mechanical or endurance evidence.
-
-After installation and read-only identity review, the owner can use one command
-with existing authorized aliases and configuration (replace example paths):
+Run exactly this first command after boot:
 
 ```sh
-python3 tools/development/qualify-platform-v1-integration.py \
-  --run --package out/y2linux-platform-v1-integration-candidate \
-  --ssh-config /owner/existing-y2-ssh-config --host y2 --wifi-host y2-wifi \
-  --cpu --usb sftp --volumes internal sd --suspend-stage core \
-  --output out/platform-v1-physical/installed-staged
+python3 /home/luca/Dokumente/Code/worktrees/platform-v1-baseline-final/Y2Linux/tools/development/qualify-platform-v1-integration.py \
+  --run --cpu --smoke-only \
+  --package /home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-baseline-candidate \
+  --ssh-config /home/luca/Dokumente/Code/Y2Linux/out/cpu-final-fix01-physical-qualification/20260927T205514Z/ssh-config \
+  --host y2 --wifi-host y2-owner-wifi \
+  --output /home/luca/Dokumente/Code/Y2Linux/out/platform-v1-physical/baseline-01-smoke
 ```
 
-The CPU helper performs guarded awake C1/C2/C3/OPP/timer/hotplug qualification
-and restores qualified normal-idle C3 only after its checks pass. SFTP validates
-Linux-owned transfers; it does not stand in for desktop MTP. After actual desktop
-MTP enumeration, run the same coordinator with `--usb mtp --volumes internal`
-and `--mtp-uri` set to the real backend's Internal Storage URI (one volume per
-matching URI). Use SD only after verifying its actual partition/filesystem size,
-card identity and clean mount. Never format or enlarge it for qualification.
+The coordinator holds one nonblocking shared device lease. It checks full source
+pair, kernel/root/build identity, same boot and taint zero, then reads dmesg,
+Reborn process, expected ROOT/DATA geometry, ext4 labels/UUIDs and idle boot
+policy. It asks seven explicit observations: wheel, display, mounted storage,
+basic listening, Wi-Fi, USB and battery. Play and stop one local track; leave
+playback stopped for CPU tests. A missing/no observation stops before any child.
+Only after this short gate does the guarded CPU child exercise actual C1/C2/C3,
+parking/timers/hotplug and all five OPPs. This invocation ends there. No MTP
+stress or full-system suspend is launched by `--smoke-only`.
 
-A full RTC attempt is explicitly separate from successful staged PM. After
-reviewing staged receipts, the owner may run this coordinator with `--cpu`,
-independent Wi-Fi and `--suspend-stage none`; it launches one 30-second RTC trial.
-Previous Baseline02 full RTC wake **failed**, so do not loop attempts. Require
-same-boot COMPLETE/EXIT, full PCM 596/reset 0x59325253, nonzero wake source,
-restore counters without new faults, explicit Reborn prepare/restore ACK and
-post-return source/radio/audio/USB/UI readiness. A watchdog warm reboot, staged
-pm_test, wake-capable declarations or awake RTC delivery are not a resume pass.
-Ordinary product deep sleep remains guarded until qualified hardware evidence.
+The CPU lane includes a single guarded context-loss return, then twenty cycles
+and bounded normal policy; preflights and stop conditions remain. This is the
+existing protected CPU acceptance, not an unrestricted write loop. Preserve its
+before/after counters and exact installed boot identity. If static admission
+leaves DORMANT disabled, inspect the refusal rather than force-enable it.
 
-## One A–J acceptance matrix
+## One campaign, staged acceptance
 
-| Lane | Integrated evidence required | Existing evidence retained / remaining equipment |
+Use the same coordinator and package for subsequent attended stages, with fresh
+output subdirectories under `out/platform-v1-physical/`. Repeated smoke/identity
+gates are intentional. `--cpu` and independent pinned Wi-Fi are required before
+transfer/suspend actions. Child operations launch once and are never retried by
+an alternate SSH path. Read-only status can recover through Wi-Fi. A process
+exit zero requires its actual passing receipt; the overall capture remains
+PENDING_EVIDENCE_REVIEW until equipment and owner observations are reviewed.
+
+| Area | Required integrated observations | Acceptance limit / safe operation |
 | --- | --- | --- |
-| A | Exact paired boot, readiness, service order, clean shutdown and preserving update/recovery | Baseline02 installed identity is history; no automatic flash or power cycle |
-| B | C1/C2/C3, OPP/timer/hotplug before/after sleep; cold-boot activation and fault guards | Protected UART01: C2 84.3473%, C3 65.2450%, 3647 checked returns, zero restore faults; new image still needs regression |
-| C | Staged PM, one backstopped RTC wake and owner Power wake; same-boot full restore | Baseline02 RTC FAIL retained; no precise codec-child cause or Power pass claimed |
-| D | DATA/SD fsynced hash, real different-card/eject/reinsert, MTP desktop durable rename/disconnect; no simultaneous filesystem writer | Storage SDR104/private scratch and USB SFTP receipts remain scoped; real desktop MTP and different-card checks pending |
-| E | Wi-Fi readiness/power save, real BT peer codec/reconnect/coexistence while transferring/playing | New BT worker unexecuted; headset/AP/codec-capable peer needed; negotiated codec must be observed |
-| F | Wired S16/44.1/48 format/seek/pause/stop, no XRUN; actual listening | Q31/decode support is separate; wider native rates require AFE/I2S precision capture and conditional hardware admission |
-| G | Declared media formats/artwork/library; scan/USB/sleep races, stale queue/source refusal and fresh covers after replacement | TEMP scanner/revision/CID faults pass in software; physically measured capacity is 50k, not 250k; cached covers have no open FD |
-| H | Display/GPU awake/off/wake, counted wheel/buttons, capture/render order and latency | Bounded temporary optimized ARM evidence retained; synthetic events exclude mechanical IRQ/photon latency |
-| I | Charging/refusal/offline boot and battery policy across load/sleep, representative endurance/electrical measurements | Current governor/low-battery safeguards retained; no battery-life promotion from CPU residency |
-| J | Private-state-safe diagnostics, package notices/source/permissions, preserving update and fallback verification | Owner-local radio firmware permission and codec/source/legal review remain distribution gates |
+| A. Boot / identity / recovery | Exact image pair, cold boot, service/Reborn readiness, same ROOT/DATA geometry, no BUG/Oops; preserving fallback/update procedure | Recovery image identity and preservation validated offline; physical recovery/update only with owner participation |
+| B. CPU | C1/C2/C3 entries/time/restore, natural parking/demand return, timers/GPT4/GPT6/CIRQ/UART ACK, hotplug, 598/747.5/1040/1196/1300 MHz before and after wake | Existing guarded CPU helper; do not exceed OPPs, bypass battery/clock/USB guards or infer full suspend from C3 |
+| C. Storage | eMMC/SD negotiated mode/rate, runtime PM, owned fsynced scratch hashes, ext4 counters; FAT/exFAT only on existing owner media; absent/reinsert/different-card identity | No formatting, repartitioning or clock forcing; different-card/eject waits for owner, finished scanner/player and no active transfer |
+| D. USB | Actual desktop MTP enumeration, large and many small owned files, create/rename/delete, reconnect/disconnect and SHA256 readback; SD root release | `--usb sftp --volumes internal sd` provides ECM integrity only. MTP uses `--usb mtp --volumes internal --mtp-uri <actual Internal Storage URI>`; one matching volume per real URI. Never export raw blocks or system roots |
+| E. Connectivity | Wi-Fi Online/route/DNS freshness, AP loss/reconnect, screen-off; real Bluetooth headset, observed negotiated codec/PCM generation, reconnect and Wi-Fi/BT coexistence during transfer/playback | No headset or AP action means NOT_RUN. Preference/compiled codec is never negotiated transport evidence |
+| F. Audio | Supported format decode/seek/pause/stop, wired S16 stereo 44.1/48 kHz listening and XRUNs; actual BT PCM/codec | S24/S32 conversion is software support. Wider native modes remain refused until AFE/I2S bit/clock evidence admits them. S32 container does not prove 32 meaningful bits |
+| G. Reborn / display / controls | Actual performance, static frame counts, off/wake GPU/KMS PM, artwork replacement, metadata, DB/no-op scans, media/USB/sleep races; counted detents/buttons, boot/splash and shutdown | Synthetic latency is separate from physical IRQ/photon timing. Inspect slow cold layout/startup, render order/blend and explicit source rejection. One frame owner; no normal capture/readback |
+| H. Power / battery | C1/C2/C3 idle, voltage/SOC and elapsed windows, charging status/refusal, warnings/shutdown, representative screen-off idle | Record actual sensor availability. Never infer electrical savings or runtime from C-state residency; use owner profile and safe charge levels |
+| I. Full system suspend | Separate staged freezer/devices/platform/processors/core; one Power wake; independently one RTC wake; same-boot COMPLETE/EXIT and full restoration | Existing Baseline02 RTC FAIL remains open. No loops or overnight full suspend. Product deep sleep stays refused until qualified evidence |
+| J. Recovery / update / diagnostics | Preserving workflow, UART01 fallback identity, private-state-safe diagnostic archive and source/notices inventory | Public firmware/codec rights and collector gaps remain a separate release axis; no protected-partition writes |
 
-Automate source/boot/taint/service and counter capture over SSH, reuse unaffected
-receipts, and ask for the counted controls, listening, host backend, charger and
-headset observations together. Do not repeat eleven unrelated campaigns. Record
-hardware identity, condition and distribution independently for every feature.
-Stop on first unexplained failure; retain stdout, result JSON, before/after samples
-and hashes under the coordinator's private output. Required lanes remain pending
-until a reviewer accepts the actual evidence. No main merge or public release
-before broad software and required physical/permission gates pass.
+The coordinator's retained machine lane letters predate this table (its C is
+full suspend, D combines storage/USB, H is display/input and I is power).
+Use named flags and these acceptance areas when reviewing evidence, rather than
+assuming a successful automated lane closes every requirement.
+
+## Suspend: Power and RTC are separate tests
+
+First run the coordinator with `--cpu --suspend-stage inspect`; review blockers
+and current battery/charging state. Then, in separate attended invocations,
+qualify each of `freezer`, `devices`, `platform`, `processors`, `core`. Reuse
+exact installed-pair and boot gates. Staged PM success and awake RTC IRQ delivery
+do not prove full suspend.
+
+After staged acceptance, one coordinator invocation with `--cpu`, independent
+Wi-Fi, `--suspend-stage none --wake-source power` tests Power. Press Power during
+the announced suspended window before the 30-second RTC backstop. If the alarm
+wakes the device instead, Power remains FAIL/NOT_PROVEN. A separate invocation
+with `--suspend-stage none --wake-source rtc` tests the armed 30-second RTC.
+Leave Power untouched for that trial. The child requires the selected actual
+PMIC IRQ delta, same boot, full PCM 596/reset 0x59325253, COMPLETE/EXIT without
+error, restored state/counters and an acknowledged Reborn prepare/restore cycle.
+Clear alarm/pm_test afterward and verify kernel, audio, display, controls, USB,
+storage and radios. A watchdog reboot is a failure even if all mounts recover.
+
+Baseline02's single 12-second RTC trial watchdog-rebooted while retained journal
+reported DEVICES_RESUMING. Wake 0x20 and a CS43131 1-0030 resume entry without
+leave narrow diagnosis; the stalled internal instruction is UNKNOWN. The new
+rollback repair, checked restores and substep telemetry are not a demonstrated
+fix for that physical stall. Power success must never close RTC.
+
+## Battery / standby observation
+
+After attended smoke/CPU and charging safety acceptance, prepare screen-off,
+no playback, Wi-Fi and Bluetooth off. Before switching off the observation
+transport, save exact identity/boot, monotonic time, voltage/SOC/temperature,
+charge state, per-state idle entries/time and restore failures, `/proc/interrupts`
+and available wakeup counters in the campaign's private H directory. Record
+the owner conditions, charger absent/present and actual current-sensor
+availability. Disconnect USB, leave idle for 30–60 minutes, reconnect and save
+the same fields. Label transport/display transitions as measurement overhead;
+radio-off windows cannot be continuously observed over Wi-Fi. Compare deltas
+and elapsed time on the same boot. A missing current sensor stays unavailable.
+
+Optionally repeat with radios idle, recording associated AP/peer condition
+privately. The existing `tools/platform/qualify.py capture` passive collector can
+capture timed snapshots, but its SSH activity is a measurement workload and it
+does not create the owner condition or prove energy benefit. Review its
+default offline plan/profile before use. An owner-run overnight radio-off idle window is
+appropriate only after attended safety acceptance; retain beginning/end
+voltage/SOC/duration/idle/IRQ data and all anomalies. No unattended full-suspend
+or low-battery exhaustion test is prepared.
+
+## Stop and restoration rules
+
+Stop on image mismatch, unexpected reboot, taint, BUG/Oops, failed/missing
+receipt, restore failure, timer/clock/UART/PWRAP/DVFS error, thermal/battery
+warning, storage error/hash mismatch, stalled mount or unavailable independent
+Wi-Fi. Preserve the failure directory. Do not replay a mutating command after a
+transport timeout. Leave no alarm/pm_test/temporary override; require restored
+normal topology/OPP, stopped scratch activity and normal player/storage/radio
+state. If restoration cannot be established, stop for owner recovery with the
+matching fallback. No hardware failure is waived by a software test.

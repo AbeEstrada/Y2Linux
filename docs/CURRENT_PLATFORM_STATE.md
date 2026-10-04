@@ -1,5 +1,15 @@
 # Current Y2Linux platform state
 
+## Newest independent Platform 1.0 baseline — 2026-10-04
+
+`Y2LINUX-PLATFORM-V1-BASELINE-01`: compiled Linux `98daf3f0220f4a1580bb4893094ee9f0e02362a5` / Reborn `9cd12baeeb70b204e08299bd4c91c8c35604c304`;
+root `2025.02.18-platform-v1.24`, kernel `6.18.0-y2linux-platform-v1-baseline-01`.
+SOFTWARE_VALIDATED / INTEGRATED_PHYSICAL_NOT_RUN; owner-local physical qualification
+ready, public distribution not ready. Baseline02 RTC FAIL remains open; UART01
+CPU evidence/fallback is historical. Owner main and earlier candidates preserved.
+Canonical candidate `/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-baseline-candidate`. Details in `docs/release/Y2-PLATFORM-V1-BASELINE.md`.
+Older current/next labels below belong to their recorded observation times.
+
 ## Integrated Platform 1.0 software candidate — 2026-10-04
 
 **READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**. All eleven source handoffs are
