@@ -337,6 +337,12 @@ Indexed pages: **289**. Explicit scope notices: **220**.
 
 ## Community beta release planning
 
+Platform 1.0 parallel integration observation (2026-10-04):
+
+- [Master report](release/Y2-PLATFORM-V1-MASTER.md)
+- [Live subsystem/worktree/candidate status](release/Y2-PLATFORM-V1-INTEGRATION-STATUS.md)
+- [Dependency, interface and qualification plan](release/Y2-PLATFORM-V1-INTEGRATION-PLAN.md)
+
 | Page | Scope |
 | --- | --- |
 | [Community beta complete feature audit](release/Y2-COMMUNITY-BETA-FEATURE-AUDIT.md) | Current-state audit; exact snapshot, not hardware acceptance |

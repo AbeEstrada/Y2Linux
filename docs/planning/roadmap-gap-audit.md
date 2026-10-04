@@ -1,5 +1,103 @@
 # Roadmap gap audit
 
+## Platform 1.0 integration activation boundary — 2026-10-04
+
+The master reviews all eleven final paired handoffs at immutable observation
+20261004T142419.143470Z: every owner tree is clean/stable and retains Linux
+b5aea937a3b8e3e8ec398f8cb2e04656b8a53f8c / Reborn
+b71b468860233faa0a42b8448ec5777fa952b8e3. Reborn main7f9df397 omits the
+scanout-release foundation. Source integration is READY_TO_INTEGRATE into new
+isolated codex/platform-v1-integration branches, as explicitly requested by the
+owner; no main merge, push or flash. Source selection and complete observed refs,
+paths, commits, diffs, tests and candidate identities are in the
+[master status](../release/Y2-PLATFORM-V1-INTEGRATION-STATUS.md) and
+[C01–C30 plan](../release/Y2-PLATFORM-V1-INTEGRATION-PLAN.md). Coherent source
+units enter with immediate targeted validation; shared changes are composed
+semantically. The weaker performance Bluetooth polling hunk is superseded by
+the Bluetooth owner's event worker. No owner branch/worktree/index is modified.
+
+This boundary compares the unchanged233-feature product target, explicit
+owner decisions, repository changes, existing issues and actual retained
+hardware receipts. It closes no milestone. Firmware, private calibration,
+protected partitions/Y2DATA, matched fallback/recovery and memory map remain
+under their established scope; native wider audio stays disabled pending proof.
+
+| Coverage / existing gate | Classification and evidence applicability | Next smallest boundary |
+| --- | --- | --- |
+| CPU, five OPPs, timers/hotplug, C1/C2/C3; #28/#30 | CONFIRMED bounded UART01: C2 84.3473%, C3 65.2450%,3,647 returns/same boot/zero restore faults. Installed Baseline02 automatic C3 readback Enabled/-1/disable0 is observed, not new-image/cold-boot/endurance qualification. | Preserve all idle/UART/timer/dynamic guards and shared restoration; fresh integrated kernel/config/DT/modules/ABI and current-image C-state regression. |
+| Full suspend/resume, power; #30/#32/#34 | FAIL for installed Baseline02 one-shot full RTC resume. Boot27e6d684 changes to88b85fa3; retained DEVICES_RESUMING/wake0x20/PCM596/resetstamp59325253 has no complete/exit and unmatched CS43131 1-0030 resume entry. Decoded RGU reset cause/RTC-child attribution not retained. New suspend/codec rollback notes are software validated, PHYSICAL_NOT_RUN. | Compose handshake/input/source quiescence, retain ordinary sleep qualification refusal, then one exact-RC same-boot campaign. Reboot direct scratch hashes/ext4 errors0 prove recovery only. |
+| Storage/filesystems/USB; #27/#28/#33 | CONFIRMED bounded old Baseline02 mode/read/hash/reinsert and stock1k scan receipts; new claims/FD pinning/MTP code software validated, PHYSICAL_NOT_RUN. USB08019df subsystem image is uninstalled and not master RC. | One diskseq/mount/CID authority, pinned regular file/sidecar lifetime including collection art C30, durable USB generation/eject and targeted native confinement/filesystem tests. |
+| Wi-Fi/Bluetooth/codecs; #31 | PARTIAL. Baseline02 throughput/readiness/off-worker observations retained; changed policy/event worker and real peer codecs/coexistence lack final-image physical evidence. No headset currently available. | Union socket/control wake, diagnostics/status contracts and owner workers; exact-RC association/transfer/peer qualification later. |
+| Wired precision/FFmpeg/library; #29/#33 | PARTIAL. Native S16 stereo44.1/48 remains admitted; software meaningful-bit fixtures, media parsing and DB scan/durability pass separately. Native50k DB benchmark measured on private Baseline02 scratch;250k catalog capacity not physically qualified. | One paired C/Rust ABI, DB-owned TEMP scan protocol plus metadata_revision, safe legacy UUID/CID upgrade and queue refusal; compose precision/FD-pinned playback/ALSA pacing. |
+| Graphics/input/Reborn responsiveness; #34/#28 | CONFIRMED bounded owner app069415a temporary ARM SHA7871ec67 on Baseline02 boot88/taint0: playing87.95→11.21% one core/audio82.63→5.11%, wheel59.93→17.52ms, supplemental16resume/pause p95 improvements; stock/data/policy restored, no hard kill/xruns. Ten pixel captures near-equivalent600/6,912,000channels max5/255, not byte identity; synthetic evdev excludes mechanical timing. Counted physical input remains NOT_RUN. | One event loop/watchdog/catalog/art worker; canonical kernel_mono_us/input cancellation/Power shutdown confirmation, stale observation/sleep guards and integrated rendering regression. |
+| Battery/charging/boot/shutdown/update/recovery; #16/#27/#28/#32 | PARTIAL. Existing policy/fallback and bounded awake/charging refusal evidence retained. No integrated image, full-resume/representative endurance/electrical acceptance yet. | Preserve rescue/developer observer, intent/checkpoint and low-battery control; fresh broad software/package then exact-RC physical conditions. |
+| Distribution/source/notices/privacy; #16/#32/#33 | PARTIAL. Existing owner-local verified radio provision is available; redistribution permission remains unestablished, private calibration excluded and codec/source collector limits persist. New MTP GPL3+ dependencies must be inventoried. | One freshly built source-bound candidate; complete installed dependency/capability/source/notices/private-state and paired fallback checks. No release permission follows from a clean merge. |
+
+Issue state from the retained read-only2026-10-04 refresh: #16/#27/#28/#29/#31/
+#32/#33/#34 OPEN; historical#30 CLOSED since2026-09-15. No external epic/status
+change is warranted at this source activation boundary; historical#30 closure
+cannot qualify the later failed physical full resume. No new bookmark is needed.
+No external issue/comment mutation is performed. The integration phase is
+PARTIALLY READY for software work; physical/endurance/distribution remain gates.
+This audit itself builds/flashes nothing and does not repeat unchanged source,
+ROM or recovery provenance. A fresh broad build/package qualification is required
+after the selected source pair is integrated, before sealing one RC.
+
+## Platform 1.0 parallel integration observation — 2026-10-04
+
+Owner authorizes master integration review of all independent sessions, followed
+by dedicated integration branches only after selected owners finish. This is the
+documentation/observation boundary, not subsystem implementation, integration
+activation, a new hardware campaign or milestone closure. Linux foundation is
+`b5aea937a3b8e3e8ec398f8cb2e04656b8a53f8c`; Reborn foundation is
+`b71b468860233faa0a42b8448ec5777fa952b8e3`. Reborn `main` is still
+`7f9df397ab3809d52e2f1073ca93a305246e0c3a`; its missing scanout-release commit
+must be preserved in the integration foundation. Eleven paired subsystem trees
+are discovered; historical candidate trees and missing `/tmp` registrations
+remain separate. No owner worktree or Git ref is changed by this review.
+
+Real evidence is the retained [UART01 receipt](../validation/Y2-CPU-C3-UART-PHYSICAL.md),
+the [Baseline02 seal](../validation/Y2-BASELINE-02.md), and the newly written
+Bluetooth/Wi-Fi owner receipts in their independent worktrees, indexed by the
+[master status](../release/Y2-PLATFORM-V1-INTEGRATION-STATUS.md).
+Those new locked observations identify **installed Baseline02**, compiled Linux
+`8584ccd8` / Reborn `b71b4688`, root v1.21, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, taint 0. This supersedes the older
+awaiting-installation identity statement only. It is not a fresh master device
+read, automatic cold-boot/C3 qualification, or acceptance of changed binaries.
+
+| Coverage / existing gate | Classification and next boundary |
+| --- | --- |
+| CPU/timers/C1/C2/C3; #28/#30 | CONFIRMED in bounded UART01 scope: C2 84.3473%, C3 65.2450%, 3,647 checked returns, same boot and zero restore failures. Preserve exact guards, timer/UART/clock/context ownership, boot policy and five OPPs. Current integrated-image and endurance acceptance remain PARTIAL. |
+| Storage/USB/connectivity; #27/#28/#31/#33 | PARTIAL. Live filesystem identity, USB MTP/export/eject, Wi-Fi wake loop and Bluetooth observer changes overlap; reconcile contracts and repeat affected tests on a frozen source pair. Actual peer audio remains unqualified; owner reports no headset currently available. |
+| Audio/media/database/graphics/input; #29/#32/#34 | PARTIAL. Four branches change native media code; two independently replace incremental scanning; input and suspend change the same Power router. Stronger final evidence and owner-specific responsibility must decide semantic integration. |
+| Full system sleep/power; #30/#32/#34 | PARTIAL. Suspend changes shared SPM code and Reborn wake/prepare contracts; protect idle restoration. Full same-boot RTC/Power wake, electrical battery evidence and endurance remain independent gates. |
+| Release/distribution/security; #16/#32/#33 | PARTIAL. No integrated candidate exists. Existing source/notices, owner firmware, private calibration and optional codec distribution restrictions persist; preserve-data/fallback/recovery are mandatory. |
+
+Existing owner receipts report #28/#31/#34 OPEN after read-only refresh. The
+master has made no external status update and closes no epic. Refresh this audit
+and the roadmap again immediately before actual integration, any material scope
+change, candidate sealing and qualification/release boundaries. The next smallest
+blocker is reproducible final owner handoffs plus semantic reconciliation, not a
+general CPU redesign. See [integration plan](../release/Y2-PLATFORM-V1-INTEGRATION-PLAN.md)
+and [master](../release/Y2-PLATFORM-V1-MASTER.md). This review builds/flashes
+nothing and does not repeat unchanged source/ROM/recovery provenance.
+
+Later owner RTC full-sleep evidence on the same installed Baseline02 is **FAIL**:
+watchdog recovery changes boot `27e6d684` to
+`88b85fa3-2282-4d93-b0b8-818a105ddd0a`, taint 0; retained journal stops at
+DEVICES_RESUMING (wake 0x20, full PCM 596, reset stamp 0x59325253), with no
+complete/exit proof. Direct scratch hashes and zero ext4 counters after reboot
+prove recovery only. New suspend source was not installed. Preserve prior
+UART01 C1/C2/C3 evidence; full resume and automatic C3 remain separate gates.
+Master archives the raw failure receipts offline and neither repeats the trial
+nor closes any milestone. Review the source-bound owner handoff before integration.
+
+Read-only GitHub refresh on 2026-10-04 confirms #16/#27/#28/#29/#31/#32/#33/#34
+OPEN and historical #30 CLOSED since 2026-09-15. That planning closure does not
+qualify physical full resume; the new failed RTC receipt keeps this release gate
+open. No external issue state or comment was changed by master.
+
 ## Baseline02 source integration into main — 2026-10-03
 
 The owner authorizes merging and publishing the current Baseline02 source and

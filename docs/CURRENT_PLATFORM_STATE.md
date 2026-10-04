@@ -1,5 +1,28 @@
 # Current Y2Linux platform state
 
+## Parallel integration observation — 2026-10-04
+
+[Master status](release/Y2-PLATFORM-V1-MASTER.md): **PARALLEL_WORK_IN_PROGRESS**.
+Eleven paired subsystem worktrees are being reviewed independently; no final
+Platform 1.0 integration candidate exists. New Bluetooth/Wi-Fi owner receipts
+identify installed Baseline02 (Linux `8584ccd8`, Reborn `b71b4688`, root v1.21,
+boot `27e6d684-3794-4490-95db-a489027cd4f4`, taint 0). Their locations and
+limitations are recorded in the [live inventory](release/Y2-PLATFORM-V1-INTEGRATION-STATUS.md).
+This supersedes the older awaiting-installation identity below; it does not
+qualify automatic cold-boot C3 or the changed subsystem binaries. UART01 remains
+the exact-image physical authority for bounded C1/C2/C3. The dated Baseline02
+seal and historical evidence remain intact. No master device access occurred.
+
+Later owner RTC full-sleep evidence on the same installed Baseline02 is **FAIL**:
+watchdog recovery changes boot `27e6d684` to
+`88b85fa3-2282-4d93-b0b8-818a105ddd0a`, taint 0; retained journal stops at
+DEVICES_RESUMING (wake 0x20, full PCM 596, reset stamp 0x59325253), with no
+complete/exit proof. Direct scratch hashes and zero ext4 counters after reboot
+prove recovery only. New suspend source was not installed. Preserve prior
+UART01 C1/C2/C3 evidence; full resume and automatic C3 remain separate gates.
+Master archives the raw failure receipts offline and neither repeats the trial
+nor closes any milestone. Review the source-bound owner handoff before integration.
+
 Updated 2026-10-03 from the sealed Baseline02 receipts and retained UART01
 hardware evidence. This synchronization changes documentation only; it does
 not build, flash, push or run a new physical qualification.

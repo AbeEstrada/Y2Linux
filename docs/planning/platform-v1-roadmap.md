@@ -1,5 +1,73 @@
 # Platform v1 roadmap
 
+## Platform 1.0 integration activation boundary — 2026-10-04
+
+All eleven paired owner handoffs are now clean, source-frozen and reviewed.
+The [standing boundary audit](roadmap-gap-audit.md#platform-10-integration-activation-boundary--2026-10-04)
+compares the233-feature target, exact source pairs, owner decisions/issues and
+real receipts before activation. Proceed with isolated paired
+codex/platform-v1-integration branches from Linuxb5aea937/Rebornb71b4688;
+Reborn main alone omits the known-good scanout release. Owner worktrees remain
+independently owned. Follow the [C01–C30 dependency plan](../release/Y2-PLATFORM-V1-INTEGRATION-PLAN.md)
+and targeted tests after each coherent source unit, then one fresh broad software,
+ARM/kernel/package/privacy/source gate and one integrated preserving candidate.
+
+UART01 C1/C2/C3 remains protected. Installed Baseline02 RTC full resume FAIL
+and boot88 recovery are retained; new suspend/codec source is uninstalled.
+Performance069415a has a bounded source-bound temporary-app pass on boot88,
+with stock/data/policy restored. Neither evidence qualifies the future RC.
+Native wider audio, real peer/coexistence, counted input, endurance/electrical,
+exact-RC full restoration and distribution remain independent requirements.
+No memory/partition/protected-data scope expansion or epic closure; no main merge,
+push or flash. Readiness is READY_TO_INTEGRATE for source, PARTIAL for product.
+
+## Platform 1.0 parallel integration observation — 2026-10-04
+
+**PARALLEL_WORK_IN_PROGRESS.** Eleven paired owners are working from Linux
+`b5aea93` / Reborn `b71b468`. The master maintains the
+[status](../release/Y2-PLATFORM-V1-INTEGRATION-STATUS.md),
+[dependency/contract plan](../release/Y2-PLATFORM-V1-INTEGRATION-PLAN.md) and
+[release picture](../release/Y2-PLATFORM-V1-MASTER.md). Follow the
+[current gap audit](roadmap-gap-audit.md#platform-10-parallel-integration-observation--2026-10-04).
+Do not merge active owners, promote their candidates or create the final image
+before reproducible handoffs and conflict decisions. Integration branches will
+use the protected Baseline02 source pair; Reborn `main` lacks `b71b468` and is
+not by itself the complete foundation.
+
+New Bluetooth/Wi-Fi owner receipts identify installed Baseline02 on boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, taint 0. Older awaiting-installation text
+below is superseded for identity only. Retained UART01 proves bounded C1/C2/C3:
+84.3473% C2, 65.2450% C3 and 3,647 checked returns with zero restore failures.
+Keep that architecture, five OPPs and automatic CPU0 boot policy. Baseline02
+cold-boot/C3 qualification is not established by radio identity reads. Full
+sleep, high-resolution physical bit/rate proof, real Bluetooth peers, USB desktop
+behavior, endurance and distribution remain separate requirements.
+
+Next: finish owner handoffs, reconcile overlapping service/scanner/media/Power
+contracts, repeat the boundary audit, then integrate coherent commits into
+`codex/platform-v1-integration` in each repository with targeted tests after
+each subsystem. After one fresh broad software/package gate, produce one
+`y2linux-platform-v1-integration-candidate` and one integrated physical campaign.
+No main merge, push, flash, hardware/memory scope expansion or epic closure is
+authorized by this observation entry. The existing 233-feature inventory remains
+authoritative; append exact integrated-RC evidence after integration without
+overwriting historical receipts or dropping required feature/distribution rows.
+
+Later owner RTC full-sleep evidence on the same installed Baseline02 is **FAIL**:
+watchdog recovery changes boot `27e6d684` to
+`88b85fa3-2282-4d93-b0b8-818a105ddd0a`, taint 0; retained journal stops at
+DEVICES_RESUMING (wake 0x20, full PCM 596, reset stamp 0x59325253), with no
+complete/exit proof. Direct scratch hashes and zero ext4 counters after reboot
+prove recovery only. New suspend source was not installed. Preserve prior
+UART01 C1/C2/C3 evidence; full resume and automatic C3 remain separate gates.
+Master archives the raw failure receipts offline and neither repeats the trial
+nor closes any milestone. Review the source-bound owner handoff before integration.
+
+Read-only GitHub refresh on 2026-10-04 confirms #16/#27/#28/#29/#31/#32/#33/#34
+OPEN and historical #30 CLOSED since 2026-09-15. That planning closure does not
+qualify physical full resume; the new failed RTC receipt keeps this release gate
+open. No external issue state or comment was changed by master.
+
 ## Baseline02 source integration into main — 2026-10-03
 
 Owner-authorized integration carries `cpu-idle-completion` at `acb5bb3` into
