@@ -219,6 +219,18 @@ class Qualification:
         return json.loads(self.cmd('rebornctl', *args, '--json'))
 
     def screen(self, off):
+        if off:
+            # Short Power on stopped/paused playback now requests full-system
+            # sleep. That is a separate physical gate, never a screen-blank
+            # control for CPU-idle qualification. Let the product's existing
+            # timeout perform ScreenSleep with its graphics ownership intact.
+            # Do not change owner settings or bypass the sleep qualification.
+            end = time.monotonic() + 330
+            while not bool(self.ctl('status')['screen_off']):
+                if time.monotonic() >= end:
+                    raise RuntimeError('Reborn automatic screen timeout did not blank; keep owner settings unchanged')
+                time.sleep(2)
+            return
         if bool(self.ctl('status')['screen_off']) != off:
             target = next(p for p in P('/sys/class/input').glob('event*/device/name')
                           if 'pmic' in p.read_text().lower())

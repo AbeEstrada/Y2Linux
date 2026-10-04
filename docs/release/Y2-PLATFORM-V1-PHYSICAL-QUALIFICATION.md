@@ -1,5 +1,15 @@
 # One Platform 1.0 integrated physical qualification campaign
 
+Host harness correction after Baseline01 installation (2026-10-04): CPU-idle
+qualification waits for Reborn's normal automatic display timeout when playback
+is stopped. Short Power now requests full-system sleep in that state and must
+not be used as a screen-blank control. The initial gesture run stopped safely
+before C2/C3 and retained its failure receipt. The corrected host-only helper
+does not change owner settings or installed firmware, and leaves timeout-disabled
+configurations as a bounded stop requiring owner observation. The normal short
+Power gesture remains the awake-from-screen-off test. Full Power wake and RTC
+wake remain separate staged qualification gates.
+
 The newest baseline starts **SOFTWARE_VALIDATED / INTEGRATED_PHYSICAL_NOT_RUN**.
 Endurance and electrical battery benefit are NOT_RUN. The owner flashes; this
 verification session accessed no device. Source, capability and historical

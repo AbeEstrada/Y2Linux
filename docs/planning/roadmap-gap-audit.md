@@ -1,5 +1,38 @@
 # Roadmap gap audit
 
+## Baseline01 installed physical admission — 2026-10-04
+
+Owner reports newest preserving firmware installed and authorizes its tests.
+Read-only pinned USB admission at 18:35 UTC verifies compiled Linux
+`98daf3f0220f4a1580bb4893094ee9f0e02362a5` / Reborn
+`9cd12baeeb70b204e08299bd4c91c8c35604c304`, kernel
+`6.18.0-y2linux-platform-v1-baseline-01`, root `2025.02.18-platform-v1.24`,
+boot `ef2c8f2f-56d9-418a-b8a8-2dfd329d0973`, taint 0.
+Standing audit repeated before activating exact-image physical qualification;
+all 233 feature IDs, source selection, protected partitions, memory and OPP
+scope, fallback and open issue gates remain unchanged. Owner confirms wheel,
+display, audible local track and normal battery display, playback now stopped.
+Root/DATA/SD ext4 and Wi-Fi COMPLETED/DNS are observed Ready. C1 counters advance;
+C3 boot policy Enabled/-1/disable0 is now observed on the integrated boot,
+but C2/C3 entry/restore and after-full-resume remain unqualified. Current
+screen/radio/USB/topology guards correctly report unmet prerequisites.
+
+Retained UART01 C1/C2/C3 remains historical exact-image evidence. Baseline02 RTC
+watchdog FAIL remains open; persisted sleep restore_failed refers to old boot
+27e6d684, not a new trial. Power and RTC full wake are separate NOT_RUN on this
+image. Battery 4.039 V/estimated 88%, no current sensor: no battery-life claim.
+Storage/USB desktop, Bluetooth peer, audio fidelity/rates, graphics/input counted
+controls, endurance and current-image recovery still require scoped tests.
+Firmware/codec redistribution, source/notices and collector gaps remain open;
+owner-local testing does not qualify public distribution or close issues.
+
+Next smallest boundary: smoke geometry/kernel/owner gate, then guarded CPU
+foundation under the shared nonblocking lease and independent pinned Wi-Fi.
+Stop mutation on identity/boot/taint/restore/storage failure. Broader USB/suspend
+follows only a passing gate; no flash, reboot loop, push or main promotion.
+Private admission and campaign receipts: owner `out/platform-v1-physical/`.
+Readiness: PHYSICAL_QUALIFICATION_IN_PROGRESS, overall acceptance PARTIAL.
+
 ## Independent baseline final closure check — 2026-10-04
 +
 +Before ending the software-seal boundary, retained real hardware and owner scope

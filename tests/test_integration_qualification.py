@@ -17,6 +17,32 @@ spec = importlib.util.spec_from_file_location('integration_campaign', ROOT / 'to
 h = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(h)
 
+spec = importlib.util.spec_from_file_location('cpu_idle_device', ROOT / 'tools/development/cpu_idle_completion_device.py')
+device = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(device)
+
+
+class ScreenIdle(unittest.TestCase):
+    def test_screen_off_waits_for_product_timeout_without_power_or_setting_writes(self):
+        run = object.__new__(device.Qualification)
+        run.ctl = Mock(side_effect=[{'screen_off': False}, {'screen_off': False}, {'screen_off': True}])
+        with patch.object(device.time, 'monotonic', side_effect=[0, 1, 3]), \
+                patch.object(device.time, 'sleep') as sleep, \
+                patch.object(device.os, 'open', side_effect=AssertionError('Power injection')), \
+                patch.object(device, 'write', side_effect=AssertionError('policy mutation')):
+            run.screen(True)
+        self.assertEqual(sleep.call_args_list, [unittest.mock.call(2), unittest.mock.call(2)])
+        self.assertTrue(all(call.args == ('status',) for call in run.ctl.call_args_list))
+
+    def test_disabled_or_failed_timeout_stops_without_forcing_screen_or_suspend(self):
+        run = object.__new__(device.Qualification)
+        run.ctl = Mock(return_value={'screen_off': False})
+        with patch.object(device.time, 'monotonic', side_effect=[0, 331]), \
+                patch.object(device.os, 'open', side_effect=AssertionError('Power injection')), \
+                patch.object(device, 'write', side_effect=AssertionError('policy mutation')):
+            with self.assertRaisesRegex(RuntimeError, 'automatic screen timeout'):
+                run.screen(True)
+
 
 class Coordinator(unittest.TestCase):
     def test_smoke_rejects_kernel_failure_disabled_idle_and_wrong_partition(self):
