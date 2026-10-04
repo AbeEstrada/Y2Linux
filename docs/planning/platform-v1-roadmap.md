@@ -1,5 +1,25 @@
 # Platform v1 roadmap
 
+## Media stock physical receipt reconciliation — 2026-10-04
+
+The [receipt reconciliation audit](roadmap-gap-audit.md#media-stock-physical-receipt-reconciliation--2026-10-04)
+adds actual stock scanner evidence from the separate storage owner's device
+slot: Baseline02 Linux `8584ccd8` / Reborn `b71b4688`, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, closing taint 0. DATA/HS200 1000-track
+initial/incremental 5526/393 ms, peak 10656 KiB; SD/ext4/SDR104 5495/401 ms,
+peak 10936 KiB. Each initial scan completes 1000/zero failures, each rescan
+reuses all tracks; storage fault deltas remain zero. Original private receipts
+and hashes are summarized in the [media report](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md).
+
+#29/#32/#33 classification: CONFIRMED bounded physical **stock** scan/reuse,
+CONFIRMED candidate software, UNTESTED new-candidate physical scan/concurrent
+playback. Remaining coverage/OPEN epic status and backup/calibration/recovery
+obligations from the prior closing review are unchanged. The next device slot
+belongs to suspend qualification; no device operation, build, flash or push
+occurs in this documentation reconciliation. Integration remains ready with
+limitations; next media gap is a matched-candidate guarded SD/playback receipt.
+No physical speedup is inferred from host/QEMU or stock-only measurements.
+
 ## FFmpeg, metadata and library software closing review — 2026-10-04
 
 The owner-authorized Reborn media subpass is software-ready with limitations,

@@ -1,5 +1,37 @@
 # Roadmap gap audit
 
+## Media stock physical receipt reconciliation — 2026-10-04
+
+Before closing this documentation addendum, repeat the boundary review with the
+new real-hardware receipts supplied by the separate storage owner. This lane
+reads retained files only; no device access, build, flash, source change or
+repeat of unchanged ROM/recovery provenance. The owner's next device slot is
+reserved for suspend qualification, and is not taken by the media lane.
+
+The storage receipts identify Baseline02 Linux `8584ccd8`, Reborn `b71b4688`,
+kernel `6.18.0-y2linux-baseline-02`, rootfs `2025.02.18-platform-v1.21`, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, closing taint 0. Stock scanner harness
+SHA256 `16e64c9ebd4139b0324a39d15e6d1bfdb57986f926e3e013d4a55c6db36400f0`
+uses the installed old media membrane and an isolated DB. One 1000-file
+mixed-corpus run per volume: DATA/HS200 initial 5526 ms, incremental 393 ms,
+peak 10656 KiB; SD/ext4/SDR104 initial 5495 ms, incremental 401 ms, peak
+10936 KiB. Each initial scan indexes 1000/zero failures; each rescan reuses all
+1000. Storage controller fault deltas remain zero during write/fsync, read/SHA
+and scans; known scratch is cleaned. Original receipts are private storage
+`out/platform-v1-storage/{emmc,sd}-corpus.json` and `corpus-restored.stdout`,
+with hashes and summaries in the [media receipt](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md).
+
+This supersedes “physical stock mixed scan unmeasured,” not the candidate's
+NOT_RUN gate. #29/#32/#33 now have CONFIRMED bounded physical stock scan/reuse
+evidence and CONFIRMED candidate software evidence; new-candidate physical
+scan/concurrent playback remains UNTESTED. The prior closing review's other
+coverage rows, eight OPEN epics, backup/calibration/fallback obligations and
+independent audio/radio/core/release gates carry forward. No epic closure,
+production waiver or hardware scope promotion. Software integration remains
+READY_WITH_LIMITATION; the smallest next gap is the matched candidate's SD
+and concurrent playback receipt after the reserved device work. Existing
+planning does not authorize installation or flash.
+
 ## FFmpeg, metadata and library software closing review — 2026-10-04
 
 Repeat the standing boundary review before closing this owner-authorized
