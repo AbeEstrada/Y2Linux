@@ -164,6 +164,26 @@ def build_root_image(build):
     return image
 
 
+def audio_stack(build, ffmpeg_version):
+    """Separate compiled conversion formats from selected native hardware policy."""
+    audio_policy=json.loads((build/'buildroot/target/etc/y2linux/audio-enabled.json').read_text())
+    return {
+        'ffmpeg_version':ffmpeg_version,
+        'canonical_sample_format':'fltp',
+        'preferred_output_format':'S16_LE',
+        'candidate_physically_qualified_output_formats':[],
+        'prior_narrow_output_formats':['S16_LE'],
+        'prior_narrow_rates_hz':[44100],
+        'implemented_software_output_formats':['S16_LE','S24_LE','S32_LE'],
+        'enabled_native_output_formats':audio_policy['enabled_formats'],
+        'enabled_native_rates_hz':audio_policy['enabled_rates'],
+        'unimplemented_native_output_formats':['S24_LE','S32_LE'],
+        'unqualified_native_rates_hz':audio_policy['enabled_rates'] + [88200,96000],
+        'precision_scope':'Software output conversion and native AFE admission are separate; no integrated physical output qualification',
+        'qualification_evidence':'docs/hardware-evidence/2026-09-18-gpu01/audio.txt',
+    }
+
+
 def package(build, base, fallback_root, out, fallback_overlay=None, public=False):
     from tools.production.validate import validate_manifest, validate_rootfs
     from tools.production.application import receipt as reborn_application
@@ -242,17 +262,7 @@ def package(build, base, fallback_root, out, fallback_overlay=None, public=False
             shutil.copyfile(build/'buildroot/target/etc/y2linux'/name, directory/name)
         (out/'metadata/hardware-configuration.json').write_text(
             json.dumps(manifest['hardware_configuration'], indent=2)+'\n')
-    manifest['audio_stack']={
-        'ffmpeg_version':ffmpeg_version,
-        'canonical_sample_format':'fltp',
-        'preferred_output_format':'S16_LE',
-        'candidate_physically_qualified_output_formats':[],
-        'prior_narrow_output_formats':['S16_LE'],
-        'prior_narrow_rates_hz':[44100],
-        'unimplemented_output_formats':['S24_LE','S32_LE'],
-        'unqualified_rates_hz':[48000,88200,96000],
-        'qualification_evidence':'docs/hardware-evidence/2026-09-18-gpu01/audio.txt',
-    }
+    manifest['audio_stack']=audio_stack(build, ffmpeg_version)
     manifest['fallback']={'policy':f"restore previous BOOTIMG ({previous['kernel_version']}) and Y2ROOT ({oldroot['version']}); preserve Y2DATA",
         'images':[{'file':'fallback/'+p['raw']['file'],'size_bytes':p['raw']['size_bytes'],'sha256':p['raw']['sha256']}
                   for p in (next(p for p in previous['payloads'] if p['target_partition']=='BOOTIMG'),oldroot)]}

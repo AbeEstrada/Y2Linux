@@ -7,6 +7,21 @@ from tools.production import system_update as u
 
 
 class Composition(unittest.TestCase):
+    def test_software_wide_conversion_does_not_admit_native_wide_output(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            build = Path(temporary)
+            installed = build/'buildroot/target/etc/y2linux'
+            installed.mkdir(parents=True)
+            (installed/'audio-enabled.json').write_text(json.dumps({
+                'enabled_formats':['S16_LE'], 'enabled_rates':[44100,48000]}))
+            audio = u.audio_stack(build, '9.0.2')
+            self.assertIn('S32_LE', audio['implemented_software_output_formats'])
+            self.assertEqual(audio['enabled_native_output_formats'], ['S16_LE'])
+            self.assertEqual(audio['enabled_native_rates_hz'], [44100,48000])
+            self.assertIn('S32_LE', audio['unimplemented_native_output_formats'])
+            self.assertEqual(audio['candidate_physically_qualified_output_formats'], [])
+            self.assertNotIn('unimplemented_output_formats', audio)
+
     def test_buildroot_generated_alias_cannot_escape_images(self):
         with tempfile.TemporaryDirectory() as temporary:
             build = Path(temporary)
@@ -81,6 +96,38 @@ class Composition(unittest.TestCase):
             module = build/'buildroot/target/usr/lib/y2-platform/y2_platform/power.py'
             module.parent.mkdir(parents=True);module.write_text('# installed coordinator')
             self.assertTrue(c.delivered(build,manifest)['capabilities']['shutdown']['compiled'])
+
+    def test_mtp_requires_config_package_responder_and_policy_together(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            build,_,manifest = self.fixture(Path(temporary))
+            target = build/'buildroot/target'
+            path = target/'etc/y2linux/capabilities.json'
+            value = json.loads(path.read_text())
+            value['capabilities']['usb_device'] = dict(implemented=True, enabled=True,
+                experimental=False, reason='MTP fixture', transfer_protocol='MTP')
+            path.write_text(json.dumps(value))
+            kernel = build/'kernel/.config'
+            config = kernel.read_text() + 'CONFIG_USB_CONFIGFS=y\nCONFIG_USB_CONFIGFS_F_FS=y\nCONFIG_USB_CONFIGFS_ECM=y\n'
+            kernel.write_text(config)
+            root = build/'buildroot/.config'
+            root.write_text(root.read_text() + 'BR2_PACKAGE_Y2_MTP=y\n')
+            files = [target/'usr/sbin/umtprd', target/'usr/lib/y2-platform/y2_platform/usb.py']
+            for file in files:
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_text('fixture')
+            self.assertTrue(c.delivered(build,manifest)['capabilities']['usb_device']['compiled'])
+            for file in files:
+                file.unlink()
+                with self.assertRaisesRegex(ValueError, 'usb_device'):
+                    c.delivered(build,manifest)
+                file.write_text('fixture')
+            kernel.write_text(config.replace('CONFIG_USB_CONFIGFS_F_FS=y\n', ''))
+            with self.assertRaisesRegex(ValueError, 'usb_device'):
+                c.delivered(build,manifest)
+            kernel.write_text(config)
+            root.write_text('BR2_PACKAGE_BLUEALSA=y\n')
+            with self.assertRaisesRegex(ValueError, 'usb_device'):
+                c.delivered(build,manifest)
 
     def test_rehashed_misleading_receipts_are_rejected(self):
         changes = [

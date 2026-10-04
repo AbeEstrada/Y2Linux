@@ -57,6 +57,15 @@ def delivered(build, manifest):
         enabled, experimental = bool(value['enabled']), bool(value['experimental'])
         if symbol:
             compiled, evidence = kernel.get(symbol) in ('y','m'), symbol
+            if name == 'usb_device' and value.get('transfer_protocol') == 'MTP':
+                prerequisites = ('CONFIG_USB_CONFIGFS', 'CONFIG_USB_CONFIGFS_F_FS',
+                                 'CONFIG_USB_CONFIGFS_ECM')
+                installed_files = ('usr/sbin/umtprd',
+                                   'usr/lib/y2-platform/y2_platform/usb.py')
+                compiled = (compiled and all(kernel.get(k) == 'y' for k in prerequisites)
+                            and root.get('BR2_PACKAGE_Y2_MTP') == 'y'
+                            and all((build/'buildroot/target'/p).is_file() for p in installed_files))
+                evidence = '; '.join((symbol, *prerequisites, 'BR2_PACKAGE_Y2_MTP', *installed_files))
         elif name in modules:
             evidence = 'usr/lib/y2-platform/y2_platform/'+modules[name]
             compiled = (build/'buildroot/target'/evidence).is_file()

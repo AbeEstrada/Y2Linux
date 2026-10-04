@@ -375,3 +375,7 @@ USB durable generations remain deferred until restore. The source freshness
 claim also checks inode/ctime/mount/card before worker and UI publication while
 releasing decode descriptors, so cached artwork cannot block SD eject. Initial compile-only composition failures are kept
 in private logs and corrected; no failure is reclassified as a pass.
+
+## Final release-contract reconciliation
+
+C31 separates software S16/S24/S32 output conversion from deployed S16-only native AFE formats and zero new-image physical acceptance. C32 binds enabled MTP delivery to kernel configfs/FunctionFS/ECM, selected package, installed responder and one installed USB policy; a USB controller alone no longer satisfies the claim. Targeted release composition/fallback/privacy checks PASS. The first fresh build is intermediate; final source identity and regenerated root/version metadata will follow the reviewed packaging-contract commit before broad qualification/sealing.
