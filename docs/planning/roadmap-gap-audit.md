@@ -1,5 +1,84 @@
 # Roadmap gap audit
 
+## Reborn performance pass closing boundary — 2026-10-04
+
+The owner-authorized, isolated application pass is complete for its measured
+Product v2 scenarios. Preserved baseline `b71b4688` plus instrumentation and
+candidate `069415a4207c00f0a32a3a2ac00602ddea29a895` run on the same real
+Baseline02 boot `88b85fa3-2282-4d93-b0b8-818a105ddd0a`, taint 0. Candidate ARM
+SHA-256 is `7871ec67f6678c7f522b1b84da0f1e53ab1646e89bc6abb6b7eafe10c02286c7`.
+The independent suspend recovery prompted a fresh matched comparison; old-boot
+results remain historical. No suspend trial is performed by this pass.
+
+Evidence origin: synthetic supported evdev records/kernel timestamps, real
+480x360 GLES2/KMS frames, disposable 10k SQL/UI fixtures, 16 collection trips,
+1,000 wheel steps, four warm starts, playback/idle windows, cover sequences,
+native write-size probes and a supplemental 16 resume/16 pause replay per binary.
+See the [Reborn report](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md),
+[matched summary](../../../Y2Reborn/docs/validation/evidence/reborn-platform-v1-performance/summary.json),
+[controls](../../../Y2Reborn/docs/validation/evidence/reborn-platform-v1-performance/play-pause.json)
+and [restoration](../../../Y2Reborn/docs/validation/evidence/reborn-platform-v1-performance/restoration.json).
+Mechanical/IRQ/debounce-to-photon, analog response, electrical power, peer radios
+and cold-boot improvement are not claimed. Live input uses three owner-library
+tracks/private PCM queue; 10k SQL/layout/GPU stress is a separate fixture.
+
+| Coverage / dependency | Classification | Evidence and remaining boundary |
+| --- | --- | --- |
+| Product v2, rendering/input; #34/#28 | CONFIRMED, bounded application scope | Wheel KMS p95 59.93→17.52 ms; Now Playing 77.61→17.15 ms; all 1,000 single steps match. Frame CPU p95 5.09–9.94→1.65–2.82 ms. Ten captures differ in 0.0087% of channels, max 5/255: bounded near-equivalence, not bit identity. Physical detent/IRQ/debounce/endurance remain separate. |
+| Library/storage/artwork; #33 | CONFIRMED fixture behavior; PARTIAL wider library | 10k SQL/UI/GPU, collection Select/Back, bounded 160px/four-cover cache and missing/corrupt handling pass. A 10k single-album stress layout still takes 34.36 ms; no before/after claim for that new extreme fixture. Deep folders, large-queue persistence, media epochs and storage-owner pinning retain integration gates. |
+| Application idle / C states; #28/#34 | CONFIRMED application reduction; PARTIAL current C2/C3/power | Home CPU 4.96→1.88%, switches 133.44→47.23/s; Home/paused Now Playing/Settings produce zero sampled static redraws. Screen-off CPU 4.25→2.87%. C1 progresses; C2/C3 remain zero under connected USB/radio guards. C3 policy stays Enabled/-1/disable0; electrical/full-suspend evidence is separate. |
+| Wired audio / controls; #29 | CONFIRMED bounded S16/48k; PARTIAL wider audio | Whole-app playing CPU 87.95→11.21%, audio thread 82.63→5.11%; tiny partial-write churn is measured and fixed with one bounded readiness wait. Supplemental resume KMS p95 43.98→22.55 ms, pause 64.70→38.50 ms. Seek/reopen/pause/resume/stop and active SIGTERM exit 317.28 ms pass with zero XRUN/audio errors. Host null/fault tests preserve S16/S24/S32 counts; high-resolution/analog/peer audio remain separate. |
+| Radios; #31 | CONFIRMED off-worker observation scope; PARTIAL peers | Redraws follow changed views; powered-off wait reduces wakes. Queued power-on can take 100 ms and is not hardware-qualified. Reconcile this local timeout hunk with the independent event-worker implementation before combined qualification. |
+| Startup/splash; #16/#27/#28/#34 | CONFIRMED warm-start scope; PARTIAL cold boot | Four starts: first KMS p95 228.74→210.28 ms, first interactive 779→499 ms. Existing Product v2 handoff/frame count remains. Lazy platform connect does not block these screens; no unexercised API or new cold-boot latency is invented. |
+| Production/recovery/full suspend; #28/#32 | CONFIRMED scope preservation; PARTIAL release | Installed `/usr/bin/reborn` b71, original paused/screen-off state and three tracks restored; same boot/taint0, rw root/data/SD with zero ext4 errors, original governor/C3 policy. Independent full-resume failure remains a release blocker. No production package, partitions, memory map, flash or push changes. |
+
+Reborn source is `b8c05db` plus `069415a`; fmt, strict workspace/all-target Clippy,
+243 workspace tests, exact ARM workspace build, 1k/10k/20k host fixtures and
+targeted native/scripted controls pass. Physical leases are released normally;
+owned device scratch is removed and raw host evidence retained privately.
+Read-only refresh keeps #16/#27/#28/#29/#31/#32/#33/#34 OPEN. No remote issue or
+milestone mutation is performed; scoped application acceptance closes no epic.
+
+The next boundary is isolated cross-owner source integration, PARTIALLY READY,
+followed by relevant combined qualification. Preserve fresh storage/FD authority,
+source-epoch and suspend-prepare/inflight-result invalidation when composing the
+off-thread observations, and the strict audio/radio transport contracts when
+composing wired pacing. Use the radio owner's event worker for its superseded
+timeout hunk. Full resume, peer/analog/electrical evidence and release remain
+independent gates. This closing audit changes documentation only; unchanged
+source/ROM/recovery provenance is not repeated and no image is built or flashed.
+
+## Reborn performance matched-run readmission — 2026-10-04
+
+An independent suspend trial recovered through a watchdog reboot. Its owner
+checked direct storage hashes/ext4 integrity, restored the installed service and
+released the device lease. This performance pass then acquired the nonblocking
+lock and independently observed boot `88b85fa3-2282-4d93-b0b8-818a105ddd0a`,
+taint 0, unchanged Baseline02 Linux `8584ccd8` / Reborn `b71b4688`, paused
+playback, screen off and three library tracks. Root/data/SD remain mounted rw
+with all three ext4 error counters zero. CPU0 C3 is Enabled/budget -1/disable 0,
+coordinator enabled and schedutil 598000–1300000; pm_test is none.
+
+The installed-source and production-scope admission below remains unchanged.
+Earlier performance measurements belong to boot `27e6d684`; rerun the preserved
+baseline executable before exact candidate `b8c05db` on this new boot for a
+matched comparison. Suspend remains PARTIAL with the independent failed full
+resume gate; this pass authorizes no further deep trial. Read-only refresh keeps
+#16/#27/#28/#29/#31/#32/#33/#34 OPEN. No source/ROM/recovery provenance, build image,
+flash, push or policy change is needed. The next boundary is the reversible
+baseline/candidate measurement and restoration receipt, followed by the closing
+gap audit. Evidence: Reborn `out/performance/admission-newboot.json`.
+
+The matched UI candidate passes its bounded boot88 scenarios. A further audio
+write-size probe using the exact gain code and normal S16/48k/512-period/4096-
+buffer sink reproduces over 10k tiny partial writes/s and roughly one core of
+CPU. A bounded capacity wait reduces that probe to 131 writes and about 30 ms
+CPU per second. This supports a localized Reborn ALSA readiness fix under the
+existing authorization, with unchanged formats/buffers/gain/leases/frame
+accounting. Validate its wait/recovery/control behavior, then repeat the exact
+candidate playback and performance receipt before the closing audit. This is
+not high-resolution/analog/peer-Bluetooth or production package authorization.
+
 ## Reborn performance pass admission — 2026-10-04
 
 Owner authorizes measurement and localized Reborn responsiveness fixes on branch

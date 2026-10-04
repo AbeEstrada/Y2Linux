@@ -1,5 +1,56 @@
 # Platform v1 roadmap
 
+## Reborn performance pass closing boundary — 2026-10-04
+
+The scoped Product v2 application performance pass is CONFIRMED on Baseline02
+boot `88b85fa3-2282-4d93-b0b8-818a105ddd0a`, taint0, with preserved baseline and
+exact candidate `069415a` ARM SHA `7871ec67f6678c7f522b1b84da0f1e53ab1646e89bc6abb6b7eafe10c02286c7`.
+See the [closing gap audit](roadmap-gap-audit.md#reborn-performance-pass-closing-boundary--2026-10-04)
+and [Reborn evidence](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md).
+
+Wheel KMS p95 is 59.93→17.52 ms and Now Playing 77.61→17.15 ms; all 1,000
+steps match. Frame CPU p95 falls from 5.09–9.94 to 1.65–2.82 ms. Sampled static
+screens stop redrawing; Home CPU falls 4.96→1.88%, playing 87.95→11.21%.
+Four warm-start interactive p95 improves 779→499 ms. Supplemental repeated
+resume/pause, cover caching, private 10k fixtures, stop/reopen and active shutdown
+pass. Product v2 retains bounded pixel near-equivalence; no photon/analog/power,
+full-suspend, peer-radio or improved cold-boot qualification is promoted.
+
+Installed b71 Reborn/data/paused screen-off state, original C3/governor policy
+and rw storage with zero ext4 errors are restored. Device leases are released;
+no flash, push, main-worktree change, production package or memory/partition
+change belongs to this pass. Read-only issue refresh keeps existing epics OPEN.
+
+Next boundary: cross-owner source integration is PARTIALLY READY. Reconcile
+source epochs/prepare and inflight observations with fresh storage/FD admission;
+compose wired pacing with strict transport/format ownership and use the radio
+owner's event worker in place of the local powered-off timeout. Repeat relevant
+combined qualification after integration. The 10k single-album stress layout
+(34.36 ms), deeper libraries/queues, analog/peer/electrical evidence and the
+independent failed full-resume gate remain scoped gaps, not implementation or
+hardware authorization. This update is documentation-only.
+
+## Reborn performance matched-run readmission — 2026-10-04
+
+The independent suspend owner released its lease after watchdog recovery,
+storage integrity checks and normal restoration. This pass independently
+observes Baseline02 Linux `8584ccd8` / Reborn `b71b4688`, new boot
+`88b85fa3-2282-4d93-b0b8-818a105ddd0a`, taint 0, stock paused/screen-off Reborn,
+three tracks, root/data/SD rw with zero ext4 errors and unchanged automatic
+CPU0 C3/schedutil policy. See the [readmission audit](roadmap-gap-audit.md#reborn-performance-matched-run-readmission--2026-10-04).
+
+Earlier performance receipts remain exact old-boot evidence. The next boundary
+is a fresh preserved baseline followed by candidate `b8c05db` on the same new
+boot, then restoration and a closing audit. Full suspend remains PARTIAL and its
+failed resume is an independent release gate; no additional deep trial or
+production/flash/push/policy change is authorized here. Existing epics stay OPEN.
+
+The subsequent same-native gain/write probe confirms a tiny partial-write spin
+in Reborn audio. Next localized step: bounded PCM-capacity waiting, preserving
+gain, formats, buffers, leases and accepted-frame accounting; validate source
+and rerun the exact candidate before closure. High-resolution/analog and peer
+Bluetooth gates remain separate; see the readmission audit for probe scope.
+
 ## Reborn performance pass admission — 2026-10-04
 
 Owner authorizes measurement and localized Reborn responsiveness fixes on branch
