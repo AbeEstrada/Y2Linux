@@ -46,6 +46,26 @@ class NetworkTime(unittest.TestCase):
         self.assertEqual(len(self.calls), before)
         self.assertNotIn('nameserver', self.ctx.read('/run/y2/resolv.conf'))
 
+    def test_cleanup_disconnect_is_not_counted_as_another_link_loss(self):
+        self.assertEqual(lease_event(self.ctx, 'DISCONNECTED')['state'], 'Unavailable')
+        self.assertEqual(self.ctx.json('/run/y2/wifi-events.json')['real_disconnects'], 0)
+        lease_event(self.ctx, 'CONNECTED')
+        lease_event(self.ctx, 'DISCONNECTED')
+        lease_event(self.ctx, 'DISCONNECTED')  # interface-removal cleanup duplicates the action
+        events = self.ctx.json('/run/y2/wifi-events.json')
+        self.assertEqual(events['disconnected'], 3)  # raw action API stays compatible
+        self.assertEqual(events['real_disconnects'], 1)
+        lease_event(self.ctx, 'CONNECTED')
+        self.assertEqual(self.ctx.json('/run/y2/wifi-events.json')['reconnects'], 1)
+        lease_event(self.ctx, 'CONNECTED')  # repeated notification is not another reconnect
+        self.assertEqual(self.ctx.json('/run/y2/wifi-events.json')['reconnects'], 1)
+        self.put('/proc/sys/kernel/random/boot_id', 'next-boot')
+        lease_event(self.ctx, 'CONNECTED')
+        events = self.ctx.json('/run/y2/wifi-events.json')
+        self.assertEqual(events['connected'], 1)
+        self.assertEqual(events['real_disconnects'], 0)
+        self.assertEqual(events['reconnects'], 0)
+
     def test_classless_routes_and_untrusted_dhcp_syntax(self):
         epoch = lease_event(self.ctx, 'CONNECTED')['epoch']
         env = dict(interface='wlan0', Y2_DHCP_GENERATION=epoch, ip='192.0.2.2',

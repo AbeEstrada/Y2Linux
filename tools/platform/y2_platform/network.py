@@ -39,6 +39,21 @@ def _lease_event(ctx, event):
     (runtime / 'wifi-epoch').write_text(epoch + '\n')
     (runtime / 'dns.json').unlink(missing_ok=True)
     old = ctx.json('/run/y2/wifi-events.json', {})
+    if old.get('boot_id') != ctx.read('/proc/sys/kernel/random/boot_id'):
+        old = {}
+    active = old.get('association_active', old.get('last_event') == 'CONNECTED') is True
+    # Action calls include supervisory cleanup as well as native link events.
+    # Keep their historical raw counts, but count a real loss only once after
+    # a known connection. Unknown queries never enter this lifecycle.
+    old.setdefault('link_counts_since_s', time.monotonic())
+    for name in ('real_disconnects', 'reconnects'):
+        value = old.get(name, 0)
+        old[name] = value if isinstance(value, int) and value >= 0 else 0
+    if event == 'DISCONNECTED' and active:
+        old['real_disconnects'] += 1
+    if event == 'CONNECTED' and not active and old.get('connected', 0):
+        old['reconnects'] += 1
+    old['association_active'] = event == 'CONNECTED'
     count = old.get(event.lower(), 0)
     count = count if isinstance(count, int) and count >= 0 else 0
     old[event.lower()] = count + 1
