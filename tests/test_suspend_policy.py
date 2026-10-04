@@ -11,7 +11,7 @@ HELPER = ROOT / 'buildroot/board/y2/production-overlay/usr/sbin/y2-suspend'
 
 class SuspendPolicy(unittest.TestCase):
     def run_status(self, powered, functions, qualify=True, enabled=False,
-                   fail_radio=None, fail_restore_record=False):
+                   fail_radio=None, fail_restore_record=False, fail_prepare=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for name in ('run/y2', 'data/network', 'data/bluetooth', 'sys/power',
@@ -34,6 +34,8 @@ class SuspendPolicy(unittest.TestCase):
                 mock = root / 'bin' / command
                 mock.write_text('#!/bin/sh\nexit 0\n')
                 mock.chmod(0o755)
+            if fail_prepare:
+                (root / 'bin/y2-platform').write_text('#!/bin/sh\nexit 1\n')
             calls = root / 'radio-calls'
             (root / 'bin/y2-radio').write_text(
                 '#!/bin/sh\n'
@@ -49,6 +51,8 @@ class SuspendPolicy(unittest.TestCase):
             if enabled and qualify:
                 self.assertIn('wifi on-runtime', calls.read_text())
                 self.assertIn('bluetooth on-runtime', calls.read_text())
+            if fail_prepare:
+                self.assertNotIn('off-runtime', calls.read_text() if calls.exists() else '')
             return result, state.read_text()
 
     def test_unqualified_default_never_enters_suspend(self):
@@ -72,6 +76,11 @@ class SuspendPolicy(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(state, '')
                 self.assertIn('Radios did not stop', result.stderr)
+
+    def test_failed_reborn_preparation_never_enters_or_quiesces_radios(self):
+        result, state = self.run_status('0', '0x0', enabled=True, fail_prepare=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(state, '')
 
     def test_restore_failure_is_not_a_passing_suspend(self):
         for failed in ('wifi', 'bluetooth'):

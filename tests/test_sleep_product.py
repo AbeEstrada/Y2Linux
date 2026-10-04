@@ -62,6 +62,13 @@ class SleepProduct(unittest.TestCase):
         self.assertEqual(self.ctx.read('/sys/power/state'), '')
         self.assertEqual(self.ctx.read('/sys/firmware/y2_pm/stage'), '')
 
+    def test_charging_refusal_is_specific_and_never_bypasses_the_kernel_guard(self):
+        self.write('/sys/class/power_supply/BAT0/status', 'Charging')
+        value = request(self.ctx)
+        self.assertEqual(value['state'], 'refused')
+        self.assertEqual(value['reason'], 'charger_active')
+        self.assertEqual(self.ctx.read('/sys/power/state'), '')
+
     def test_parallel_product_request_does_not_replace_owner_receipt(self):
         record(self.ctx, 'quiescing_radios', 0)
         record(self.ctx, 'kernel_suspend', 0)

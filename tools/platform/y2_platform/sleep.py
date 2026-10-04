@@ -131,7 +131,9 @@ def request(ctx):
         except BlockingIOError:
             current = status(ctx)
             return dict(current, state='refused', reason='sleep_operation_in_progress')
-        value = record(ctx, 'refused_physical_qualification_required', 2)
+        reason = ('charger_active' if ctx.read('/sys/class/power_supply/BAT0/status') == 'Charging'
+                  else 'physical_qualification_required')
+        value = record(ctx, 'refused_' + reason, 2)
         return value['product']
     finally:
         os.close(fd)
