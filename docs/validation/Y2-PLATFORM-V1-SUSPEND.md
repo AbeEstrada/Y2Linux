@@ -53,8 +53,8 @@ and kernel exit; historical failure locations are not assumed current.
    The helper obtains explicit `sleep_prepare` acknowledgement: checkpoint queue
    and position, refuse playback/pending work, release ALSA and DRM scanout, blank
    display. Preparation blocks new input/transport/control mutations until unwind.
-   `sleep_restore` restores scanout/backlight, renders a frame and clears old press
-   ages, queued wake edges and wheel cadence. It runs on failed attempts too;
+   `sleep_restore` restores scanout/backlight, renders a frame and reopens evdev queues and clears old press
+   ages, queued wake edges, overflow state and wheel cadence. It runs on failed attempts too;
    status-socket liveness alone no longer proves application restoration.
 5. A short Power gesture requests sleep when playback is paused/stopped; during
    playback it blanks the display. An off-screen press wakes the display. A long
@@ -142,10 +142,10 @@ skipped. Coverage includes suspend policy and failures, CPU/idle/timers/CIRQ,
 storage/MMC context, USB, connectivity/radio, GPU and audio. The later 23-test
 policy run passes, including two added charging/preparation-refusal checks.
 The five full-path/observer fault tests also pass after adding inherited-lease
-exclusion and inode checks. Reborn fmt and strict all-target Clippy pass; all 243 workspace tests pass with
+exclusion and inode checks. Reborn fmt and strict all-target Clippy pass; all 244 workspace tests pass with
 locked dependencies and isolated temporary paths. The ARM release build passes
 against the exact Baseline02 SDK; Reborn SHA256 is
-`673f8c18d293101102e9768076e5429968f71ecee17121eb38aa0d3172418a09`.
+`afe9291a9412ca0f61a182ff5fad8b4e77f6ff1aaafac9269dbd153c4374c571`.
 Native and Cortex-A7 QEMU headless processes pass explicit prepare/checkpoint,
 prepared mutation refusal, restore/control admission and a second prepare/restore
 in the same process. QEMU uses the Baseline02 ARM runtime libraries. These are
@@ -171,6 +171,7 @@ Implementation commits:
 - Linux `7e10bdc`: retained coordinator lease across staged and wake trials.
 - Reborn `4544b1a`: typed preparation/restoration and Power/input semantics.
 - Reborn `f69c3c4`: discard wake input before fallible display restoration.
+- Reborn `c57a55f`: reopen evdev queues and clear overflow state after full resume.
 
 The physical receipt remains pending. No push or flash.
 
