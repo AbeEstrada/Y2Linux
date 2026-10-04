@@ -1,9 +1,25 @@
 # Current Y2Linux platform state
 
+## Integrated Platform 1.0 software candidate — 2026-10-04
+
+**READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**. All eleven source handoffs are
+composed on paired codex/platform-v1-integration branches. One sealed candidate:
+`/home/luca/Dokumente/Code/worktrees/platform-v1-integration/Y2Linux/out/y2linux-platform-v1-integration-candidate`. Compiled Linux `4c72466f2f27ddf9f0ca18ba8ddc4d89c52599d2` / Reborn `dd73dcc3243045cd33e319dda2f76918ed37ea31`; kernel `6.18.0-y2linux-platform-v1-integration-01`, root `2025.02.18-platform-v1.23`.
+Broad source/kernel/ARM/QEMU/ELF/package/privacy/source checks PASS; integrated
+hardware/endurance NOT_RUN and public distribution blocked. See the [master](release/Y2-PLATFORM-V1-MASTER.md),
+[233-feature matrix](release/Y2-COMMUNITY-BETA-FEATURES.json) and [one physical plan](release/Y2-PLATFORM-V1-PHYSICAL-QUALIFICATION.md).
+
+Latest owner-installed receipts remain Baseline02 Linux8584ccd8/Rebornb71b4688,
+boot88b85fa3/taint0 after a failed full RTC trial. Temporary optimized binaries
+were restored to stock. UART01 remains the protected bounded CPU-idle authority.
+No new integrated image has run on hardware. Older dated sections below retain
+their original scope; a documentation HEAD is separate from compiled identity.
+
+
 ## Parallel integration observation — 2026-10-04
 
 [Master status](release/Y2-PLATFORM-V1-MASTER.md): **INTEGRATION_IN_PROGRESS**.
-All eleven paired handoffs are source-frozen and selected source is composed on isolated master branches; no final
+All eleven source-frozen handoffs are composed on isolated paired master branches; no final
 Platform 1.0 integration candidate exists. New Bluetooth/Wi-Fi owner receipts
 identify installed Baseline02 (Linux `8584ccd8`, Reborn `b71b4688`, root v1.21,
 boot `27e6d684-3794-4490-95db-a489027cd4f4`, taint 0). Their locations and
@@ -27,7 +43,7 @@ Updated 2026-10-03 from the sealed Baseline02 receipts and retained UART01
 hardware evidence. This synchronization changes documentation only; it does
 not build, flash, push or run a new physical qualification.
 
-## Current candidate and installed evidence
+## Retained Baseline02 seal and installed evidence
 
 | Field | Sealed Baseline02 |
 | --- | --- |
@@ -49,8 +65,6 @@ Reborn `b71b468860233faa0a42b8448ec5777fa952b8e3`, root
 C1, C2 and C3 are physically working on that image. Baseline02 retains that
 kernel architecture; its new image and automatic cold-boot activation remain
 **PHYSICAL_NOT_RUN** until owner installation and the guarded checks.
-
-Later 2026-10-04 source-bound owner reports identify installed Baseline02 and boot `88b85fa3` after a failed full RTC wake. The dated table above records the Baseline02 seal; it does not override these later observations. See the [master](release/Y2-PLATFORM-V1-MASTER.md) for current source and device axes.
 
 See the [sealed receipt](validation/Y2-BASELINE-02.md),
 [exact candidate and fallback identities](knowledge/candidate-index.md) and

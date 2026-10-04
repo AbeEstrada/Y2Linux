@@ -1,5 +1,25 @@
 # Platform v1 roadmap
 
+## Platform 1.0 software exit / physical qualification preparation — 2026-10-04
+
+The [repeated boundary audit](roadmap-gap-audit.md#platform-10-software-exit--physical-qualification-preparation--2026-10-04)
+reconciles the233-feature scope, eleven completed source pairs, C01–C34 contracts,
+all eight active issues and real hardware evidence before this boundary.
+One sealed owner-local candidate is **READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**.
+Compiled Linux `4c72466f2f27ddf9f0ca18ba8ddc4d89c52599d2` / Reborn `dd73dcc3243045cd33e319dda2f76918ed37ea31`; root `2025.02.18-platform-v1.23`. Broad software/kernel/ARM/QEMU/
+package/privacy/source gates PASS:466cases (456pass,10native-dependency skips,
+all10actual cases separately passed),324Reborn/fmt/Clippy,384ELFs/1411edges.
+
+Next smallest blocker is the owner's preserving installation of this exact pair,
+then one [A–J campaign](../release/Y2-PLATFORM-V1-PHYSICAL-QUALIFICATION.md).
+Integrated hardware/endurance are NOT_RUN; Baseline02 full RTC FAIL and UART01
+C1/C2/C3 remain source-bound. Ordinary deep sleep/wideAFE/peer/codecs are not
+promoted. Public distribution is blocked pending firmware/codec permissions,
+corresponding-source/notices and collector limitations. All existing open epics
+remain open; historical#30 closure is unchanged and supplies no full-resume proof.
+No source/memory/layout expansion, main merge, push or master flash/device access.
+
+
 
 ## Platform 1.0 production composition boundary — 2026-10-04
 
@@ -1235,7 +1255,7 @@ coverage is PARTIAL with DNS FAIL, not Online or full Session C acceptance.
 Next diagnose DNS/readiness; no network settings or production code were changed.
 
 
-<!-- Retained owner admission: bluetooth; frozen 2026-10-04 source. Historical admission does not authorize integrated hardware. -->
+<!-- Retained Bluetooth owner boundary; historical source scope, not integrated authorization. -->
 
 ## Bluetooth optimization boundary — 2026-10-04
 

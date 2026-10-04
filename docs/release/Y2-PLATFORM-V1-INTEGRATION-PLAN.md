@@ -1,6 +1,6 @@
 # Y2 + Reborn Platform 1.0 integration plan
 
-Started 2026-10-04. State: **INTEGRATION_IN_PROGRESS**. This plan records
+Started 2026-10-04. State: **READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**. This plan records
 decisions for future semantic integration; it does not authorize modifying live
 subsystem worktrees. [Status](Y2-PLATFORM-V1-INTEGRATION-STATUS.md) contains exact
 observed tips, paths, changed files and receipts. [Master](Y2-PLATFORM-V1-MASTER.md)
@@ -276,3 +276,7 @@ gates, exact candidate path/BOOTIMG/Y2ROOT hashes and the single next owner acti
 ## Production source composition — 2026-10-04
 
 C01–C30 source reconciliation is complete. Paired master branches contain all selected source units and source-bound owner receipts. The production boundary audit precedes the new release identity and fresh build. Next: one fresh pinned kernel/Buildroot/Reborn ARM composition, broad software and package checks, then one source/image-bound [physical coordinator](Y2-PLATFORM-V1-PHYSICAL-QUALIFICATION.md). No subsystem image becomes the final Platform 1.0 product.
+
+## Software exit and next integrated phase
+
+C01–C34 source contracts are reconciled, broad software gates PASS and one candidate is sealed. All merge units are complete in master-owned paired branches; remaining work is one source/image-bound A–J physical campaign and distribution review. Use the [final master16-item handoff](Y2-PLATFORM-V1-MASTER.md#final-16-item-master-handoff) and exact preserving owner package instructions. No main merge/push/automatic hardware action.

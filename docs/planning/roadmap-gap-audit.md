@@ -1,5 +1,44 @@
 # Roadmap gap audit
 
+## Platform 1.0 software exit / physical qualification preparation — 2026-10-04
+
+Repeated standing milestone-boundary audit at 2026-10-04T16:54:14.264292+00:00, before crossing the
+software-candidate boundary. Explicit owner Platform 1.0 requirements, all233
+feature IDs, all eleven frozen paired sources, accepted/rejected C01–C34 changes,
+all eight current open GitHub issues and actual source-bound hardware receipts
+are reconciled. Source and software are **CONFIRMED**; integrated hardware,
+endurance and distribution remain **PARTIAL / NOT_RUN**, with conditional wide
+AFE/audio and peer/backend questions **UNKNOWN**. No production waiver or
+milestone closure follows from the software exit.
+
+Exact compiled pair: Linux `4c72466f2f27ddf9f0ca18ba8ddc4d89c52599d2` / Reborn `dd73dcc3243045cd33e319dda2f76918ed37ea31`. Kernel `6.18.0-y2linux-platform-v1-integration-01`,
+root `2025.02.18-platform-v1.23`. One sealed candidate: `/home/luca/Dokumente/Code/worktrees/platform-v1-integration/Y2Linux/out/y2linux-platform-v1-integration-candidate`.
+BOOTIMG SHA256 `d2dec1a517a596861adb69b4c9aaab51e68d5caf46712a99dbd8607e9d8fbb06`;
+Y2ROOT SHA256 `cd3c077fd6c4882c82b7c67c42266f5f0ddc04828ddc2af111434740153bd1dc`. Identity comes from the new manifest,
+not later documentation HEAD. This audit reads the seal/receipts and does not
+build, flash, access hardware or repeat unchanged source/stock/recovery provenance.
+
+| Coverage / issue | Real evidence and present gap | Boundary decision |
+| --- | --- | --- |
+| CPU/idle/timers/hotplug/DVFS; #28/#30 | CONFIRMED bounded UART01: all4 C1, C2 84.3473%, C3 65.2450%,3647 checked returns/zero restore faults/sameboot. Fifteen registered foundation files plus SPM dormant/idle-arm/idle-restore functions byte-preserved. Fresh ARM/config/DT/modules/ABI/software PASS. Integrated cold boot/C3 NOT_RUN. | Protect foundation; exact-RC before/after-sleep regression required. Historical#30 closure is not full-sleep acceptance. |
+| Full suspend/product restore; #28/#30/#32 | PARTIAL. Baseline02 boot27 full RTC FAIL, recovered boot88/taint0, retained DEVICES_RESUMING/wake0x20/PCM596/reset59325253, unmatched CS43131 1-0030 phase7. New checked codec/SPM restore and worker ACK guards software PASS; never installed. | No ordinary deep-sleep promotion. One staged/backstopped source-bound trial after owner installation/review; stop on unexpected reboot. |
+| Storage/filesystems/USB; #27/#33 | CONFIRMED scoped Baseline02 SD SDR104/direct hash/runtime-PM observations; six private DB trials and fsynced integrity evidence remain exact-scope. New MTP/configfs/PIO/confinement source and software PASS. Real desktop MTP/different-card/newRC NOT_RUN. | Linux sole filesystem writer; no raw block export. PreserveDATA/SD geometry. F134 MTP required; mass-storage/RNDIS absent. |
+| Wi-Fi/BT/codec/precision/audio; #29/#31 | PARTIAL. Old Wi-Fi throughput/readiness and S16/44.1/48 observations retained; optimized BT worker never ran with a peer. Q31/S24/S32 conversion software PASS is not wider native AFE output. | Real AP/headset/codec/coexistence/listening remain gates. Native S16-only enablement; wider fetch/I2S/analog evidence conditional. |
+| Media/library/DB; #32/#33 | CONFIRMED exact9.0.2 ARM/QEMU parser policy, schema1 TEMP scan/revision/CID/admission/privacy/fault tests. Source-bound50k native benchmark includes ingest/prune regressions;250k is capacity ceiling, not qualified capacity. | One scanner/catalog/worker; retained queues refuse stale cards; zero-FD4-cover cache cannot block eject. Integrated scan/playback/USB/sleep races remain physical gates. |
+| Graphics/input/performance; #28/#34 | CONFIRMED bounded temporary069415a ARM evidence on boot88 with stock/data restored;600/6,912,000 pixel-channel differences (near-equivalence), synthetic input excludes mechanical latency. New runtime/input/capture/sleep source324tests/fmt/Clippy PASS. | Preserve DRM/Lima/scanout foundation. Exact-RC counted input/display/latency checks required; no new refresh-rate or cold-boot claim. |
+| Battery/charging/boot/shutdown/update/recovery; #16/#27/#28/#32 | PARTIAL. Awake/refusal/recovery evidence retained; no electrical/endurance/newRC full-return qualification. Matching UART01 fallback is sealed separately and preserving scatter selects onlyBOOTIMG/ANDROID. | One owner install and one integratedA–J campaign; existingDATA/protected partitions/stock recovery remain intact. |
+| Composition/source/notices/privacy/distribution; #32/#33 | CONFIRMED fresh106-package inventory,384ELFs/1411edges,449source/license records, checksums/root/private-state PASS. Owner firmware redistribution and AAC/aptX/aptX-HD/LDAC approvals unresolved; collector/toolchain/local-license limitations retained, MTP GPL3+ source/notices reviewed as delivery not legal clearance. | Owner-local candidate only; no public distribution waiver. Corresponding-source/notices/permission review remains required. |
+
+All active GitHub issues were refreshed read-only at16:43UTC: #16/#27/#28/#29/
+#31/#32/#33/#34 OPEN; #30 historicalCLOSED since2026-09-15. Those states remain
+appropriate because their physical/product/distribution gates are open. No
+remote issue mutation, new bookmark or closure is warranted. Existing source-
+bound failures are preserved. Memory/layout/OPP/protected-data scope is unchanged;
+the bounded48KiB render cache and4 pixel covers do not enlarge hardware admission.
+Next phase readiness: **READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION** as an
+owner-local software candidate; complete Platform 1.0 remains **PARTIAL**.
+
+
 
 ## Platform 1.0 production composition boundary — 2026-10-04
 

@@ -1,5 +1,9 @@
 # Y2Linux + Reborn community beta feature audit
 
+## Sealed integration current state — 2026-10-04
+
+**READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**. Compiled Linux `4c72466f2f27ddf9f0ca18ba8ddc4d89c52599d2` / Reborn `dd73dcc3243045cd33e319dda2f76918ed37ea31`. One candidate `/home/luca/Dokumente/Code/worktrees/platform-v1-integration/Y2Linux/out/y2linux-platform-v1-integration-candidate`. All233feature IDs and50patches retain separate implementation/software/physical/release/hardware/distribution axes in the JSON; old census and source-bound receipts remain history.466production cases/456PASS/10exact native-covered dependency skips,324Reborn/fmt/Clippy, fresh kernel/ARM/QEMU/384ELFs/1411edges/106packages/449source-license records/package/privacy PASS. Integrated physical/endurance NOT_RUN, public distribution blocked. Later documentation commits are separate from the compiled pair. The [master](Y2-PLATFORM-V1-MASTER.md) and [boundary audit](../planning/roadmap-gap-audit.md#platform-10-software-exit--physical-qualification-preparation--2026-10-04) control current acceptance; the dated sections below remain retained progress/history.
+
 ## Platform 1.0 composition — 2026-10-04
 
 All eleven source handoffs are composed on isolated paired master branches.

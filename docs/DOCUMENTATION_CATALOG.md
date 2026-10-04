@@ -11,7 +11,7 @@ document links, rather than relocating or deleting proof. See the
 [shared knowledge rules](KNOWLEDGE_BASE.md)
 and the other repository's catalog for product-wide context.
 
-Indexed pages: **301**. Explicit scope notices: **220**.
+Indexed pages: **302**. Explicit scope notices: **220**.
 
 ## Entry
 
@@ -376,3 +376,9 @@ Platform 1.0 parallel integration observation (2026-10-04):
 | [Platform 1.0 master report](release/Y2-PLATFORM-V1-MASTER.md) | Current master integration state |
 | [Platform 1.0 live source status](release/Y2-PLATFORM-V1-INTEGRATION-STATUS.md) | Timestamped read-only owner/source evidence |
 | [Platform 1.0 integration plan](release/Y2-PLATFORM-V1-INTEGRATION-PLAN.md) | C01–C30 source reconciliation and gates |
+
+## Integrated Platform 1.0 software handoff
+
+| Page | Scope |
+| --- | --- |
+| [Platform 1.0 integrated software qualification](validation/Y2-PLATFORM-V1-INTEGRATION.md) | Current integration software receipt or master plan; hardware scope explicit |

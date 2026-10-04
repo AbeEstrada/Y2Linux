@@ -1,6 +1,6 @@
 # Y2 + Reborn Platform 1.0 master report
 
-Review cutoff: 2026-10-04T15:40:03.801693+00:00. **INTEGRATION_IN_PROGRESS**.
+Review cutoff: 2026-10-04T16:46:18.335648+00:00. **READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**.
 
 The master found eleven independent paired subsystem sessions and is doing
 integration in its own isolated worktrees. No subsystem tree, ref or index was modified. Initial observation performed no build/hardware test/merge. The refreshed
@@ -10,12 +10,28 @@ flash or push occurred. See the
 dirty state, changed files, contract, tests, evidence, dependencies and candidate;
 the [plan](Y2-PLATFORM-V1-INTEGRATION-PLAN.md) records C01–C30 and merge order.
 
+## Current integration result — 2026-10-04
+
+**READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION.** All eleven source handoffs are
+finished, all selected source is integrated, and no sessions remain active.
+The paired integration branches contain one source/image-bound owner-local
+candidate. Integrated physical/endurance qualification is NOT_RUN and public
+distribution remains blocked. The repeated boundary audit and roadmap precede
+this readiness change; no main merge, push, flash or owner-tree/ref/index change.
+
+Compiled Linux `4c72466f2f27ddf9f0ca18ba8ddc4d89c52599d2` / Reborn `dd73dcc3243045cd33e319dda2f76918ed37ea31`. Candidate: `/home/luca/Dokumente/Code/worktrees/platform-v1-integration/Y2Linux/out/y2linux-platform-v1-integration-candidate`.
+BOOTIMG `d2dec1a517a596861adb69b4c9aaab51e68d5caf46712a99dbd8607e9d8fbb06`; Y2ROOT `cd3c077fd6c4882c82b7c67c42266f5f0ddc04828ddc2af111434740153bd1dc`.
+Exact next owner action: SPFT Download Only with the candidate's
+MT6582_preserve_data_scatter.txt, select BOOTIMG.img and Y2ROOT.img only;
+leave USRDATA and all other partitions unselected. Retain the separate matching
+UART01 fallback. Then review exact source/boot/taint and use one A–J campaign.
+
 ## Overall Platform 1.0 state
 
 The protected source foundation is Linux `b5aea937a3b8e3e8ec398f8cb2e04656b8a53f8c` and
 Reborn `b71b468860233faa0a42b8448ec5777fa952b8e3`. Reborn main at `7f9df397` lacks the
 scanout-release commit; preserve it. All eleven session histories retain the
-foundations. Independent drafts have not become one selected implementation.
+foundations. Selected source from all eleven finished handoffs is composed, software-qualified and sealed as one owner-local candidate in paired isolated master branches.
 
 Owner receipts identify **installed Baseline02** (compiled Linux `8584ccd8`,
 Reborn `b71b4688`, root v1.21). Radio/storage/DB/graphics measurements belong to
@@ -351,7 +367,7 @@ unit origins remain in the status/plan; source owners and canonical refs are
 unchanged. Raw patch context whitespace is retained for exact zero-fuzz/digest
 verification; ordinary code whitespace is checked separately.
 
-## Next owner action and readiness
+## Historical pre-seal next-action checkpoint
 
 **No owner flash/install action now.** All eleven source-frozen handoffs are
 reviewed. Paired isolated integration branches are active; shared kernel, storage, USB/Wi-Fi, Bluetooth, precision, media and DB source units are committed and targeted software checks pass. Performance/runtime/input/suspend composition has passed its targeted tests; fresh release/software gates remain. A real headset is needed for later Bluetooth
@@ -376,8 +392,173 @@ claim also checks inode/ctime/mount/card before worker and UI publication while
 releasing decode descriptors, so cached artwork cannot block SD eject. Initial compile-only composition failures are kept
 in private logs and corrected; no failure is reclassified as a pass.
 
-## Final release-contract reconciliation
+## Fresh production build checkpoint — 2026-10-04
 
-C31 separates software S16/S24/S32 output conversion from deployed S16-only native AFE formats and zero new-image physical acceptance. C32 binds enabled MTP delivery to kernel configfs/FunctionFS/ECM, selected package, installed responder and one installed USB policy; a USB controller alone no longer satisfies the claim. Targeted release composition/fallback/privacy checks PASS. The first fresh build is intermediate; final source identity and regenerated root/version metadata will follow the reviewed packaging-contract commit before broad qualification/sealing.
+Compiled source target is Linux `e4a615dc9d02b70a3ceb71558162fce0cc70614d` / Reborn `dd73dcc3243045cd33e319dda2f76918ed37ea31`; root `2025.02.18-platform-v1.23`, kernel `6.18.0-y2linux-platform-v1-integration-01`. Fresh kernel Image/zImage/modules and ARM ABI helper PASS; fresh Buildroot userspace is running, not qualified yet. All 22 frozen owner trees remain unchanged/clean/stable at 16:17 UTC. Fifteen registered CPU-idle/UART/timer/CIRQ/DVFS foundation source files are byte-preserved relative to the protected base; no source/test deletion. The one coordinator prints its A–J plan offline and its 43 affected software tests PASS. No device access or new physical acceptance. Final package contract review must separate software S24/S32 conversion from native hardware admission and bind delivered MTP to config/package/responder presence. Initial missing host APK cache preflight failed before compilation and is retained; verified cache inputs were copied into master-owned storage and the fresh build restarted.
 
-C33: actual Buildroot package version now uses the same workspace-package parser as application receipts; make show-info confirms0.2.0. C34: the minimal locked host lacks native GIO; new Bluetooth JSON/fake-peer cases now report this prerequisite and execute on the native packaging host. Their behavior is unchanged, source tests are retained, and fresh ARM observer build remains required. The initial namespace/GIO failures remain archived.
+## Final 16-item master handoff
+
+### 1. All discovered sessions
+
+Both branches are codex/platform-v1-<subsystem>. All22 owner trees are clean/stable and unchanged at16:46UTC. Full worktree paths, every source commit/file/interface/receipt and lifecycle are in the [live status](Y2-PLATFORM-V1-INTEGRATION-STATUS.md). All selected source is ACCEPT_WITH_INTEGRATION_ADJUSTMENT; physical scope remains separate.
+
+| Subsystem | Linux owner HEAD | Reborn owner HEAD | Reviewed result / validation |
+| --- | --- | --- | --- |
+| storage | `3a6b5f3e20b3e1ebaf709ff99035a7c067723d3b` | `f726ae40bfd965d7f09cb37b3e317bfb532db0f2` | Selected no-follow source/card/FD policy and passive telemetry; actualSD/1k hash evidence retained |
+| usb | `1115933c48e147e4cf4cffd60778716b27a270f5` | `51d477b2f30edfc90418d8d0c3fa5fad8de6f581` | Selected configfs/MTP/PIO/helper policy; freshARM/native tests; real desktop NOT_RUN |
+| wifi | `78c3512400a3a907e93fe3d73bf2870dc5a35d14` | `2cdb9cce8df1b9a65a4f88f8cd39dd05f851093e` | Selected policy/readiness and shared wake wait; Baseline02 observations retained |
+| bluetooth | `5846a7a0a1336f581f075a1bba1ea6484439e760` | `de092094c27ad4ebba3cc0ba7003f29944de53ac` | Selected event/reconnect bounded worker and codec observation; native fake-peer PASS; real peer NOT_RUN |
+| highres-audio | `7163181805ff28846ab98c6a9bdd373dd980aad8` | `cd5d2430f7560b8077814f23cf45e88ae57bad55` | Selected Q31/meaningful-bit diagnostics; software PASS; native hardware S16 only |
+| ffmpeg-metadata | `e709ecc7900690bfbbb765227092a9f3c81a99f8` | `c9ef7902e89443bfe26846dfe1f325de7d84598f` | Selected bounded MediaFile/metadata/artwork/AVIO and revision support; duplicate scanner rejected |
+| library-db | `cdbdfe880609fcf8563991d5fe888fa055047857` | `c7a8786904825a0552ca26ee4bdc833eff822704` | Selected TEMP scanner/conditional transaction/keyset/schema1/WAL protocol;50k native scope retained |
+| graphics | `383234de0efbecf08db65b9f712211f2eec28eef` | `a2df691edfbb105a164e2f5f574b158ec5f81e6c` | Selected checked JPEG reduction, preserve GPU/runtime-PM/scanout; bounded ARM receipt retained |
+| reborn-performance | `949b78ce0f046398a3f630a4aa4ba4bcaf6f38bf` | `7ed4a406e812ca31b5f98a6cfb25e7a58f454f05` | Selected exact069415a pacing/render/runtime with source/sleep adapters; stale BT poll rejected; bounded native receipts retained |
+| input | `8b5803021ce8d7861278904f7afd8a06a381b0b3` | `e51a33525dc15eba144702a37eca694da9037b76` | Selected monotonic clock/identity/read budget/cancel/Power policy; software PASS; counted mechanical NOT_RUN |
+| suspend | `2d2b543d3a597a9100a18d6352f63d3a5b19904b` | `c57a55f8d09af7e609ef3f76d4ba1e870493562c` | Selected checked codec/SPM restore and typed product/worker guards; software PASS; Baseline02 RTC FAIL remains |
+
+### 2. Cross-branch conflicts found
+
+C01–C34 are recorded in the [plan](Y2-PLATFORM-V1-INTEGRATION-PLAN.md).
+Resolved shared signal/socket wait, storage/USB ownership/claims, schema/diagnostic
+union, audio/media ABI and meaningful-bit precision, scanner/extractor revision,
+JPEG/artwork limits, one runtime/worker authority, monotonic input/Power/wake
+queues, source freshness/eject/zero-FD caching, prepare/restore ACK barriers,
+release source/package version and MTP dependency evidence. Initial cache/mount/
+GIO preflight failures remain private and corrected; no failed receipt becomes PASS.
+No unresolved source merge/interface conflicts remain; physical gates remain open.
+
+### 3. Duplicated work rejected
+
+Reject FFmpeg's second durable seen-marker scanner in favor of DB-owned bounded
+TEMP scan protocol. Reject stale performance BT20→100ms timer hunk in favor of
+Bluetooth-owner event worker. Use one source/card authority, kernel_mono_us clock,
+artwork cache/cancellation model, signal wake/select loop and qualification lease.
+Do not package subsystem candidates as independent Platform1.0 releases.
+
+### 4. Interface changes reconciled
+
+Retain platform APIv1/feature contract2; Bluetooth PCM codec remains the canonical
+observed codec, alongside bounded PCM epoch/readiness. One USB schema/typed client
+with durable library_refresh_generation and Linux filesystem ownership; native
+output precision/rate admission stays distinct from software conversion. Sleep
+requested/preparing/refused/sleeping/waking/restored/restore_failed with explicit
+product ACK and same-boot full PCM/reset/wake proof. Diagnostics fixed-field
+union keeps safe bool bonded while redacting arbitrary bond secrets/addresses/
+paths/text. One C/Rust metadata/FFmpeg ABI and schema1 additive extractor revision.
+
+### 5. Features improved
+
+Bounded radio event work, desktop-MTP implementation, durable incremental refresh,
+strict source/card/queue/sidecar admission, checked JPEG reduction, per-vertex
+render batching, waitable input/event loop and wired ALSA pacing, TEMP scanning/
+metadata revision, malformed-media limits/tags and meaningful-bit conversion,
+source-aware zero-FD cover cache, observed kernel precision/PM faults, real worker
+sleep quiescence and explicit refusal/restore contracts. These are selected source
+and software improvements; owner physical performance numbers apply to their
+exact temporary binaries, not the new image.
+
+### 6. Features deliberately unchanged
+
+Preserve established GPU/DRM/Lima/runtime-PM/scanout, guarded native S16 path,
+CPU/idle/timer/DVFS/hotplug, battery/low-battery/charger authority, logical storage
+layout, DATA/SD integrity and preserving recovery. Do not invent wider AFE modes,
+raw block export/RNDIS, larger memory/catalog qualification or battery-life claims.
+
+### 7. Known-good foundations preserved
+
+UART01 all4 C1; C2 84.3473%; C3 65.2450%,3647 checked returns, restore faults0,
+sameboot. Fifteen source files and SPM dormant/idle-arm/idle-restore functions are
+byte-identical to the protected foundation. Reborn starts at b71b468 scanout fix,
+not its older main. Full suspend remains independent and unqualified on the RC.
+
+### 8. Integration commits
+
+Coherent semantic units on isolated branches; no main merge/history rewrite.
+Compiled source ends at Linux4c72466/Reborndd73dcc. Later documentation-only
+commits record the seal without claiming to be compiled code. Full unit ledger:
+
+Y2Linux:
+
+- `a99b56f477ff641d6ac7ae44a689328a8ab40c11` — docs: admit isolated Platform 1.0 integration from frozen owner handoffs
+- `c95561f79d839c42a8f4bc78c87c07b818f82d53` — Integrate shared kernel fixes while preserving qualified CPU idle
+- `02c314e4c5608dad62d2972788e6a13d38084b03` — Integrate storage claims, filesystem preflight and lifecycle diagnostics
+- `96ce4df086c149620f81cdd206b419f507f6e107` — Compose USB transfer and Wi-Fi readiness with one signal/socket wait
+- `f463e657ab3568b20e2385ab22ce0a336a81f5af` — Integrate BlueZ reconnect policy and bounded Bluetooth observations
+- `0b78829e676f1208294d50a057a622777b02918c` — Compose truthful audio capability and private-safe shared diagnostics
+- `6cd52a672b1789c5c18e270d62da09b34f480dd3` — Retain input capture evidence tooling in integrated production checks
+- `82499a0c11b83340767f70068c07cf75d7a538f6` — Integrate checked full-suspend restoration contracts and qualification evidence tooling
+- `792f00a5bf655071920991d5af3c672dae3c8ee2` — Preserve subsystem source-bound validation and architecture handoffs
+- `e4a615dc9d02b70a3ceb71558162fce0cc70614d` — release: compose one Platform 1.0 identity, inventory and leased qualification campaign
+- `3689131fc75d269acbfc82d274aefb9e41a88886` — release: reconcile native audio admission and delivered MTP dependencies
+- `4c72466f2f27ddf9f0ca18ba8ddc4d89c52599d2` — release: derive Reborn package identity and retain native Bluetooth qualification
+
+Y2Reborn:
+
+- `a243405416beb71b6912696d498ecea5baa91e8e` — docs: admit isolated Platform 1.0 integration from frozen owner handoffs
+- `b533ebbded5020839a9d9f8372a7ca9f2d67809d` — Pin playback files and sidecars to current storage sources
+- `ccdb794cf22791270041665c68b0aef971f2cbf2` — Add typed USB transfer states and durable library refresh
+- `5317b7c1a5f5b291a5680289e52d2d5e64716a15` — Integrate bounded Wi-Fi observations and association freshness
+- `0fadf293569556f3d697704413046acaca90424d` — Use event-driven Bluetooth intent and PCM transport epochs
+- `465b3d3726d1d240ae81605a3abc3d1cb28cd52e` — Preserve meaningful PCM bits and all pinned audio fixtures
+- `5435572e761d31d56547b57156f91fe3a98bbdc0` — Integrate bounded FFmpeg metadata, checked JPEG reduction and pinned sidecars
+- `836533560fdcdadc6351a8b2cfc116e947ace124` — Compose TEMP-table library scans with revisioned bounded FFmpeg metadata
+- `4ee462f5e93b7044d6c0cd40ad32c7a0d53b2085` — Integrate measured render and audio pacing with source-safe artwork and observations
+- `7686c9b2a72b7829072f82bd63c32452d22262b3` — Reconcile monotonic input timing, hold routing and performance capture
+- `30b6a95687d101b57151de3df740a02ce6dab956` — Compose full-suspend acknowledgement with scanner, USB, artwork and input ownership
+- `f0fba6cc4e90fae0681eee93ebecba20187caff3` — Preserve media, database, input and measured performance handoffs
+- `dd73dcc3243045cd33e319dda2f76918ed37ea31` — docs: record composed Platform 1.0 source and scoped physical evidence
+
+### 9. Global software results
+
+Fresh kernel Image/zImage/modules/config/DT/ABI and full Buildroot/Reborn ARM
+PASS.466production cases:456PASS/10minimal-host dependency skips; all10exact
+cases pass separately in native fixtures (43scratch,31storage/measurement/owner,
+15GIO/ALSA cases).324Reborn workspace tests/fmt/strict Clippy PASS. Cortex-A7
+QEMU, installed ARM platform/app/codec/audio-null/library, exactFFmpeg9.0.2,
+384ELFs/1411dependency edges,106packages, capability manifest, source/notices,
+root/fallback/private-state/preservation/checksum validation PASS.449source/license
+records preserve collector warnings. Source-bound private receipts:
+`/home/luca/Dokumente/Code/worktrees/platform-v1-integration/Y2Linux/out/platform-v1-integration-qualification`.
+
+### 10. Remaining physical qualification
+
+One [A–J campaign](Y2-PLATFORM-V1-PHYSICAL-QUALIFICATION.md): exact boot/cold-start,
+C1/C2/C3 before/after full return, staged/one-shot RTC/Power, DATA/SD/different-card/
+MTP desktop, AP/headset/actual negotiated codecs/coexistence, wired playback and
+listening/conditional wide precision, format/library/USB/sleep races, GPU/countable
+wheel/buttons, charging/electrical/endurance, shutdown and preserving recovery.
+Baseline02 RTC FAIL remains; no new-image physical pass, precise inner codec cause
+or endurance claim. Ordinary deep sleep stays guarded.
+
+### 11. Distribution/permission blockers
+
+Firmware redistribution unresolved; AAC/aptX/aptX-HD/LDAC approvals unresolved.
+Pinned MTP GPL3+ source/license delivery included; source/notices/toolchain/local
+collector limitations still need review before public distribution. Owner-local
+software candidate only; public_distribution_ready=false.
+
+### 12. Integrated candidate path
+
+`/home/luca/Dokumente/Code/worktrees/platform-v1-integration/Y2Linux/out/y2linux-platform-v1-integration-candidate`. Preserving profile only; no DATA payload. Source pair/hash identity is
+in manifest.json; OWNER-HANDOFF.md and the physical plan contain exact next steps.
+
+### 13. BOOTIMG SHA256
+
+`d2dec1a517a596861adb69b4c9aaab51e68d5caf46712a99dbd8607e9d8fbb06` (7231488bytes).
+
+### 14. Y2ROOT SHA256
+
+`cd3c077fd6c4882c82b7c67c42266f5f0ddc04828ddc2af111434740153bd1dc` (536870912bytes).
+
+### 15. Exact next owner action
+
+Owner installs this pair in SPFT Download Only using MT6582_preserve_data_scatter.txt:
+BOOTIMG→BOOTIMG.img and ANDROID→Y2ROOT.img only, USRDATA/every other partition
+unselected; no format/table/loader/calibration write. Retain matching UART01 fallback
+and stock recovery. First review installed source/boot/taint, then one shared-lease
+A–J campaign. Master has never accessed/flashed the device or pushed/main-merged.
+
+### 16. Verdict
+
+**READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**. Platform1.0 product remains
+PARTIAL pending required exact-RC hardware/endurance and distribution gates.
