@@ -33,11 +33,15 @@ class TelemetryRegressions(unittest.TestCase):
             self.assertEqual(result['supplicant_observation'],
                              {'ok': False, 'reason': 'command_timeout', 'duration_ns': 1_000_000_000})
             self.assertIsNone(result['events'])
-            self.assertEqual(calls[0][1], {})  # Preserve the existing bounded timeout.
+            # The accepted Wi-Fi policy allows measured >2 s STATUS replies.
+            # A timeout still means unavailable observation, never disconnect.
+            self.assertEqual(calls[0][1], {'timeout': 3})
             ctx.path('/sys/class/net/wlan0').rmdir()
+            calls.clear()
             result = wifi(ctx)
             self.assertEqual(result['supplicant_observation'],
                              {'ok': None, 'reason': 'radio_off', 'duration_ns': None})
+            self.assertFalse(any(call[0][0] == 'wpa_cli' for call in calls))
 
     def test_health_cli_dispatches_quick_and_full_checks_and_preserves_failure(self):
         with tempfile.TemporaryDirectory() as directory:
