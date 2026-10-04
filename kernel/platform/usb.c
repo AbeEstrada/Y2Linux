@@ -21,6 +21,7 @@
 #include <linux/usb/role.h>
 #include <linux/sched.h>
 #include <linux/uaccess.h>
+#include <linux/math64.h>
 #include "boot.h"
 #include "source.h"
 #include "/project/kernel/diagnostic/text.h"
@@ -196,7 +197,7 @@ void y2_musb_rx_event(unsigned event, unsigned ep, unsigned csr, unsigned arg);
 void y2_musb_rx_event(unsigned event, unsigned ep, unsigned csr, unsigned arg)
 {
     unsigned i = (unsigned)atomic_inc_return(&y2_rx_head) & (Y2_RX_RING - 1);
-    y2_rx_ring[i] = (struct y2_rx_event){ .us = (u32)(ktime_get_ns() / 1000), .event = event,
+    y2_rx_ring[i] = (struct y2_rx_event){ .us = (u32)div_u64(ktime_get_ns(), 1000), .event = event,
         .ep = ep, .csr = csr, .arg = arg };
     atomic64_inc(&y2_rx_count[event & 15]);
 }
