@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Read-only BlueZ/BlueALSA 5 observation. No transport, radio or codec mutation. */
 #include <gio/gio.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -33,6 +34,12 @@ static void json(GVariant *value, unsigned depth)
 	case G_VARIANT_CLASS_UINT32: g_string_append_printf(out,"%u",g_variant_get_uint32(value)); break;
 	case G_VARIANT_CLASS_INT16: g_string_append_printf(out,"%d",g_variant_get_int16(value)); break;
 	case G_VARIANT_CLASS_INT32: g_string_append_printf(out,"%d",g_variant_get_int32(value)); break;
+	case G_VARIANT_CLASS_UINT64: g_string_append_printf(out,"%" G_GUINT64_FORMAT,g_variant_get_uint64(value)); break;
+	case G_VARIANT_CLASS_INT64: g_string_append_printf(out,"%" G_GINT64_FORMAT,g_variant_get_int64(value)); break;
+	case G_VARIANT_CLASS_DOUBLE: {
+		double number=g_variant_get_double(value);char text[G_ASCII_DTOSTR_BUF_SIZE];
+		g_string_append(out,isfinite(number)?g_ascii_dtostr(text,sizeof(text),number):"null");break;
+	}
 	case G_VARIANT_CLASS_ARRAY: {
 		gboolean dict=g_variant_type_is_dict_entry(g_variant_type_element(g_variant_get_type(value)));
 		g_string_append_c(out,dict?'{':'[');
@@ -42,7 +49,16 @@ static void json(GVariant *value, unsigned depth)
 			if(i) g_string_append_c(out,',');
 			if(dict) {
 				GVariant *key=g_variant_get_child_value(child,0), *item=g_variant_get_child_value(child,1);
-				quoted(g_variant_get_string(key,NULL)); g_string_append_c(out,':'); json(item,depth+1);
+				/* D-Bus dictionaries also use numeric keys (BlueZ's
+				 * ManufacturerData is a{qv}); JSON object keys are strings. */
+				if(g_variant_is_of_type(key,G_VARIANT_TYPE_STRING) ||
+				   g_variant_is_of_type(key,G_VARIANT_TYPE_OBJECT_PATH) ||
+				   g_variant_is_of_type(key,G_VARIANT_TYPE_SIGNATURE)) quoted(g_variant_get_string(key,NULL));
+				else {
+					GString *saved=out;out=g_string_new(NULL);json(key,depth+1);
+					char *text=g_string_free(out,FALSE);out=saved;quoted(text);g_free(text);
+				}
+				g_string_append_c(out,':'); json(item,depth+1);
 				g_variant_unref(key); g_variant_unref(item);
 			} else json(child,depth+1);
 			g_variant_unref(child);
