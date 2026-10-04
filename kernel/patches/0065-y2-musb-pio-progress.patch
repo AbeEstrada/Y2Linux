@@ -1,16 +1,38 @@
 --- a/drivers/usb/musb/musb_gadget.c
 +++ b/drivers/usb/musb/musb_gadget.c
-@@ -20,6 +20,9 @@
+@@ -20,6 +20,16 @@
  #include <linux/slab.h>
  
  #include "musb_core.h"
 +#if IS_ENABLED(CONFIG_Y2_PLATFORM)
 +extern void y2_musb_pio_progress(struct musb *, unsigned, bool);
++extern void y2_musb_rx_event(unsigned, unsigned, unsigned, unsigned);
++extern bool y2_musb_late_pio(void);
++enum { Y2_RX_QUEUE = 1, Y2_RX_STATE, Y2_RX_LATE_PIO, Y2_RX_DMA, Y2_RX_PIO, Y2_RX_NOREQ,
++       Y2_RX_BUSY, Y2_RX_DMADONE, Y2_RX_GIVEBACK, Y2_RX_NUKE, Y2_RX_RESTART_FLUSH };
++#define Y2_RXEV(ev, ep, csr, arg) y2_musb_rx_event(ev, ep, csr, arg)
++#else
++#define Y2_RXEV(ev, ep, csr, arg) do { } while (0)
 +#endif
  #include "musb_trace.h"
  
  
-@@ -386,6 +389,9 @@
+@@ -86,7 +96,13 @@
+ {
+ 	struct musb_ep *musb_ep = request->ep;
+ 
+-	if (!is_buffer_mapped(request) || !musb_ep->dma)
++	/* A request mapped for DMA must be unmapped even if its endpoint has
++	 * already lost its channel (nuke() releases the channel before it gives
++	 * the requests back). Skipping that left a stale request->dma behind on
++	 * persistent requests such as FunctionFS's ep->req: the next transfer was
++	 * then DMA'd to the previous, already freed, buffer. */
++	(void)musb_ep;
++	if (!is_buffer_mapped(request))
+ 		return;
+ 
+ 	if (request->request.dma == DMA_ADDR_INVALID) {
+@@ -386,6 +402,9 @@
  		musb_write_fifo(musb_ep->hw_ep, fifo_count,
  				(u8 *) (request->buf + request->actual));
  		request->actual += fifo_count;
@@ -20,13 +42,135 @@
  		csr |= MUSB_TXCSR_TXPKTRDY;
  		csr &= ~MUSB_TXCSR_P_UNDERRUN;
  		musb_writew(epio, MUSB_TXCSR, csr);
-@@ -767,6 +773,9 @@
+@@ -516,7 +535,7 @@
+ /*
+  * Context: controller locked, IRQs blocked, endpoint selected
+  */
+-static void rxstate(struct musb *musb, struct musb_request *req)
++static void rxstate(struct musb *musb, struct musb_request *req, bool late)
+ {
+ 	const u8		epnum = req->epnum;
+ 	struct usb_request	*request = &req->request;
+@@ -541,6 +560,8 @@
+ 						musb_ep->end_point.name);
+ 		return;
+ 	}
++
++	Y2_RXEV(Y2_RX_STATE, epnum, csr, (late ? 0x10000 : 0) | dma_channel_status(musb_ep->dma));
+ 
+ 	/* We shouldn't get here while DMA is active, but we do... */
+ 	if (dma_channel_status(musb_ep->dma) == MUSB_DMA_STATUS_BUSY) {
+@@ -599,6 +620,17 @@
+ 			if (!is_buffer_mapped(req))
+ 				goto buffer_aint_mapped;
+ 
++#if IS_ENABLED(CONFIG_Y2_PLATFORM)
++			/* A packet that was ACKed before this request existed is already
++			 * in the FIFO. Take that single packet with the CPU: it never
++			 * depends on the DMA engine seeing a request edge that already
++			 * happened. Streaming packets that arrive after this request is
++			 * queued still use DMA. */
++			if (late && y2_musb_late_pio()) {
++				Y2_RXEV(Y2_RX_LATE_PIO, epnum, csr, fifo_count);
++				goto y2_late_pio;
++			}
++#endif
+ 			if (musb_dma_inventra(musb)) {
+ 				struct dma_controller	*c;
+ 				struct dma_channel	*channel;
+@@ -723,6 +755,9 @@
+ 					return;
+ 			}
+ 
++#if IS_ENABLED(CONFIG_Y2_PLATFORM)
++y2_late_pio:
++#endif
+ 			len = request->length - request->actual;
+ 			musb_dbg(musb, "%s OUT/RX pio fifo %d/%d, maxpacket %d",
+ 					musb_ep->end_point.name,
+@@ -767,6 +802,10 @@
  			musb_read_fifo(musb_ep->hw_ep, fifo_count, (u8 *)
  					(request->buf + request->actual));
  			request->actual += fifo_count;
 +#if IS_ENABLED(CONFIG_Y2_PLATFORM)
 +        y2_musb_pio_progress(musb, fifo_count, musb_ep->is_in);
 +#endif
++			Y2_RXEV(Y2_RX_PIO, epnum, csr, fifo_count);
  
  			/* REVISIT if we left anything in the fifo, flush
  			 * it and report -EOVERFLOW
+@@ -807,8 +846,10 @@
+ 	musb_ep_select(mbase, epnum);
+ 
+ 	req = next_request(musb_ep);
+-	if (!req)
++	if (!req) {
++		Y2_RXEV(Y2_RX_NOREQ, epnum, musb_readw(epio, MUSB_RXCSR), 0);
+ 		return;
++	}
+ 
+ 	trace_musb_req_rx(req);
+ 	request = &req->request;
+@@ -844,6 +885,7 @@
+ 		/* "should not happen"; likely RXPKTRDY pending for DMA */
+ 		musb_dbg(musb, "%s busy, csr %04x",
+ 			musb_ep->end_point.name, csr);
++		Y2_RXEV(Y2_RX_BUSY, epnum, csr, 0);
+ 		return;
+ 	}
+ 
+@@ -855,6 +897,7 @@
+ 			MUSB_RXCSR_P_WZC_BITS | csr);
+ 
+ 		request->actual += musb_ep->dma->actual_len;
++		Y2_RXEV(Y2_RX_DMADONE, epnum, csr, musb_ep->dma->actual_len);
+ 
+ #if defined(CONFIG_USB_INVENTRA_DMA) || defined(CONFIG_USB_TUSB_OMAP_DMA) || \
+ 	defined(CONFIG_USB_UX500_DMA)
+@@ -901,7 +944,7 @@
+ exit:
+ #endif
+ 	/* Analyze request */
+-	rxstate(musb, req);
++	rxstate(musb, req, false);
+ }
+ 
+ /* ------------------------------------------------------------ */
+@@ -1171,17 +1214,36 @@
+ 		txstate(musb, req);
+ 	} else {
+ 		csr = musb_readw(epio, MUSB_RXCSR);
++		Y2_RXEV(Y2_RX_RESTART_FLUSH, req->epnum, csr, 0);
+ 		csr |= MUSB_RXCSR_FLUSHFIFO | MUSB_RXCSR_P_WZC_BITS;
+ 		musb_writew(epio, MUSB_RXCSR, csr);
+ 		musb_writew(epio, MUSB_RXCSR, csr);
+ 	}
+ }
+ 
++/* Start a freshly queued request on an idle endpoint. Unlike a restart after
++ * dequeue, an OUT FIFO may legitimately hold a packet the host was already
++ * ACKed for: flushing it silently dropped that packet (and re-writing the
++ * sampled RXCSR could re-assert RXPKTRDY and leave the endpoint NAKing
++ * forever). Service the FIFO instead. */
++static void musb_ep_start(struct musb *musb, struct musb_request *req)
++{
++	trace_musb_req_start(req);
++	musb_ep_select(musb->mregs, req->epnum);
++	Y2_RXEV(Y2_RX_QUEUE, req->epnum,
++		req->tx ? 0 : musb_readw(req->ep->hw_ep->regs, MUSB_RXCSR),
++		req->request.length);
++	if (req->tx)
++		txstate(musb, req);
++	else
++		rxstate(musb, req, true);
++}
++
+ static int musb_ep_restart_resume_work(struct musb *musb, void *data)
+ {
+ 	struct musb_request *req = data;
+ 
+-	musb_ep_restart(musb, req);
++	musb_ep_start(musb, req);
+ 
+ 	return 0;
+ }

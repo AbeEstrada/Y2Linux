@@ -152,6 +152,7 @@ int main(void){
         declarations += re.search(r'struct y2_charger \{.*?\n\};', s,re.S)[0]
         run_c(FIXTURE + r'''
 #define Y2_PET_LATE_MS 2500
+#define Y2_SOURCE_RETRIES 5
 #define POWER_SUPPLY_PROP_CURRENT_MAX 1
 #define POWER_SUPPLY_STATUS_UNKNOWN 0
 #define POWER_SUPPLY_STATUS_CHARGING 1
@@ -275,6 +276,19 @@ int main(void){
  reset();c=charger();phy_error=-EAGAIN;y2_charger_run(&c);
  assert(!c.active && !c.source_valid && !c.fault && !phy_owned);
  phy_error=0;clock_ms+=1000;y2_charger_run(&c);assert(c.active);
+ /* A PHY readback failure latches a SOURCE fault (charging stays inhibited), but a
+  * classification error is retried a bounded number of times, 2 s apart, instead of
+  * waiting for a cable removal: this was the "second connect never registers" lock-up. */
+ reset();c=charger();phy_error=-EIO;y2_charger_run(&c);
+ assert(!c.active && c.fault==Y2_FAULT_SOURCE && !phy_owned);
+ phy_error=0;clock_ms+=1000;y2_charger_run(&c);assert(!c.active && c.fault==Y2_FAULT_SOURCE);
+ clock_ms+=1500;y2_charger_run(&c);assert(c.active && !c.fault && c.source_valid);
+ reset();c=charger();phy_error=-EIO;y2_charger_run(&c);
+ for(unsigned n=0;n<8;n++){clock_ms+=2100;y2_charger_run(&c);}
+ assert(!c.active && c.fault==Y2_FAULT_SOURCE && c.source_retries==Y2_SOURCE_RETRIES);
+ phy_error=0;clock_ms+=2100;y2_charger_run(&c);assert(!c.active && c.fault==Y2_FAULT_SOURCE);
+ regs[0]&=~0x20;clock_ms+=1000;y2_charger_run(&c);assert(!c.fault && !c.source_retries);
+ regs[0]|=0x20;clock_ms+=1000;y2_charger_run(&c);assert(c.active);
  /* Removal at every BC settling stage must inhibit and release the PHY. */
  for(unsigned n=1;n<=4;n++) {
   reset();c=charger();waits=0;removed_at_wait=n;y2_charger_run(&c);

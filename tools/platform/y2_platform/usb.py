@@ -53,9 +53,25 @@ def media_views(ctx):
     return result
 
 
+NAMES = {'/data/music': 'Internal Storage', '/media/sd': 'SD Card'}
+
+
+def identity(view):
+    return (view.get('mount_id'), view.get('device_id'), view.get('uuid'), view['access'])
+
+
+def expectations(views):
+    """Mount identity the responder must find when it pins a root."""
+    return ''.join('%s %s %s\n' % (v['path'], v['device_id'], v['mount_id'])
+                   for v in views if v.get('device_id') and v.get('mount_id') is not None)
+
+
 def config(views):
-    # Only fixed paths and labels reach the responder parser.
-    allowed = {'/data/music': 'Internal Storage', '/media/sd': 'SD Card'}
+    # Only fixed paths and labels reach the responder parser. Both views are
+    # always declared, in fixed slots (stable MTP storage IDs); a view that is
+    # not currently available is declared `notmounted` and joins or leaves the
+    # live session later without a USB re-enumeration.
+    allowed = NAMES
     lines = ['loop_on_disconnect 1', 'manufacturer "Y2Linux"', 'product "Y2"',
              'serial "Y2LINUX-DEV-01"', 'interface "MTP"', 'firmware_version "Platform 1.0"',
              'mtp_extensions ""', 'usb_class 0x6', 'usb_subclass 0x1', 'usb_protocol 0x1', 'perceived_device_type 0x2', 'usb_functionfs_mode 1',
@@ -63,11 +79,20 @@ def config(views):
              'usb_epout_path "/dev/ffs-mtp/ep2"', 'usb_epint_path "/dev/ffs-mtp/ep3"',
              'usb_max_packet_size 0x200', 'usb_max_rd_buffer_size 0x10000',
              'usb_max_wr_buffer_size 0x10000', 'read_buffer_cache_size 0x100000',
-             'sync_when_close 1', 'no_inotify 1', 'umask 077']
+             'sync_when_close 0', 'no_inotify 1', 'umask 077']
+    present = {}
     for v in views:
         if allowed.get(v['path']) != v['name'] or v['access'] not in ('ro', 'rw'):
             raise ValueError('unsafe_media_view')
-        lines.append('storage "%s" "%s" "%s"' % (v['path'], v['name'], v['access']))
+        present[v['path']] = v
+    for path, name in allowed.items():
+        v = present.get(path)
+        options = ['ro' if v and v['access'] == 'ro' else 'rw']
+        if path == '/media/sd':
+            options.append('removable')
+        if not v:
+            options.append('notmounted')
+        lines.append('storage "%s" "%s" "%s"' % (path, name, ','.join(options)))
     return '\n'.join(lines) + '\n'
 
 
@@ -131,6 +156,7 @@ class USBService:
         self.signature = None
         self.cached_views = []
         self.terminal = False
+        self.mounted = {}
 
     def write(self, relative, value):
         self.ctx.path(GADGET + '/' + relative).write_text(str(value) + '\n')
@@ -200,8 +226,11 @@ class USBService:
             self.write('strings/0x409/' + name, value)
         self.mkdir('configs/c.1/strings/0x409')
         self.write('configs/c.1/strings/0x409/configuration', 'Music Transfer' if mode == 'mtp' else 'Developer')
-        self.write('configs/c.1/MaxPower', '0')  # legacy self-powered g_cdc; charger policy owns current
-        self.write('configs/c.1/bmAttributes', '0xc0')  # battery/self powered
+        # The charger grants the validated SDP ceiling (450 mA) only for a configured
+        # 500 mA bus-powered request (kernel/platform/source-policy.h). A self-powered,
+        # 0 mA configuration made the allocation 0 and left the PC port "Not charging".
+        self.write('configs/c.1/MaxPower', '500')
+        self.write('configs/c.1/bmAttributes', '0x80')
         for link in root.joinpath('configs/c.1').iterdir():
             if link.is_symlink():
                 link.unlink()
@@ -221,9 +250,60 @@ class USBService:
                 if not result['ok']:
                     raise OSError('functionfs_mount_failed')
             self.ctx.path('/run/y2/umtprd.conf').write_text(config(views))
+            self.ctx.path('/run/y2/mtp-expect.txt').write_text(expectations(views))
             self.child = self.launch()
         self.mode, self.views = mode, views
+        self.mounted = {v['path']: identity(v) for v in views} if mode == 'mtp' else {}
         self.started = time.monotonic()
+
+    def command(self, message):
+        """Send one IPC command to the running responder."""
+        try:
+            answer = subprocess.run(['/usr/sbin/umtprd', '-cmd:' + message], stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3,
+                env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'LC_ALL': 'C'})
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        return answer.returncode == 0
+
+    def pinned(self):
+        state = self.ctx.json('/run/y2/mtp-roots.json', {})
+        if not self.child or state.get('pid') != self.child.pid:
+            return None
+        roots = state.get('roots')
+        return set(roots) if isinstance(roots, list) else None
+
+    def await_root(self, path, present, timeout=3.0):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            roots = self.pinned()
+            if roots is not None and (path in roots) == present:
+                return True
+            time.sleep(.05)
+        return False
+
+    def reconcile(self, views):
+        """Change the live MTP view without touching the USB gadget."""
+        desired = {v['path']: v for v in views}
+        for path in list(self.mounted):
+            view = desired.get(path)
+            if view is not None and self.mounted[path] == identity(view):
+                continue
+            # Leaving view: the responder drops its pinned root and open files
+            # before the platform may unmount or replace the filesystem.
+            if not (self.command('unmount:' + NAMES[path]) and self.await_root(path, False)):
+                raise OSError('responder_unmount_timeout')
+            del self.mounted[path]
+        self.ctx.path('/run/y2/mtp-expect.txt').write_text(expectations(views))
+        for path, view in desired.items():
+            if path in self.mounted:
+                continue
+            message = ('mountro:' if view['access'] == 'ro' else 'mount:') + NAMES[path]
+            if not (self.command(message) and self.await_root(path, True)):
+                raise OSError('responder_mount_timeout')
+            self.mounted[path] = identity(view)
+        self.views = views
+        self.refresh_generation = time.monotonic_ns()
 
     def record(self, state, reason, cable, activity=None):
         value = {'schema': SCHEMA, 'boot_id': self.ctx.read('/proc/sys/kernel/random/boot_id'),
@@ -263,10 +343,12 @@ class USBService:
             if self.mode is not None and requested != self.mode and cable != 'not attached':
                 requested = self.mode
                 views = self.cached_views if self.mode == 'mtp' else []
-            if self.mode != requested or self.views != views:
+            if self.mode != requested:
                 if self.mode is not None:
                     self.refresh_generation = time.monotonic_ns()
                 self.setup(requested, views)
+            elif self.mode == 'mtp' and self.views != views and self.child and self.child.poll() is None:
+                self.reconcile(views)
             if self.child and self.child.poll() is not None:
                 self.stop()
                 self.failures += 1

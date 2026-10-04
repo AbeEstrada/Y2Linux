@@ -15,16 +15,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/statvfs.h>
+#include <sys/sysmacros.h>
 #include <sys/syscall.h>
 #include <time.h>
 #include <unistd.h>
 
 #define RESERVE_BYTES (96ULL * 1024 * 1024)
 #define RESERVE_INODES 128
-static struct { char *path; int fd; } roots[2] = {{NULL, -1}, {NULL, -1}};
+#define MAX_ROOTS 4
+static struct { char *path; int fd; } roots[MAX_ROOTS] = {{NULL, -1}, {NULL, -1}, {NULL, -1}, {NULL, -1}};
+#define EXPECT_PATH "/run/y2/mtp-expect.txt"
+#define ROOTS_PATH "/run/y2/mtp-roots.json"
+#define SPACE_CHECK_BYTES (8ULL * 1024 * 1024)
 static const char *event_path;
 static uint64_t serial, generation;
-struct y2_upload { int fd, parent; char *name; char temporary[80]; uint64_t size, written; };
+struct y2_upload { int fd, parent; char *name; char temporary[80]; uint64_t size, written, checked; };
 
 /* Contains no filenames or credentials. Atomic, bounded activity/generation
  * receipt consumed by the platform; generations advance only after durability. */
@@ -47,17 +52,103 @@ static void event(int active, int error, int changed)
 }
 void y2_transfer_activity(int active, int error) { event(active, error, 0); }
 
+/* Atomic receipt of the currently pinned roots: the platform waits for a root
+ * to disappear from it before it unmounts a card, and for it to appear before
+ * it announces the card. Contains paths of the two fixed views only. */
+static void publish_roots(void)
+{
+    char temporary[96], data[256];
+    int length = snprintf(data, sizeof data, "{\"schema\":1,\"pid\":%ld,\"roots\":[", (long)getpid());
+    int first = 1;
+    for (unsigned i = 0; i < MAX_ROOTS && length < (int)sizeof data - 48; i++) {
+        if (!roots[i].path || roots[i].fd < 0) continue;
+        length += snprintf(data + length, sizeof data - length, "%s\"%s\"", first ? "" : ",", roots[i].path);
+        first = 0;
+    }
+    length += snprintf(data + length, sizeof data - length, "]}\n");
+    snprintf(temporary, sizeof temporary, ROOTS_PATH ".%ld", (long)getpid());
+    int fd = open(temporary, O_WRONLY|O_CREAT|O_TRUNC|O_NOFOLLOW|O_CLOEXEC, 0600);
+    if (fd < 0) return;
+    if (write(fd, data, length) == length) rename(temporary, ROOTS_PATH);
+    close(fd);
+    unlink(temporary);
+}
+
+/* The platform writes "<path> <major>:<minor> <mount_id>" per view it validated.
+ * A pin of a different mount (card swapped between validation and pinning) fails. */
+static int expected(const char *path, int fd)
+{
+    FILE *file = fopen(EXPECT_PATH, "re");
+    if (!file) return 0;
+    char line[160], name[96];
+    unsigned major_number, minor_number;
+    unsigned long long mount_id;
+    int listed = 0, ok = 1;
+    while (fgets(line, sizeof line, file)) {
+        if (sscanf(line, "%95s %u:%u %llu", name, &major_number, &minor_number, &mount_id) != 4 || strcmp(name, path)) continue;
+        listed = 1;
+        struct stat64 info;
+        ok = !fstat64(fd, &info) && major(info.st_dev) == major_number && minor(info.st_dev) == minor_number;
+        /* The mount id of the pinned directory comes from the descriptor itself. */
+        char fdinfo[64], text[256];
+        snprintf(fdinfo, sizeof fdinfo, "/proc/self/fdinfo/%d", fd);
+        FILE *info_file = ok ? fopen(fdinfo, "re") : NULL;
+        int found = 0;
+        while (info_file && fgets(text, sizeof text, info_file)) {
+            unsigned long long id;
+            if (sscanf(text, "mnt_id: %llu", &id) == 1) { found = 1; ok = id == mount_id; }
+        }
+        if (info_file) fclose(info_file);
+        if (!found) ok = 0;
+    }
+    fclose(file);
+    return listed && !ok ? -1 : 0;
+}
+
+int y2_fs_pin(const char *path)
+{
+    for (unsigned i = 0; i < MAX_ROOTS; i++)
+        if (roots[i].path && !strcmp(roots[i].path, path) && roots[i].fd >= 0) return 0;
+    for (unsigned i = 0; i < MAX_ROOTS; i++) {
+        if (roots[i].path) continue;
+        int fd = open(path, O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC);
+        if (fd < 0) return -1;
+        if (expected(path, fd)) { close(fd); errno = ESTALE; return -1; }
+        roots[i].path = strdup(path);
+        if (!roots[i].path) { close(fd); return -1; }
+        roots[i].fd = fd;
+        publish_roots();
+        return 0;
+    }
+    errno = ENOSPC;
+    return -1;
+}
+
+void y2_fs_unpin(const char *path)
+{
+    for (unsigned i = 0; i < MAX_ROOTS; i++) {
+        if (!roots[i].path || strcmp(roots[i].path, path)) continue;
+        if (roots[i].fd >= 0) close(roots[i].fd);
+        free(roots[i].path);
+        roots[i].path = NULL;
+        roots[i].fd = -1;
+        publish_roots();
+    }
+}
+
 int y2_fs_init(const char *internal, const char *sd, const char *events)
 {
     const char *paths[] = {internal, sd};
-    for (unsigned i = 0; i < 2; i++) {
+    event_path = events;
+    for (unsigned i = 0; i < MAX_ROOTS; i++) {
         if (roots[i].fd >= 0) close(roots[i].fd);
         free(roots[i].path);
-        roots[i].path = paths[i] ? strdup(paths[i]) : NULL;
-        roots[i].fd = paths[i] ? open(paths[i], O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC) : -1;
-        if (paths[i] && (roots[i].fd < 0 || !roots[i].path)) return -1;
+        roots[i].path = NULL;
+        roots[i].fd = -1;
     }
-    event_path = events;
+    for (unsigned i = 0; i < 2; i++)
+        if (paths[i] && y2_fs_pin(paths[i])) return -1;
+    publish_roots();
     event(0, 0, 0);
     return 0;
 }
@@ -66,7 +157,7 @@ int y2_fs_init(const char *internal, const char *sd, const char *events)
  * closed on kernels without openat2. root fd preserves removed-media identity. */
 static int resolve(const char *path, const char **relative)
 {
-    for (unsigned i = 0; i < 2; i++) {
+    for (unsigned i = 0; i < MAX_ROOTS; i++) {
         if (!roots[i].path || roots[i].fd < 0) continue;
         size_t length = strlen(roots[i].path);
         if (!strncmp(path, roots[i].path, length) && (path[length] == '/' || !path[length])) {
@@ -200,7 +291,14 @@ fail:
 int y2_upload_write(struct y2_upload *u, const void *data, size_t length)
 {
     if (!u) { errno = EINVAL; return -1; }
-    if (space(u->fd, length)) return -1;
+    /* The reserve is enforced at admission and then every 8 MiB; a statvfs per
+     * 64 KiB write only costs syscalls. ENOSPC from write() still aborts. */
+    if (u->written + length >= u->checked + SPACE_CHECK_BYTES || !u->checked) {
+        uint64_t need = SPACE_CHECK_BYTES;
+        if (u->size != UINT32_MAX && u->size > u->written && u->size - u->written < need) need = u->size - u->written;
+        if (space(u->fd, need)) return -1;
+        u->checked = u->written + length;
+    }
     if (u->size != UINT32_MAX && length > u->size-u->written) { errno = EMSGSIZE; return -1; }
     const char *bytes = data;
     size_t left = length;

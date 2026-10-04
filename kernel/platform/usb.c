@@ -180,6 +180,29 @@ void y2_musb_pio_progress(struct musb *musb, unsigned bytes, bool transmit)
     WRITE_ONCE(y2_usb_progress, y2_usb_progress + 1);
 }
 
+/* OUT-endpoint receive diagnostics: counters plus a bounded event ring written
+ * by the patched MUSB gadget code (musb_gadget.c). Read-only observation, except
+ * rx_late_pio which selects the CPU path for a packet already waiting in the FIFO
+ * when its request is queued (default on; harmless when never needed). */
+#define Y2_RX_RING 256
+static const char *const y2_rx_names[] = { "?", "queue", "rxstate", "late_pio", "dma_prog",
+    "pio", "irq_noreq", "dma_busy", "dma_done", "giveback", "nuke", "restart_flush" };
+static struct y2_rx_event { u32 us; u16 event, ep, csr; u32 arg; } y2_rx_ring[Y2_RX_RING];
+static atomic_t y2_rx_head;
+static atomic64_t y2_rx_count[16];
+static bool y2_late_pio = true;
+static bool y2_rx_dma;
+void y2_musb_rx_event(unsigned event, unsigned ep, unsigned csr, unsigned arg);
+void y2_musb_rx_event(unsigned event, unsigned ep, unsigned csr, unsigned arg)
+{
+    unsigned i = (unsigned)atomic_inc_return(&y2_rx_head) & (Y2_RX_RING - 1);
+    y2_rx_ring[i] = (struct y2_rx_event){ .us = (u32)(ktime_get_ns() / 1000), .event = event,
+        .ep = ep, .csr = csr, .arg = arg };
+    atomic64_inc(&y2_rx_count[event & 15]);
+}
+bool y2_musb_late_pio(void);
+bool y2_musb_late_pio(void) { return READ_ONCE(y2_late_pio); }
+
 static int __init y2_usb_dma_option(char *value)
 {
     /* Boot-time choice only: never change DMA ownership under live requests. */
@@ -189,6 +212,13 @@ static int __init y2_usb_dma_option(char *value)
 __setup("y2.usb_dma=", y2_usb_dma_option);
 
 #if IS_ENABLED(CONFIG_USB_INVENTRA_DMA)
+/* Bulk-OUT DMA selector. Mentor mode-0 receive needs two interrupts per packet
+ * and, on this controller, lost a packet that the host had already ACKed when
+ * the next host packet followed an IN completion within microseconds. The CPU
+ * read of the FIFO has the same one-interrupt-per-packet cost and no such
+ * race, so OUT requests stay unmapped (PIO) unless this is switched on at run
+ * time to compare. IN (device-to-host) transfers keep DMA either way. */
+static int y2_dma_is_compatible(struct dma_channel *channel, u16 packet, void *buffer, u32 length);
 /* Observe the upstream allocator/programmer without changing its decisions.
  * Bytes below are accepted DMA programming, NOT USB delivery or TCP goodput.
  * Atomic counters keep 64-bit snapshots coherent on this 32-bit platform.
@@ -203,7 +233,6 @@ static atomic64_t y2_dma_programs[2], y2_dma_programmed_bytes[2];
 static atomic64_t y2_dma_program_failures, y2_dma_aborts, y2_dma_abort_failures;
 static atomic64_t y2_dma_alignment_rejects;
 static atomic_t y2_dma_allocated;
-
 static struct dma_channel *y2_dma_alloc(struct dma_controller *controller,
                                       struct musb_hw_ep *ep, u8 transmit)
 {
@@ -287,6 +316,7 @@ static struct dma_controller *y2_musb_dma_init(struct musb *musb, void __iomem *
     dma->channel_release = y2_dma_release;
     dma->channel_program = y2_dma_program;
     dma->channel_abort = y2_dma_abort;
+    dma->is_compatible = y2_dma_is_compatible;
     /* Same gadget quirk as MUSB_G_NO_SKB_RESERVE, selected only after DMA
      * allocation. u_ether's NET_IP_ALIGN=2 otherwise makes every RX buffer
      * fail Inventra's four-byte address check. ARMv7 permits unaligned IP
@@ -305,8 +335,19 @@ static void y2_musb_dma_exit(struct dma_controller *dma)
     atomic_set(&y2_dma_allocated, 0);
     WRITE_ONCE(y2_usb_dma_active, false);
 }
+
+static int y2_dma_is_compatible(struct dma_channel *channel, u16 packet, void *buffer, u32 length)
+{
+    unsigned int i;
+    if (READ_ONCE(y2_rx_dma)) return true;
+    for (i = 0; i < ARRAY_SIZE(y2_dma_channels); i++)
+        if (y2_dma_channels[i].channel == channel)
+            return y2_dma_channels[i].transmit;
+    return true;
+}
 #endif
 
+static void y2_bc11_pm_release(void);
 static bool y2_usb_data_permitted(void)
 {
 #ifdef CONFIG_Y2_POWER
@@ -330,6 +371,21 @@ void y2_usb_source_invalidate(void)
     WRITE_ONCE(y2_usb_data_source, false);
 }
 
+/* The PHY registers used by BC1.1 sit behind the controller's bus clock. After a
+ * cable removal the detached controller autosuspends and gates that clock, so the
+ * second and later classifications read back garbage: -EIO, a latched charger
+ * SOURCE fault and no reconnect until reboot. Hold a runtime-PM reference of the
+ * controller (which restores the clock) across the whole transaction. */
+static bool y2_bc11_pm_held;
+static void y2_bc11_pm_release(void)
+{
+    if (!y2_bc11_pm_held) return;
+    y2_bc11_pm_held = false;
+    if (y2_usb_child) {
+        pm_runtime_mark_last_busy(&y2_usb_child->dev);
+        pm_runtime_put_autosuspend(&y2_usb_child->dev);
+    }
+}
 int y2_usb_bc11_begin(void)
 {
     unsigned value;
@@ -338,12 +394,17 @@ int y2_usb_bc11_begin(void)
     if (!y2_usb_phy || y2_usb_finished || READ_ONCE(y2_live.result)) ret = -ENODEV;
     else if (y2_musb && !y2_usb_detached) ret = -EAGAIN;
     if (ret) { mutex_unlock(&y2_usb_lifecycle); return ret; }
-    /* Actual Y2 Charger_Detect_Init: USBPHYACR6 BC1.1 switch, bit 7.
-     * The USB clock provider remains enabled throughout this transaction. */
+    if (y2_usb_child) {
+        ret = pm_runtime_resume_and_get(&y2_usb_child->dev);
+        if (ret < 0) { mutex_unlock(&y2_usb_lifecycle); return ret; }
+        y2_bc11_pm_held = true;
+    }
+    /* Actual Y2 Charger_Detect_Init: USBPHYACR6 BC1.1 switch, bit 7. */
     value = readb(y2_usb_phy + 0x1a);
     writeb(value | 0x80, y2_usb_phy + 0x1a);
     if (readb(y2_usb_phy + 0x1a) != (value | 0x80)) {
         writeb(value, y2_usb_phy + 0x1a);
+        y2_bc11_pm_release();
         mutex_unlock(&y2_usb_lifecycle);
         return -EIO;
     }
@@ -359,6 +420,7 @@ int y2_usb_bc11_end(bool data_source)
     udelay(1);
     ret = readb(y2_usb_phy + 0x1a) == value ? 0 : -EIO;
     WRITE_ONCE(y2_usb_data_source, data_source && !ret);
+    y2_bc11_pm_release();
     mutex_unlock(&y2_usb_lifecycle);
     return ret;
 }
@@ -1172,7 +1234,49 @@ static ssize_t status_show(struct device *dev, struct device_attribute *attr, ch
     return n;
 }
 static DEVICE_ATTR_RO(status);
-static struct attribute *y2_usb_attrs[] = { &dev_attr_status.attr, NULL };
+static ssize_t rxdiag_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+    unsigned i, head = (unsigned)atomic_read(&y2_rx_head);
+    ssize_t n = 0;
+    n += sysfs_emit_at(buf, n, "late_pio=%u rx_dma=%u", READ_ONCE(y2_late_pio), READ_ONCE(y2_rx_dma));
+    for (i = 1; i < ARRAY_SIZE(y2_rx_names); i++)
+        n += sysfs_emit_at(buf, n, " %s=%lld", y2_rx_names[i], atomic64_read(&y2_rx_count[i]));
+    n += sysfs_emit_at(buf, n, "\n");
+    /* Newest events last; us is a wrapping 32-bit microsecond clock. */
+    for (i = 0; i < 40; i++) {
+        struct y2_rx_event e = y2_rx_ring[(head - 39 + i) & (Y2_RX_RING - 1)];
+        if (!e.event) continue;
+        n += sysfs_emit_at(buf, n, "%u %s ep%u csr=%04x arg=%x\n", e.us,
+            e.event < ARRAY_SIZE(y2_rx_names) ? y2_rx_names[e.event] : "?", e.ep, e.csr, e.arg);
+    }
+    return n;
+}
+static DEVICE_ATTR_RO(rxdiag);
+static ssize_t rx_late_pio_show(struct device *dev, struct device_attribute *attr, char *buf)
+{ return sysfs_emit(buf, "%u\n", READ_ONCE(y2_late_pio)); }
+static ssize_t rx_late_pio_store(struct device *dev, struct device_attribute *attr,
+                                 const char *buf, size_t count)
+{
+    bool value;
+    if (kstrtobool(buf, &value)) return -EINVAL;
+    WRITE_ONCE(y2_late_pio, value);
+    return count;
+}
+static DEVICE_ATTR_RW(rx_late_pio);
+static ssize_t rx_dma_show(struct device *dev, struct device_attribute *attr, char *buf)
+{ return sysfs_emit(buf, "%u\n", READ_ONCE(y2_rx_dma)); }
+static ssize_t rx_dma_store(struct device *dev, struct device_attribute *attr,
+                            const char *buf, size_t count)
+{
+    bool value;
+    if (kstrtobool(buf, &value)) return -EINVAL;
+    /* Applies to requests queued afterwards; a request already mapped finishes as is. */
+    WRITE_ONCE(y2_rx_dma, value);
+    return count;
+}
+static DEVICE_ATTR_RW(rx_dma);
+static struct attribute *y2_usb_attrs[] = { &dev_attr_status.attr, &dev_attr_rxdiag.attr,
+    &dev_attr_rx_late_pio.attr, &dev_attr_rx_dma.attr, NULL };
 ATTRIBUTE_GROUPS(y2_usb);
 static int y2_role_set(struct usb_role_switch *sw, enum usb_role role)
 {

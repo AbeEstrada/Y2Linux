@@ -5,8 +5,12 @@
 #include <stdint.h>
 #include <sys/stat.h>
 struct y2_upload;
-/* Roots are pinned once per responder, never reopened after a card swap. */
+/* Roots are pinned while their storage is mounted into the MTP view and are
+ * never reopened behind a removed card: unpinning drops the only reference. */
 int y2_fs_init(const char *internal, const char *sd, const char *events);
+/* Pin a storage root (must match /run/y2/mtp-expect.txt when listed there). */
+int y2_fs_pin(const char *path);
+void y2_fs_unpin(const char *path);
 int y2_open(const char *path, int flags, mode_t mode);
 int y2_stat(const char *path, struct stat64 *st);
 DIR *y2_opendir(const char *path);

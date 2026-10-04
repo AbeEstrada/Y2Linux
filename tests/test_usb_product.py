@@ -124,6 +124,85 @@ class USBProduct(unittest.TestCase):
         self.assertEqual(seen[-1],'musb')
         self.assertEqual(restarted.tick()['filesystem_owner'],'linux')
 
+    def test_gadget_requests_validated_bus_powered_500ma_allocation(self):
+        # The charger grants 450 mA to a *configured* 500 mA request only; a
+        # self-powered/0 mA configuration left a PC port "Not charging".
+        self.ready()
+        self.assertEqual(self.ctx.read(GADGET+'/configs/c.1/MaxPower'), '500')
+        self.assertEqual(self.ctx.read(GADGET+'/configs/c.1/bmAttributes'), '0x80')
+
+    def test_both_views_declared_in_fixed_slots_missing_sd_is_notmounted(self):
+        text = config(self.views)
+        self.assertIn('storage "/data/music" "Internal Storage" "rw"', text)
+        self.assertIn('storage "/media/sd" "SD Card" "rw,removable,notmounted"', text)
+        sd = {'path':'/media/sd','name':'SD Card','access':'ro','mount_id':9}
+        text = config(self.views + [sd])
+        self.assertIn('storage "/media/sd" "SD Card" "ro,removable"', text)
+        self.assertLess(text.index('Internal Storage'), text.index('SD Card'))
+
+    def test_sd_hotplug_changes_the_live_view_without_usb_reenumeration(self):
+        self.ready()
+        binds = []; original = self.service.write
+        def watch(relative, value):
+            if relative == 'UDC': binds.append(value)
+            original(relative, value)
+        sent = []
+        def command(message):
+            sent.append(message)
+            name = message.split(':', 1)[1]
+            roots = {'Internal Storage': '/data/music', 'SD Card': '/media/sd'}
+            current = set(json.loads(self.ctx.read('/run/y2/mtp-roots.json') or '{"roots":[]}')['roots'])
+            (current.add if message.startswith('mount') else current.discard)(roots[name])
+            self.put('/run/y2/mtp-roots.json', json.dumps({'pid':123, 'roots':sorted(current)}))
+            return True
+        self.put('/run/y2/mtp-roots.json', json.dumps({'pid':123, 'roots':['/data/music']}))
+        sd = {'path':'/media/sd','name':'SD Card','access':'rw','mount_id':9,'device_id':'179:9','uuid':'u'}
+        with patch.object(self.service, 'write', side_effect=watch), patch.object(self.service, 'command', side_effect=command):
+            self.mock.stop(); self.mock = patch('y2_platform.usb.media_views', return_value=self.views + [sd]); self.mock.start()
+            self.put('/proc/self/mountinfo', 'sd inserted')
+            first = self.service.tick(); generation = first['refresh_generation']
+            self.assertEqual(sent, ['mount:SD Card'])
+            self.assertEqual([v['path'] for v in first['views']], ['/data/music', '/media/sd'])
+            self.mock.stop(); self.mock = patch('y2_platform.usb.media_views', return_value=list(self.views)); self.mock.start()
+            self.put('/proc/self/mountinfo', 'sd removed')
+            second = self.service.tick()
+        self.assertEqual(sent, ['mount:SD Card', 'unmount:SD Card'])
+        self.assertEqual([v['path'] for v in second['views']], ['/data/music'])
+        self.assertEqual(binds, [])
+        self.assertGreater(second['refresh_generation'], 0)
+
+    def test_unacknowledged_unmount_falls_back_to_stopping_the_responder(self):
+        self.ready(); old = self.service.child
+        sd = {'path':'/media/sd','name':'SD Card','access':'rw','mount_id':9,'device_id':'179:9','uuid':'u'}
+        self.service.mounted['/media/sd'] = ('9', '179:9', 'u', 'rw')
+        self.service.views = self.views + [sd]
+        with patch.object(self.service, 'command', return_value=True), \
+             patch.object(self.service, 'await_root', return_value=False):
+            self.put('/proc/self/mountinfo', 'sd gone')
+            self.service.tick()
+        self.assertIsNot(self.service.child, old)  # old responder released every pin
+
+    def test_musb_overlay_fixes_idle_queue_flush_and_stale_dma_mapping(self):
+        patch_text = (ROOT / 'kernel/patches/0065-y2-musb-pio-progress.patch').read_text()
+        # nuke() releases the channel first; the request must still be unmapped, or
+        # FunctionFS's persistent ep->req keeps a stale request->dma (zero payloads).
+        self.assertIn('+\tif (!is_buffer_mapped(request))', patch_text)
+        self.assertNotIn('+\tif (!is_buffer_mapped(request) || !musb_ep->dma)', patch_text)
+        # A request queued on an idle OUT endpoint must service, not flush, the FIFO.
+        self.assertIn('+static void musb_ep_start(struct musb *musb, struct musb_request *req)', patch_text)
+        self.assertIn('+\t\trxstate(musb, req, true);', patch_text)
+        # Packets already ACKed before the request existed are read by the CPU.
+        self.assertIn('+\t\t\tif (late && y2_musb_late_pio()) {', patch_text)
+        manifest = json.loads((ROOT / 'kernel/patches/manifest.json').read_text())
+        spec = next(o for o in manifest['overlays'] if o['path'] == 'drivers/usb/musb/musb_gadget.c')
+        self.assertEqual(spec['patch'], '0065-y2-musb-pio-progress.patch')
+        usb = (ROOT / 'kernel/platform/usb.c').read_text()
+        # BC1.1 touches the PHY only while the controller's bus clock is running.
+        begin = usb[usb.index('int y2_usb_bc11_begin(void)'):usb.index('int y2_usb_bc11_end')]
+        self.assertLess(begin.index('pm_runtime_resume_and_get'), begin.index('readb(y2_usb_phy + 0x1a)'))
+        end = usb[usb.index('int y2_usb_bc11_end'):usb.index('/* USB core calls set_power')]
+        self.assertIn('y2_bc11_pm_release()', end)
+
     def test_media_identity_change_stops_old_responder_before_new_view(self):
         self.ready(); old=self.service.child
         self.views[0]['mount_id'] = 6

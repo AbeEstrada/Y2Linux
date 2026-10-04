@@ -22,6 +22,7 @@
 
 #define Y2_POLL_MS 1000
 #define Y2_PET_LATE_MS 2500
+#define Y2_SOURCE_RETRIES 5
 
 enum y2_charge_fault {
 	Y2_FAULT_IO = BIT(0), Y2_FAULT_ADC = BIT(1), Y2_FAULT_BATTERY = BIT(2),
@@ -51,6 +52,8 @@ struct y2_charger {
 	int status, behaviour;
 	bool active, paused, stopping, online, present, awake, irq_wake;
 	bool source_valid, source_changed;
+	u64 source_retry_ms;
+	unsigned source_retries;
 	int irq;
 };
 
@@ -219,6 +222,7 @@ static void y2_charger_run(struct y2_charger *c)
 		c->source_valid = false;
 		c->source = Y2_SOURCE_UNKNOWN;
 		y2_usb_source_invalidate();
+		c->source_retries = 0;
 		if (!y2_charger_inhibit(c) && !y2_charger_sample_fault(c) &&
 		    c->uv < Y2_CHARGE_UV) {
 			/* Only verified removal, engine-off and recovered safety inputs
@@ -231,6 +235,17 @@ static void y2_charger_run(struct y2_charger *c)
 		c->status = POWER_SUPPLY_STATUS_DISCHARGING;
 		return;
 	}
+	/* A failed BC1.1 classification is not an electrical fault: charging stays
+	 * inhibited (no source-backed current is known), but it is retried a bounded
+	 * number of times instead of waiting for a cable removal. */
+	if (c->fault == Y2_FAULT_SOURCE && c->source_retries < Y2_SOURCE_RETRIES &&
+	    now_ms >= c->source_retry_ms) {
+		c->fault = 0;
+		c->first_fault = 0;
+		c->last_error = 0;
+		c->source_valid = false;
+		c->source_retries++;
+	}
 	c->fault |= y2_charger_sample_fault(c);
 	if (c->cycle.timed_out) c->fault |= Y2_FAULT_TIMEOUT;
 	if (c->fault || c->behaviour == POWER_SUPPLY_CHARGE_BEHAVIOUR_INHIBIT_CHARGE) goto inhibit;
@@ -241,6 +256,7 @@ static void y2_charger_run(struct y2_charger *c)
 			if (ret != -EAGAIN && ret != -ENODEV) {
 				c->fault |= Y2_FAULT_SOURCE;
 				c->last_error = ret;
+				c->source_retry_ms = now_ms + 2000;
 			}
 			goto inhibit;
 		}
