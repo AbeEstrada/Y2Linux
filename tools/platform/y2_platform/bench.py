@@ -1,6 +1,8 @@
 """Scratch-only storage measurements, descriptor-pinned across media removal."""
 # SPDX-License-Identifier: GPL-2.0-only
 import errno
+import hashlib
+import re
 import math
 import os
 from pathlib import Path
@@ -11,7 +13,7 @@ import uuid
 import json
 import shutil
 from .common import read
-from .observe import mountinfo, storage, device_instance
+from .observe import mountinfo, storage, device_instance, storage_mode
 
 
 class Scratch:
@@ -160,6 +162,78 @@ def write_all(fd, data, offset):
         written += n
 
 
+def io_snapshot(ctx):
+    """Passive counters only; never resume MMC just to observe an idle gate."""
+    cpu = re.search(r'^cpu\s+([0-9 ]+)$', ctx.read('/proc/stat') or '', re.M)
+    irq = {}
+    for line in (ctx.read('/proc/interrupts') or '').splitlines():
+        if ':' not in line:
+            continue
+        key, fields = line.split(':', 1)
+        values = []
+        for field in fields.split():
+            if not field.isdigit():
+                break
+            values.append(int(field))
+        if values:
+            irq[key.strip()] = sum(values)
+    controllers = {}
+    for path in ctx.glob('/sys/bus/platform/devices/*.mmc/y2_storage'):
+        controllers[path.parent.name] = storage_mode(read(path))
+    return {'cpu_ticks': [int(v) for v in cpu[1].split()][:8] if cpu else None,
+            'irqs': irq or None, 'controllers': controllers}
+
+
+def io_delta(before, after):
+    """Unavailable/reset counters are explicit, not false zero-error passes."""
+    result = {'cpu_busy_percent': None, 'irq_delta': None, 'controllers': {}}
+    a, b = before['cpu_ticks'], after['cpu_ticks']
+    if a and b and len(a) == len(b) and all(y >= x for x, y in zip(a, b)):
+        delta = [y - x for x, y in zip(a, b)]
+        total = sum(delta)
+        if total and len(delta) >= 5:
+            result['cpu_busy_percent'] = 100 * (total - delta[3] - delta[4]) / total
+    a, b = before['irqs'], after['irqs']
+    if a is not None and b is not None:
+        result['irq_delta'] = {k: b[k] - v if k in b and b[k] >= v else None for k, v in a.items()}
+    counters = ('crc_events', 'timeout_events', 'controller_events', 'tuning_events',
+                'voltage_events', 'verify_events', 'fallbacks', 'resets')
+    for name in before['controllers'].keys() | after['controllers'].keys():
+        a, b = before['controllers'].get(name) or {}, after['controllers'].get(name) or {}
+        result['controllers'][name] = {'before': a, 'after': b, 'delta': {
+            k: b[k] - a[k] if isinstance(a.get(k), int) and isinstance(b.get(k), int) and b[k] >= a[k]
+            else None for k in counters}}
+    return result
+
+
+def sha256_regions(scratch, ensure, advise):
+    """Offset-specific patterns catch address aliasing as well as changed bytes."""
+    regions = ((0, 1), (511, 513), (4093, 4099), (65543, 65537), (1049087, 1048583))
+    fd = scratch.open('integrity')
+    result = []
+    try:
+        for offset, size in regions:
+            ensure(scratch)
+            payload = random.Random(6582 + offset + size).randbytes(size)
+            write_all(fd, payload, offset)
+            os.fsync(fd)
+            result.append({'offset': offset, 'bytes': size,
+                           'expected_sha256': hashlib.sha256(payload).hexdigest()})
+        # Verify only after every write: aliased writes must not erase another
+        # region undetected. Advisory eviction is file-scoped, never global.
+        for region in result:
+            offset, size = region['offset'], region['bytes']
+            advise(fd, f'sha256_{offset}_{size}')
+            ensure(scratch)
+            actual = hashlib.sha256(os.pread(fd, size, offset)).hexdigest()
+            if actual != region['expected_sha256']:
+                raise OSError(errno.EIO, 'sha256_readback_mismatch')
+            region.update(readback_sha256=actual, result='OK')
+    finally:
+        os.close(fd)
+    return result
+
+
 def storage_benchmark(ctx, volume='/data', size_mib=16, operations=64, seconds=300, guard=None):
     if not 1 <= size_mib <= 128 or not 1 <= operations <= 1024 or not 1 <= seconds <= 1800:
         raise ValueError('benchmark_bounds_exceeded')
@@ -170,7 +244,7 @@ def storage_benchmark(ctx, volume='/data', size_mib=16, operations=64, seconds=3
                                              'operations': operations, 'deadline_seconds': seconds,
                                              'io': 'buffered', 'cold_read': 'not_guaranteed',
                                              'seed': 6582}), 'measurements': [],
-              'volume': None, 'cache_advice': []}
+              'volume': None, 'cache_advice': [], 'integrity': []}
     result['record']['units'] = {'latency': 'ms', 'throughput': 'MB/s (decimal)', 'rate': 'operations/s'}
     rng = random.Random(6582)
     # A repeatable nonzero 1-MiB pattern prepared outside timed I/O.
@@ -180,7 +254,7 @@ def storage_benchmark(ctx, volume='/data', size_mib=16, operations=64, seconds=3
         advice = {'before': operation, 'state': 'unavailable', 'errno': None}
         if hasattr(os, 'posix_fadvise'):
             try:
-                os.posix_fadvise(fd, 0, size, os.POSIX_FADV_DONTNEED)
+                os.posix_fadvise(fd, 0, 0, os.POSIX_FADV_DONTNEED)
                 advice['state'] = 'requested_advisory_only'
             except OSError as error:
                 # Older Y2 kernels omit ADVISE_SYSCALLS (EINVAL on ARM).
@@ -196,8 +270,14 @@ def storage_benchmark(ctx, volume='/data', size_mib=16, operations=64, seconds=3
             raise TimeoutError('benchmark_deadline')
         scratch.ensure()
 
+    def check_controller_faults(system):
+        if any(v is not None and v > 0 for c in system['controllers'].values()
+               for v in c['delta'].values()):
+            raise OSError(errno.EIO, 'controller_fault_during_benchmark')
+
     def measure(name, count, fn, bytes_per_op=0, finalize=None):
         samples = []
+        before_io = io_snapshot(ctx)
         started = time.monotonic_ns()
         for n in range(count):
             ensure(scratch)
@@ -208,10 +288,12 @@ def storage_benchmark(ctx, volume='/data', size_mib=16, operations=64, seconds=3
             finalize()
         elapsed = time.monotonic_ns() - started
         result['measurements'].append({'operation': name, 'result': 'OK',
-                                       **distribution(samples, count * bytes_per_op, elapsed)})
+                                       **distribution(samples, count * bytes_per_op, elapsed),
+                                       'system': io_delta(before_io, io_snapshot(ctx))})
+        check_controller_faults(result['measurements'][-1]['system'])
 
     try:
-        with Scratch(ctx, volume, size + 1024**2, guard) as scratch:
+        with Scratch(ctx, volume, size + 3 * 1024**2 + operations * 4096, guard) as scratch:
             result['volume'] = {'path': volume, 'generation': scratch.initial, 'uuid': scratch.initial_uuid}
             if guard is None:
                 result['volume']['observation'] = storage(ctx)
@@ -243,6 +325,17 @@ def storage_benchmark(ctx, volume='/data', size_mib=16, operations=64, seconds=3
                     measure(name, min(operations, 64), durable, 4096)
             finally:
                 os.close(fd)
+            def small_file(n):
+                fd = scratch.open(f'small{n}')
+                try:
+                    write_all(fd, block[:4096], 0)
+                    os.fsync(fd)
+                finally:
+                    os.close(fd)
+            measure('small_file_write_fsync', operations, small_file, 4096,
+                    finalize=lambda: os.fsync(scratch.fd))
+            for n in range(operations):
+                scratch.unlink(f'small{n}')
             measure('create', operations, lambda n: os.close(scratch.open(f'f{n}')))
             measure('stat', operations, lambda n: os.stat(f'f{n}', dir_fd=scratch.fd, follow_symlinks=False))
             measure('rename', operations, lambda n: scratch.rename(f'f{n}', f'g{n}'))
@@ -265,6 +358,10 @@ def storage_benchmark(ctx, volume='/data', size_mib=16, operations=64, seconds=3
                     raise
                 result['measurements'].append({'operation': 'file_fsync_rename_directory_fsync',
                                                'result': 'UNAVAILABLE', 'reason': 'filesystem_does_not_support_directory_fsync'})
+            before_io = io_snapshot(ctx)
+            result['integrity'] = sha256_regions(scratch, ensure, advise_read)
+            result['integrity_system'] = io_delta(before_io, io_snapshot(ctx))
+            check_controller_faults(result['integrity_system'])
             ensure(scratch)
         result['record']['result'] = 'OK'
     except (OSError, ValueError, TimeoutError) as error:

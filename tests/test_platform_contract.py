@@ -1,5 +1,6 @@
 """Platform API failure boundaries using Linux-shaped fixtures, no hardware."""
 import json
+import shutil
 import os
 from pathlib import Path
 import sys
@@ -34,6 +35,9 @@ class PlatformContract(unittest.TestCase):
         self.put('/proc/self/mountinfo', f'{generation} 1 179:9 / /media/sd rw - vfat /dev/mmcblk1p1 rw\n')
         device = self.ctx.path('/sys/devices/platform/11240000.mmc/mmcblk1/mmcblk1p1')
         device.mkdir(parents=True, exist_ok=True)
+        (device / 'partition').write_text('1')
+        (device / 'dev').write_text('179:9')
+        (device.parent / 'diskseq').write_text('17')
         link = self.ctx.path('/sys/dev/block/179:9')
         link.parent.mkdir(parents=True, exist_ok=True)
         if not link.is_symlink():
@@ -49,7 +53,7 @@ class PlatformContract(unittest.TestCase):
         device = self.mounted_sd()
         first = storage(self.ctx)['volumes'][2]
         self.assertEqual(first['state'], 'Ready')
-        device.rmdir()
+        shutil.rmtree(device)
         absent = storage(self.ctx)['volumes'][2]
         self.assertEqual(absent['state'], 'Failed')
         self.assertEqual(absent['space_state'], 'Failed')

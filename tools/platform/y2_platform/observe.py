@@ -27,10 +27,22 @@ def mountinfo(text):
 
 
 def device_instance(ctx, device_id):
+    """One gendisk lifetime, stable across kernfs inode reclamation.
+
+    dev_t selects the partition and diskseq distinguishes removal/reinsertion,
+    including the same CID. Missing diskseq fails closed rather than falling
+    back to an inode/ctime that can change without a media change.
+    """
     try:
         path = ctx.path('/sys/dev/block/' + device_id).resolve(strict=True)
-        meta = path.stat()
-        return f'{meta.st_ino}:{meta.st_ctime_ns}'
+        disk = path.parent if (path / 'partition').is_file() else path
+        dev = read(path / 'dev')
+        seq = read(disk / 'diskseq')
+        if dev != device_id or not re.fullmatch(r'[0-9]+:[0-9]+', dev or ''):
+            return None
+        if not seq or not seq.isascii() or not seq.isdigit() or int(seq) <= 0:
+            return None
+        return f'block:{dev}:diskseq:{seq}'
     except OSError:
         return None
 
@@ -375,7 +387,7 @@ def storage(ctx):
                     item.update(state='Failed', reason='mount_claim_changed_or_missing')
                 if item['state'] == 'Ready' and (identity is None or (claim.get('identity') is not None and claim['identity'] != identity)):
                     item.update(state='Failed', reason='media_identity_changed_or_missing')
-                if claim.get('source_instance') != item['source_instance']:
+                if item['source_instance'] is None or claim.get('source_instance') != item['source_instance']:
                     item.update(state='Failed', reason='block_instance_changed')
         readonly = 'ro' in item['options'] or 'ro' in item['super_options']
         try:
@@ -408,8 +420,13 @@ def storage(ctx):
     for path in ctx.glob('/sys/bus/platform/devices/*.mmc/y2_performance'):
         values = dict(re.findall(r'(cap_hz|actual_hz|transport_errors|fallbacks|clock_error)=(-?\d+)', read(path) or ''))
         controllers.append({'name': path.parent.name, **{key: int(value) for key, value in values.items()},
-                            'mode': storage_mode(read(path.parent / 'y2_storage', limit=4096))})
+                            'mode': storage_mode(read(path.parent / 'y2_storage', limit=4096)),
+                            'runtime_pm': storage_mode(read(path.parent / 'y2_runtime_pm', limit=4096)),
+                            'runtime_status': read(path.parent / 'power/runtime_status'),
+                            'tuning': read(path.parent / 'y2_tune_diag', limit=4096)})
     return {'volumes': volumes, 'blocks': blocks, 'controllers': controllers,
+            'media': {'last_operation': ctx.json('/run/y2/media.json', None),
+                      'lifecycle': ctx.json('/run/y2/media-lifecycle.json', None)},
             'bus_parameters': ctx.read('/sys/kernel/debug/mmc0/ios'),
             'sd_bus_parameters': ctx.read('/sys/kernel/debug/mmc1/ios')}
 

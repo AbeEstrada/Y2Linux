@@ -15,7 +15,8 @@ def media_identity(entry, filesystem, uuid):
     if partition is not None:
         device = device.parent
     cid = read(device / 'device/cid')
-    geometry = {'partition': partition, 'start': read(entry / 'start'), 'size': read(entry / 'size')}
+    geometry = {'partition': partition, 'start': read(entry / 'start') if partition is not None else '0',
+                'size': read(entry / 'size')}
     if not uuid and (not cid or any(geometry[k] is None or not geometry[k].isdigit()
                                   for k in ('start', 'size'))):
         return None
@@ -38,10 +39,12 @@ def candidates(ctx):
         if props.get('TYPE') not in ('ext4', 'vfat', 'exfat'):
             continue
         identity = media_identity(entry, props['TYPE'], props.get('UUID'))
-        if identity is None:
+        instance = device_instance(ctx, read(entry / 'dev') or '')
+        if identity is None or instance is None:
             continue
         result.append({'device': '/dev/' + entry.name, 'filesystem': props['TYPE'],
-                       'uuid': props.get('UUID'), 'cid': identity['cid'], 'identity': identity})
+                       'uuid': props.get('UUID'), 'cid': identity['cid'], 'identity': identity,
+                       'source_instance': instance})
     return result
 
 
@@ -153,6 +156,21 @@ def operation(ctx, action):
                     state.update(state='Ready' if result['ok'] else 'Degraded',
                                  reason='read_only_check_passed' if result['ok'] else result['reason'])
                 else:
+                    # Read-only admission never authorizes checker repairs.
+                    # Large/unhealthy media may time out;
+                    # the owner must see that failure rather than a RW mount.
+                    argv = {'ext4': ['e2fsck', '-n'], 'vfat': ['fsck.fat', '-n'],
+                            'exfat': ['fsck.exfat', '-n']}[card['filesystem']]
+                    result = ctx.command(argv + [card['device']], timeout=60)
+                    state['filesystem_check'] = result
+                    if not result['ok']:
+                        state.update(state='Degraded', reason='filesystem_check_failed')
+                        atomic_json(runtime / 'media.json', state)
+                        return state
+                    if candidates(ctx) != available:
+                        state.update(state='Failed', reason='source_changed_during_check')
+                        atomic_json(runtime / 'media.json', state)
+                        return state
                     target = ctx.path('/media/sd')
                     if target.is_symlink():
                         raise ValueError('mountpoint_symlink')
@@ -160,6 +178,8 @@ def operation(ctx, action):
                     options = 'rw,nosuid,nodev,noexec'
                     if card['filesystem'] in ('vfat', 'exfat'):
                         options += ',fmask=0177,dmask=0077'
+                    if card['filesystem'] == 'vfat':
+                        options += ',utf8=1'
                     result = ctx.command(['mount', '-t', card['filesystem'], '-o', options,
                                           card['device'], '/media/sd'], timeout=3)
                     current = mounts(ctx)
