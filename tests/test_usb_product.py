@@ -112,6 +112,18 @@ class USBProduct(unittest.TestCase):
         self.assertFalse(self.service.bound)
         self.assertIsNone(self.service.child)
 
+    def test_readiness_restart_unbinds_its_existing_gadget_before_setup(self):
+        self.ready()
+        restarted=USBService(self.ctx,launch=Child)
+        seen=[]; original=restarted.write
+        def observed(relative,value):
+            if relative=='UDC': seen.append(value)
+            original(relative,value)
+        with patch.object(restarted,'write',side_effect=observed): restarted.tick()
+        self.assertEqual(seen[0],'')
+        self.assertEqual(seen[-1],'musb')
+        self.assertEqual(restarted.tick()['filesystem_owner'],'linux')
+
     def test_media_identity_change_stops_old_responder_before_new_view(self):
         self.ready(); old=self.service.child
         self.views[0]['mount_id'] = 6

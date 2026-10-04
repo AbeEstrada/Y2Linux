@@ -41,7 +41,10 @@ FunctionFS remaps logical descriptor endpoint numbers. FS bulk descriptors use
 compatible ID `MTP`, interface class 6/subclass 1/protocol 1 support Windows WPD
 binding; enumeration must be checked on Windows. Configfs binds only after the
 responder has written descriptors and exposed all three endpoints. Binding or
-responder failure is explicit and retries at most five times.
+responder failure is explicit and retries at most five times. A readiness restart
+unbinds its existing configfs gadget before configuring; parent death kills the
+old responder to release endpoint/root FDs. The legacy boot-controlled g_cdc is
+disabled in production; configfs serves both product and developer selections.
 
 Upstream uMTP-Responder is pinned at `2241a803c27f1fff7537cb9504befeb810b880d3`,
 source SHA256 `077ef6f4745d599bda7db0fff2993e21b969bbf414784c4ab3adf0f664177d2b`.
@@ -96,8 +99,8 @@ new public USB identity allocation. Charger voltage/current policy is unchanged.
 
 | Host | Intended behavior / exact requirements | Qualification |
 | --- | --- | --- |
-| Linux GNOME | Standard portable-media discovery through GVfs MTP/libmtp; Files shows Y2 and storage views. Install distribution `gvfs-mtp` support if absent. MTP is a file-manager virtual location, not a kernel block mount. | GIO/libmtp available on this host; exact new-image desktop discovery NOT_RUN. |
-| Linux KDE | Dolphin uses its MTP KIO/libmtp support; install the distribution MTP KIO worker if absent. UDisks block automount is not involved. | NOT_RUN. |
+| Linux GNOME | Standard portable-media discovery through GVfs MTP/libmtp; Files shows Y2 and storage views. Install distribution `gvfs-mtp` support if absent. MTP is a file-manager virtual location, not a kernel block mount. | GIO/libmtp tools present; GVfs MTP backend absent on this host. Exact new-image desktop discovery NOT_RUN. |
+| Linux KDE | Dolphin uses its MTP KIO/libmtp support; install the distribution MTP KIO worker if absent. UDisks block automount is not involved. | KDE MTP plugins are installed on this host; enumeration NOT_RUN. |
 | Windows | Explorer portable-device view expected through inbox WPD/MTP driver and compatible-ID descriptors. ECM networking support is separate and unnecessary for music copies. | Descriptor bytes tested; Windows enumeration NOT_RUN. |
 | macOS | Finder does not natively provide this MTP view; a standard MTP client such as OpenMTP is required. Advanced SFTP remains an option where ECM is usable. | NOT_RUN; native Finder mounting is an explicit limitation. |
 

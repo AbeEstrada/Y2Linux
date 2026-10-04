@@ -809,7 +809,7 @@ index 32db8e3..35a5333 100644
  
  const int supported_op_size=sizeof(supported_op);
 diff --git a/src/umtprd.c b/src/umtprd.c
-index 93fb167..ba4824e 100644
+index 93fb167..fdc4a61 100644
 --- a/src/umtprd.c
 +++ b/src/umtprd.c
 @@ -33,6 +33,7 @@
@@ -834,6 +834,19 @@ index 93fb167..ba4824e 100644
  
  	loop_continue = mtp_context->usb_cfg.loop_on_disconnect;
  
+@@ -168,6 +176,12 @@ int check_running()
+ 
+ int main(int argc, char *argv[])
+ {
++    /* Never leave an endpoint/root owner behind a killed readiness supervisor.
++     * SIGKILL guarantees fd release even if a worker cannot gracefully exit;
++     * private incomplete .part files remain hidden for owner inspection. */
++    pid_t parent_pid=getppid();
++    if (parent_pid<=1 || prctl(PR_SET_PDEATHSIG,SIGKILL) || getppid()!=parent_pid) return 4;
++
+ 	const char *conffile = UMTPR_CONF_FILE;
+ 	int retcode = 0;
+ 	int already_running = check_running();
 diff --git a/src/usb_gadget.c b/src/usb_gadget.c
 index 74d9d2a..729f365 100644
 --- a/src/usb_gadget.c

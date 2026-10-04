@@ -41,7 +41,7 @@ def userspace_config(config):
     if config.get('CONFIG_USB_CONFIGFS_F_FS') == 'y':
         for key in ('CONFIG_USB_CONFIGFS','CONFIG_USB_CONFIGFS_ACM','CONFIG_USB_CONFIGFS_ECM'):
             require(config.get(key)=='y','missing product USB prerequisite '+key)
-        require(config.get('CONFIG_USB_CDC_COMPOSITE')=='m','legacy developer gadget module')
+        require(config.get('CONFIG_USB_CDC_COMPOSITE') not in ('y','m'),'configfs owns product and developer gadget')
         require(config.get('CONFIG_USB_CONFIGFS_MASS_STORAGE')!='y' and config.get('CONFIG_USB_MASS_STORAGE') not in ('y','m'),'no block storage export')
     else:
         require(config.get('CONFIG_USB_CDC_COMPOSITE')=='y','missing development prerequisite CONFIG_USB_CDC_COMPOSITE')

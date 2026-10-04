@@ -152,7 +152,7 @@ class USBService:
     def stop(self):
         # Unbind first: endpoint reads return, then join/abort staged uploads.
         unbind_error = None
-        if self.bound and self.ctx.path(GADGET + '/UDC').exists():
+        if self.ctx.path(GADGET + '/UDC').exists() and (self.bound or self.ctx.read(GADGET + '/UDC')):
             try:
                 self.write('UDC', '')
             except OSError as error:
