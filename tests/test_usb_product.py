@@ -202,6 +202,16 @@ class PhysicalHarness(unittest.TestCase):
         self.assertEqual(value['irq_per_s'],30)
         self.assertEqual(value['context_switches_per_s'],40)
 
+    def test_process_metrics_refuse_reused_pid_and_label_memory_scope(self):
+        before={'stat':'','processes':{'9':{'start':'one','ticks':100},'10':{'start':'old','ticks':1}}}
+        after={'stat':'','hz':100,'processes':{'9':{'start':'one','ticks':200,'name':'umtprd','memory_kib':{'VmRSS':1000}},'10':{'start':'new','ticks':200,'name':'dropbear','memory_kib':{}}}}
+        value=self.module.delta(before,after,2)['processes']
+        self.assertEqual(len(value),1)
+        self.assertEqual(value[0]['cpu_percent_one_core'],50)
+        self.assertEqual(value[0]['memory_kib']['VmRSS'],1000)
+        self.assertIn('process lifetime',value[0]['memory_scope'])
+        compile(self.module.SNAPSHOT,'remote-snapshot','exec')
+
     def test_boot_or_media_swap_refuses_following_transfer_or_cleanup(self):
         from types import SimpleNamespace
         harness=self.module.Harness(SimpleNamespace(ssh_config=None,host='fixture'))

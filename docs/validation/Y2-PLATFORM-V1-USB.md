@@ -190,7 +190,8 @@ not installed. Retained 1 MiB checksums are integrity evidence only. There is no
 claimed performance gain, DMA ceiling or arbitrary target. The harness records
 actual speed, bytes/time (decimal MB/s), independent upload/download SHA256,
 aggregate CPU average, IRQ/context-switch deltas, memory snapshots, USB counters
-and storage statistics. It leaves uncertain scratch data after failure; identity
+and storage statistics, per-process CPU/RSS with PID-reuse rejection and
+process-lifetime HWM labels, and actual frequency snapshots. It leaves uncertain scratch data after failure; identity
 changes refuse further copy/cleanup. SFTP uses one authenticated session per
 workload so small-file numbers are not SSH-login-per-file benchmarks.
 
@@ -218,7 +219,7 @@ The responder ARM binary is 96,092 bytes; runtime RSS remains unmeasured.
 
 411 production checks: 406 PASS, 5 minimal-host dependency skips. Separate native
 host filesystem/GIO (27) and ALSA (3) checks cover those dependencies. Focused
-USB/storage/DMA/platform tests (79), final harness guards (5), Reborn tests (240),
+USB/storage/DMA/platform tests (79), final harness guards (6), Reborn tests (240),
 fmt/clippy, Cortex-A7 QEMU, installed ARM tools/library scan, ELF dependencies,
 release inventory and legal-info PASS. UI detection found no reported issues;
 rendered ready/copying/error/refresh fixtures were inspected. No warning-free,
@@ -262,3 +263,75 @@ requiring host refresh/reconnect (inotify disabled to hide staging) and public U
 identity allocation remain explicit product limitations. Five consecutive
 responder/bind failures exhaust the retry budget; restart Y2/readiness to retry
 a persistent service failure. Ordinary interrupted sessions recover on reconnect.
+
+## Changed files and local commits
+
+Y2Linux (33 files, including the final evidence record):
+
+- `buildroot/Config.in`
+- `buildroot/configs/y2_production_defconfig`
+- `buildroot/package/y2-mtp/0001-y2-safe-media-transfers.patch`
+- `buildroot/package/y2-mtp/Config.in`
+- `buildroot/package/y2-mtp/y2-mtp.hash`
+- `buildroot/package/y2-mtp/y2-mtp.mk`
+- `docs/architecture/platform-usb-v1.md`
+- `docs/planning/platform-v1-roadmap.md`
+- `docs/planning/roadmap-gap-audit.md`
+- `docs/validation/Y2-PLATFORM-V1-USB.md`
+- `kernel/config/production.config`
+- `kernel/patches/0065-y2-musb-pio-progress.patch`
+- `kernel/patches/manifest.json`
+- `kernel/platform/usb.c`
+- `kernel/usb/fault.h`
+- `tests/test_cpu_fix03.py`
+- `tests/test_usb_product.py`
+- `tests/usb_mtp_fs.c`
+- `tests/usb_mtp_protocol.c`
+- `tools/platform/capabilities.json`
+- `tools/platform/y2_platform/cli.py`
+- `tools/platform/y2_platform/media.py`
+- `tools/platform/y2_platform/observe.py`
+- `tools/platform/y2_platform/service.py`
+- `tools/platform/y2_platform/usb.py`
+- `tools/production/build.py`
+- `tools/production/release.json`
+- `tools/production/tests.sh`
+- `tools/usb/mtp-safe.c`
+- `tools/usb/mtp-safe.h`
+- `tools/usb/qualify.py`
+- `tools/validation/dev_artifacts.py`
+- `docs/validation/evidence/platform-v1-usb.json`
+
+Y2Reborn (7 files):
+
+- `app/reborn/src/bin/reborn-preview.rs`
+- `app/reborn/src/main.rs`
+- `crates/reborn-core/src/platform.rs`
+- `crates/reborn-platform/src/client.rs`
+- `crates/reborn-platform/src/storage.rs`
+- `crates/reborn-ui/src/pages.rs`
+- `crates/reborn-ui/src/tests.rs`
+
+Local implementation commits: Linux `418723d` (MTP/media/product integration),
+`5cb5be0` (configfs-only selection and supervisor lifetime), `6fcd1b2` (preserved
+error causes and latest retained evidence), `08019df` (pinned kernel UAPI/ARM ABI).
+Reborn `51d477b` implements typed states and incremental refresh. Linux `d9ea222`
+records qualification and the guarded transfer matrix; the subsequent closing
+commit adds expanded harness diagnostics, path inventory and this final evidence.
+Images compile exactly Linux08019df / Reborn51d477b; later qualification/docs
+commits are not represented as newly compiled binaries. All commits are local;
+existing configured owner identity is preserved, with no model attribution or push.
+
+Final payload SHA256:
+
+- BOOTIMG: `b1b9dc1ec000159cb9d9c75327ab6d60aa32f29ffe476ab8450f7850e76fc9c4`
+- Y2ROOT: `cf0a4eccbd30cb556bb28d3ca7d145a8a75e968e24b1fbaf70d31b3dcaed9c52`
+
+The preserving package, source/license seal and final checksum/rootfs/package
+validation PASS. Source delivery contains449 source/license records and their
+collector limitations; public distribution/USB identity/legal approval is not
+claimed. Native hardware proofs remain scoped to their preceding artifacts.
+The latest exact-image transfer harness is attached separately with its own
+revision and SHA256. No physical flash, push or modification to owner-main files
+was performed by this pass. Candidate handoff is `USB-OWNER-HANDOFF.md` inside
+`out/y2linux-platform-v1-usb-candidate/`.

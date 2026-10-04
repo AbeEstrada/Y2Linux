@@ -18,12 +18,24 @@ import tempfile
 import time
 import uuid
 
-SNAPSHOT = '''import json,pathlib
+SNAPSHOT = '''import json,pathlib,os
 p=pathlib.Path
 def read(name):
  try:return p(name).read_text()
  except OSError:return None
-print(json.dumps({"boot":read("/proc/sys/kernel/random/boot_id"),"mounts":read("/proc/self/mountinfo"),"stat":read("/proc/stat"),"memory":read("/proc/meminfo"),"interrupts":read("/proc/interrupts"),"usb":read("/sys/bus/platform/drivers/y2-usb/11200000.usb/status"),"speed":[read(str(v/"current_speed")) for v in p("/sys/class/udc").glob("*")],"versions":read("/etc/y2linux/versions.json"),"storage_stat":{str(v):read(str(v)) for v in p("/sys/class/block").glob("mmcblk*/stat")}}))'''
+processes={}
+for child in p("/proc").iterdir():
+ if not child.name.isdigit():continue
+ name=(read(str(child/"comm")) or "").strip()
+ if name not in ("umtprd","dropbear","reborn"):continue
+ stat=read(str(child/"stat"))
+ if not stat:continue
+ fields=stat.rsplit(")",1)[1].split()
+ memory={}
+ for line in (read(str(child/"status")) or "").splitlines():
+  if line.startswith(("VmRSS:","VmHWM:","VmSize:")):memory[line.split(":",1)[0]]=int(line.split()[1])
+ processes[child.name]={"name":name,"ticks":int(fields[11])+int(fields[12]),"start":fields[19],"memory_kib":memory}
+print(json.dumps({"hz":os.sysconf("SC_CLK_TCK"),"processes":processes,"frequency_khz":{v.name:read(str(v/"scaling_cur_freq")) for v in p("/sys/devices/system/cpu/cpufreq").glob("policy*")},"file_transfer":read("/run/y2/usb-transfer.json"),"boot":read("/proc/sys/kernel/random/boot_id"),"mounts":read("/proc/self/mountinfo"),"stat":read("/proc/stat"),"memory":read("/proc/meminfo"),"interrupts":read("/proc/interrupts"),"usb":read("/sys/bus/platform/drivers/y2-usb/11200000.usb/status"),"speed":[read(str(v/"current_speed")) for v in p("/sys/class/udc").glob("*")],"versions":read("/etc/y2linux/versions.json"),"storage_stat":{str(v):read(str(v)) for v in p("/sys/class/block").glob("mmcblk*/stat")}}))'''
 
 
 def run(argv, timeout=90):
@@ -43,7 +55,14 @@ def delta(before, after, seconds):
     a, b = stat(before['stat']), stat(after['stat'])
     ticks = [y-x for x,y in zip(a.get('cpu',[])[:8], b.get('cpu',[])[:8])]
     total = sum(ticks)
-    return {'cpu_busy_percent': 100*(total-sum(ticks[3:5]))/total if total and all(t>=0 for t in ticks) else None,
+    processes=[]
+    for pid, current in after.get('processes',{}).items():
+        old=before.get('processes',{}).get(pid)
+        if old and old['start']==current['start'] and current['ticks']>=old['ticks']:
+            processes.append({'pid':pid,'name':current['name'],
+                'cpu_percent_one_core':100*(current['ticks']-old['ticks'])/after.get('hz',100)/seconds,
+                'memory_kib':current['memory_kib'], 'memory_scope':'RSS now; HWM is process lifetime, not transfer-only peak'})
+    return {'processes':processes,'cpu_busy_percent': 100*(total-sum(ticks[3:5]))/total if total and all(t>=0 for t in ticks) else None,
             'irq_per_s': (b['intr'][0]-a['intr'][0])/seconds if 'intr' in a and 'intr' in b else None,
             'context_switches_per_s': (b['ctxt'][0]-a['ctxt'][0])/seconds if 'ctxt' in a and 'ctxt' in b else None,
             'cpu_scope': 'all CPUs aggregate average; no peak-memory claim'}

@@ -1,3 +1,32 @@
+## USB candidate handoff boundary — 2026-10-04
+
+One preserving USB candidate is sealed at out/y2linux-platform-v1-usb-candidate/.
+Compiled Linux08019df / Reborn51d477b; BOOTIMG SHA256
+b1b9dc1ec000159cb9d9c75327ab6d60aa32f29ffe476ab8450f7850e76fc9c4,
+Y2ROOT SHA256 cf0a4eccbd30cb556bb28d3ca7d145a8a75e968e24b1fbaf70d31b3dcaed9c52.
+Package/root/checksum validation and449-record source/license seal pass. The
+qualification harness adds checked user-partition/SD admission, every before/after
+hash, process CPU/RSS and actual frequency diagnostics; its6 native guards pass.
+Later docs/harness revision is explicitly separate from the compiled source pair.
+
+Every standing coverage row retains the preceding software-sealing admission:
+CONFIRMED bounded UART01 boot/core/display/input/storage/audio/CPU/C1/C2/C3;
+CONFIRMED retained Baseline02 installed identity only, boot27e6d684…/taint0;
+PARTIAL new-image/cold-boot/full-suspend/endurance, USB/radio/desktop/performance,
+power/thermal/electrical/firmware/calibration/backlight/watchdog/wake and RAM/
+recovery/update/security/services/time/identity/privacy/release gates
+(#27/#28/#29/#31/#32/#33/#34); UART crash capture UNKNOWN, host/VBUS PHYSICAL_GATE,
+FM excluded. MTP adds no block export or protected/memory/charging policy change.
+USB platform remains MORE_WORK_REQUIRED; all issues stay OPEN remotely.
+
+Shared-lock refusals leave current speed, BEFORE/AFTER throughput and transfer
+CPU/IRQ/memory unmeasured. No new hardware result is inferred from software checks.
+Next exact action: owner Download Only of BOOTIMG and ANDROID/Y2ROOT while preserving
+Y2DATA/protected partitions, then the attached locked transfer harness and desktop/
+ten-session/mid-copy/eject/library/playback/PIO acceptance. No flash or push; owner
+main/parallel subsystem work stays untouched. Full [USB report](../validation/Y2-PLATFORM-V1-USB.md)
+and [structured evidence](../validation/evidence/platform-v1-usb.json) retain the scope.
+
 ## USB software-qualified candidate sealing admission — 2026-10-04
 
 The source pair Linux 08019df44c8a7fbc249fc49a5a41f7ac906429ba / Reborn
