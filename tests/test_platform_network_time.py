@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools/platform'))
 from y2_platform.common import Context
-from y2_platform.network import dhcp_event, lease_event, probe_dns, EventMonitor
+from y2_platform.network import dhcp_event, lease_event, probe_dns, EventMonitor, DnsProbeSchedule
 from y2_platform.timekeeping import status, bootstrap, ntp_event
 from y2_platform.network_check import check as network_check
 
@@ -46,6 +46,26 @@ class NetworkTime(unittest.TestCase):
         self.assertEqual(len(self.calls), before)
         self.assertNotIn('nameserver', self.ctx.read('/run/y2/resolv.conf'))
 
+    def test_cleanup_disconnect_is_not_counted_as_another_link_loss(self):
+        self.assertEqual(lease_event(self.ctx, 'DISCONNECTED')['state'], 'Unavailable')
+        self.assertEqual(self.ctx.json('/run/y2/wifi-events.json')['real_disconnects'], 0)
+        lease_event(self.ctx, 'CONNECTED')
+        lease_event(self.ctx, 'DISCONNECTED')
+        lease_event(self.ctx, 'DISCONNECTED')  # interface-removal cleanup duplicates the action
+        events = self.ctx.json('/run/y2/wifi-events.json')
+        self.assertEqual(events['disconnected'], 3)  # raw action API stays compatible
+        self.assertEqual(events['real_disconnects'], 1)
+        lease_event(self.ctx, 'CONNECTED')
+        self.assertEqual(self.ctx.json('/run/y2/wifi-events.json')['reconnects'], 1)
+        lease_event(self.ctx, 'CONNECTED')  # repeated notification is not another reconnect
+        self.assertEqual(self.ctx.json('/run/y2/wifi-events.json')['reconnects'], 1)
+        self.put('/proc/sys/kernel/random/boot_id', 'next-boot')
+        lease_event(self.ctx, 'CONNECTED')
+        events = self.ctx.json('/run/y2/wifi-events.json')
+        self.assertEqual(events['connected'], 1)
+        self.assertEqual(events['real_disconnects'], 0)
+        self.assertEqual(events['reconnects'], 0)
+
     def test_classless_routes_and_untrusted_dhcp_syntax(self):
         epoch = lease_event(self.ctx, 'CONNECTED')['epoch']
         env = dict(interface='wlan0', Y2_DHCP_GENERATION=epoch, ip='192.0.2.2',
@@ -66,6 +86,8 @@ class NetworkTime(unittest.TestCase):
         with patch('y2_platform.network.wifi', return_value=after):
             self.assertIsNone(probe_dns(self.ctx, before))
         self.assertFalse(self.ctx.path('/run/y2/dns.json').exists())
+        with patch('y2_platform.network.wifi', return_value=dict(before, default_route=[])):
+            self.assertIsNone(probe_dns(self.ctx, before))
         with patch('y2_platform.network.wifi', return_value=before):
             self.assertTrue(probe_dns(self.ctx, before)['ok'])
         monitor = EventMonitor(self.ctx)
@@ -73,6 +95,123 @@ class NetworkTime(unittest.TestCase):
         record = self.ctx.json('/run/y2/wifi-failure.json')
         self.assertEqual(record['error'], 'wrong_credentials')
         self.assertNotIn('private-name', json.dumps(record))
+
+    def test_new_lease_dns_does_not_inherit_old_probe_deadline(self):
+        schedule = DnsProbeSchedule()
+        link = dict(association='COMPLETED', association_id='one',
+                    ip_addresses=['192.0.2.2'], default_route=[{}])
+        self.assertTrue(schedule.due(link, 'first', 100))
+        self.assertFalse(schedule.due(link, 'first', 101))
+        # Association without DHCP cannot consume the new probe opportunity.
+        self.assertFalse(schedule.due(dict(link, ip_addresses=[]), 'second', 102))
+        self.assertTrue(schedule.due(link, 'second', 103))
+        self.assertFalse(schedule.due(link, 'second', 104))
+        self.assertTrue(schedule.due(link, 'second', 133))
+        self.assertTrue(schedule.due(dict(link, association_id='two'), 'second', 134))
+        self.assertFalse(schedule.due(dict(link, association=None), 'second', 135))
+        self.assertTrue(schedule.due(dict(link, ip_addresses=['192.0.2.3']), 'second', 136))
+        self.assertFalse(schedule.due(dict(link, default_route=[]), 'third', 137))
+
+    def test_event_wait_wakes_for_real_supplicant_event(self):
+        import socket
+        import threading
+        monitor = EventMonitor(self.ctx)
+        monitor.sock, sender = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+        self.addCleanup(monitor.close)
+        self.addCleanup(sender.close)
+        timer = threading.Timer(.02, lambda: sender.send(b'event'))
+        timer.start()
+        started = time.monotonic()
+        monitor.wait(2)
+        timer.join()
+        self.assertLess(time.monotonic() - started, 1)
+        self.assertEqual(monitor.sock.recv(16), b'event')
+
+    def test_dns_readiness_rejects_old_lease_same_address_and_peer(self):
+        from y2_platform.observe import wifi
+        self.put('/sys/class/net/wlan0/ifindex', '4')
+        self.put('/run/y2/wifi-epoch', 'current')
+        def runner(argv, **kw):
+            output = ('wpa_state=COMPLETED\nbssid=one' if argv[-1] == 'status' else
+                      '[{"addr_info":[{"local":"192.0.2.2","scope":"global"}]}]' if 'addr' in argv else
+                      '[{"dst":"default"}]' if 'route' in argv else 'RSSI=-50')
+            return dict(ok=True, output=output, reason=None)
+        self.ctx.runner = runner
+        value = dict(ok=True, boot_id='boot-one', monotonic_s=time.monotonic(),
+                     address='192.0.2.2', bssid='one', epoch='old')
+        self.put('/run/y2/dns.json', json.dumps(value))
+        self.assertEqual(wifi(self.ctx)['state'], 'Authenticated')
+        value['epoch'] = 'current'
+        self.put('/run/y2/dns.json', json.dumps(value))
+        self.assertEqual(wifi(self.ctx)['state'], 'Online')
+
+    def test_rssi_cache_is_bounded_and_invalidates_on_peer_or_boot_change(self):
+        from y2_platform.observe import wifi
+        self.put('/sys/class/net/wlan0/ifindex', '4')
+        self.put('/run/y2/wifi-epoch', 'current')
+        peer = ['one']
+        calls = []
+        def runner(argv, **kw):
+            calls.append((argv, kw))
+            output = (f'wpa_state=COMPLETED\nbssid={peer[0]}' if argv[-1] == 'status' else
+                      '[{"addr_info":[{"local":"192.0.2.2","scope":"global"}]}]' if 'addr' in argv else
+                      '[{"dst":"default"}]' if 'route' in argv else 'RSSI=-50')
+            return dict(ok=True, output=output, reason=None)
+        self.ctx.runner = runner
+        first = wifi(self.ctx)
+        self.assertEqual(first['rssi_dbm'], -50)
+        calls.clear()
+        self.assertEqual(wifi(self.ctx, signal_cache=first)['rssi_dbm'], -50)
+        self.assertFalse(any(c[-1] == 'signal_poll' for c, kw in calls))
+        self.put('/run/y2/network.json', json.dumps(first))
+        calls.clear()
+        self.assertEqual(wifi(self.ctx)['rssi_dbm'], -50)
+        self.assertFalse(any(c[-1] == 'signal_poll' for c, kw in calls))
+        self.assertEqual(next(kw['timeout'] for c, kw in calls if c[-1] == 'status'), 3)
+        first['signal_observation']['monotonic_s'] -= 31
+        self.put('/run/y2/network.json', json.dumps(first))
+        calls.clear()
+        wifi(self.ctx)
+        self.assertTrue(any(c[-1] == 'signal_poll' for c, kw in calls))
+        self.put('/run/y2/network.json', json.dumps(dict(first, signal_observation=dict(
+            first['signal_observation'], monotonic_s=time.monotonic()))))
+        peer[0] = 'two'
+        calls.clear()
+        wifi(self.ctx)
+        self.assertTrue(any(c[-1] == 'signal_poll' for c, kw in calls))
+        self.put('/proc/sys/kernel/random/boot_id', 'new-boot')
+        calls.clear()
+        wifi(self.ctx)
+        self.assertTrue(any(c[-1] == 'signal_poll' for c, kw in calls))
+
+    def test_readiness_query_failures_are_counted_without_link_events(self):
+        from y2_platform import service
+        callbacks = {}
+        observations = iter([
+            dict(state='Starting', association=None, radio_present=True,
+                 supplicant_observation=dict(ok=False), traffic_counters={}),
+            dict(state='Starting', association=None, radio_present=True,
+                 supplicant_observation=dict(ok=False), traffic_counters={}),
+            dict(state='Off', association=None, radio_present=False,
+                 supplicant_observation=dict(ok=None), traffic_counters={})])
+        waits = []
+        def wait(seconds, *, wake_fd=None):
+            waits.append(seconds)
+            if len(waits) == 3:
+                callbacks[service.signal.SIGTERM](None, None)
+        with patch.object(service.signal, 'signal', side_effect=lambda sig, fn: callbacks.update({sig: fn})), \
+             patch.object(service, 'wifi', side_effect=lambda ctx: next(observations)), \
+             patch.object(service, 'display_dark', return_value=True), \
+             patch.object(service, 'media_reconcile_needed', return_value=False), \
+             patch.object(service, 'time_status', return_value={}), \
+             patch.object(service.EventMonitor, 'poll'), \
+             patch.object(service.EventMonitor, 'wait', side_effect=wait):
+            service.serve(self.ctx)
+        result = self.ctx.json('/run/y2/network.json')
+        self.assertEqual(result['status_query_failures'], 2)
+        self.assertFalse(self.ctx.path('/run/y2/wifi-events.json').exists())
+        self.assertGreater(waits[0], 9)  # Unknown status must not trigger fast polling.
+        self.assertGreater(waits[2], 9)
 
     def test_implausible_rtc_build_floor_and_network_clock_readiness(self):
         floor = 1790000000

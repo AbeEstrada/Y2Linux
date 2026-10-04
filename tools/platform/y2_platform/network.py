@@ -5,6 +5,7 @@ import ipaddress
 import json
 import os
 import re
+import select
 import socket
 import time
 import uuid
@@ -38,6 +39,21 @@ def _lease_event(ctx, event):
     (runtime / 'wifi-epoch').write_text(epoch + '\n')
     (runtime / 'dns.json').unlink(missing_ok=True)
     old = ctx.json('/run/y2/wifi-events.json', {})
+    if old.get('boot_id') != ctx.read('/proc/sys/kernel/random/boot_id'):
+        old = {}
+    active = old.get('association_active', old.get('last_event') == 'CONNECTED') is True
+    # Action calls include supervisory cleanup as well as native link events.
+    # Keep their historical raw counts, but count a real loss only once after
+    # a known connection. Unknown queries never enter this lifecycle.
+    old.setdefault('link_counts_since_s', time.monotonic())
+    for name in ('real_disconnects', 'reconnects'):
+        value = old.get(name, 0)
+        old[name] = value if isinstance(value, int) and value >= 0 else 0
+    if event == 'DISCONNECTED' and active:
+        old['real_disconnects'] += 1
+    if event == 'CONNECTED' and not active and old.get('connected', 0):
+        old['reconnects'] += 1
+    old['association_active'] = event == 'CONNECTED'
     count = old.get(event.lower(), 0)
     count = count if isinstance(count, int) and count >= 0 else 0
     old[event.lower()] = count + 1
@@ -135,15 +151,35 @@ def probe_dns(ctx, observed):
     answer = ctx.command(['/usr/bin/python3', '-I', '-c',
                           'import socket,sys; print(len(socket.getaddrinfo(sys.argv[1],None,socket.AF_INET)))',
                           hostname], timeout=3)
-    after = wifi(ctx)
+    after = wifi(ctx, signal_cache=observed)
     if (ctx.read('/run/y2/wifi-epoch') != epoch or
             after.get('association_id') != observed.get('association_id') or
-            after['ip_addresses'] != observed['ip_addresses']):
+            after['ip_addresses'] != observed['ip_addresses'] or
+            after.get('default_route') != observed.get('default_route')):
         return None
     ok = answer['ok'] and (answer['output'] or '').isdigit() and int(answer['output']) > 0
     return publish(ctx, 'dns', {'epoch': epoch, 'ok': ok, 'address': observed['ip_addresses'][0],
                    'bssid': observed.get('association_id'), 'probe_host': hostname,
                    'reason': None if ok else 'dns_unavailable'})
+
+
+class DnsProbeSchedule:
+    """Probe newly usable leases immediately; bound retries on the same lease."""
+    def __init__(self):
+        self.key = None
+        self.deadline = 0
+
+    def due(self, observed, epoch, now):
+        if (observed.get('association') != 'COMPLETED' or not epoch or
+                not observed.get('ip_addresses') or not observed.get('default_route')):
+            return False
+        key = (epoch, observed.get('association_id'), tuple(observed['ip_addresses']))
+        if key != self.key:
+            self.key, self.deadline = key, 0
+        if now < self.deadline:
+            return False
+        self.deadline = now + 30
+        return True
 
 
 class EventMonitor:
@@ -189,6 +225,18 @@ class EventMonitor:
                     break
                 self.event(raw)
         except (OSError, ValueError):
+            self.close()
+
+    def wait(self, timeout, *, wake_fd=None):
+        # Events wake readiness immediately. DHCP remains owned by wpa-event;
+        # the bounded acquisition cadence also observes its lease publication.
+        readers = ([] if self.sock is None else [self.sock]) + ([] if wake_fd is None else [wake_fd])
+        if not readers:
+            time.sleep(timeout)
+            return
+        try:
+            select.select(readers, [], [], timeout)
+        except OSError:
             self.close()
 
     def event(self, text):

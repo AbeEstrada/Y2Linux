@@ -81,19 +81,30 @@
       "enabled": true,
       "qualified": false,
       "functions": [
-        "ACM",
+        "MTP",
         "ECM"
       ],
       "ssh_bind": "10.42.0.1:22",
       "ssh_interface": "usb0",
-      "transfer_protocol": "SFTP",
-      "authenticated_owner_only": true,
+      "transfer_protocol": "MTP",
+      "authenticated_owner_only": false,
       "atomic_verified_uploads": true,
       "filesystem_mass_storage": false,
       "sftp_reserve_bytes": 100663296,
       "experimental": false,
-      "reason": "physical qualification of this exact candidate pending",
-      "transient_tolerance": "1 s PMIC supply-sample tolerance and 10 s write-free reconnect retry"
+      "reason": "consumer MTP plus advanced ECM; exact candidate desktop and physical qualification pending",
+      "transient_tolerance": "1 s PMIC supply-sample tolerance and 10 s write-free reconnect retry",
+      "developer_functions": [
+        "ACM",
+        "ECM"
+      ],
+      "advanced_transfer_protocol": "SFTP",
+      "advanced_authenticated_owner_only": true,
+      "filesystem_owner": "linux",
+      "host_views": [
+        "/data/music",
+        "/media/sd"
+      ]
     },
     "usb_host": {
       "implemented": true,
@@ -308,7 +319,7 @@
       "reason": "physical qualification pending",
       "fallback": "PIO",
       "boot_fallback": "y2.usb_dma=off",
-      "telemetry": "directional programmed bytes and bus faults; not delivered-byte counters; first terminal fault reason and read-only controller/DMA snapshot; storm guard counts only interrupts without DMA progress"
+      "telemetry": "directional programmed bytes and bus faults; not delivered-byte counters; first terminal fault reason and read-only controller/DMA snapshot; storm guard counts only interrupts without DMA or PIO FIFO progress"
     },
     "usb_ncm": {
       "implemented": true,

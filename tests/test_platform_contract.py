@@ -112,7 +112,8 @@ class PlatformContract(unittest.TestCase):
         self.assertEqual(wifi(self.ctx)['reason'], 'dhcp_timeout')
         address.append({'scope': 'global', 'local': '192.0.2.7'})
         self.assertEqual(wifi(self.ctx)['reason'], 'dns_unavailable')
-        record = {'ok': True, 'boot_id': 'boot-a', 'address': '192.0.2.7', 'bssid': 'peer1',
+        self.put('/run/y2/wifi-epoch', 'lease-one')
+        record = {'ok': True, 'boot_id': 'boot-a', 'epoch': 'lease-one', 'address': '192.0.2.7', 'bssid': 'peer1',
                   'monotonic_s': time.monotonic()}
         self.put('/run/y2/dns.json', json.dumps(record))
         self.assertEqual(wifi(self.ctx)['state'], 'Online')
