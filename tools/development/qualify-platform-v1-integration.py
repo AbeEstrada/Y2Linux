@@ -34,6 +34,63 @@ LANES = {
     'J': 'Diagnostics privacy, exact notices/source, owner distribution conditions and preserving update/recovery.',
 }
 
+SMOKE_CHECKS = ('wheel', 'display', 'storage', 'audio_playback', 'wifi', 'usb', 'battery')
+SMOKE_PROBE = r'''import json,pathlib,subprocess
+def read(name):
+ try: return pathlib.Path(name).read_text().strip()
+ except OSError: return None
+mounts=[line.split()[:3] for line in (read('/proc/mounts') or '').splitlines()]
+partitions={}
+for device,mount,kind in mounts:
+ if mount not in ('/','/data'): continue
+ node=pathlib.Path(device).resolve()
+ identity=subprocess.run(['blkid','-p','-o','export',str(node)],capture_output=True,text=True,timeout=5)
+ partitions[mount]={'identity':dict(line.split('=',1) for line in identity.stdout.splitlines() if '=' in line),
+  'start':read('/sys/class/block/'+node.name+'/start'),'size':read('/sys/class/block/'+node.name+'/size')}
+states={}
+for path in pathlib.Path('/sys/devices/system/cpu/cpu0/cpuidle').glob('state*'):
+ states[read(str(path/'name'))]={'usage':read(str(path/'usage')),'disable':read(str(path/'disable'))}
+log=subprocess.run(['dmesg'],capture_output=True,text=True,timeout=5)
+app=subprocess.run(['pidof','reborn'],capture_output=True,text=True,timeout=5)
+print(json.dumps({'mounts':mounts,'partitions':partitions,'states':states,'reborn_running':app.returncode==0,
+ 'dmesg_ok':log.returncode==0,'dmesg':log.stdout,'boot_id':read('/proc/sys/kernel/random/boot_id')}))
+'''
+
+
+def check_smoke_probe(probe, boot):
+    if probe.get('boot_id') != boot or probe.get('reborn_running') is not True:
+        raise ValueError('smoke boot/application failure')
+    if probe.get('dmesg_ok') is not True or re.search(
+            r'Kernel panic|BUG:|Oops:|Unable to handle kernel', probe.get('dmesg', '')):
+        raise ValueError('smoke kernel log failure')
+    mounts = {row[1]: row for row in probe.get('mounts', []) if len(row) == 3}
+    if any(name not in mounts or mounts[name][2] != 'ext4' for name in ('/', '/data')):
+        raise ValueError('smoke expected root/data mounts missing')
+    # Match the established geometry/UUID, independently of enumeration names.
+    for mount, label, uuid, start, size in (
+            ('/', 'Y2ROOT', '79324c69-6e75-4801-8000-000000000101', 0x5180000, 0x33400000),
+            ('/data', 'Y2DATA', '79324c69-6e75-4801-8000-000000000102', 0x40380000, 0x32000000)):
+        part = probe.get('partitions', {}).get(mount, {})
+        identity = part.get('identity', {})
+        if (part.get('start') != str(start // 512) or part.get('size') != str(size // 512)
+                or any(identity.get(key) != value for key, value in
+                       (('LABEL', label), ('UUID', uuid), ('TYPE', 'ext4')))):
+            raise ValueError('smoke unexpected partition identity/geometry')
+    states = probe.get('states', {})
+    if not {'WFI', 'SLIDLE', 'DORMANT'}.issubset(states):
+        raise ValueError('smoke C1/C2/C3 unavailable')
+    if any(states[name].get('disable') != '0' for name in ('WFI', 'SLIDLE', 'DORMANT')):
+        raise ValueError('smoke idle boot policy disabled; inspect qualification guards')
+    return True
+
+
+def check_smoke_owner(evidence, expected, boot):
+    if evidence.get('expected') != expected or evidence.get('boot') != boot:
+        raise ValueError('smoke owner receipt must match exact installed pair and boot')
+    if any(evidence.get('checks', {}).get(name) is not True for name in SMOKE_CHECKS):
+        raise ValueError('smoke owner observation missing or failed')
+    return True
+
 
 def expected_identity(manifest):
     result = {k: manifest.get(k) for k in ('build_git_commit', 'reborn_source_commit',
@@ -156,12 +213,18 @@ class Campaign:
 
     def run(self):
         self.observe('baseline')
+        self.smoke()
         if self.args.cpu:
             self.child('cpu-idle', [ROOT / 'tools/development/qualify-cpu-idle-completion.py',
                 '--run', '--package', self.args.package, '--ssh-config', self.args.ssh_config,
                 '--host', self.args.host, '--wifi-host', self.args.wifi_host,
                 '--enable-qualified-runtime',
                 '--output', self.args.output / 'cpu-idle'])
+        if self.args.smoke_only:
+            self.observe('smoke-final')
+            return
+        if not self.args.cpu and (self.args.usb or self.args.suspend_stage):
+            raise ValueError('broader campaign requires the guarded C1/C2/C3 smoke lane')
         if self.args.usb:
             for volume in self.args.volumes:
                 argv = [ROOT / 'tools/usb/qualify.py', '--run', '--package', self.args.package,
@@ -180,14 +243,33 @@ class Campaign:
                     '--device-lock-fd', str(self.lease.fileno()),
                     '--output', self.args.output / 'suspend']
             if self.args.suspend_stage == 'none':
-                argv.extend(['--alarm-seconds', '30', '--wake-source', 'rtc'])
+                argv.extend(['--alarm-seconds', '30', '--wake-source', self.args.wake_source])
             self.child('suspend', argv)
         self.observe('final')
+
+    def smoke(self):
+        probe = self.read(['python3', '-c', SMOKE_PROBE])
+        (self.args.output / 'smoke-probe.json').write_text(json.dumps(probe, indent=2) + '\n')
+        check_smoke_probe(probe, self.boot)
+        if self.args.smoke_evidence:
+            evidence = json.loads(self.args.smoke_evidence.read_text())
+        else:
+            evidence = {'expected': self.expected, 'boot': self.boot, 'checks': {}}
+            print('Short smoke gate: turn the wheel, inspect display/storage/battery, play and stop a local track, verify Wi-Fi and USB. Leave playback stopped for CPU tests.', flush=True)
+            for name in SMOKE_CHECKS:
+                evidence['checks'][name] = input(name + ' observed working? [yes/no] ').strip().lower() == 'yes'
+        path = self.args.output / 'smoke-owner.json'
+        path.write_text(json.dumps(evidence, indent=2) + '\n')
+        check_smoke_owner(evidence, self.expected, self.boot)
+        self.observe('smoke-owner-complete')
+        self.results.append({'lane': 'short-smoke', 'state': 'PASS',
+                             'scope': 'boot/app/mount/policy and explicit owner observations; actual C-state entries require cpu-idle receipt'})
+        self.save()
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--package', type=Path, default=ROOT / 'out/y2linux-platform-v1-integration-candidate')
+    parser.add_argument('--package', type=Path, default=Path('/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-baseline-candidate'))
     parser.add_argument('--output', type=Path, default=ROOT / 'out/platform-v1-physical' /
                         datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'))
     parser.add_argument('--run', action='store_true')
@@ -195,12 +277,15 @@ def main():
     parser.add_argument('--host', default='y2')
     parser.add_argument('--wifi-host')
     parser.add_argument('--cpu', action='store_true')
+    parser.add_argument('--smoke-only', action='store_true', help='short gate plus selected CPU lane; no transfers or system suspend')
+    parser.add_argument('--smoke-evidence', type=Path, help='owner observations bound to this exact pair and boot; otherwise prompt')
     parser.add_argument('--usb', choices=['sftp', 'mtp'])
     parser.add_argument('--volumes', choices=['internal', 'sd'], nargs='+', default=['internal'])
     parser.add_argument('--mtp-uri')
     parser.add_argument('--suspend-stage', choices=['inspect', 'freezer', 'devices', 'platform',
                                                   'processors', 'core', 'none'])
     parser.add_argument('--suspend-host')
+    parser.add_argument('--wake-source', choices=['rtc', 'power'], default='rtc', help='independent full wake test; one attempt per invocation')
     parser.add_argument('--key', type=Path, default=Path.home() / '.ssh/y2linux_ed25519')
     args = parser.parse_args()
     args.package, args.output = args.package.resolve(), args.output.resolve()
@@ -216,14 +301,16 @@ def main():
     if args.usb == 'mtp' and (not args.mtp_uri or len(args.volumes) != 1):
         parser.error('MTP requires one matching volume and its standard file-manager --mtp-uri')
     if args.suspend_stage == 'none' and (not args.cpu or not args.wifi_host):
-        parser.error('one-shot full RTC requires fresh awake CPU lane and independent Wi-Fi observation')
+        parser.error('one-shot full wake requires fresh awake CPU lane and independent Wi-Fi observation')
+    if args.smoke_only and (args.usb or args.suspend_stage):
+        parser.error('--smoke-only excludes transfer and suspend actions')
     os.umask(0o077)
     try:
         with open_lease() as lease:
             campaign = Campaign(args, lease)
             try:
                 campaign.run()
-            except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as error:
+            except (OSError, ValueError, RuntimeError, EOFError, subprocess.TimeoutExpired) as error:
                 campaign.results.append({'lane': 'campaign', 'state': 'STOPPED', 'reason': str(error)})
                 campaign.save()
                 print('STOPPED; inspect campaign.json; no mutating launch is retried')

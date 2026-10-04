@@ -19,6 +19,59 @@ spec.loader.exec_module(h)
 
 
 class Coordinator(unittest.TestCase):
+    def test_smoke_rejects_kernel_failure_disabled_idle_and_wrong_partition(self):
+        sample = {'boot_id': 'one', 'reborn_running': True, 'dmesg_ok': True, 'dmesg': '',
+                  'mounts': [['/dev/root', '/', 'ext4'], ['/dev/data', '/data', 'ext4']],
+                  'partitions': {},
+                  'states': {name: {'usage': '0', 'disable': '0'} for name in ('WFI', 'SLIDLE', 'DORMANT')}}
+        for mount, label, suffix, start, size in (
+                ('/', 'Y2ROOT', '101', 0x5180000, 0x33400000),
+                ('/data', 'Y2DATA', '102', 0x40380000, 0x32000000)):
+            sample['partitions'][mount] = {'identity': {'LABEL': label, 'UUID': '79324c69-6e75-4801-8000-000000000' + suffix, 'TYPE': 'ext4'},
+                                           'start': str(start // 512), 'size': str(size // 512)}
+        self.assertTrue(h.check_smoke_probe(sample, 'one'))
+        sample['dmesg'] = 'BUG: failed resume'
+        with self.assertRaisesRegex(ValueError, 'kernel log'):
+            h.check_smoke_probe(sample, 'one')
+        sample['dmesg'] = ''
+        sample['states']['DORMANT']['disable'] = '1'
+        with self.assertRaisesRegex(ValueError, 'policy disabled'):
+            h.check_smoke_probe(sample, 'one')
+        sample['states']['DORMANT']['disable'] = '0'
+        sample['partitions']['/data']['identity']['UUID'] = 'wrong'
+        with self.assertRaisesRegex(ValueError, 'partition identity'):
+            h.check_smoke_probe(sample, 'one')
+
+    def test_smoke_owner_cannot_reuse_old_boot_or_omit_listening(self):
+        expected = {'linux': 'a' * 40}
+        receipt = {'expected': expected, 'boot': 'one', 'checks': dict.fromkeys(h.SMOKE_CHECKS, True)}
+        self.assertTrue(h.check_smoke_owner(receipt, expected, 'one'))
+        with self.assertRaisesRegex(ValueError, 'exact installed'):
+            h.check_smoke_owner(receipt, expected, 'two')
+        receipt['checks']['audio_playback'] = False
+        with self.assertRaisesRegex(ValueError, 'missing or failed'):
+            h.check_smoke_owner(receipt, expected, 'one')
+
+    def test_smoke_failure_prevents_mutating_children(self):
+        campaign = object.__new__(h.Campaign)
+        campaign.args = argparse.Namespace(cpu=True)
+        with patch.object(campaign, 'observe'), patch.object(campaign, 'smoke', side_effect=ValueError('failed')):
+            with patch.object(campaign, 'child') as child:
+                with self.assertRaises(ValueError):
+                    campaign.run()
+                child.assert_not_called()
+
+    def test_full_power_wake_is_selected_independently_from_rtc(self):
+        campaign = object.__new__(h.Campaign)
+        campaign.args = argparse.Namespace(cpu=True, smoke_only=False, usb=None, suspend_stage='none',
+            package=Path('package'), ssh_config=Path('config'), host='usb', wifi_host='wifi',
+            output=Path('output'), suspend_host=None, key=Path('key'), wake_source='power')
+        campaign.lease = None
+        with patch.object(campaign, 'observe'), patch.object(campaign, 'smoke'), patch.object(campaign, 'child') as child:
+            campaign.run()
+            argv = child.call_args_list[-1].args[1]
+            self.assertEqual(argv[argv.index('--wake-source') + 1], 'power')
+
     def test_nonblocking_lease_inheritance_preserves_parent_and_rejects_wrong_inode(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'device.lock'

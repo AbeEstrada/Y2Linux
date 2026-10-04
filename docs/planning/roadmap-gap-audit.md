@@ -1,5 +1,33 @@
 # Roadmap gap audit
 
+## Independent baseline finalization admission — 2026-10-04
+
+Owner authorizes verification/reconciliation, fresh build/software qualification
+and one preserving owner-local baseline. No device access, flash, main merge,
+push or public release. Standing audit repeated before finalization/production
+identity change, using retained real hardware evidence. All eleven paired merge
+bases equal Linux b5aea937/Reborn b71b4688. Master compiled4c72466/dd73dcc;
+later tips are documentation-only. Owner dirt and all histories are preserved.
+
+| Coverage / existing issues | Evidence classification / next smallest boundary |
+| --- | --- |
+| CPU/idle/timers/hotplug/DVFS/PWRAP; #28/#30 | CONFIRMED UART01 e9e8d63/b71 sameboot/taint0: C1 working,C2 84.3473%,C3 65.2450%,3647 reset/resumes,restore faults0.16source files and3idle functions byte-compared with physical source. Integrated cold boot/idle PARTIAL. Preserve qualified once-per-boot CPU0 policy/dynamic guards. |
+| Full suspend; #28/#30/#32 | PARTIAL. Baseline02 RTC FAIL: boot27→88 watchdog recovery,DEVICES_RESUMING/wake0x20/PCM596/reset59325253,unmatched CS43131 resume entry7407. New rollback repair/substep notes are not a demonstrated RTC-stall fix. Power/RTC independently NOT_RUN on new source. |
+| Storage/USB; #27/#33 | CONFIRMED bounded old modes/hashes/1k scans; selected source has sole Linux filesystem writer. Integrated MTP/replacement/endurance PARTIAL. |
+| Radios/audio/media/library; #29/#31/#32/#33 | CONFIRMED software/scoped old metrics; changed BT/peer/coexistence/wider AFE PARTIAL/UNKNOWN. Native S16 stereo44.1/48 only;50k DB measured,250k ceiling unqualified. |
+| GPU/input/performance; #28/#34 | CONFIRMED temporary binary/JPEG scope; integrated counted controls/renderer PARTIAL. Preserve scanout/runtimePM. |
+| Battery/charging/recovery; #16/#27/#28/#32 | PARTIAL. Safeguards retained; electrical/battery-life/overnight/current-image recovery NOT_RUN. Residency is not battery gain. |
+| Distribution/source/notices; #16/#32/#33 | PARTIAL. Firmware/codec permissions and collector/toolchain/local-package limitations unresolved. Owner-local qualification proceeds separately. |
+
+All233feature IDs/layout/OPPs/memory/protectedDATA/calibration scope stays fixed.
+C01–C34 source dispositions checked against blobs/diffs/contracts. Final identity
+and smoke-gated single coordinator with separate Power/RTC are needed. Retained
+issue snapshot: #16/#27/#28/#29/#31/#32/#33/#34 OPEN; #30 historical CLOSED,
+never full-sleep acceptance. No issue/milestone changed or closed. Next: fresh
+independent build/package/software, then owner flash and exact-image hardware.
+Finalization PARTIALLY_READY; no integrated physical promotion.
+
+
 ## Platform 1.0 software exit / physical qualification preparation — 2026-10-04
 
 Repeated standing milestone-boundary audit at 2026-10-04T16:54:14.264292+00:00, before crossing the
