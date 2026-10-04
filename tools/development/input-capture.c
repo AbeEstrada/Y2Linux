@@ -6,12 +6,21 @@
 #include <inttypes.h>
 #include <linux/input.h>
 #include <poll.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <time.h>
 #include <unistd.h>
+
+static volatile sig_atomic_t stopped;
+
+static void stop_capture(int signal)
+{
+    (void)signal;
+    stopped = 1;
+}
 
 static uint64_t mono_us(void)
 {
@@ -25,6 +34,11 @@ int main(int argc, char **argv)
     char *end = NULL;
     long seconds = argc == 2 ? strtol(argv[1], &end, 10) : 0;
     if (!end || *end || seconds < 1 || seconds > 600) return 2;
+    setvbuf(stdout, NULL, _IOLBF, 0);
+    struct sigaction stop_action = {.sa_handler = stop_capture};
+    sigemptyset(&stop_action.sa_mask);
+    if (sigaction(SIGINT, &stop_action, NULL) || sigaction(SIGTERM, &stop_action, NULL))
+        return 2;
     struct pollfd fds[32];
     int numbers[32], clocks[32], count = 0;
     for (int n = 0; n < 32; ++n) {
@@ -46,12 +60,11 @@ int main(int argc, char **argv)
                clocks[count-1] ? "true" : "false");
     }
     if (!count) return 3;
-    setvbuf(stdout, NULL, _IOLBF, 0);
     uint64_t start = mono_us(), stop = start + (uint64_t)seconds * 1000000;
     unsigned records = 0;
     int failure = 0;
     printf("{\"capture_start_us\":%" PRIu64 ",\"seconds\":%ld}\n", start, seconds);
-    while (mono_us() < stop && records < 8192 && !failure) {
+    while (!stopped && mono_us() < stop && records < 8192 && !failure) {
         uint64_t remaining = stop - mono_us();
         if (remaining > (uint64_t)seconds * 1000000) break;
         int ready = poll(fds, (nfds_t)count, (int)((remaining + 999) / 1000));

@@ -2,16 +2,19 @@
 
 ## Platform 1.0 input software candidate — 2026-10-04
 
-Reborn `a701e0b` / Linux input tooling `99087ba`: source and software checks
-complete (256 workspace tests,36 input/40 UI, fmt/strict Clippy/ARM,5 Linux
+Reborn `e51a335` / Linux input tooling `99087ba`: source and software checks
+complete (257 workspace tests,37 input/40 UI, fmt/strict Clippy/ARM,5 Linux
 input cases). Userspace candidate `out/platform-v1-input-candidate/` is sealed;
 kernel/DT/images unchanged. [Boundary review](roadmap-gap-audit.md#platform-10-input-software-candidate-boundary--2026-10-04).
 
 Retained218 physical wheel pairs have no same-direction gaps below8ms;
 keep existing wheel filtering and acceleration. Current100CW/100CCW accuracy,
-20/button, input->frame and idle/owner feel remain pending the shared lock.
-The owner requests continued waiting for the other measurement. No device
-access, flash, push or physical milestone closure; #28/#34 remain OPEN.
+20/button, input->frame and owner feel remain pending a coordinated window.
+One read-only Baseline02 window (boot27e6d684, taint0) recorded zero events;
+owner replied after it ended. Idle wheel/I2C0/Power/keypad IRQ deltas all0;
+current four-core topology rejected C2/C3. CPU policy and installed binary
+unchanged, temporary helper removed, lock released for storage. No flash,
+push or physical milestone closure; #28/#34 remain OPEN.
 [Full input receipt](../validation/Y2-PLATFORM-V1-INPUT.md).
 
 ## Platform 1.0 input pass — 2026-10-04

@@ -2,13 +2,18 @@
 
 ## Platform 1.0 input software candidate boundary — 2026-10-04
 
-The admitted input-only source pass is software complete: Reborn `a701e0b`,
-Linux tooling `99087ba` (kernel/DT unchanged), 256 workspace tests including
-36 input and40 UI tests, fmt/strict Clippy, ARM Cortex-A7 release build and
+The admitted input-only source pass is software complete: Reborn `e51a335`,
+Linux tooling `99087ba` (kernel/DT unchanged), 257 workspace tests including
+37 input and40 UI tests, fmt/strict Clippy, ARM Cortex-A7 release build and
 5 targeted Linux input tests pass. The userspace candidate is sealed under
 `out/platform-v1-input-candidate/`; no BOOTIMG/Y2ROOT image, flash or push.
-The owner explicitly requests continued waiting for the busy device lock;
-no live-device access has occurred. This is not physical pass closure.
+After owner-requested waiting, the lock admitted one bounded read-only window.
+Baseline02 boot `27e6d684-3794-4490-95db-a489027cd4f4`, compiled Linux `8584ccd8` /
+Reborn `b71b468`, taint0: 120.289s with zero evdev records (owner replied after
+capture); subsequent wheel/I2C0/Power/keypad IRQ deltas all0. Current four-core
+topology rejected dormant entry; C2/C3 counts0. No policy or installed binary
+changed. Helper removed and lock released for storage. This is not physical
+acceptance or cold-boot/CPU qualification.
 
 Fresh analysis of retained physical DEV02/GPU01 raw records finds218 wheel
 press/release pairs; zero same-direction gaps <8ms; minimum active gap30.957ms.
@@ -21,7 +26,7 @@ hardware authority; no CPU/radio/poll policy or full-suspend subsystem change.
 | APT32F/I2C/evdev, #28 | CONFIRMED retained pulse behavior; PARTIAL counted/current behavior |100CW+100CCW counted detents and button counts |
 | Reborn timing/recovery, #28 | CONFIRMED deterministic software; PARTIAL physical | Candidate holds/rebind/drop/wake and human feel |
 | Input->state/frame, #34 | PARTIAL | New bounded microsecond trace on candidate; physical median/p95/worst pending |
-| Input idle/C1/C2/C3, #28 | CONFIRMED retained whole-system scope; PARTIAL new input measurement | Observe idle IRQs/timers/CPU under lock;20ms navigation polling retained limitation |
+| Input idle/C1/C2/C3, #28 | CONFIRMED retained whole-system scope; PARTIAL new input measurement | Zero idle wheel/I2C0/Power/keypad IRQ delta observed; per-process timers/candidate C2/C3 pending;20ms navigation poll retained |
 | Power/full suspend, #28 | PARTIAL | Typed gesture/reset contract provided; platform-owned full wake qualification |
 | Product v2 controls | CONFIRMED software invariants; PARTIAL physical UX | Screen/list/volume listening and owner acceptance |
 

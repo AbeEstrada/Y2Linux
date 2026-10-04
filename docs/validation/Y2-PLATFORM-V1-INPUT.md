@@ -9,24 +9,35 @@ No flash, push, unrelated merge, identity change or main-worktree write.
 
 Linux base `b5aea93`; input tools/admission `99087bac96728d1b61ee92828d8d56608f5cc27d`.
 Reborn base `b71b468`; fixed candidate
-`a701e0b866293c7e2bdfab95545081a8e363c074`.
+`e51a335` (timing/recovery `a701e0b`, malformed-key cancellation `e51a335`).
 Kernel/DT/CPU/I2C drivers and production packaging are unchanged.
 Candidate: `out/platform-v1-input-candidate/`, build
 `Y2-INPUT-V1-CANDIDATE-01`. It contains ARM userspace binaries and a manifest,
 **not BOOTIMG/Y2ROOT images**. It has not been installed or physically qualified.
 
-The nonblocking `/tmp/y2-platform-v1-device.lock` has been occupied by other
-sessions. No live-device command, mount, service stop or hardware mutation has
-occurred in this pass. Current counted physical tests and input-to-frame latency
-must not be inferred from software tests or historical logs. The owner has
-agreed to perform counted tests when a capture window becomes available.
+After the owner requested continued waiting for other measurements, this pass
+obtained the nonblocking `/tmp/y2-platform-v1-device.lock`. Read-only inventory
+identified Baseline02 Linux `8584ccd85f052f351fe51650b2348c83ca894ed4`, Reborn
+`b71b468860233faa0a42b8448ec5777fa952b8e3`, kernel
+`6.18.0-y2linux-baseline-02`, root `2025.02.18-platform-v1.21`, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, taint 0. The temporary observer was
+uploaded to `/run`, observed the four named controls without grabbing them,
+and removed before normal lock release. No service stop or hardware mutation
+occurred. Boot, taint and installed Reborn hash were unchanged at release.
 
-Retained hardware authority: UART01 Linux `e9e8d63`, Reborn `b71b468`, kernel
+The first 120.289-second window recorded **zero events**; the owner's readiness
+reply arrived after it ended. This is valid untouched observation, not a
+100-detent test. The owner is now ready; counted tests await a coordinated
+window after other sessions. Current counted accuracy and input-to-frame
+latency must not be inferred from software tests or historical logs.
+[Current observation receipt](evidence/platform-v1-input-live.json).
+
+Retained UART01 hardware authority: Linux `e9e8d63`, Reborn `b71b468`, kernel
 `6.18.0-y2linux-cpu-c3-uart-01`, boot
 `fd955840-35d9-47db-83e0-ff47d6bb2d2b`, taint 0. Bounded C1/C2/C3 gates pass;
-3,647 actual C3 entries/returns/UART ACKs with zero restore failures. Baseline02
-new-image/cold-boot qualification remains PHYSICAL_NOT_RUN. See
-[CPU receipt](Y2-CPU-C3-UART-PHYSICAL.md) and
+3,647 actual C3 entries/returns/UART ACKs with zero restore failures. The new
+read-only Baseline02 identity is not a repeat of its cold-boot/CPU qualification.
+See [CPU receipt](Y2-CPU-C3-UART-PHYSICAL.md) and
 [admission audit](../planning/roadmap-gap-audit.md#platform-10-input-pass-admission--2026-10-04).
 
 ## 1. Complete architecture and authority
@@ -172,22 +183,35 @@ Reborn also retains 15/50 ms main-loop wakeups. Device rescans add at most one
 per second, even when initially absent; they no longer retry sysfs every loop
 when missing. No CPU governor, core-parking, C1/C2/C3 or radio policy was changed.
 
-Current untouched-input IRQ deltas, timer wakeups, context switches and CPU
-usage are **NOT_MEASURED due to the busy device**. Retained whole-system UART01
-C1/C2/C3 working evidence includes the prior input implementation; it supports
-compatibility in that bounded scope, not new-image qualification or electrical
-battery savings. The existing 50 Hz navigation poll is an explicit remaining
-idle limitation. Converting it to interrupts requires validated GPIO/EINT mux,
-IRQ/debounce and wake ownership beyond this handoff provider. No guessed pin
-remux, firmware sleep command, increased poll interval or weakened idle guard.
+The 120.289-second observer recorded zero input records. In the subsequent
+untouched snapshots wheel EINT55, I2C0, PMIC Power and keypad IRQ counts each
+stayed unchanged. Aggregate CPU deltas were user 211, system 86, idle 9,027
+ticks, and 9,174 context switches. The snapshots were not synchronized;
+9,324 aggregate ticks over four CPUs at USER_HZ=100 indicate approximately
+23.31 seconds, not a precise wall-time measurement. Whole-system CPU work and
+context switches cannot be attributed to input alone. CPU0 C1 usage rose 1,290;
+C2/C3 usage stayed zero. All four CPUs remained online and 957 dormant attempts
+were rejected at topology. No governor, parking, radio or suspend setting was
+changed to alter another session's policy. This boot cannot qualify C2/C3
+compatibility for the candidate.
+
+Retained whole-system UART01 C1/C2/C3 working evidence includes the prior input
+implementation; it supports compatibility in that bounded scope, not candidate
+qualification or electrical battery savings. The 50 Hz navigation poll remains
+an explicit idle limitation. Converting it to interrupts requires validated
+GPIO/EINT mux, IRQ/debounce and wake ownership beyond this handoff provider.
+No guessed pin remux, firmware sleep command, increased poll interval or weakened
+idle guard. Per-process input timer/context-switch attribution remains pending.
 
 ## 16–18. Bugs, fixes and rejected optimizations
 
-Four added deterministic tests **failed before fixes**: queued real hold became
+Five added deterministic tests **failed before fixes**: queued real hold became
 short, kernel repeat doubled the local volume authority, dark held transport
 became a short track skip, and a dark-started Power gesture slept an externally
-woken display. They pass after fixes. Additional source/test findings fixed:
+woken display, and malformed EV_KEY values left a held button active. They pass after fixes. Additional source/test findings fixed:
 
+- Malformed EV_KEY values now cancel held state and cadence rather than aging
+  a stale press into a phantom long action or repeat.
 - Rebind identity used changing inputN; failed initial opens/absent devices were
   never revisited. Stable parent identity plus one-second discovery retries.
 - One-read queue handling could leave queued releases behind timer aging. Bounded
@@ -213,14 +237,14 @@ logging/verbose release telemetry; full-suspend implementation; flash/push.
 ## 19–22. Files, tests, commits and candidate
 
 Linux changes: this report, roadmap-gap-audit.md, platform-v1-roadmap.md,
-`docs/validation/evidence/platform-v1-input-retained.json`,
+`docs/validation/evidence/platform-v1-input-{retained,live}.json`,
 `tools/development/input-capture.c`, `tools/development/analyze-input.py`,
 `tests/test_input_capture.py`. Reborn changes:
 `crates/reborn-platform/src/input.rs`, `app/reborn/src/main.rs`,
 `crates/reborn-ui/src/tests.rs`, `docs/architecture/platform-v1-input.md`.
 
 Validation: fmt PASS; clippy workspace/all-targets/locked/-D warnings PASS;
-workspace tests **256 passed**, including **36 input tests** and **40 UI tests**;
+workspace tests **257 passed**, including **37 input tests** and **40 UI tests**;
 ARM release workspace build PASS using retained Baseline02 Buildroot SDK,
 Cortex-A7/NEON/hard-float. Linux input tests **5 passed** (actual APT32F handler
 and GPIO callbacks plus analyzer fault cases). Observer compiles with host
@@ -235,18 +259,20 @@ initial-open/rebind recovery, SYN_DROPPED, full reset, dark navigation/Power,
 wake-batch cadence, bounded diagnostics and visible focus at both ends of
 10/100/1k/10k libraries. Existing screen/back/dialog/empty/Unicode tests preserved.
 
-Commits: Linux `99087ba` (tools/admission); Reborn `a701e0b` (source/tests/contract).
+Commits: Linux `99087ba` (tools/admission), `44f8d9b` (candidate/retained receipt);
+Reborn `a701e0b` (source/tests/contract), `e51a335` (malformed-key guard).
+Current observation/helper/report follow-up is recorded by the next Linux commit.
 Candidate manifest retains exact compiled-source and binary SHA256 values:
 `out/platform-v1-input-candidate/manifest.json`. Reborn binary SHA256
-`d0330570db870826dee319b0b7627507e7c12b1eb079330f4fd4e847bae5a5f8`;
-12,562,796 bytes. Raw software logs and receipt: `out/input-validation/`.
+`783291dc4b41257038d122875543fddf662e0d859e1c29c3fce0ccdaed4fbc64`;
+12,562,892 bytes. Raw software logs and receipt: `out/input-validation/`.
 No rootfs/kernel build is necessary for the unchanged kernel; integration with
 other Platform 1.0 subsystem work remains a separate owner boundary.
 
 ## 23–24. Remaining physical owner test and verdict
 
-Await a free nonblocking shared-device lock. Verify actual installed identity
-and controller inventory first. Upload only the bounded observer to private
+Await the next coordinated nonblocking shared-device lock. Recheck installed
+identity against the first observation and controller inventory. Upload only the bounded observer to private
 `/run` storage, retain records locally and remove it afterwards; never grab
 input devices, flash, probe undocumented I2C or disturb another session.
 
@@ -264,5 +290,5 @@ Device rebind/full resume are separate guarded destructive-to-service tests;
 software cancellation tests do not replace their physical acceptance.
 
 **Provisional verdict: MORE_WORK_REQUIRED.** Coherent implementation and software
-validation are complete; current counted detent/button, actual latency, idle
+validation are complete; current counted detent/button, actual UI latency, candidate deep-idle
 and owner feel evidence remain open. No input or full-system milestone is closed.
