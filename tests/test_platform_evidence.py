@@ -46,10 +46,13 @@ class EvidenceTests(unittest.TestCase):
             subprocess.run(['cc','-Wall','-Wextra','-Werror',str(ROOT/'tools/connectivity/audio-contract.c'),
                             *flags,'-o',str(executable)],check=True)
             result = json.loads(subprocess.check_output([str(executable),'--device','null'],timeout=3))
-            self.assertEqual(len(result['combinations']),12)
+            self.assertEqual(len(result['combinations']),16)
             self.assertTrue(all(c['accepted_constraints'] for c in result['combinations']))
             self.assertFalse(result['physical_qualification'])
             self.assertFalse(result['pcm_started'])
+            self.assertFalse(result['constraint_bits_are_hardware_precision'])
+            self.assertTrue(all(c['meaningful_bits'] is None for c in result['combinations']))
+            self.assertEqual({c['format'] for c in result['combinations']}, {'S16_LE', 'S24_LE', 'S32_LE', 'S24_3LE'})
             self.assertEqual(subprocess.run([str(executable),'--device','default'],capture_output=True).returncode,2)
 
     def test_previous_boot_logs_are_private_bounded_once_only_and_not_reset_diagnosis(self):

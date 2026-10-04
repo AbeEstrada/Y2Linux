@@ -24,3 +24,9 @@ FIELDS |= KERNEL_FIELDS | frozenset('handoff_checks handoff_rejects handoff_coun
 # Wi-Fi observation/policy counters. Peer identifiers and lease epochs remain
 # private; retain only fixed fields, numeric counters and reviewed public enums.
 FIELDS |= frozenset('signal_observation status_query_failures association_active real_disconnects reconnects link_counts_since_s last_event applied requested_driver_profile ifindex rx_bytes tx_bytes rx_packets tx_packets rx_errors tx_errors rx_dropped tx_dropped rx_crc_errors rx_frame_errors rx_fifo_errors rx_length_errors rx_missed_errors rx_over_errors tx_aborted_errors tx_carrier_errors tx_fifo_errors tx_heartbeat_errors tx_window_errors collisions multicast'.split())
+FIELDS |= frozenset("pcm_contract evidence physical_bit_capture hardware_max_meaningful_bits supported_modes alsa_format container_bits meaningful_bits channels dma_format dl1_format afe_format afe_interconnect_physical_bits i2s_slot_bits i2s_payload_bits dac_input_word_bits rates_hz configured running rate_hz".split())
+
+# Integration: additive USB/sleep observation keys; never dynamic names/paths.
+FIELDS |= frozenset('file_transfer filesystem_owner block_export refresh_generation active views access cable restarts'.split())
+KERNEL_FIELDS |= frozenset('suspend_restore_failures'.split())
+FIELDS |= KERNEL_FIELDS

@@ -56,7 +56,7 @@ audio_command=['bwrap','--unshare-all','--uid','0','--gid','0','--ro-bind',str(t
                '--ro-bind',str(qemu),'/run/qemu','--setenv','ALSA_CONFIG_PATH','/usr/share/alsa/alsa.conf',
                '--','/run/qemu','-cpu','cortex-a7','/usr/sbin/y2-audio-contract','--device','null']
 audio=json.loads(subprocess.check_output(audio_command,text=True,timeout=15))
-assert len(audio['combinations']) == 12 and all(v['accepted_constraints'] for v in audio['combinations'])
+assert len(audio['combinations']) == 16 and all(v['accepted_constraints'] for v in audio['combinations'])
 assert not audio['physical_qualification'] and not audio['pcm_started']
 defaults = json.loads(run('usr/bin/reborn', ['--default-settings']).stdout)
 assert defaults['session_schema'] == 2 and 'volume' in defaults['settings']

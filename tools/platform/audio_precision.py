@@ -2,7 +2,7 @@
 """Create offline bit/channel fixtures; never configure a sink or play audio.
 
 Packed 24-bit WAV -> FFmpeg S32 left-aligned reference, plus ALSA S24_LE
-24-in-32 sign-extended memory words. Captured I2S words must be compared with
+24-in-32 sign-extended reference words. Captured I2S words must be compared with
 these references only after the direct hardware path supports that format.
 """
 # SPDX-License-Identifier: GPL-2.0-only
@@ -15,16 +15,22 @@ from pathlib import Path
 import struct
 import wave
 
-PATTERN = (0,1,-1,127,-127,255,-255,256,-256,257,-257,1023,-1023,32767,-32768,0)
+PATTERN = (0,1,-1,127,-127,255,-255,256,-256,257,-257,1023,-1023,32767,-32768,0,
+           0x234500,0x234501,0x23457f,0x234580,0x2345ff,
+           -0x234600,-0x2345ff,-0x234581,-0x234580,-0x234501)
+PATTERN32 = (0x23450001,0x23450002,0x2345007f,0x23450080,0x234500ff,
+             -0x23450100,-0x234500ff,-0x23450081,-0x23450080,-0x23450001)
 
 
 def generate(directory, frames=4096):
     directory=Path(directory)
     directory.mkdir(parents=True,exist_ok=False)
-    words=[]; packed=bytearray(); s24=bytearray(); s32=bytearray()
+    words=[]; packed=bytearray(); s24=bytearray(); s32=bytearray(); full32=bytearray()
     for index in range(frames):
         left=PATTERN[index%len(PATTERN)]
         right=PATTERN[(index+5)%len(PATTERN)]
+        for value in (PATTERN32[index%len(PATTERN32)], PATTERN32[(index+3)%len(PATTERN32)]):
+            full32.extend(struct.pack('<i',value))
         for value in (left,right):
             packed.extend((value & 0xffffff).to_bytes(3,'little'))
             s24.extend(struct.pack('<i',value))
@@ -33,15 +39,20 @@ def generate(directory, frames=4096):
             words.append([index,left,right,f'{(left<<8)&0xffffffff:08x}',f'{(right<<8)&0xffffffff:08x}'])
     (directory/'reference-s24le.raw').write_bytes(s24)
     (directory/'reference-s32le.raw').write_bytes(s32)
+    (directory/'reference-full-s32le.raw').write_bytes(full32)
     for rate in (44100,48000,88200,96000):
         with wave.open(str(directory/f'precision-s24-{rate}.wav'),'wb') as stream:
             stream.setparams((2,3,rate,frames,'NONE','not compressed'));stream.writeframes(packed)
+    for rate in (44100,48000):
+        with wave.open(str(directory/f'precision-s32-{rate}.wav'),'wb') as stream:
+            stream.setparams((2,4,rate,frames,'NONE','not compressed'));stream.writeframes(full32)
     with (directory/'expected-words.csv').open('w',newline='') as stream:
         writer=csv.writer(stream);writer.writerow(['frame','left_s24','right_s24','left_s32_hex','right_s32_hex']);writer.writerows(words)
     result={'schema':'org.y2linux.audio-precision-fixture/v1','evidence_level':'IMPLEMENTED',
-            'frames':frames,'channels':2,'peak_source_s24':32768,'source_valid_bits':24,
+            'frames':frames,'channels':2,'peak_source_s24':max(abs(value) for value in PATTERN),'source_valid_bits':24,
             's24le':'ALSA 24 valid low bits in 32-bit signed container',
             's32le':'24 valid high bits; source multiplied by 256; low eight bits zero',
+            'full_s32le':'independent 32-bit source fixture, with meaningful low bits; current FLTP cannot preserve all of them',
             'meaning':'Nonzero source bits below bit 8 detect a hidden S16 truncation; file proof is not hardware proof',
             'physical_playback':False,'hardware_formats_or_rates_enabled':False,'files':{}}
     for file in sorted(directory.iterdir()):

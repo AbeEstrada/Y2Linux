@@ -11,6 +11,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools/platform'))
 from y2_platform.network import EventMonitor
 from y2_platform.service import SignalWake
+from y2_platform.diagnostics import project
 
 
 class ReadinessWake(unittest.TestCase):
@@ -59,3 +60,45 @@ class ReadinessWake(unittest.TestCase):
             wake.close()
             monitor.close()
             sender.close()
+
+
+class DiagnosticContracts(unittest.TestCase):
+    def test_shared_public_observations_survive_without_private_values(self):
+        private = 'private-control-secret'
+        raw = {
+            'bluetooth': {'devices': [{'bonded': True, 'paired': False, 'trusted': True,
+                                      'address': private, 'name': private}]},
+            'wifi': {'state': 'Online', 'status_query_failures': 3,
+                     'signal_observation': {'ok': False, 'reason': 'command_timeout', 'bssid': private}},
+            'system': {'usb': {'file_transfer': {
+                'schema': 'org.y2linux.usb-transfer/v1', 'state': 'Copying',
+                'mode': 'mtp', 'filesystem_owner': 'linux', 'block_export': False,
+                'active': True, 'refresh_generation': 23,
+                'views': [{'name': 'SD Card', 'access': 'rw', 'path': private, 'cid': private}]}}},
+            'sleep': {'state': 'waking', 'same_boot': True},
+            'audio': {'pcm_contract': {'evidence': 'driver_contract',
+                      'physical_bit_capture': False, 'hardware_max_meaningful_bits': None,
+                      'supported_modes': [{'meaningful_bits': 16, 'i2s_slot_bits': 32}]}},
+            'spm': 'suspend_restore_failures=0 private=secret',
+        }
+        result = project(raw)
+        self.assertTrue(result['bluetooth']['devices'][0]['bonded'])
+        self.assertEqual(result['wifi']['signal_observation']['reason'], 'command_timeout')
+        usb = result['system']['usb']['file_transfer']
+        self.assertEqual(usb['schema'], 'org.y2linux.usb-transfer/v1')
+        self.assertEqual(usb['refresh_generation'], 23)
+        self.assertTrue(usb['active'])
+        self.assertEqual(usb['views'][0]['name'], 'SD Card')
+        self.assertEqual(result['sleep']['state'], 'waking')
+        self.assertFalse(result['audio']['pcm_contract']['physical_bit_capture'])
+        self.assertEqual(result['spm']['suspend_restore_failures'], '0')
+        import json
+        self.assertNotIn(private, json.dumps(result))
+
+    def test_bond_records_and_unknown_strings_remain_private(self):
+        for value in ('private-secret', {'link_key': 'private-secret'}, [True], 1):
+            self.assertEqual(project({'bonded': value})['bonded'], '[redacted]')
+        for value in (False, True):
+            self.assertIs(project({'bonded': value})['bonded'], value)
+        self.assertEqual(project({'file_transfer': {'mode': 'private-secret'}})
+                         ['file_transfer']['mode'], '[redacted]')

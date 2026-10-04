@@ -52,6 +52,13 @@ PUBLIC_WORDS |= frozenset(('Off Starting Scanning Associating AcquiringIP Authen
     'authentication_rejected ap_unavailable authentication_timeout '
     'command_timeout command_unavailable command_output_limit command_failed '
     'power_save_readback_unavailable').split())
+PUBLIC_WORDS |= frozenset(("driver_contract", "interleaved_s16_le", "s16_stereo", "I05_I06_to_O00_O01_s16"))
+PUBLIC_WORDS |= frozenset(('org.y2linux.usb-transfer/v1', 'org.y2linux.pcm-contract/v1',
+    'org.y2linux.sleep/v1', 'Copying', 'Developer', 'Disconnected', 'Enabled',
+    'mtp', 'developer', 'linux', 'ro', 'rw', 'Internal Storage', 'SD Card',
+    'ffs.mtp', 'ecm.usb0', 'acm.GS0', 'not attached', 'powered', 'default',
+    'addressed', 'configured', 'suspended', 'sleep_requested', 'sleep_preparing',
+    'sleep_refused', 'preparing', 'waking'))
 PRIVATE_KEYS = re.compile(r'(password|passphrase|secret|credential|ssid|bssid|address|mac$|cid$|serial|calibration|nvram|bond|link.?key|identity|filename|track|title|artist|album|path|cmdline)', re.I)
 IDENTITY_KEYS = frozenset(('build_git_commit', 'reborn_source_commit', 'y2linux_commit', 'reborn_commit', 'sha256'))
 VERSION_KEYS = frozenset(('kernel_version', 'kernel', 'rootfs_version', 'rootfs_release', 'release_version', 'reborn_version', 'build_id'))
@@ -66,6 +73,9 @@ def project(value, key='', depth=0):
     """Keep counters and known public enums; discard unknown strings and keys."""
     if depth > 16:
         return '[depth-limit]'
+    # A public bonding fact is a boolean, never a bond record/key/string.
+    if key == 'bonded' and type(value) is bool:
+        return value
     if PRIVATE_KEYS.search(key):
         return '[redacted]'
     if value is None or type(value) in (bool, int):
