@@ -42,6 +42,16 @@ PUBLIC_WORDS |= frozenset(('idle requested refused sleeping restoring restored r
     'PLATFORM_ENTER TEST_RETURN SELFTEST_A SELFTEST_B BACKSTOP_STARTED EXIT DEVICES_RESUMED '
     'CONSOLE_RESUMED PLATFORM_ENDED TASKS_THAWED FILESYSTEMS_THAWED POST_SUSPEND_NOTIFIED '
     'CONSOLE_RESTORED').split())
+# Fixed Wi-Fi states/reasons; arbitrary supplicant strings stay private.
+PUBLIC_WORDS |= frozenset(('Off Starting Scanning Associating AcquiringIP Authenticated Online '
+    'COMPLETED DISCONNECTED SCANNING ASSOCIATING ASSOCIATED AUTHENTICATING '
+    '4WAY_HANDSHAKE GROUP_HANDSHAKE INACTIVE INTERFACE_DISABLED CONNECTED SERVICE_RESTART '
+    'off automatic CAM FAST_PSP radio_off supplicant_unavailable not_authenticated '
+    'no_address no_default_route dns_unavailable dhcp_timeout dhcp_nak '
+    'lease_configuration_failed wrong_credentials authentication_failed '
+    'authentication_rejected ap_unavailable authentication_timeout '
+    'command_timeout command_unavailable command_output_limit command_failed '
+    'power_save_readback_unavailable').split())
 PRIVATE_KEYS = re.compile(r'(password|passphrase|secret|credential|ssid|bssid|address|mac$|cid$|serial|calibration|nvram|bond|link.?key|identity|filename|track|title|artist|album|path|cmdline)', re.I)
 IDENTITY_KEYS = frozenset(('build_git_commit', 'reborn_source_commit', 'y2linux_commit', 'reborn_commit', 'sha256'))
 VERSION_KEYS = frozenset(('kernel_version', 'kernel', 'rootfs_version', 'rootfs_release', 'release_version', 'reborn_version', 'build_id'))

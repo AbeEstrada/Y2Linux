@@ -59,6 +59,39 @@ class Diagnostics(unittest.TestCase):
         self.assertNotIn('AA:BB:CC:DD:EE:FF',json.dumps(result))
         self.assertNotIn('Private peer',json.dumps(result))
 
+    def test_wifi_observations_survive_without_peer_or_lease_identifiers(self):
+        peer = 'AA:BB:CC:DD:EE:FF'
+        raw = {'wifi': {'state': 'Online', 'association': 'COMPLETED',
+               'association_id': peer, 'ip_addresses': ['192.0.2.2'],
+               'status_query_failures': 3, 'rssi_dbm': -52,
+               'signal_observation': {'monotonic_s': 100.0, 'ok': False,
+                                      'reason': 'command_timeout', 'bssid': peer},
+               'events': {'real_disconnects': 1, 'reconnects': 2,
+                          'association_active': True, 'last_event': 'CONNECTED',
+                          'link_counts_since_s': 90.0},
+               'power_save': {'mode': 'automatic', 'requested_driver_profile': 'CAM',
+                              'applied': False, 'ifindex': '4', 'epoch': 'private-lease'},
+               'traffic_counters': {'rx_errors': 0, 'tx_packets': 100}}}
+        result = d.project(raw)['wifi']
+        self.assertEqual(result['state'], 'Online')
+        self.assertEqual(result['association'], 'COMPLETED')
+        self.assertEqual(result['status_query_failures'], 3)
+        self.assertEqual(result['signal_observation']['reason'], 'command_timeout')
+        self.assertEqual(result['signal_observation']['monotonic_s'], 100.0)
+        self.assertEqual(result['events']['real_disconnects'], 1)
+        self.assertEqual(result['events']['reconnects'], 2)
+        self.assertTrue(result['events']['association_active'])
+        self.assertEqual(result['power_save']['requested_driver_profile'], 'CAM')
+        self.assertFalse(result['power_save']['applied'])
+        self.assertEqual(result['traffic_counters']['rx_errors'], 0)
+        self.assertNotIn(peer, json.dumps(result))
+        self.assertNotIn('192.0.2.2', json.dumps(result))
+        self.assertNotIn('private-lease', json.dumps(result))
+        for key in ('state', 'reason', 'requested_driver_profile', 'status_query_failures'):
+            self.assertEqual(d.project({key: 'Private peer'})[key], '[redacted]')
+        self.assertEqual(d.project({'power_save': {'requested_driver_profile': 'FAST_PSP'}})
+                         ['power_save']['requested_driver_profile'], 'FAST_PSP')
+
     def test_archive_is_private_projected_and_mount_bound(self):
         with tempfile.TemporaryDirectory() as root:
             ctx = Context(root)
