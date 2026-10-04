@@ -1,5 +1,137 @@
 # Platform v1 roadmap
 
+## Library/database bounded native Y2 closure — 2026-10-04
+
+This closing review supersedes only the earlier library target NOT_RUN label.
+Actual installed Baseline02 is Linux `8584ccd85f052f351fe51650b2348c83ca894ed4`,
+Reborn `b71b468860233faa0a42b8448ec5777fa952b8e3`, kernel `6.18.0-y2linux-baseline-02`,
+root `2025.02.18-platform-v1.21`, boot `27e6d684-3794-4490-95db-a489027cd4f4`, taint 0.
+MemTotal 951824 KiB; Y2DATA rw ext4/eMMC. All six private native before/after runs
+(1k/10k/50k) preserve boot, taint and exact mount generation. The read-only observer
+after optimized scan 14 reads ext4 errors_count 0 on DATA, SD and root. Driver exits 0
+after descriptor-relative owned DATA/SD fixture and temporary binary cleanup;
+shared device lock released normally. Installed app/database and storage modes
+are unchanged. No flash, push, service change or production database replacement.
+
+The 50k fixture uses 25k files on DATA + 25k on SD, all SQLite databases on DATA;
+capacity admission includes bytes/inodes/reserves. The stock filesystem inode
+limit prevents a safe single-volume 50k fixture; no resize/format is authorized.
+1k/10k use only DATA. 50k after artifact is Reborn `c161404`; before is archived
+`b71b468` production code with current benchmark-only adapters. Transfers are
+SHA256-verified; checked-in sanitized results retain artifact identity and all
+median/p95/worst samples. See [Reborn evidence/report](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-LIBRARY-DB.md).
+The target lacks `/proc/self/io`; target write bytes are unavailable, not zero.
+
+| Coverage / existing epic | Classification | Evidence and next boundary |
+| --- | --- | --- |
+| SQLite/library; #32 | CONFIRMED, bounded host + native Y2 through 50k | Native unchanged scan 25.47 → 3.85 s, mixed 25.73 → 3.87 s, complete catalog 8.64 → 1.00 s. Songs 64-row page 1.79 → 1.59 ms. Initial ingest 17.53 → 18.53 s and prune 85.50 → 155.21 ms regress and are retained. |
+| Memory/navigation; #32/#34 | CONFIRMED process footprint and cached model; PARTIAL rendered UI | Native 50k peak 49.72 → 38.68 MiB, DB 21.617 → 20.457 MiB; no-op scan preserves resident/cache identity. Cold Songs row construction remains ~179 ms, queue 20k ~131 ms; actual frame/simultaneous playback gate remains separate. |
+| Transactions/durability/media; #28/#32/#33 | CONFIRMED host fault behavior; PARTIAL electrical/paired identity integration | 251 workspace tests/fmt/Clippy and production Cortex-A7 ARM build pass. Real SQLite FULL, killed transaction, restart, migration/row/media faults retain usable library. Schema v1/indexes, WAL/NORMAL, 64-row writes and single worker preserved. Storage SourceID/playback guard and FFmpeg revision must integrate separately. |
+| Storage/installation; #28/#33 | CONFIRMED narrow mounted scratch behavior; PARTIAL endurance/power loss | Root/DATA/SD errors 0 and same boot/mount checks; no production changes or physical removal during this DB run. Electrical power loss, endurance and install/rollback gates unchanged. |
+| CPU/radio/audio/GPU/release; #28/#29/#31/#34 | PARTIAL, independent gates unchanged | This userspace benchmark does not qualify Baseline02 whole-image/cold boot, CPU/suspend, audio codecs, radio restoration, rendered frames, battery or release. Retained UART01 hardware authority remains scoped to its original receipt. |
+
+All active issues/epics refreshed read-only 2026-10-04: #16/#27/#28/#29/#31/#32/#33/#34
+remain OPEN. Existing coverage owners and retained failures remain; no external
+issue or milestone status is changed. Protected partitions, hardware/memory
+layout, recovery/calibration and standing installation decisions are unchanged.
+No unchanged ROM/recovery provenance, package or kernel checks are repeated.
+
+The localized library/database pass is ready for source integration, with
+measured regressions and current 20k queue/8 MiB session limits explicit. The next
+smallest boundary is combining the separate storage and FFmpeg commits, resolving
+source ownership/reuse revision interactions, then targeted integration checks.
+This is not whole Platform 1.0 closure or authorization for flash/push.
+
+
+## Library 50k split-fixture admission — 2026-10-04
+
+Locked read-only admission confirms installed Baseline02: Linux `8584ccd85f052f351fe51650b2348c83ca894ed4`,
+Reborn `b71b468860233faa0a42b8448ec5777fa952b8e3`, kernel `6.18.0-y2linux-baseline-02`,
+root `2025.02.18-platform-v1.21`, boot `27e6d684-3794-4490-95db-a489027cd4f4`, taint 0.
+Y2DATA is rw ext4 on mmcblk0p7, 770.6 MiB, errors_count 0; RAM MemTotal 951824 KiB.
+Standalone private before/after 1k and 10k library runs pass. This is not full
+Baseline02 cold-boot/CPU/platform qualification.
+
+The first 50k-file attempt failed with remote status 1 and cleaned its owned scratch;
+that wrapper failed to retain stderr, so its exact failing syscall is unknown.
+The storage owner reports only ~51071 free Y2DATA inodes and ~31982 on the current
+512 MiB SD ext4 filesystem. 50k files plus ~2084 release directories cannot safely
+fit on either filesystem. Do not resize/format/mount/remap anything. This is a
+fixture capacity boundary, not permission to change production storage.
+
+Proceed, after the queued live session releases the same device lock, with a
+bounded 50k collection split into 25k new private files on Y2DATA and 25k on SD.
+Keep all SQLite databases on Y2DATA. Pin both scratch directory descriptors,
+check bytes/inodes/reserve and mount/boot identity, clean only newly owned dirs.
+No existing media, installed app/DB, SD mode, services or hardware controls change.
+The separate storage physical sequence is finished and restored SDR104/HS200.
+Core media-removal/identity fault qualification remains separate; fixture sources
+are synthetic and benchmark exact mount generation is checked by the parent.
+The Reborn report must label this two-source layout and missing target I/O counters
+(`/proc/self/io` is absent), rather than claiming zero flash writes. Existing
+#28/#31/#32/#34 remain OPEN; no whole-platform acceptance is promoted.
+
+
+## Library/database host validation boundary — 2026-10-04
+
+Repeat the admission audit before recording this local software result. Reborn
+`b0b114e` implements bounded fingerprint/presence scans and coherent keyset catalog
+loads; `9152005` preserves instrumentation-only baseline reproduction, `eca41fc`
+covers UUID-less CID compatibility. Schema v1, persistent indexes, WAL/NORMAL,
+64-row write transactions, single worker, protected/data/memory-layout and installed
+images remain unchanged. The cache target is explicit 2 MiB; no new RAM layout.
+
+Retained real hardware authority remains UART01 Linux `e9e8d63` / Reborn
+`b71b468`, boot `fd955840-35d9-47db-83e0-ff47d6bb2d2b`, taint 0. No new-image or
+physical performance pass is inferred from host timing. Baseline02 cold-boot
+qualification remains PHYSICAL_NOT_RUN. #28/#31/#32/#34 refreshed read-only again
+2026-10-04: all OPEN; no external milestone/epic changes or new issue required.
+
+| Coverage | Classification | Result / next boundary |
+| --- | --- | --- |
+| Reborn SQLite/library; #32 | CONFIRMED host software, PARTIAL target performance | 100/1k/10k/50k actual schema/scanner fixtures, 250 workspace tests/fmt/Clippy and Cortex-A7 ARM build pass; 50k rescan 1185→189 ms, catalog 399→40 ms, peak process RSS 168→113 MiB on host |
+| Durability/media; #28/#32 | CONFIRMED host fault behavior, PARTIAL electrical/physical | Real SQLite FULL, killed transaction, restart before prune, migration/row/media faults retain usable records; no electrical power-loss or physical SD qualification here |
+| Y2DATA/storage | CONFIRMED retained UART01 bounded scope; target DB benchmark NOT_RUN | Parallel storage session retains device lock during owner removal/reinsert confirmation; do not remove its lock or touch its SD state |
+| Release/suspend/endurance; #28/#31/#34 | PARTIAL, unchanged | Exact-image/new-boot, full suspend, wider endurance, battery and release gates remain separate |
+
+The [Reborn pass record](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-LIBRARY-DB.md)
+and checked-in host samples retain median/p95/worst and observed regressions.
+The next smallest gate is locked scratch-only Y2DATA before/after timing/memory,
+without flash, production database or installed binary replacement. Source-ID
+producer changes belong to storage; library accepts legacy, UUID-less CID and
+UUID+CID IDs without auto-rebinding old queue snapshots to unproven cards.
+No unchanged ROM/recovery/source provenance, package or kernel qualification is
+repeated. This records software readiness, not whole Platform 1.0 closure.
+
+
+## Library/database performance pass admission — 2026-10-04
+
+Owner authorizes isolated host profiling and bounded scratch-only Y2 tests for
+Reborn SQLite/library Platform 1.0. Reborn base `b71b468860233faa0a42b8448ec5777fa952b8e3`;
+Linux base `b5aea93`. Separate `codex/platform-v1-library-db` worktrees preserve
+main trees. FFmpeg metadata parsing belongs to another session. No flash, push,
+production database replacement, kernel change or milestone closure is authorized.
+
+Retained real hardware authority is [UART01](../validation/Y2-CPU-C3-UART-PHYSICAL.md):
+Linux `e9e8d63`, Reborn `b71b468`, boot `fd955840-35d9-47db-83e0-ff47d6bb2d2b`,
+taint 0, bounded C1/C2/C3 and storage integrity pass. Baseline02 new-image/cold-boot
+qualification remains PHYSICAL_NOT_RUN. GitHub #28/#31/#32/#34 refreshed read-only
+2026-10-04: all OPEN. No external status changes are needed for this localized pass.
+
+| Coverage | Classification | Next evidence boundary |
+| --- | --- | --- |
+| Library/schema/query behavior; #32 | PARTIAL | Reproducible 100/1k/10k/50k host workloads, scan faults and ARM build; locked scratch Y2 timings where available |
+| Y2DATA/eMMC/storage; #28/#32 | CONFIRMED bounded UART01; PARTIAL endurance/power-loss | Preserve ext4 data and volume identity contracts; no destructive durability experiments |
+| Memory/navigation | PARTIAL | Remove scan-wide duplicate metadata; measure 50k catalog/queue peak and bounded worker requests |
+| Platform/release; #28/#31/#34 | PARTIAL | Full suspend, wider endurance, electrical battery and new-image gates unchanged |
+
+Proceed with measured local library improvements within the existing worker and
+schema. Application memory is measured, not new RAM-layout authorization. Future
+physical runs acquire `/tmp/y2-platform-v1-device.lock`; no unchanged source/ROM/
+recovery provenance is repeated. Closing report must distinguish host/ARM evidence
+from real-device and whole-platform qualification.
+
+
 ## Baseline02 source integration into main — 2026-10-03
 
 Owner-authorized integration carries `cpu-idle-completion` at `acb5bb3` into
