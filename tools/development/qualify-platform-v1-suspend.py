@@ -63,12 +63,16 @@ def verdict(result):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--host', default='root@10.42.0.1')
+    p.add_argument('--ssh-port', type=int, default=22)
+    p.add_argument('--host-key-alias', help='verify a temporary Wi-Fi listener against the known USB host key')
     p.add_argument('--key', type=Path, default=Path('/home/luca/.ssh/y2linux_ed25519'))
     p.add_argument('--stage', choices=['inspect', 'freezer', 'devices', 'platform', 'processors', 'core', 'none'], default='inspect')
     p.add_argument('--alarm-seconds', type=int, default=0)
     p.add_argument('--wake-source', choices=['rtc', 'power'], default='rtc')
     p.add_argument('--output', type=Path, required=True)
     a = p.parse_args()
+    if not 1 <= a.ssh_port <= 65535:
+        p.error('--ssh-port must be 1..65535')
     # Hostnames and key paths are passed as argv, never interpolated into shell.
     with open('/tmp/y2-platform-v1-device.lock', 'a') as lock:
         try:
@@ -76,7 +80,10 @@ def main():
         except BlockingIOError:
             raise SystemExit('DEVICE_BUSY: no device access performed')
         a.output.mkdir(parents=True, exist_ok=False)
-        ssh = ['ssh', '-T', '-oBatchMode=yes', '-oStrictHostKeyChecking=yes', '-oConnectTimeout=5', '-i', str(a.key), a.host]
+        ssh = ['ssh', '-T', '-oBatchMode=yes', '-oStrictHostKeyChecking=yes', '-oConnectTimeout=5', '-i', str(a.key), '-p', str(a.ssh_port)]
+        if a.host_key_alias:
+            ssh += ['-oHostKeyAlias=' + a.host_key_alias]
+        ssh.append(a.host)
         def remote(code, timeout=15):
             return subprocess.run(ssh + [code], capture_output=True, text=True, timeout=timeout)
         inspect = remote("uname -a; cat /etc/os-release; cat /proc/sys/kernel/random/boot_id /proc/sys/kernel/tainted; ip -4 addr show wlan0; cat /sys/firmware/y2_pm/state /sys/firmware/y2_pm/previous /sys/firmware/y2_pm/backstop_s; cat /sys/class/power_supply/BAT0/status; y2-platform status system")
