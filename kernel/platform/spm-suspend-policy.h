@@ -120,4 +120,19 @@ static inline void y2_spm_suspend_clean(const struct y2_spm_io *io)
 	io->write(io->context, SPM_SLEEP_ISR_STATUS, ISRC_ALL_EXC_TWAM);
 	io->write(io->context, SPM_PCM_SW_INT_CLEAR, PCM_SW_INT0);
 }
+/* Full system sleep must prove the runtime firmware contract after both a
+ * reset return and an aborted entry. No register value is inferred here. */
+static inline int y2_spm_suspend_restore(const struct y2_spm_io *io, unsigned address)
+{
+	y2_spm_suspend_clean(io);
+	y2_spm_normal(io, address);
+	if (io->read(io->context, SPM_PCM_IM_PTR) != address ||
+	    io->read(io->context, SPM_PCM_IM_LEN) != 27 ||
+	    io->read(io->context, SPM_PCM_PWR_IO_EN) ||
+	    (io->read(io->context, SPM_POWER_ON_VAL1) & R7_UART_CLK_OFF_REQ) ||
+	    (io->read(io->context, SPM_CLK_CON) & (CC_SRCLKENA_MASK | CC_LOCK_INFRA_DCM)) ||
+	    (io->read(io->context, SPM_PCM_CON1) & (CON1_PCM_WDT_EN | CON1_PCM_TIMER_EN)))
+		return -EIO;
+	return 0;
+}
 #endif

@@ -167,8 +167,18 @@ static bool y2_usb_data_source;
 static bool y2_usb_dma_disabled;
 static bool y2_usb_dma_active;
 static unsigned int y2_usb_dma_irqs, y2_usb_dma_errors;
-/* Accepted DMA programming: forward progress for the interrupt storm guard. */
+/* Accepted DMA programming or actual PIO FIFO bytes: storm-guard progress. */
 static unsigned int y2_usb_progress;
+static atomic64_t y2_pio_bytes[2];
+/* Called only after actual gadget FIFO movement, under the MUSB lock. Empty
+ * interrupts and ZLPs are not invented progress. Other controllers are untouched. */
+void y2_musb_pio_progress(struct musb *musb, unsigned bytes, bool transmit);
+void y2_musb_pio_progress(struct musb *musb, unsigned bytes, bool transmit)
+{
+    if (musb != READ_ONCE(y2_musb) || !bytes) return;
+    atomic64_add(bytes, &y2_pio_bytes[!!transmit]);
+    WRITE_ONCE(y2_usb_progress, y2_usb_progress + 1);
+}
 
 static int __init y2_usb_dma_option(char *value)
 {
@@ -500,7 +510,7 @@ static int y2_musb_fifos(struct musb *musb)
     void __iomem *b=musb->mregs;
     u8 index=readb(b+MUSB_INDEX);
     int ok;
-    /* ECM/ACM: two bulk pairs and two 16-byte notifications, 2144 bytes. */
+    /* ECM plus ACM or MTP: two bulk pairs, two 16-byte notifications, 2144 bytes. */
     writeb(1,b+MUSB_INDEX);
     ok=readb(b+MUSB_TXFIFOSZ)==6 && readb(b+MUSB_RXFIFOSZ)==6 &&
         readw(b+MUSB_TXFIFOADD)==8 && readw(b+MUSB_RXFIFOADD)==72;
@@ -1092,6 +1102,8 @@ static ssize_t status_show(struct device *dev, struct device_attribute *attr, ch
     n += sysfs_emit_at(buf, n, "transfer=%s dma_irqs=%u dma_errors=%u dma_boot_disabled=%u\n",
         READ_ONCE(y2_usb_dma_active) ? "inventra_dma" : "pio",
         READ_ONCE(y2_usb_dma_irqs), READ_ONCE(y2_usb_dma_errors), y2_usb_dma_disabled);
+    n += sysfs_emit_at(buf, n, "pio_rx_bytes=%lld pio_tx_bytes=%lld\n",
+        atomic64_read(&y2_pio_bytes[0]), atomic64_read(&y2_pio_bytes[1]));
 #if IS_ENABLED(CONFIG_USB_INVENTRA_DMA)
     n += sysfs_emit_at(buf, n,
         "dma_allocations=%lld dma_alloc_failures=%lld dma_releases=%lld dma_allocated=%d\n",

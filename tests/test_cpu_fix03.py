@@ -132,6 +132,27 @@ int main(void){
 }
 ''')
 
+    def test_pio_fifo_progress_uses_the_same_stall_guard(self):
+        run_c(USB_GUARD + r'''
+int main(void){
+ struct y2_usb_irq_guard g={0}; unsigned packet,progress=0;
+ for(packet=0;packet<2000;packet++){
+  assert(!y2_usb_irq_storm(&g,7,progress)); progress++; /* actual PIO FIFO move */
+ }
+ assert(g.max_jiffy==2000 && g.max_burst<=2);
+ for(packet=0;packet<Y2_USB_IRQ_BURST_LIMIT;packet++)assert(!y2_usb_irq_storm(&g,7,progress));
+ assert(y2_usb_irq_storm(&g,7,progress));
+ /* A cable session/new IRQ epoch has independent guard state. */
+ struct y2_usb_irq_guard reconnect={0};
+ assert(!y2_usb_irq_storm(&reconnect,8,progress));
+}
+''')
+        source=overlay('drivers/usb/musb/musb_gadget.c')
+        self.assertEqual(source.count('y2_musb_pio_progress(musb, fifo_count,'),2)
+        for name in ('txstate','rxstate'):
+            body=function(source,name)
+            self.assertLess(body.index('request->actual += fifo_count;'),body.index('y2_musb_pio_progress('))
+
     def test_stuck_source_without_progress_is_terminal(self):
         run_c(USB_GUARD + r'''
 int main(void){
@@ -278,6 +299,7 @@ class SdInventoryIdentity(unittest.TestCase):
 
 
 DEVICE = r'''
+enum { Y2_PM_PHASE_RESUME_NOIRQ = 5, Y2_PM_PHASE_EARLY = 6, Y2_PM_PHASE_RESUME = 7 };
 struct device { const char *name; };
 static const char *dev_name(const struct device *d) { return d->name; }
 static int sysfs_emit_at(char *buf, int at, const char *fmt, ...) { va_list a; va_start(a, fmt); int n = vsnprintf(buf + at, 8192 - at, fmt, a); va_end(a); return n; }

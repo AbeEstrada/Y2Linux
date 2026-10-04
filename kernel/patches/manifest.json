@@ -88,7 +88,7 @@
       "path": "drivers/mmc/host/mtk-sd.c",
       "patch": "0009-y2-msdc-readonly.patch",
       "base_sha256": "8fd10e3a6f6d60e37216de79b2d7a8b8f766c7d7e5cdd5851cccfe375e2536d1",
-      "result_sha256": "196e6d5517b219cf44f751937b08e2de89b9caff7a98b7c8b5d76a71deac4690"
+      "result_sha256": "055daccf2192a2d84ef3726bdf4e7ead3ea8a396b6b4e918ab0a55e3234009c7"
     },
     {
       "path": "drivers/gpu/drm/mediatek/mtk_crtc.c",
@@ -178,7 +178,7 @@
       "path": "sound/soc/codecs/cs43130.c",
       "patch": "0030-cs43130-system-pm.patch",
       "base_sha256": "e3f2d840943600a6cb9d474ba367b1bb6a225cd98fc502f3c09570a7d6033099",
-      "result_sha256": "097ac1ecb34926811dbc5f361ea2301e994bce8955af67bafa0903b0aa833c7c"
+      "result_sha256": "21b060f6e894a1786b7891df63e5a2f212d01b3d2d0e57829bdc86ca56826545"
     },
     {
       "path": "drivers/usb/gadget/legacy/cdc2.c",
@@ -293,6 +293,12 @@
       "patch": "0061-mt6582-uart-pio-sleep.patch",
       "base_sha256": "9ed47647ccf4c2cada2b09d61d088b04cbc80b92f9455673b41fd645e5dfe821",
       "result_sha256": "daaef67207f7257f1f0a40006ff59d4cc339c8d82338d371bed48cbc4ce05ab1"
+    },
+    {
+      "path": "drivers/usb/musb/musb_gadget.c",
+      "patch": "0065-y2-musb-pio-progress.patch",
+      "base_sha256": "c0948905903b9e2998408d01adefbb69195bd493f165c209b350e019760a97a4",
+      "result_sha256": "5b99b451e51e04a9b686ee0c856f9e7baa65b8a845737a1fff5c5cec7f71a7a6"
     }
   ]
 }

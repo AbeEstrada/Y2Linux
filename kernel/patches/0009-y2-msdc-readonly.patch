@@ -1661,7 +1661,7 @@
  	.prepare_hs400_tuning = msdc_prepare_hs400_tuning,
  	.execute_hs400_tuning = msdc_execute_hs400_tuning,
  	.card_hw_reset = msdc_hw_reset,
-@@ -2957,11 +4331,135 @@
+@@ -2957,11 +4331,139 @@
  	return 0;
  }
  
@@ -1778,6 +1778,10 @@
 +		host->y2_clock_fallbacks, host->y2_resets, host->y2_reset_error,
 +		host->y2_clock_error, host->y2_drive_before[0], host->y2_drive_before[1],
 +		host->y2_drive_before[2], host->y2_drive_error);
++	n += sysfs_emit_at(buf, n, " fallback_from=%s fallback_reason=%s driver_type=%u",
++		host->y2_clock_fallbacks ? ladder[host->y2_fb_from].name : "none",
++		host->y2_clock_fallbacks ? y2_storage_event_names[host->y2_fb_event] : "none",
++		mmc->ios.drv_type);
 +	for (i = 0; i < Y2_EVENT_COUNT; i++)
 +		n += sysfs_emit_at(buf, n, " %s_events=%u", y2_storage_event_names[i], host->y2_events[i]);
 +	return n + sysfs_emit_at(buf, n, "\n");
@@ -1797,7 +1801,7 @@
  
  	if (!pdev->dev.of_node) {
  		dev_err(&pdev->dev, "No DT found\n");
-@@ -2983,6 +4481,9 @@
+@@ -2983,6 +4485,9 @@
  		return PTR_ERR(host->base);
  
  	host->dev_comp = of_device_get_match_data(&pdev->dev);
@@ -1807,7 +1811,7 @@
  
  	if (host->dev_comp->needs_top_base) {
  		host->top_base = devm_platform_ioremap_resource(pdev, 1);
-@@ -3016,6 +4517,11 @@
+@@ -3016,6 +4521,11 @@
  	if (host->irq < 0)
  		return host->irq;
  
@@ -1819,7 +1823,7 @@
  	host->pinctrl = devm_pinctrl_get(&pdev->dev);
  	if (IS_ERR(host->pinctrl))
  		return dev_err_probe(&pdev->dev, PTR_ERR(host->pinctrl),
-@@ -3032,6 +4538,8 @@
+@@ -3032,6 +4542,8 @@
  		dev_err(&pdev->dev, "Cannot find pinctrl uhs!\n");
  		return PTR_ERR(host->pins_uhs);
  	}
@@ -1828,7 +1832,7 @@
  
  	/* Support for SDIO eint irq ? */
  	if ((mmc->pm_caps & MMC_PM_WAKE_SDIO_IRQ) && (mmc->pm_caps & MMC_PM_KEEP_POWER)) {
-@@ -3048,9 +4556,62 @@
+@@ -3048,9 +4560,62 @@
  	}
  
  	msdc_of_property_parse(pdev, host);
@@ -1891,7 +1895,7 @@
  	/* Set host parameters to mmc */
  	mmc->ops = &mt_msdc_ops;
  	if (host->dev_comp->clk_div_bits == 8)
-@@ -3072,6 +4633,8 @@
+@@ -3072,6 +4637,8 @@
  		mmc->caps2 |= MMC_CAP2_SDIO_IRQ_NOTHREAD;
  
  	mmc->caps |= MMC_CAP_CMD23;
@@ -1900,7 +1904,7 @@
  	if (host->cqhci)
  		mmc->caps2 |= MMC_CAP2_CQE | MMC_CAP2_CQE_DCMD;
  	/* MMC core transfer sizes tunable parameters */
-@@ -3102,6 +4665,10 @@
+@@ -3102,6 +4669,10 @@
  	}
  	msdc_init_gpd_bd(host, &host->dma);
  	INIT_DELAYED_WORK(&host->req_timeout, msdc_request_timeout);
@@ -1911,7 +1915,7 @@
  	spin_lock_init(&host->lock);
  
  	platform_set_drvdata(pdev, mmc);
-@@ -3132,7 +4699,7 @@
+@@ -3132,7 +4703,7 @@
  		mmc->max_seg_size = 64 * 1024;
  		/* Reduce CIT to 0x40 that corresponds to 2.35us */
  		msdc_cqe_cit_cal(host, 2350);
@@ -1920,7 +1924,7 @@
  		/* Use HSQ on eMMC/SD (but not on SDIO) if HW CQE not supported */
  		struct mmc_hsq *hsq = devm_kzalloc(&pdev->dev, sizeof(*hsq), GFP_KERNEL);
  		if (!hsq) {
-@@ -3160,9 +4727,51 @@
+@@ -3160,9 +4731,51 @@
  
  	if (ret)
  		goto end;
@@ -1973,7 +1977,7 @@
  	pm_runtime_disable(host->dev);
  release:
  	msdc_deinit_hw(host);
-@@ -3189,6 +4798,19 @@
+@@ -3189,6 +4802,19 @@
  
  	mmc = platform_get_drvdata(pdev);
  	host = mmc_priv(mmc);
@@ -1993,7 +1997,7 @@
  
  	pm_runtime_get_sync(host->dev);
  
-@@ -3278,6 +4900,86 @@
+@@ -3278,6 +4904,86 @@
  		__msdc_enable_sdio_irq(host, 1);
  }
  
@@ -2080,7 +2084,7 @@
  static int msdc_runtime_suspend(struct device *dev)
  {
  	struct mmc_host *mmc = dev_get_drvdata(dev);
-@@ -3285,6 +4987,12 @@
+@@ -3285,6 +4991,12 @@
  
  	if (host->hsq_en)
  		mmc_hsq_suspend(mmc);
@@ -2093,7 +2097,7 @@
  
  	msdc_save_reg(host);
  
-@@ -3306,6 +5014,8 @@
+@@ -3306,6 +5018,8 @@
  	struct msdc_host *host = mmc_priv(mmc);
  	int ret;
  

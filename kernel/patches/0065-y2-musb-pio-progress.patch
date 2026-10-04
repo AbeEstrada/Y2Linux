@@ -1,0 +1,32 @@
+--- a/drivers/usb/musb/musb_gadget.c
++++ b/drivers/usb/musb/musb_gadget.c
+@@ -20,6 +20,9 @@
+ #include <linux/slab.h>
+ 
+ #include "musb_core.h"
++#if IS_ENABLED(CONFIG_Y2_PLATFORM)
++extern void y2_musb_pio_progress(struct musb *, unsigned, bool);
++#endif
+ #include "musb_trace.h"
+ 
+ 
+@@ -386,6 +389,9 @@
+ 		musb_write_fifo(musb_ep->hw_ep, fifo_count,
+ 				(u8 *) (request->buf + request->actual));
+ 		request->actual += fifo_count;
++#if IS_ENABLED(CONFIG_Y2_PLATFORM)
++        y2_musb_pio_progress(musb, fifo_count, musb_ep->is_in);
++#endif
+ 		csr |= MUSB_TXCSR_TXPKTRDY;
+ 		csr &= ~MUSB_TXCSR_P_UNDERRUN;
+ 		musb_writew(epio, MUSB_TXCSR, csr);
+@@ -767,6 +773,9 @@
+ 			musb_read_fifo(musb_ep->hw_ep, fifo_count, (u8 *)
+ 					(request->buf + request->actual));
+ 			request->actual += fifo_count;
++#if IS_ENABLED(CONFIG_Y2_PLATFORM)
++        y2_musb_pio_progress(musb, fifo_count, musb_ep->is_in);
++#endif
+ 
+ 			/* REVISIT if we left anything in the fifo, flush
+ 			 * it and report -EOVERFLOW
