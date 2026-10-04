@@ -11,6 +11,10 @@ Y2_MTP_LICENSE_FILES = LICENSE
 define Y2_MTP_COPY_SAFETY_HELPERS
 	$(INSTALL) -m 0644 $(BR2_EXTERNAL_Y2LINUX_PATH)/../tools/usb/mtp-safe.h $(@D)/inc/mtp-safe.h
 	$(INSTALL) -m 0644 $(BR2_EXTERNAL_Y2LINUX_PATH)/../tools/usb/mtp-safe.c $(@D)/src/mtp-safe.c
+	# Old external-toolchain UAPI predates openat2. Use the actual pinned kernel
+	# ABI, including generated ARM EABI numbers; never guess syscall constants.
+	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_Y2LINUX_PATH)/../.cache/sources/linux-6.18/include/uapi/linux/openat2.h $(@D)/inc/linux/openat2.h
+	$(INSTALL) -D -m 0644 $(Y2_ARTIFACT_DIR)/kernel/arch/arm/include/generated/uapi/asm/unistd-eabi.h $(@D)/inc/asm/unistd-eabi.h
 endef
 Y2_MTP_POST_PATCH_HOOKS += Y2_MTP_COPY_SAFETY_HELPERS
 

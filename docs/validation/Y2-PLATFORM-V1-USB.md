@@ -54,6 +54,9 @@ disabled in production; configfs serves both product and developer selections.
 Upstream uMTP-Responder is pinned at `2241a803c27f1fff7537cb9504befeb810b880d3`,
 source SHA256 `077ef6f4745d599bda7db0fff2993e21b969bbf414784c4ab3adf0f664177d2b`.
 It is a small GPL-3.0+ C program using pthread/rt, without a desktop framework.
+The older external-toolchain UAPI is supplemented with pinned Linux 6.18
+openat2 definitions and the freshly generated ARM EABI syscall header, preserving
+fail-closed confinement instead of using a weaker path-resolution fallback.
 64 KiB USB buffers and the existing 1 MiB cache setting are bounded; the process
 has a 64 MiB address-space ceiling. Handles are discovered lazily. The ceiling
 is a protection, not measured RSS or proof of arbitrary library-size acceptance.
