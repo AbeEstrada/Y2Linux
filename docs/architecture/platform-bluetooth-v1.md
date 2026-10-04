@@ -30,6 +30,33 @@ Baseline02's new-image/cold-boot tests are pending. Current source/API reference
 [feature inventory](../release/Y2-COMMUNITY-BETA-FEATURE-AUDIT.md) and
 [Baseline02](../validation/Y2-BASELINE-02.md).
 
+## Bluetooth optimization source contract — 2026-10-04
+
+The [optimization receipt](../validation/Y2-PLATFORM-V1-BLUETOOTH-OPTIMIZATION.md)
+records the measured Baseline02 idle baseline and localized follow-up. The
+reconnect owner now consumes a GIO ObjectManager signal cache, watches explicit
+intent replacements, addresses the unique BlueZ owner, and uses one-shot retry
+and connection-stability deadlines. Its 5s status heartbeat performs no recurring
+D-Bus enumeration. Two attempts, 10s call timeout, 25s episode, 30s stable-link
+rearming and boot-bound inhibition/uncertain completion remain. A committed
+explicit connect/power-on intent rearms immediately; its 30s validity deadline
+is not a reconnect delay. Automatic candidates require a durable Bonded state
+as well as Paired/Trusted; a live audio peer is never displaced.
+
+Reborn observes relevant BlueZ/BlueALSA signals, waits on D-Bus readiness and a
+bounded notified command queue, and retains a 30s reconciliation backstop plus
+operation/discovery/pairing deadlines. PCM lifetime invalidation and per-epoch
+codec capability caching remain; it still issues no automatic Device.Connect.
+BlueZ owner return restores agent registration. Status failure clears stale
+PCM/device observations; requested refresh preserves operation errors.
+
+Native observation serializes numeric D-Bus dictionary keys as JSON strings
+(including discovery ManufacturerData) and retains 64-bit counters. Platform
+status exposes Pairable/Discoverable and Bonded independently. Encoder, codec
+quality, PCM buffering, kernel clocks/DMA/firmware and radio policy are unchanged.
+These are source/host/ARM software results, not headset/audio qualification or
+electrical battery evidence.
+
 ## Historical source contract and physical notes
 
 The retained description below belongs to earlier profiles/source cuts.

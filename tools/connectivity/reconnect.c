@@ -21,6 +21,9 @@
 
 #define SINK "0000110b-0000-1000-8000-00805f9b34fb"
 static GDBusConnection *bus;
+static GDBusObjectManager *manager;
+static guint evaluation_source;
+static void schedule_evaluation(guint milliseconds);
 static GHashTable *connected;
 static char preferred[18];
 static gboolean inhibited, pending, was_powered;
@@ -29,6 +32,7 @@ static gint64 connected_since, control_sequence, control_until;
 static unsigned failures, completed, total_attempts;
 static char boot_id[64];
 static int runtime_directory;
+static const char *runtime_path="/run/y2";
 static int operation_lock;
 static const char *last_error;
 static int directory;
@@ -45,7 +49,7 @@ static void write_runtime(const char *name,const char *data)
 static void record(void)
 {
 	gint64 now=g_get_monotonic_time();
-	const char *state=!was_powered?"Off":g_hash_table_size(connected)?"Connected":
+	const char *state=!g_strcmp0(last_error,"bluez_unavailable")?"Unavailable":!was_powered?"Off":g_hash_table_size(connected)?"Connected":
 		pending?"Connecting":inhibited?"Inhibited":
 		budget.attempts>=2 || (budget.deadline && now>=budget.deadline)?"Exhausted":"Waiting";
 	char *json=g_strdup_printf("{\"schema\":1,\"boot_id\":\"%s\",\"monotonic_us\":%lld,\"state\":\"%s\","
@@ -71,7 +75,8 @@ static void record(void)
 static void load_state(void)
 {
 	GKeyFile *file=g_key_file_new();
-	if(g_key_file_load_from_file(file,"/run/y2/bt-reconnect.ini",G_KEY_FILE_NONE,NULL)) {
+	char *path=g_build_filename(runtime_path,"bt-reconnect.ini",NULL);
+	if(g_key_file_load_from_file(file,path,G_KEY_FILE_NONE,NULL)) {
 		char *boot=g_key_file_get_string(file,"state","boot_id",NULL);
 		if(!g_strcmp0(boot,boot_id)) {
 			budget.attempts=CLAMP(g_key_file_get_integer(file,"state","attempts",NULL),0,2);
@@ -86,12 +91,13 @@ static void load_state(void)
 		}
 		g_free(boot);
 	}
-	g_key_file_unref(file);
+	g_free(path);g_key_file_unref(file);
 }
 static void control(void)
 {
 	GKeyFile *file=g_key_file_new();
-	if(g_key_file_load_from_file(file,"/run/y2/bt-control.ini",G_KEY_FILE_NONE,NULL)) {
+	char *path=g_build_filename(runtime_path,"bt-control.ini",NULL);
+	if(g_key_file_load_from_file(file,path,G_KEY_FILE_NONE,NULL)) {
 		char *boot=g_key_file_get_string(file,"intent","boot_id",NULL);
 		char *operation=g_key_file_get_string(file,"intent","operation",NULL);
 		gint64 sequence=g_key_file_get_int64(file,"intent","sequence",NULL);
@@ -105,11 +111,14 @@ static void control(void)
 				!g_strcmp0(operation,"power_off") || !g_strcmp0(operation,"pair") ||
 				!g_strcmp0(operation,"uncertain") || !g_strcmp0(operation,"connect_pending") ||
 				!g_strcmp0(operation,"power_pending") || !g_strcmp0(operation,"codec")) inhibited=TRUE;
-			control_sequence=sequence;control_until=until;record();
+			/* A completed explicit operation already held the common lease.
+			 * Its validity deadline is not an automatic reconnect delay. */
+			control_sequence=sequence;
+			control_until=inhibited?until:0;record();
 		}
 		g_free(boot);g_free(operation);
 	}
-	g_key_file_unref(file);
+	g_free(path);g_key_file_unref(file);
 }
 
 static gboolean address_valid(const char *s)
@@ -150,12 +159,13 @@ static void connection_done(GObject *object,GAsyncResult *result,gpointer unused
 	g_clear_error(&error); pending=FALSE;
 	flock(operation_lock,LOCK_UN);
 	budget.next=g_get_monotonic_time()+2*G_USEC_PER_SEC;record();
+	schedule_evaluation(2000);
 }
 static gboolean management(gint fd,GIOCondition condition,gpointer unused)
 {
 	(void)unused;
 	control();
-	if (condition & (G_IO_ERR|G_IO_HUP|G_IO_NVAL)) { inhibited=TRUE; return G_SOURCE_REMOVE; }
+	if (condition & (G_IO_ERR|G_IO_HUP|G_IO_NVAL)) { inhibited=TRUE; last_error="management_unavailable"; record(); return G_SOURCE_REMOVE; }
 	unsigned char packet[1024]; ssize_t n;
 	while ((n=recv(fd,packet,sizeof(packet),MSG_DONTWAIT))>0) {
 		/* mgmt_hdr: opcode/index/length, followed by address/type/reason. */
@@ -168,53 +178,76 @@ static gboolean management(gint fd,GIOCondition condition,gpointer unused)
 		 * An explicit connect/power-on intent clears it. */
 		if (packet[13]==2 || packet[13]==4) inhibited=TRUE;
 	}
+	record();schedule_evaluation(100);
 	return G_SOURCE_CONTINUE;
 }
-static gboolean poll_devices(gpointer unused)
+/* ObjectManager maintains a signal-driven property cache, including daemon
+ * replacement. No recurring GetManagedObjects or HCI probes are needed. */
+static GVariant *cached_properties(GDBusObject *object, const char *name)
+{
+	GDBusInterface *interface=g_dbus_object_get_interface(object,name);
+	if(!interface) return NULL;
+	GDBusProxy *proxy=G_DBUS_PROXY(interface);
+	GVariantBuilder builder;g_variant_builder_init(&builder,G_VARIANT_TYPE_VARDICT);
+	char **names=g_dbus_proxy_get_cached_property_names(proxy);
+	for(char **key=names;key && *key;key++) {
+		GVariant *value=g_dbus_proxy_get_cached_property(proxy,*key);
+		if(value) { g_variant_builder_add(&builder,"{sv}",*key,value);g_variant_unref(value); }
+	}
+	g_strfreev(names);g_object_unref(interface);
+	return g_variant_ref_sink(g_variant_builder_end(&builder));
+}
+static gboolean evaluate_devices(gpointer unused)
 {
 	(void)unused;
+	evaluation_source=0;
 	control();
-	GError *error=NULL;
-	GVariant *reply=g_dbus_connection_call_sync(bus,"org.bluez","/",
-		"org.freedesktop.DBus.ObjectManager","GetManagedObjects",NULL,
-		G_VARIANT_TYPE("(a{oa{sa{sv}}})"),G_DBUS_CALL_FLAGS_NONE,3000,NULL,&error);
-	if (!reply) { g_clear_error(&error); last_error="bluez_unavailable";record();return G_SOURCE_CONTINUE; }
-	GVariant *objects=g_variant_get_child_value(reply,0), *interfaces, *properties;
-	GVariantIter it; const char *path; gboolean powered=FALSE;
-	g_variant_iter_init(&it,objects);
-	while (g_variant_iter_next(&it,"{&o@a{sa{sv}}}",&path,&interfaces)) {
-		properties=g_variant_lookup_value(interfaces,"org.bluez.Adapter1",G_VARIANT_TYPE_VARDICT);
-		if (properties) { gboolean on=FALSE; g_variant_lookup(properties,"Powered","b",&on); powered|=on; g_variant_unref(properties); }
-		g_variant_unref(interfaces);
+	char *owner=g_dbus_object_manager_client_get_name_owner(G_DBUS_OBJECT_MANAGER_CLIENT(manager));
+	if(!owner) {
+		connected_since=0;g_hash_table_remove_all(connected);
+		last_error="bluez_unavailable";record();return G_SOURCE_REMOVE;
+	}
+	if(!g_strcmp0(last_error,"bluez_unavailable")) last_error=NULL;
+	GList *objects=g_dbus_object_manager_get_objects(manager);
+	gboolean powered=FALSE,powered_known=FALSE;
+	for(GList *item=objects;item;item=item->next) {
+		GVariant *properties=cached_properties(item->data,"org.bluez.Adapter1");
+		if(properties) {
+			gboolean on=FALSE;
+			if(g_variant_lookup(properties,"Powered","b",&on)) { powered_known=TRUE;powered|=on; }g_variant_unref(properties);
+		}
 	}
 	if (powered && !was_powered && !inhibited) y2_reconnect_reset(&budget);
-	was_powered=powered;
+	if(powered_known) was_powered=powered;
 	char *candidate=NULL;
 	GHashTable *now=g_hash_table_new_full(g_str_hash,g_str_equal,g_free,NULL);
-	g_variant_iter_init(&it,objects);
-	while (g_variant_iter_next(&it,"{&o@a{sa{sv}}}",&path,&interfaces)) {
-		properties=g_variant_lookup_value(interfaces,"org.bluez.Device1",G_VARIANT_TYPE_VARDICT);
-		g_variant_unref(interfaces);
-		if (!properties) continue;
-		const char *address=NULL; gboolean paired=FALSE,trusted=FALSE,up=FALSE,resolved=FALSE,blocked=FALSE,sink=FALSE;
+	for(GList *item=objects;item;item=item->next) {
+		const char *path=g_dbus_object_get_object_path(item->data);
+		GVariant *properties=cached_properties(item->data,"org.bluez.Device1");
+		if(!properties) continue;
+		const char *address=NULL;
+		gboolean paired=FALSE,bonded=FALSE,trusted=FALSE,up=FALSE,resolved=FALSE,blocked=FALSE,sink=FALSE;
 		g_variant_lookup(properties,"Address","&s",&address);
 		g_variant_lookup(properties,"Paired","b",&paired);
+		g_variant_lookup(properties,"Bonded","b",&bonded);
 		g_variant_lookup(properties,"Trusted","b",&trusted);
 		g_variant_lookup(properties,"Connected","b",&up);
 		g_variant_lookup(properties,"ServicesResolved","b",&resolved);
 		g_variant_lookup(properties,"Blocked","b",&blocked);
 		GVariant *uuids=g_variant_lookup_value(properties,"UUIDs",G_VARIANT_TYPE_STRING_ARRAY);
-		if (uuids) {
-			GVariantIter u; const char *uuid; g_variant_iter_init(&u,uuids);
-			while (g_variant_iter_next(&u,"&s",&uuid)) sink |= !g_ascii_strcasecmp(uuid,SINK);
+		if(uuids) {
+			GVariantIter u;const char *uuid;g_variant_iter_init(&u,uuids);
+			while(g_variant_iter_next(&u,"&s",&uuid)) sink|=!g_ascii_strcasecmp(uuid,SINK);
 			g_variant_unref(uuids);
 		}
-		if (address && address_valid(address) && sink && paired && trusted && !blocked) {
-			if (up && resolved) {
+		if(address && address_valid(address) && sink && !blocked) {
+			if(up && resolved) {
+				/* Even an unbonded live peer must not be displaced. Only a
+				 * durable, trusted bond becomes the preferred reconnect peer. */
 				g_hash_table_add(now,g_strdup(path));
-				if (!g_hash_table_contains(connected,path)) remember(address);
-			} else if (!up && !g_ascii_strcasecmp(preferred,address)) {
-				g_free(candidate); candidate=g_strdup(path);
+				if(paired && bonded && trusted && !g_hash_table_contains(connected,path)) remember(address);
+			} else if(!up && paired && bonded && trusted && !g_ascii_strcasecmp(preferred,address)) {
+				g_free(candidate);candidate=g_strdup(path);
 			}
 		}
 		g_variant_unref(properties);
@@ -224,6 +257,7 @@ static gboolean poll_devices(gpointer unused)
 	if(g_hash_table_size(now)) {
 		if(!connected_since) connected_since=timestamp;
 		if(timestamp-connected_since>=30*G_USEC_PER_SEC && !inhibited) y2_reconnect_reset(&budget);
+		else if(!inhibited) schedule_evaluation((guint)((30*G_USEC_PER_SEC-(timestamp-connected_since))/1000)+1);
 	} else connected_since=0;
 	if (powered && !inhibited && !pending && candidate && !g_hash_table_size(now) &&
 	    !flock(operation_lock,LOCK_EX|LOCK_NB)) {
@@ -232,14 +266,85 @@ static gboolean poll_devices(gpointer unused)
 		if(!inhibited && timestamp>=control_until && y2_reconnect_attempt(&budget,timestamp)) {
 			pending=TRUE;
 			total_attempts++;record();
-			g_dbus_connection_call(bus,"org.bluez",candidate,"org.bluez.Device1","ConnectProfile",
+			g_dbus_connection_call(bus,owner,candidate,"org.bluez.Device1","ConnectProfile",
 				g_variant_new("(s)",SINK),NULL,G_DBUS_CALL_FLAGS_NONE,10000,NULL,connection_done,NULL);
 		} else flock(operation_lock,LOCK_UN);
 	}
+	gboolean has_candidate=candidate!=NULL;
 	g_free(candidate); g_hash_table_unref(connected); connected=now;
-	g_variant_unref(objects); g_variant_unref(reply);
+	g_list_free_full(objects,g_object_unref);g_free(owner);
 	record();
-	return G_SOURCE_CONTINUE;
+	if(powered && !inhibited && !pending && !g_hash_table_size(connected) &&
+	   budget.attempts<2 && (!budget.deadline || timestamp<budget.deadline) && has_candidate) {
+		/* Retry a busy user lease or the bounded inter-attempt deadline.
+		 * Never replenish an exhausted episode from a heartbeat/signal. */
+		schedule_evaluation(2000);
+	}
+	return G_SOURCE_REMOVE;
+}
+static void schedule_evaluation(guint milliseconds)
+{
+	if(evaluation_source) g_source_remove(evaluation_source);
+	evaluation_source=g_timeout_add(milliseconds,evaluate_devices,NULL);
+}
+static void objects_changed(GDBusObjectManager *m,GDBusObject *object,gpointer unused)
+{
+	(void)m;(void)object;(void)unused;schedule_evaluation(100);
+}
+static void properties_changed(GDBusObjectManagerClient *m,GDBusObjectProxy *object,
+	GDBusProxy *proxy,GVariant *changed,const char *const *invalidated,gpointer unused)
+{
+	(void)m;(void)object;(void)unused;
+	const char *interface=g_dbus_proxy_get_interface_name(proxy);
+	const char *const keys[]={"Powered","Address","Paired","Bonded","Trusted",
+		"Connected","ServicesResolved","Blocked","UUIDs",NULL};
+	if(strcmp(interface,"org.bluez.Adapter1") && strcmp(interface,"org.bluez.Device1")) return;
+	for(const char *const *key=keys;*key;key++) {
+		GVariant *value=g_variant_lookup_value(changed,*key,NULL);
+		gboolean relevant=value!=NULL;
+		if(value) g_variant_unref(value);
+		for(const char *const *name=invalidated;name && *name;name++) relevant|=!strcmp(*name,*key);
+		if(relevant) { schedule_evaluation(100);return; }
+	}
+}
+static void owner_changed(GObject *object,GParamSpec *property,gpointer unused)
+{
+	(void)object;(void)property;(void)unused;schedule_evaluation(100);
+}
+static void intent_changed(GFileMonitor *monitor,GFile *file,GFile *other,
+	GFileMonitorEvent event,gpointer unused)
+{
+	(void)monitor;(void)other;(void)event;(void)unused;
+	char *name=g_file_get_basename(file);
+	if(!g_strcmp0(name,"bt-control.ini")) schedule_evaluation(100);
+	g_free(name);
+}
+static gboolean heartbeat(gpointer unused)
+{
+	(void)unused;
+	/* Preserve the existing <10s status freshness contract without D-Bus
+	 * enumeration. The heartbeat also covers a missed filesystem notification. */
+	gint64 before=control_sequence;control();
+	if(before!=control_sequence) schedule_evaluation(100);
+	record();return G_SOURCE_CONTINUE;
+}
+static gboolean start_observer(void)
+{
+	manager=g_dbus_object_manager_client_new_sync(bus,G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_DO_NOT_AUTO_START,
+		"org.bluez","/",NULL,NULL,NULL,NULL,NULL);
+	if(!manager) return FALSE;
+	g_signal_connect(manager,"object-added",G_CALLBACK(objects_changed),NULL);
+	g_signal_connect(manager,"object-removed",G_CALLBACK(objects_changed),NULL);
+	g_signal_connect(manager,"interface-proxy-properties-changed",G_CALLBACK(properties_changed),NULL);
+	g_signal_connect(manager,"notify::name-owner",G_CALLBACK(owner_changed),NULL);
+	GFile *runtime=g_file_new_for_path(runtime_path);
+	GFileMonitor *monitor=g_file_monitor_directory(runtime,G_FILE_MONITOR_NONE,NULL,NULL);
+	g_object_unref(runtime);
+	if(!monitor) return FALSE;
+	g_signal_connect(monitor,"changed",G_CALLBACK(intent_changed),NULL);
+	g_timeout_add_seconds(5,heartbeat,NULL);
+	schedule_evaluation(100);
+	return TRUE;
 }
 int main(void)
 {
@@ -267,7 +372,7 @@ int main(void)
 	bus=g_bus_get_sync(G_BUS_TYPE_SYSTEM,NULL,NULL); if (!bus) return 1;
 	connected=g_hash_table_new_full(g_str_hash,g_str_equal,g_free,NULL);
 	g_unix_fd_add(fd,G_IO_IN|G_IO_HUP|G_IO_ERR,management,NULL);
-	g_timeout_add_seconds(2,poll_devices,NULL);
+	if(!start_observer()) return 1;
 	GMainLoop *loop=g_main_loop_new(NULL,FALSE); g_main_loop_run(loop);
 	return 0;
 }

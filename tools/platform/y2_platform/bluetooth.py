@@ -40,7 +40,9 @@ def normalize(ctx, raw):
         return result
     path, adapter = adapters[0]
     result['adapter'] = {'path': path, 'powered': adapter.get('Powered'),
-                         'discovering': adapter.get('Discovering'), 'bluez_owner': raw.get('bluez_owner')}
+                         'discovering': adapter.get('Discovering'),
+                         'pairable': adapter.get('Pairable'), 'discoverable': adapter.get('Discoverable'),
+                         'bluez_owner': raw.get('bluez_owner')}
     if adapter.get('Powered') is not True:
         result['reason'] = 'radio_off'
         return result
@@ -61,7 +63,7 @@ def normalize(ctx, raw):
         if not isinstance(device, dict):
             continue
         devices.append({'path': device_path, 'address': device.get('Address'),
-                        'paired': device.get('Paired'), 'trusted': device.get('Trusted'),
+                        'paired': device.get('Paired'), 'bonded': device.get('Bonded'), 'trusted': device.get('Trusted'),
                         'connected': device.get('Connected'), 'services_resolved': device.get('ServicesResolved')})
     result['devices'] = devices[:128]
     preferred = ctx.read('/data/bluetooth/preferred-audio')

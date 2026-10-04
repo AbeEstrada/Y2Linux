@@ -46,6 +46,18 @@ class BluetoothObservation(unittest.TestCase):
         self.assertEqual(result['pcm']['valid_bits'], 24)
         self.assertEqual(result['pcm']['physical_bits'], 32)
 
+    def test_bonding_and_pairing_windows_are_independent_observations(self):
+        self.raw['bluez']['/org/bluez/hci0']['org.bluez.Adapter1'].update(Pairable=False, Discoverable=False)
+        device = self.raw['bluez'][self.device]['org.bluez.Device1']
+        device.update(Paired=True, Bonded=False, Trusted=True, Connected=True)
+        result = normalize(self.ctx, self.raw)
+        self.assertFalse(result['adapter']['pairable'])
+        self.assertFalse(result['adapter']['discoverable'])
+        self.assertTrue(result['selected_peer']['paired'])
+        self.assertFalse(result['selected_peer']['bonded'])
+        del device['Bonded']
+        self.assertIsNone(normalize(self.ctx, self.raw)['selected_peer']['bonded'])
+
     def test_disappearance_wrong_direction_owner_change_and_missing_properties_fail_closed(self):
         self.raw['bluez'][self.device]['org.bluez.Device1']['Connected'] = False
         self.assertIsNone(normalize(self.ctx, self.raw)['negotiated_codec'])
@@ -157,6 +169,26 @@ class BluetoothObservation(unittest.TestCase):
         self.assertFalse(power(self.ctx, 'on')['ok'])
         self.assertEqual(len(calls), 1)
         self.assertIn('operation=uncertain', (directory/'bt-control.ini').read_text())
+
+    def test_observer_numeric_manufacturer_keys_and_64_bit_counters_are_valid_json(self):
+        flags = subprocess.run(['pkg-config', '--cflags', '--libs', 'gio-2.0'], capture_output=True, text=True, check=True)
+        binary = Path(self.temp.name) / 'observer-json'
+        subprocess.run(['cc', '-Wall', '-Wextra', '-Werror', str(ROOT/'tests/native/bt-observe-json.c'), *flags.stdout.split(), '-o', str(binary)], check=True)
+        result = subprocess.run([str(binary)], capture_output=True, text=True, timeout=3, check=True)
+        observed = json.loads(result.stdout)
+        self.assertEqual(observed['ManufacturerData'], {'117': [0, 1, 76]})
+        self.assertEqual(observed['Counter'], 9223372036854775813)
+        self.assertEqual(observed['Signed'], -9223372036854775807)
+        self.assertEqual(observed['Finite'], 1.5)
+        self.assertIsNone(observed['Nonfinite'])
+        self.assertEqual(observed['Alias'], 'escaped "name"')
+
+    def test_reconnect_signal_cache_intents_and_bounded_recovery(self):
+        flags = subprocess.run(['pkg-config', '--cflags', '--libs', 'gio-2.0', 'gio-unix-2.0'], capture_output=True, text=True, check=True)
+        binary = Path(self.temp.name) / 'reconnect-events'
+        subprocess.run(['cc', '-Wall', '-Wextra', '-Werror', str(ROOT/'tests/native/bt-reconnect-events.c'), *flags.stdout.split(), '-o', str(binary)], check=True)
+        result = subprocess.run([str(binary)], capture_output=True, text=True, timeout=25, check=True)
+        self.assertIn('PASS: idle snapshots=1', result.stdout)
 
     def test_native_reconnect_budget_does_not_retry_forever_or_reset_on_poll(self):
         source = Path(self.temp.name)/'budget.c'

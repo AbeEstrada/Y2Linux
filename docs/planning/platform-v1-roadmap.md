@@ -1,5 +1,47 @@
 # Platform v1 roadmap
 
+## Bluetooth optimization boundary — 2026-10-04
+
+Owner explicitly authorizes the Bluetooth implementation/research pass in isolated
+`codex/platform-v1-bluetooth` worktrees from Linux `b5aea93` / Reborn `b71b468`.
+Read-only locked SSH identifies installed **Baseline02**, Linux `8584ccd8`,
+Reborn `b71b4688`, kernel `6.18.0-y2linux-baseline-02`, root v1.21, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, taint 0. This supersedes the *installed
+identity* in the older UART01 receipt; it does not constitute the separate
+Baseline02 cold-boot/C3 qualification. Retained UART01 C1/C2/C3 evidence remains
+bounded to its own image/boot. No headset is available, as confirmed by the owner.
+
+F102/F103/F104 and #31 remain PARTIAL: the controller/BlueZ/BlueALSA are observable;
+peer pairing, audio, reconnect and endurance cannot be promoted by this pass.
+F105/F108/F229 retain peer/audio/coexistence evidence gates. #28/#31/#34 remain
+OPEN on read-only GitHub refresh. Idle measurement with Bluetooth off shows
+50.37 Reborn Bluetooth thread context switches/s and repeated 2s BlueZ snapshots;
+these justify localized event/wakeup fixes, not a new kernel power architecture.
+
+Proceed with signal-based observation, bounded-intent/recovery fixes, private-bus
+regressions, ARM userspace builds and temporary, restored runtime tests only when
+the nonblocking shared device lock is held. Preserve one reconnect owner and
+FFmpeg → shared DSP → final sink conversion → BlueALSA. No memory, firmware,
+calibration, protected storage, image packaging, flash, push, merge, release or
+milestone closure. The next acceptance boundary remains actual peer/audio and
+coexistence measurements on the final integrated artifact. Findings and final
+classification: [Bluetooth optimization receipt](../validation/Y2-PLATFORM-V1-BLUETOOTH-OPTIMIZATION.md).
+
+
+## Bluetooth optimization handoff — 2026-10-04
+
+Localized control/wakeup/diagnostics implementation is software validated; the
+[closing review](roadmap-gap-audit.md#bluetooth-optimization-closing-evidence--2026-10-04)
+and [receipt](../validation/Y2-PLATFORM-V1-BLUETOOTH-OPTIMIZATION.md) separate
+physical Baseline02 measurements from uninstalled source. MORE_WORK_REQUIRED:
+retest changed binaries under the nonblocking device lock, then pair/reconnect/
+SBC startup, loss/recovery, screen-off and Wi-Fi scan/transfer with an available
+headset. M5 #31/F103/F104/F105/F108/F229 stay open/partial; no hardware or release
+milestone is closed. Preserve CONSYS/BTIF/BlueZ/BlueALSA, shared DSP/final sink
+conversion, one reconnect owner and current codec policy. No kernel/power redesign
+or optional codec feature-completion project is activated.
+
+
 ## Baseline02 source integration into main — 2026-10-03
 
 Owner-authorized integration carries `cpu-idle-completion` at `acb5bb3` into
