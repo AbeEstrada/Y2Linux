@@ -1,62 +1,140 @@
 --- a/sound/soc/codecs/cs43130.c
 +++ b/sound/soc/codecs/cs43130.c
-@@ -2675,20 +2675,30 @@
- static int cs43130_runtime_suspend(struct device *dev)
- {
- 	struct cs43130_private *cs43130 = dev_get_drvdata(dev);
+@@ -36,0 +37,2 @@
++#include <linux/suspend.h>
++#include "/project/kernel/platform/pm-journal.h"
+@@ -2674,0 +2677,37 @@
++/* Baseline02 full wake reaches this codec callback without returning. Keep
++ * its regulator/reset/cache boundaries in the existing retained PM ring only
++ * during system sleep, rather than tracing ordinary runtime audio traffic. */
++static void cs43130_pm_note(const char *step, int ret)
++{
++	if (pm_suspend_target_state != PM_SUSPEND_ON)
++		y2_pm_note(step, ret);
++}
++
++static int cs43130_restore_cache(struct cs43130_private *cs43130)
++{
++	int ret;
++
++	cs43130_pm_note("cs_access_begin", 0);
++	regcache_cache_only(cs43130->regmap, false);
++	gpiod_set_value_cansleep(cs43130->reset_gpio, 1);
++	cs43130_pm_note("cs_delay_begin", 0);
++	usleep_range(2000, 2050);
++	cs43130_pm_note("cs_delay_done", 0);
++
++	cs43130_pm_note("cs_cache_begin", 0);
++	ret = regcache_sync(cs43130->regmap);
++	cs43130_pm_note("cs_cache_done", ret);
++	if (ret)
++		return ret;
++
++	if (cs43130->xtal_ibias != CS43130_XTAL_UNUSED) {
++		cs43130_pm_note("cs_xtal_begin", 0);
++		ret = regmap_update_bits(cs43130->regmap, CS43130_INT_MASK_1,
++					 CS43130_XTAL_ERR_INT, 0);
++		cs43130_pm_note("cs_xtal_done", ret);
++		if (ret)
++			return ret;
++	}
++	return 0;
++}
++
+@@ -2678,3 +2717,4 @@
 -
 -	if (cs43130->xtal_ibias != CS43130_XTAL_UNUSED)
 -		regmap_update_bits(cs43130->regmap, CS43130_INT_MASK_1,
-+	int ret;
++	int ret, restore;
 +
 +	if (cs43130->xtal_ibias != CS43130_XTAL_UNUSED) {
 +		ret = regmap_update_bits(cs43130->regmap, CS43130_INT_MASK_1,
- 				   CS43130_XTAL_ERR_INT,
- 				   1 << CS43130_XTAL_ERR_INT_SHIFT);
-+		if (ret) return ret;
+@@ -2682,0 +2723,3 @@
++		if (ret)
++			return ret;
 +	}
- 
- 	regcache_cache_only(cs43130->regmap, true);
- 	regcache_mark_dirty(cs43130->regmap);
- 
- 	gpiod_set_value_cansleep(cs43130->reset_gpio, 0);
- 
+@@ -2686 +2728,0 @@
+-
+@@ -2689,3 +2731,14 @@
 -	regulator_bulk_disable(CS43130_NUM_SUPPLIES, cs43130->supplies);
 -
 -	return 0;
 +	ret = regulator_bulk_disable(CS43130_NUM_SUPPLIES, cs43130->supplies);
 +	if (ret) {
-+		/* Bulk disable restores prior rails on failure. Restore accessibility
-+		 * and abort system suspend instead of claiming the codec is off. */
-+		gpiod_set_value_cansleep(cs43130->reset_gpio, 1);
-+		usleep_range(2000, 2050);
-+		regcache_cache_only(cs43130->regmap, false);
++		/* Bulk disable restores the prior rail references on failure. A
++		 * reset or partial rail cycle may have erased codec state; the XTAL
++		 * interrupt was masked too. Replay without enabling rails twice. */
++		cs43130_pm_note("cs_disable_fail", ret);
++		restore = cs43130_restore_cache(cs43130);
++		if (restore) {
++			dev_err(dev, "Failed to restore after supply refusal: %d\n", restore);
++			return restore;
++		}
 +		dev_err(dev, "Failed to disable supplies: %d\n", ret);
 +	}
 +	return ret;
- }
- 
- static int cs43130_runtime_resume(struct device *dev)
-@@ -2714,9 +2724,11 @@
- 		goto err;
- 	}
- 
+@@ -2697,2 +2750,3 @@
+-	int ret;
+-
++	int ret, cleanup;
++
++	cs43130_pm_note("cs_rails_begin", 0);
+@@ -2700 +2754,2 @@
+-	if (ret != 0) {
++	cs43130_pm_note("cs_rails_done", ret);
++	if (ret) {
+@@ -2705,18 +2760,5 @@
+-	regcache_cache_only(cs43130->regmap, false);
+-
+-	gpiod_set_value_cansleep(cs43130->reset_gpio, 1);
+-
+-	usleep_range(2000, 2050);
+-
+-	ret = regcache_sync(cs43130->regmap);
+-	if (ret != 0) {
+-		dev_err(dev, "Failed to restore register cache\n");
+-		goto err;
+-	}
+-
 -	if (cs43130->xtal_ibias != CS43130_XTAL_UNUSED)
 -		regmap_update_bits(cs43130->regmap, CS43130_INT_MASK_1,
 -				   CS43130_XTAL_ERR_INT, 0);
-+	if (cs43130->xtal_ibias != CS43130_XTAL_UNUSED) {
-+		ret = regmap_update_bits(cs43130->regmap, CS43130_INT_MASK_1,
-+					 CS43130_XTAL_ERR_INT, 0);
-+		if (ret) goto err;
+-
+-	return 0;
+-err:
++	ret = cs43130_restore_cache(cs43130);
++	if (!ret)
++		return 0;
++
++	dev_err(dev, "Failed to restore codec state: %d\n", ret);
+@@ -2724,2 +2766,26 @@
+-	regulator_bulk_disable(CS43130_NUM_SUPPLIES, cs43130->supplies);
+-
++	gpiod_set_value_cansleep(cs43130->reset_gpio, 0);
++	cleanup = regulator_bulk_disable(CS43130_NUM_SUPPLIES, cs43130->supplies);
++	if (cleanup) {
++		cs43130_pm_note("cs_cleanup_fail", cleanup);
++		dev_err(dev, "Failed to disable supplies after restore error: %d\n", cleanup);
 +	}
- 
- 	return 0;
- err:
-@@ -2728,6 +2740,7 @@
- 
- static const struct dev_pm_ops cs43130_runtime_pm = {
- 	RUNTIME_PM_OPS(cs43130_runtime_suspend, cs43130_runtime_resume, NULL)
-+	SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
- };
- 
- #if IS_ENABLED(CONFIG_OF)
++	return ret;
++}
++
++static int cs43130_system_suspend(struct device *dev)
++{
++	int ret;
++
++	cs43130_pm_note("cs_sleep_begin", 0);
++	ret = pm_runtime_force_suspend(dev);
++	cs43130_pm_note("cs_sleep_done", ret);
++	return ret;
++}
++
++static int cs43130_system_resume(struct device *dev)
++{
++	int ret;
++
++	cs43130_pm_note("cs_force_begin", 0);
++	ret = pm_runtime_force_resume(dev);
++	cs43130_pm_note("cs_force_done", ret);
+@@ -2730,0 +2797 @@
++	SYSTEM_SLEEP_PM_OPS(cs43130_system_suspend, cs43130_system_resume)
