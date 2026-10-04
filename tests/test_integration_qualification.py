@@ -44,6 +44,76 @@ class ScreenIdle(unittest.TestCase):
                 run.screen(True)
 
 
+class USBOfflineSafety(unittest.TestCase):
+    def test_long_parking_wait_keeps_usb_attached_and_never_arms_c3(self):
+        run = object.__new__(device.Qualification)
+        run.result = {}
+        run.cmd = Mock()
+        run.wait_for_c3_topology = Mock(side_effect=RuntimeError('parking hold'))
+        role = object()
+        with patch.object(device.P, 'glob', return_value=iter([role])), \
+                patch.object(device, 'write') as write, \
+                patch.object(device.signal, 'setitimer') as timer:
+            with self.assertRaisesRegex(RuntimeError, 'parking hold'):
+                run.c3_cycles()
+        self.assertTrue(all(call.args[0] != role for call in write.call_args_list))
+        self.assertNotIn(unittest.mock.call(device.C3, 0), write.call_args_list)
+        timer.assert_not_called()
+
+    def test_offline_timeout_quarantines_c3_and_restores_usb_without_retry(self):
+        run = object.__new__(device.Qualification)
+        role, previous_handler = object(), object()
+        with patch.object(device, 'read', return_value='device'), \
+                patch.object(device, 'write') as write, \
+                patch.object(device.time, 'sleep'), \
+                patch.object(device.signal, 'getitimer', return_value=(0, 0)), \
+                patch.object(device.signal, 'getsignal', return_value=previous_handler), \
+                patch.object(device.signal, 'signal') as handler, \
+                patch.object(device.signal, 'setitimer') as timer:
+            with self.assertRaisesRegex(RuntimeError, 'USB-offline limit'):
+                with run.usb_offline(role):
+                    expire = handler.call_args.args[1]
+                    expire(device.signal.SIGALRM, None)
+        self.assertEqual(write.call_args_list, [unittest.mock.call(role, 'none'),
+                         unittest.mock.call(device.C3, 1), unittest.mock.call(device.BUDGET, 0),
+                         unittest.mock.call(device.BACKSTOP, 0), unittest.mock.call(role, 'device')])
+        self.assertEqual(timer.call_args_list, [unittest.mock.call(device.signal.ITIMER_REAL, 180),
+                                               unittest.mock.call(device.signal.ITIMER_REAL, 0)])
+        self.assertEqual(handler.call_args.args, (device.signal.SIGALRM, previous_handler))
+
+    def test_cleanup_error_still_attempts_usb_restore(self):
+        run = object.__new__(device.Qualification)
+        role = object()
+        writes = []
+
+        def write(path, value):
+            writes.append((path, value))
+            if path == device.C3:
+                raise OSError('quarantine write failed')
+
+        with patch.object(device, 'read', return_value='device'), \
+                patch.object(device, 'write', side_effect=write), \
+                patch.object(device.time, 'sleep'), \
+                patch.object(device.signal, 'getitimer', return_value=(0, 0)), \
+                patch.object(device.signal, 'getsignal'), patch.object(device.signal, 'signal'), \
+                patch.object(device.signal, 'setitimer') as timer:
+            with self.assertRaisesRegex(OSError, 'quarantine write failed'):
+                with run.usb_offline(role):
+                    pass
+        self.assertEqual(writes[-1], (role, 'device'))
+        self.assertEqual(timer.call_args.args, (device.signal.ITIMER_REAL, 0))
+
+    def test_existing_timer_prevents_detach(self):
+        run = object.__new__(device.Qualification)
+        with patch.object(device, 'read', return_value='device'), \
+                patch.object(device, 'write') as write, \
+                patch.object(device.signal, 'getitimer', return_value=(5, 0)):
+            with self.assertRaisesRegex(RuntimeError, 'existing userspace timer'):
+                with run.usb_offline(object()):
+                    self.fail('must not detach')
+        write.assert_not_called()
+
+
 class Coordinator(unittest.TestCase):
     def test_smoke_rejects_kernel_failure_disabled_idle_and_wrong_partition(self):
         sample = {'boot_id': 'one', 'reborn_running': True, 'dmesg_ok': True, 'dmesg': '',

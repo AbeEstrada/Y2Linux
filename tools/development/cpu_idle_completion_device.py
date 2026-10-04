@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Device half of the CPU qualification. Only supported kernel/user APIs."""
 import datetime
+from contextlib import contextmanager
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import signal
 import sqlite3
 import struct
 import subprocess
@@ -472,20 +474,55 @@ class Qualification:
             time.sleep(.5)
         raise RuntimeError('C3 admission did not settle after evidence write: '+repr(row))
 
+    @contextmanager
+    def usb_offline(self, role):
+        """Restore observation transport after a bounded offline trial.
+
+        The resident job is the only role owner. SIGALRM bounds userspace
+        prerequisite waits independently of the real-entry kernel backstop.
+        Never replace another timer or leave C3 armed during USB restoration.
+        """
+        original_role = read(role)
+        if original_role != 'device':
+            raise RuntimeError('C3 qualification requires the original device USB role')
+        if any(signal.getitimer(signal.ITIMER_REAL)):
+            raise RuntimeError('existing userspace timer; refusing USB detach')
+        previous_handler = signal.getsignal(signal.SIGALRM)
+
+        def expired(signum, frame):
+            raise RuntimeError('C3 USB-offline limit reached; restoring USB, no retry')
+
+        signal.signal(signal.SIGALRM, expired)
+        signal.setitimer(signal.ITIMER_REAL, 180)
+        try:
+            write(role, 'none')
+            yield
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, previous_handler)
+            try:
+                write(C3, 1)
+                write(BUDGET, 0)
+                write(BACKSTOP, 0)
+            finally:
+                write(role, original_role)
+                time.sleep(8)
+
     def c3_cycles(self):
         self.cmd('sync')
         write(POLICY/'scaling_min_freq', 598000)
         write(POLICY/'scaling_max_freq', 747500)
         role = next(P('/sys/class/usb_role').glob('*/role'))
-        original_role = read(role)
+        # sync and frequency changes may restore parked CPUs and their long
+        # post-load hold. Await that owner with USB still available.
+        self.result['c3_topology_with_usb'] = self.wait_for_c3_topology()
         rows = []
-        try:
-            write(role, 'none')
+        with self.usb_offline(role):
             time.sleep(6)
-            self.result['c3_topology'] = self.wait_for_c3_topology()
+            self.result['c3_topology'] = self.wait_for_c3_topology(timeout=60)
             write(BACKSTOP, 10)
             write(BUDGET, 1)
-            initial_admission = self.wait_for_c3_admission()
+            initial_admission = self.wait_for_c3_admission(timeout=30)
             preflight = initial_admission['last']['preflight']
             self.result['c3_initial_admission'] = initial_admission
             completed = self.config.get('qualified_first_entry', {}).get('completed_cycles', 0)
@@ -497,7 +534,7 @@ class Qualification:
                 self.result['c3_armed'] = {'cycle': cycle, 'status': 'settling_after_durable_receipt',
                                          'budget': 1, 'backstop_s': 10}
                 self.save()
-                admission = self.wait_for_c3_admission()
+                admission = self.wait_for_c3_admission(timeout=30)
                 before = snapshot()
                 # Keep the final snapshot in memory until wake. Saving it here
                 # would recreate the observer-induced eMMC clock rejection.
@@ -520,7 +557,7 @@ class Qualification:
             near_before = fields(spm())
             write(BACKSTOP, 10)
             write(BUDGET, 1)
-            self.wait_for_c3_admission()
+            self.wait_for_c3_admission(timeout=30)
             write(C3, 0)
             for _ in range(20):
                 time.sleep(.001)
@@ -542,14 +579,6 @@ class Qualification:
                 self.result['c3_runtime_window'] = window
             return {'pass': True, 'cycles': rows, 'preflight': preflight,
                     'physical_state': 'WORKING_AND_REPEATEDLY_OBSERVED'}
-        except Exception:
-            write(C3, 1)
-            write(BUDGET, 0)
-            raise
-        finally:
-            write(BACKSTOP, 0)
-            write(role, original_role)
-            time.sleep(8)
 
     def playback(self):
         previous = self.ctl('status').get('playback', {})

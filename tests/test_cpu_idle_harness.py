@@ -200,10 +200,10 @@ class Harness(unittest.TestCase):
         q.config = {}
         q.cmd = lambda *a: ''
         q.save = lambda: None
-        q.wait_for_c3_topology = lambda: {'pass': True}
+        q.wait_for_c3_topology = lambda **kw: {'pass': True}
         events = []
         q.save = lambda: events.append('save')
-        q.wait_for_c3_admission = lambda: events.append('quiet') or {'pass': True, 'last': {'preflight': 'unmet='}}
+        q.wait_for_c3_admission = lambda **kw: events.append('quiet') or {'pass': True, 'last': {'preflight': 'unmet='}}
         writes = []
         state = {'dormant_attempts': '0', 'dormant_entries': '0', 'dormant_resumes': '0', 'dormant_successes': '0',
                  'dormant_residency_us': '0', 'dormant_restore_failures': '0', 'dormant_failures': '0',

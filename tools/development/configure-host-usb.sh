@@ -11,6 +11,7 @@ connection=$(nmcli -g GENERAL.CONNECTION device show "$iface")
 [ -n "$connection" ] && [ "$connection" != -- ]
 nmcli -f connection.id,connection.interface-name,802-3-ethernet.mac-address,ipv4.method,ipv4.addresses,ipv4.never-default connection show "$connection"
 nmcli connection modify "$connection" \
+    connection.interface-name '' \
     802-3-ethernet.mac-address 02:42:00:00:00:02 \
     ipv4.method manual ipv4.addresses 10.42.0.2/24 ipv4.gateway '' \
     ipv4.never-default yes connection.autoconnect yes
