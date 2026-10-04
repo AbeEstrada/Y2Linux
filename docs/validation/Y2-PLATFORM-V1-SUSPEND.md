@@ -144,9 +144,10 @@ Reborn fmt and strict all-target Clippy pass; all 243 workspace tests pass with
 locked dependencies and isolated temporary paths. The ARM release build passes
 against the exact Baseline02 SDK; Reborn SHA256 is
 `673f8c18d293101102e9768076e5429968f71ecee17121eb38aa0d3172418a09`.
-A native headless process passes explicit prepare/checkpoint, prepared mutation
-refusal, restore/control admission and a second prepare/restore in the same
-process. This is an application IPC test, not physical GPU/audio/input proof.
+Native and Cortex-A7 QEMU headless processes pass explicit prepare/checkpoint,
+prepared mutation refusal, restore/control admission and a second prepare/restore
+in the same process. QEMU uses the Baseline02 ARM runtime libraries. These are
+application IPC tests, not physical GPU/audio/input proof.
 
 Wake-input reset is scheduled before fallible display restoration, so even a
 failed display restore discards the prior gesture before accepting input again.
@@ -169,3 +170,25 @@ Implementation commits:
 - Reborn `f69c3c4`: discard wake input before fallible display restoration.
 
 The physical receipt remains pending. No push or flash.
+
+
+## Changed files
+
+Linux:
+
+- `kernel/platform/{spm.c,spm-suspend-policy.h,pm-journal.c}`
+- `tools/platform/y2_platform/{cli.py,sleep.py,suspend_record.py}`
+- `buildroot/board/y2/production-overlay/usr/sbin/y2-suspend`
+- `tools/development/{qualify-platform-v1-suspend.py,suspend_platform_device.py}`
+- `tests/{test_cpu_fix03.py,test_platform_v1_suspend.py,test_sleep_product.py,test_suspend_policy.py}`
+- `docs/validation/Y2-PLATFORM-V1-SUSPEND.md`
+- `docs/planning/{roadmap-gap-audit.md,platform-v1-roadmap.md}`
+- `docs/DOCUMENTATION_CATALOG.md`
+
+Reborn:
+
+- `app/reborn/src/{main.rs,bin/reborn-preview.rs}`
+- `crates/reborn-control/src/lib.rs`
+- `crates/reborn-core/src/{lib.rs,platform.rs}`
+- `crates/reborn-platform/src/{client.rs,input.rs}`
+- `crates/reborn-ui/src/{lib.rs,pages.rs,tests.rs}`
