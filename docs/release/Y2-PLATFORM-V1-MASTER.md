@@ -1,9 +1,9 @@
 # Y2 + Reborn Platform 1.0 master report
 
-Review cutoff: 2026-10-04T14:24:19.143470+00:00. **INTEGRATION_IN_PROGRESS**.
+Review cutoff: 2026-10-04T15:40:03.801693+00:00. **INTEGRATION_IN_PROGRESS**.
 
 The master found eleven independent paired subsystem sessions and is doing
-integration review only. No subsystem tree, ref or index was modified. Initial observation performed no build/hardware test/merge. The refreshed
+integration in its own isolated worktrees. No subsystem tree, ref or index was modified. Initial observation performed no build/hardware test/merge. The refreshed
 activation audit now admits master-owned isolated integration trees; no main merge,
 flash or push occurred. See the
 [live status](Y2-PLATFORM-V1-INTEGRATION-STATUS.md) for every branch/HEAD/path,
@@ -323,12 +323,38 @@ Supplemental JSON is archived in14:10 snapshot and primary figures preserved.
 No app source changed. Normal lease release/restoration completed; paired closing
 7ed4a406/949b78ce is clean and reviewed; master stays offline.
 
+## Integration execution ledger — current 2026-10-04
+
+| Unit | Linux / Reborn integration commit | Targeted evidence |
+| --- | --- | --- |
+| Admission | a99b56f477ff641d6ac7ae44a689328a8ab40c11 / a243405416beb71b6912696d498ecea5baa91e8e | Eleven clean/stable final paired handoffs; standing audit/roadmap refreshed; protected b5/b71 foundations; existing configured/recorded Luca identity retained without configuration changes. |
+| Shared kernel | c95561f79d839c42a8f4bc78c87c07b818f82d53 / foundation | Storage0009, suspend0030/SPM journal/restore, USB0065/configfs and truthful AFE precision telemetry; new kernel identity integration-01.50 exact overlay base/result/zero-fuzz checks PASS;55 source tests initially54pass/one omitted-wrapper dependency, then full8policy tests PASS after including wrapper. Clean ARM Image/zImage/modules/config build PASS; idle/UART/timer/CIRQ/boot-policy paths unchanged. |
+| Storage | 02c314e4c5608dad62d2972788e6a13d38084b03 / b533ebbded5020839a9d9f8372a7ca9f2d67809d |46 Linux tests and247 Reborn workspace tests PASS; source claims, no-follow playback/queue/sidecar FD lifetime and existing fixtures preserved. |
+| USB + shared Wi-Fi service |96ce4df086c149620f81cdd206b419f507f6e107 / ccdb794cf22791270041665c68b0aef971f2cbf2 (USB),5317b7c1a5f5b291a5680289e52d2d5e64716a15 (Wi-Fi) | USB51 Linux/172 affected Rust tests PASS; combined60 Linux tests including native responder/confinement and two new signal/socket/termination/idle tests PASS;14 Wi-Fi Rust tests PASS. Production test entrypoint retains storage+USB+new codec PM/integration coverage. Linux shared service landed as one coherent combined unit. |
+
+
+| Bluetooth | f463e657ab3568b20e2385ab22ce0a336a81f5af / 0fadf293569556f3d697704413046acaca90424d | 40 Linux PASS/one DT dependency skip and ten Bluetooth Rust PASS; event-driven owner retained. |
+| PCM precision and diagnostics | 0b78829e676f1208294d50a057a622777b02918c / 465b3d3726d1d240ae81605a3abc3d1cb28cd52e | 15 Linux and78 affected Rust tests PASS;35 pinned PCM fixtures, typed public bonding/USB/sleep/precision export and private malformed bond redaction. |
+| Bounded media and checked artwork | source foundation / 5435572e761d31d56547b57156f91fe3a98bbdc0 | 90 affected Rust tests and ten host artwork checks PASS. FFmpeg unified bounded decoder, graphics checked JPEG lowres and storage FD header/regular-file guards composed. New case/fallback/parent-rename/symlink test PASS. Host FFmpeg is newer than pinned9.0.2; exact production ARM/QEMU gate remains. |
+| Database/media scanner | source foundation / 836533560fdcdadc6351a8b2cfc116e947ace124 | DB-owner TEMP presence/batch/token/keyset protocol retained; FFmpeg metadata revision2/additive schema1 reopen, bounded iterator traversal, demux-only parse and file-race counters adapted.46 library tests plus affected app/binaries PASS, including50k behavior, unchanged persistent-write refusal, UUID-to-CID offline identity and250001 SQL-only cap fixture. The threshold fixture is no hardware/RSS qualification beyond the owner's50k result. |
+
+
+| Performance/runtime/render | source foundation / 4ee462f5e93b7044d6c0cd40ad32c7a0d53b2085 |222 affected Rust tests and strict workspace Clippy PASS;14 host art requests/eight expected warm hits. Exact reviewed pacing blob0580a345 retained. Observation generation and source-aware artwork composed; later suspend unit releases cached FDs and adds actual worker quiescence. Physical performance numbers remain bound to owner069415a binary. |
+| Input |6cd52a672b1789c5c18e270d62da09b34f480dd3 /7686c9b2a72b7829072f82bd63c32452d22262b3 |195 affected Rust and three Linux analyzer tests PASS; host capture helper compiles with strict warnings. Canonical kernel_mono_us controls timing; performance analyzer reads it and retains compatibility with old evdev_us receipts. |
+| Full-suspend product reconciliation |82499a0c11b83340767f70068c07cf75d7a538f6 /30b6a95687d101b57151de3df740a02ce6dab956 |324 full Reborn workspace tests, fmt and strict Clippy PASS;40 Linux tests PASS. New source/music/mount/sleep generation, pending scanner acknowledgement, deferred durable USB refresh, active artwork cancellation, zero-cache-FD eject and >read-budget pre-wake queue tests. PowerHold is shutdown confirmation; short dark wake is consumed; dark transport seeking preserved. Full physical RTC failure remains open and ordinary deep sleep still refuses unqualified hardware. |
+| Retained owner handoffs |792f00a5bf655071920991d5af3c672dae3c8ee2 /f0fba6cc4e90fae0681eee93ebecba20187caff3 | Source-bound architecture/validation/raw committed receipts preserved; historical roadmap/CURRENT claims are not replayed as current integration identity.15:40 read-only discovery confirms all owner heads unchanged/clean/stable. |
+
+Private master build/test logs: isolated paired `out/integration-validation/`;
+initial kernel output `Y2Linux/out/integration-kernel/`. These are software units,
+not a sealed BOOTIMG/Y2ROOT pair or physical acceptance. Exact public source
+unit origins remain in the status/plan; source owners and canonical refs are
+unchanged. Raw patch context whitespace is retained for exact zero-fuzz/digest
+verification; ordinary code whitespace is checked separately.
+
 ## Next owner action and readiness
 
 **No owner flash/install action now.** All eleven source-frozen handoffs are
-reviewed. The immediate master action is the refreshed boundary audit and paired
-isolated integration branches, followed by owned semantic composition and
-targeted validation after each step. A real headset is needed for later Bluetooth
+reviewed. Paired isolated integration branches are active; shared kernel, storage, USB/Wi-Fi, Bluetooth, precision, media and DB source units are committed and targeted software checks pass. Performance/runtime/input/suspend composition has passed its targeted tests; fresh release/software gates remain. A real headset is needed for later Bluetooth
 qualification. One final integrated physical campaign will reuse unaffected
 receipts and focus on cross-subsystem regressions, with minimal owner interaction.
 
@@ -336,3 +362,16 @@ Readiness: **INTEGRATION_IN_PROGRESS**. The final 16-item completion report,
 one candidate and its exact owner installation step become available only after
 required integration/software gates; PLATFORM_V1_READY additionally requires
 required physical/endurance and distribution gates.
+
+Source composition is now committed; next work is release composition, the one
+qualification harness and fresh broad software/ARM validation.
+Owner trees/refs remain untouched. Collection caching retains four valid embedded covers and immutable source/file
+claims; cached covers own no descriptors or mount pins. Sidecar results are uncached/fresh.
+New source freshness checks avoid repeated UUID probes on warm cache hits and
+reject changed inode/ctime/mount/card claims before worker and UI publication.
+Sleep preparation consumes read-only observation, actual scanner admission and
+artwork activity gates; queued/active work cannot start after acknowledgement.
+USB durable generations remain deferred until restore. The source freshness
+claim also checks inode/ctime/mount/card before worker and UI publication while
+releasing decode descriptors, so cached artwork cannot block SD eject. Initial compile-only composition failures are kept
+in private logs and corrected; no failure is reclassified as a pass.

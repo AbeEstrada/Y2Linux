@@ -78,7 +78,8 @@ def verdict(result):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--host', default='root@10.42.0.1')
-    p.add_argument('--ssh-port', type=int, default=22)
+    p.add_argument('--ssh-port', type=int)
+    p.add_argument('--ssh-config', type=Path, help='existing pinned owner SSH configuration')
     p.add_argument('--host-key-alias', help='verify a temporary Wi-Fi listener against the known USB host key')
     p.add_argument('--device-lock-fd', type=int, help='inherited shared-lock descriptor from a retained coordinator lease')
     p.add_argument('--key', type=Path, default=Path('/home/luca/.ssh/y2linux_ed25519'))
@@ -87,8 +88,10 @@ def main():
     p.add_argument('--wake-source', choices=['rtc', 'power'], default='rtc')
     p.add_argument('--output', type=Path, required=True)
     a = p.parse_args()
-    if not 1 <= a.ssh_port <= 65535:
+    if a.ssh_port is not None and not 1 <= a.ssh_port <= 65535:
         p.error('--ssh-port must be 1..65535')
+    if a.ssh_config and not a.ssh_config.is_file():
+        p.error('--ssh-config must already exist')
     # Hostnames and key paths are passed as argv, never interpolated into shell.
     with device_lock(a.device_lock_fd) as lock:
         try:
@@ -96,7 +99,11 @@ def main():
         except BlockingIOError:
             raise SystemExit('DEVICE_BUSY: no device access performed')
         a.output.mkdir(parents=True, exist_ok=False)
-        ssh = ['ssh', '-T', '-oBatchMode=yes', '-oStrictHostKeyChecking=yes', '-oConnectTimeout=5', '-i', str(a.key), '-p', str(a.ssh_port)]
+        ssh = ['ssh', '-T', '-oBatchMode=yes', '-oStrictHostKeyChecking=yes', '-oConnectTimeout=5', '-i', str(a.key)]
+        if a.ssh_config:
+            ssh += ['-F', str(a.ssh_config)]
+        if a.ssh_port is not None:
+            ssh += ['-p', str(a.ssh_port)]
         if a.host_key_alias:
             ssh += ['-oHostKeyAlias=' + a.host_key_alias]
         ssh.append(a.host)

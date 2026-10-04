@@ -2,8 +2,8 @@
 
 ## Parallel integration observation — 2026-10-04
 
-[Master status](release/Y2-PLATFORM-V1-MASTER.md): **PARALLEL_WORK_IN_PROGRESS**.
-Eleven paired subsystem worktrees are being reviewed independently; no final
+[Master status](release/Y2-PLATFORM-V1-MASTER.md): **INTEGRATION_IN_PROGRESS**.
+All eleven paired handoffs are source-frozen and selected source is composed on isolated master branches; no final
 Platform 1.0 integration candidate exists. New Bluetooth/Wi-Fi owner receipts
 identify installed Baseline02 (Linux `8584ccd8`, Reborn `b71b4688`, root v1.21,
 boot `27e6d684-3794-4490-95db-a489027cd4f4`, taint 0). Their locations and
@@ -41,7 +41,7 @@ not build, flash, push or run a new physical qualification.
 | Software / package | PASS |
 | New-image hardware / automatic cold boot | PHYSICAL_NOT_RUN |
 
-The latest hardware receipt is **UART01**, kernel
+The protected bounded CPU-idle hardware receipt is **UART01**, kernel
 `6.18.0-y2linux-cpu-c3-uart-01`, Linux `e9e8d63f9c94232c2b6627881e0967583e202dac`,
 Reborn `b71b468860233faa0a42b8448ec5777fa952b8e3`, root
 `2025.02.18-platform-v1.20`, boot
@@ -49,6 +49,8 @@ Reborn `b71b468860233faa0a42b8448ec5777fa952b8e3`, root
 C1, C2 and C3 are physically working on that image. Baseline02 retains that
 kernel architecture; its new image and automatic cold-boot activation remain
 **PHYSICAL_NOT_RUN** until owner installation and the guarded checks.
+
+Later 2026-10-04 source-bound owner reports identify installed Baseline02 and boot `88b85fa3` after a failed full RTC wake. The dated table above records the Baseline02 seal; it does not override these later observations. See the [master](release/Y2-PLATFORM-V1-MASTER.md) for current source and device axes.
 
 See the [sealed receipt](validation/Y2-BASELINE-02.md),
 [exact candidate and fallback identities](knowledge/candidate-index.md) and

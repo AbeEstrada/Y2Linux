@@ -6,17 +6,20 @@ unique scratch directories; cleanup refuses a changed boot/mount identity.
 MTP runs through GIO, exercising the normal GNOME/GVfs desktop path.
 """
 import argparse
-import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
+import sys
 import shlex
 import shutil
 import subprocess
 import tempfile
 import time
 import uuid
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'development'))
+from device_lease import open_lease
 
 SNAPSHOT = '''import json,pathlib,os
 p=pathlib.Path
@@ -235,6 +238,7 @@ def main():
     parser.add_argument('--ssh-config',type=Path)
     parser.add_argument('--mtp-uri',help='GIO URI of Y2 Internal Storage, e.g. mtp://[usb:003,012]/Internal Storage')
     parser.add_argument('--package',type=Path)
+    parser.add_argument('--device-lock-fd',type=int,help='inherited integration campaign lease')
     parser.add_argument('--sizes',type=int,nargs='+',default=[1,16,128,512])
     parser.add_argument('--small-files',type=int,nargs='+',default=[100,1000])
     parser.add_argument('--music-corpus',type=Path)
@@ -246,11 +250,12 @@ def main():
     if any(n<1 or n>512 for n in args.sizes) or any(n<1 or n>1000 for n in args.small_files): parser.error('bounded workload sizes required')
     args.output.mkdir(parents=True,exist_ok=True)
     if (args.output/'result.json').exists(): parser.error('fresh evidence output required')
-    with open('/tmp/y2-platform-v1-device.lock','a') as lock:
-        try: fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-        except BlockingIOError:
-            result={'result':'NOT_RUN_DEVICE_LOCK_BUSY','physical_access':False}
-        else:
+    try:
+        lease = open_lease(args.device_lock_fd)
+    except BlockingIOError:
+        result={'result':'NOT_RUN_DEVICE_LOCK_BUSY','physical_access':False}
+    else:
+        with lease:
             try: result=Harness(args).matrix()
             except Exception as error: result={'result':'FAIL_PREFLIGHT','error':str(error)}
     (args.output/'result.json').write_text(json.dumps(result,indent=2)+'\n')

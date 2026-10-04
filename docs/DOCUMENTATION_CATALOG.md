@@ -2,7 +2,7 @@
 
 Updated 2026-10-03 for Baseline02. Every project-owned Markdown page in this repository
 is listed once; vendored upstream package documentation is excluded.
-The newest sealed candidate is Baseline02; latest bounded CPU-idle hardware
+Platform 1.0 source composition is in progress; retained sealed Baseline02 is history; latest bounded CPU-idle hardware
 proof is UART01. Baseline02 new-image/cold-boot qualification remains NOT_RUN.
 Start with the current-state page; a historical
 report records its own build/session, not the presently installed image.
@@ -11,7 +11,7 @@ document links, rather than relocating or deleting proof. See the
 [shared knowledge rules](KNOWLEDGE_BASE.md)
 and the other repository's catalog for product-wide context.
 
-Indexed pages: **289**. Explicit scope notices: **220**.
+Indexed pages: **301**. Explicit scope notices: **220**.
 
 ## Entry
 
@@ -358,3 +358,21 @@ Platform 1.0 parallel integration observation (2026-10-04):
 | [Reborn and battery implementation](release/implementation-reborn-power.md) | Productv2 controls, power and exact sensor evidence |
 | [Community tester guide](release/Y2-COMMUNITY-TESTER-GUIDE.md) | First install, transfer, redacted report, update/recovery |
 | [Source delivery and distribution gate](release/Y2-COMMUNITY-SOURCE-DELIVERY.md) | Composition, privacy, sources and public-distribution blockers |
+
+## Platform 1.0 integration source and evidence
+
+| Page | Scope |
+| --- | --- |
+| [One Platform 1.0 physical qualification campaign](release/Y2-PLATFORM-V1-PHYSICAL-QUALIFICATION.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
+| [Y2 + Reborn Bluetooth Platform 1.0 optimization](validation/Y2-PLATFORM-V1-BLUETOOTH-OPTIMIZATION.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
+| [Y2 Platform 1.0 GPU, display and graphics power pass](validation/Y2-PLATFORM-V1-GRAPHICS.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
+| [Y2 Platform 1.0 wired PCM precision completion pass](validation/Y2-PLATFORM-V1-HIGHRES-AUDIO.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
+| [Y2 Platform 1.0 input validation](validation/Y2-PLATFORM-V1-INPUT.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
+| [Y2 Platform 1.0 storage and filesystem pass](validation/Y2-PLATFORM-V1-STORAGE.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
+| [Y2 Platform 1.0 full system suspend / resume](validation/Y2-PLATFORM-V1-SUSPEND.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
+| [Y2 Platform 1.0 USB / desktop file transfer](validation/Y2-PLATFORM-V1-USB.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
+| [Y2 Platform 1.0 Wi-Fi optimization](validation/Y2-PLATFORM-V1-WIFI-OPTIMIZATION.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
+
+| [Platform 1.0 master report](release/Y2-PLATFORM-V1-MASTER.md) | Current master integration state |
+| [Platform 1.0 live source status](release/Y2-PLATFORM-V1-INTEGRATION-STATUS.md) | Timestamped read-only owner/source evidence |
+| [Platform 1.0 integration plan](release/Y2-PLATFORM-V1-INTEGRATION-PLAN.md) | C01–C30 source reconciliation and gates |

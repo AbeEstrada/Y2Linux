@@ -1,10 +1,10 @@
 # Y2 + Reborn Platform 1.0 live integration status
 
-Observation started 2026-10-04T14:24:19.143470+00:00 (Europe/Berlin: UTC+02 on this date).
+Observation started 2026-10-04T15:40:03.801693+00:00 (Europe/Berlin: UTC+02 on this date).
 
-**Verdict: PARALLEL_WORK_IN_PROGRESS.** This is a timestamped evidence review; live trees can change immediately afterward. Never infer completion or hardware qualification from Git activity. See [plan](Y2-PLATFORM-V1-INTEGRATION-PLAN.md) and [master](Y2-PLATFORM-V1-MASTER.md).
+**Verdict: INTEGRATION_IN_PROGRESS.** This is a timestamped evidence review; live trees can change immediately afterward. Never infer completion or hardware qualification from Git activity. See [plan](Y2-PLATFORM-V1-INTEGRATION-PLAN.md) and [master](Y2-PLATFORM-V1-MASTER.md).
 
-Immutable local snapshot: `/home/luca/Dokumente/Code/Y2Linux/out/platform-v1-integration-analysis/20261004T142419.143470Z/inventory.json`, paired tracked diffs, copied changed handoff documents, graph/ref inventory, candidate manifest copies and file fingerprints. Raw receipts stay ignored/private; no image/source-tree/ROM rehash. Refresh with `python3 tools/development/observe-platform-v1.py` and review changes before updating this report. The observer changes no owner refs/index/files and never marks work accepted/finished. A snapshot or manifest marked unstable must be read again.
+Immutable local snapshot: `/home/luca/Dokumente/Code/Y2Linux/out/platform-v1-integration-analysis/20261004T154003.801693Z/inventory.json`, paired tracked diffs, copied changed handoff documents, graph/ref inventory, candidate manifest copies and file fingerprints. Raw receipts stay ignored/private; no image/source-tree/ROM rehash. Refresh with `python3 tools/development/observe-platform-v1.py` and review changes before updating this report. The observer changes no owner refs/index/files and never marks work accepted/finished. A snapshot or manifest marked unstable must be read again.
 
 ## Source and device axes
 
@@ -15,23 +15,23 @@ Immutable local snapshot: `/home/luca/Dokumente/Code/Y2Linux/out/platform-v1-int
 | Reborn main | `7f9df397ab3809d52e2f1073ca93a305246e0c3a`; do not omit `b71b468` when integrating |
 | Latest installed identity in owner receipts | Baseline02, compiled Linux `8584ccd8` / Reborn `b71b4688`, root v1.21. Earlier subsystem boot `27e6d684-3794-4490-95db-a489027cd4f4`; single RTC full-sleep trial watchdog-recovered to `88b85fa3-2282-4d93-b0b8-818a105ddd0a`, taint 0. Master did not access device. |
 | Protected CPU physical receipt | UART01 Linux `e9e8d63f9c94232c2b6627881e0967583e202dac` / Reborn `b71b4688`, boot `fd955840-35d9-47db-83e0-ff47d6bb2d2b`. C1 working; C2 84.3473%; C3 65.2450%, 3,647 checked returns, zero restore failures. |
-| Baseline02 full sleep / automatic C3 / final integration | RTC full trial FAIL: no same-boot complete resume; retained DEVICES_RESUMING/wake 0x20/PCM 596/reset 0x59325253. Matching direct scratch hashes and ext4 counters after reboot prove recovery only. Automatic cold-boot/C3 gate remains open. Integrated image does not exist. |
+| Baseline02 full sleep / automatic C3 / final integration | RTC full trial FAIL: no same-boot complete resume; retained DEVICES_RESUMING/wake 0x20/PCM 596/reset 0x59325253. Matching direct scratch hashes and ext4 counters after reboot prove recovery only. Automatic cold-boot/C3 gate remains open. Source units are integrated; fresh final image build and qualification remain. |
 
-## Eleven live subsystem pairs
+## Eleven finished source handoffs
 
 Both branch names are `codex/platform-v1-<subsystem>` in their respective repositories. Full worktree paths and all fields follow the compact table. New commits are counted from the protected foundation; Reborn b71b468 is shared foundation, not eleven independent new changes.
 
 | Subsystem | Linux HEAD / dirty | Reborn HEAD / dirty | Lifecycle | Master source disposition | Order |
 | --- | --- | --- | --- | --- | --- |
 | bluetooth | `5846a7a0a133` / clean | `de092094c27a` / clean | Finished software handoff; physical gates open | ACCEPT_WITH_INTEGRATION_ADJUSTMENT (source); NEEDS_MORE_WORK (qualification) | 5 |
-| ffmpeg-metadata | `e709ecc79006` / clean | `c9ef7902e894` / clean | Finished software handoff; physical scan/playback NOT_RUN | NEEDS_REBASE_OR_RECONCILIATION (C02/C03/C09/C24) | 6 → 7 → 8 |
-| graphics | `383234de0efb` / clean | `a2df691edfbb` / clean | Finished paired handoff; bounded native-ARM/awake/off/wake evidence, overall PARTIAL | NEEDS_REBASE_OR_RECONCILIATION for artwork; keep current GPU/scanout baseline | 8 |
+| ffmpeg-metadata | `e709ecc79006` / clean | `c9ef7902e894` / clean | Finished software handoff; physical scan/playback NOT_RUN | ACCEPT_WITH_INTEGRATION_ADJUSTMENT (selected source composed and targeted software tests PASS); exact RC physical/global gates open | 6 → 7 → 8 |
+| graphics | `383234de0efb` / clean | `a2df691edfbb` / clean | Finished paired handoff; bounded native-ARM/awake/off/wake evidence, overall PARTIAL | ACCEPT_WITH_INTEGRATION_ADJUSTMENT (selected source composed and targeted software tests PASS); exact RC physical/global gates open | 8 |
 | highres-audio | `7163181805ff` / clean | `cd5d2430f756` / clean | Finished software handoff; native wider hardware admission open | ACCEPT_WITH_INTEGRATION_ADJUSTMENT (source); NEEDS_MORE_WORK (native highres qualification) | 6 |
-| input | `8b5803021ce8` / clean | `e51a33525dc1` / clean | Finished paired source handoff at owner closure; physical MORE_WORK_REQUIRED | NEEDS_REBASE_OR_RECONCILIATION (C04/C14); NEEDS_MORE_WORK (physical) | 9 → 10 |
-| library-db | `cdbdfe880609` / clean | `c7a878690482` / clean | Finished paired handoff; native 1k/10k/50k scratch evidence, wider qualification open | NEEDS_REBASE_OR_RECONCILIATION (C02/C19/C24) | 7 |
+| input | `8b5803021ce8` / clean | `e51a33525dc1` / clean | Finished paired source handoff at owner closure; physical MORE_WORK_REQUIRED | ACCEPT_WITH_INTEGRATION_ADJUSTMENT (selected source composed and targeted software tests PASS); exact RC physical/global gates open | 9 → 10 |
+| library-db | `cdbdfe880609` / clean | `c7a878690482` / clean | Finished paired handoff; native 1k/10k/50k scratch evidence, wider qualification open | ACCEPT_WITH_INTEGRATION_ADJUSTMENT (selected source composed and targeted software tests PASS); exact RC physical/global gates open | 7 |
 | reborn-performance | `949b78ce0f04` / clean | `7ed4a406e812` / clean | Finished clean paired handoff; scoped exact069415a device performance PASS | ACCEPT_WITH_INTEGRATION_ADJUSTMENT (source); wider qualification open | 8 → 10 |
-| storage | `3a6b5f3e20b3` / clean | `f726ae40bfd9` / clean | Finished paired handoff; target acceptance partial | NEEDS_REBASE_OR_RECONCILIATION (C07/C19); qualification partial | 1 → 2 |
-| suspend | `2d2b543d3a59` / clean | `c57a55f8d09a` / clean | Finished paired source handoff; Baseline02 full RTC FAIL, new code NOT_RUN | NEEDS_REBASE_OR_RECONCILIATION; full sleep hardware open | 1 (kernel review) → 10 (product) |
+| storage | `3a6b5f3e20b3` / clean | `f726ae40bfd9` / clean | Finished paired handoff; target acceptance partial | ACCEPT_WITH_INTEGRATION_ADJUSTMENT (selected source composed and targeted software tests PASS); exact RC physical/global gates open | 1 → 2 |
+| suspend | `2d2b543d3a59` / clean | `c57a55f8d09a` / clean | Finished paired source handoff; Baseline02 full RTC FAIL, new code NOT_RUN | ACCEPT_WITH_INTEGRATION_ADJUSTMENT (selected source composed and targeted software tests PASS); exact RC physical/global gates open | 1 (kernel review) → 10 (product) |
 | usb | `1115933c48e1` / clean | `51d477b2f30e` / clean | Finished software/image/final harness handoff; physical NOT_RUN | NEEDS_REBASE_OR_RECONCILIATION (C01/C07/C17/C19); NEEDS_MORE_WORK (qualification) | 1 → 3 → 4 → 10 |
 | wifi | `78c3512400a3` / clean | `2cdb9cce8df1` / clean | Finished source handoff; Platform 1.0 physical acceptance PARTIAL | ACCEPT_WITH_INTEGRATION_ADJUSTMENT (C01/C08); NEEDS_MORE_WORK (qualification) | 4 |
 
@@ -928,6 +928,7 @@ codex/platform-v1-ffmpeg-metadata e709ecc7900690bfbbb765227092a9f3c81a99f8
 codex/platform-v1-graphics 383234de0efbecf08db65b9f712211f2eec28eef
 codex/platform-v1-highres-audio 7163181805ff28846ab98c6a9bdd373dd980aad8
 codex/platform-v1-input 8b5803021ce8d7861278904f7afd8a06a381b0b3
+codex/platform-v1-integration 82499a0c11b83340767f70068c07cf75d7a538f6
 codex/platform-v1-library-db cdbdfe880609fcf8563991d5fe888fa055047857
 codex/platform-v1-reborn-performance 949b78ce0f046398a3f630a4aa4ba4bcaf6f38bf
 codex/platform-v1-storage 3a6b5f3e20b3e1ebaf709ff99035a7c067723d3b
@@ -965,6 +966,7 @@ codex/platform-v1-ffmpeg-metadata c9ef7902e89443bfe26846dfe1f325de7d84598f
 codex/platform-v1-graphics a2df691edfbb105a164e2f5f574b158ec5f81e6c
 codex/platform-v1-highres-audio cd5d2430f7560b8077814f23cf45e88ae57bad55
 codex/platform-v1-input e51a33525dc15eba144702a37eca694da9037b76
+codex/platform-v1-integration 30b6a95687d101b57151de3df740a02ce6dab956
 codex/platform-v1-library-db c7a8786904825a0552ca26ee4bdc833eff822704
 codex/platform-v1-reborn-performance 7ed4a406e812ca31b5f98a6cfb25e7a58f454f05
 codex/platform-v1-storage f726ae40bfd965d7f09cb37b3e317bfb532db0f2
@@ -1059,3 +1061,33 @@ ReleaseV2.3 263552d114b66601ab0cd8223f4d5779750b9b6b
 Registered worktrees: Linux 44, Reborn 31; live subsystem pairs 11. Snapshot stability is per worktree, not an atomic multi-repository transaction. The first prototype inventory had a leading-space status parsing defect and misclassified the historical physical-worktrees directory; corrected observer snapshots from 11:02:21 UTC onward govern the tables above.
 
 Master validation so far: read-only inventory, actual diffs/reports/log files, temporary-copy merge probes, pure combined diagnostic projection, offline existing qualification plans and document/diff checks. No subsystem tests, build, device experiment, flash, merge, rebase, main commit or push was performed.
+
+## Master integration execution — source composition complete
+
+Isolated paired branches `codex/platform-v1-integration` are under
+`/home/luca/Dokumente/Code/worktrees/platform-v1-integration/`. Owner admission
+remains the frozen14:24 final source roster;15:40 observer confirms all22 owner
+heads unchanged, clean and stable. Total registered Linux/Reborn worktrees is77
+including these two master trees. No owner worktree/ref/index was changed.
+
+All chosen subsystem source units are composed with targeted software checks.
+Reborn324 workspace tests, strict workspace/all-target Clippy and fmt check PASS;
+Linux40 focused suspend/diagnostics/precision and earlier unit tests PASS. Exact
+pinned9.0.2 ARM/QEMU, fresh production/kernel/DT/modules/ABI, package/privacy and
+source/notices gates remain. Current image is NOT_BUILT; subsystem candidates
+remain separate retained artifacts. Source admission is distinct from product
+acceptance: full RTC failure, hardware-limited highres and unrun peer/desktop/
+input/endurance lanes remain open.
+
+Rejected/superseded source fragments: performance's stale Bluetooth timer hunk;
+FFmpeg's competing durable presence/wall-marker scanner in favor of DB-owner
+TEMP/token protocol; duplicate JPEG decoders in favor of graphics checked lowres
+inside FFmpeg's unified bounded wrapper; old input timestamp/Power definitions
+and pathname-only art access. All original handoffs and measured regressions are
+preserved. Warm art retains four pixel entries plus immutable claims and zero
+cached file descriptors, preserving SD eject. See master execution ledger and
+C01–C30 decisions for the exact composition and new conflict regressions.
+
+## Source composition cutoff — 2026-10-04
+
+All eleven paired source handoffs are finished, clean and unchanged at the 15:40 read-only refresh. Each useful implementation is now ACCEPT_WITH_INTEGRATION_ADJUSTMENT in the master branches; this supersedes the initial reconciliation requests in the historical review below. Graphics GPU/runtime-PM and protected CPU foundations are deliberately preserved. Physical/product acceptance remains PARTIAL or NEEDS_MORE_WORK as recorded per owner. No integrated image exists at this cutoff. See the master execution ledger for every integration commit and rejected duplicate/stale hunk.

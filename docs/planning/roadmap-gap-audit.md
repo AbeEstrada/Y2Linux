@@ -1,5 +1,50 @@
 # Roadmap gap audit
 
+
+## Platform 1.0 production composition boundary — 2026-10-04
+
+Before creating the integrated release candidate, the master repeats the
+[standing milestone boundary review](#standing-milestone-boundary-rule).
+The233-feature target, owner Platform1.0 direction, all eleven frozen paired
+handoffs, protected Linuxb5aea937/Rebornb71b4688 foundations and C01–C30 are
+compared with the retained hardware receipts.15:40 read-only discovery confirms
+all22 owner heads unchanged/clean/stable; isolated integration branches alone
+contain the selected composition. Source/software readiness is complete for
+localized units: Reborn324 tests/fmt/strict Clippy and Linux focused contracts
+pass. Fresh pinned9.0.2 ARM/kernel/DT/modules/ABI/production/package/source/privacy
+qualification is the next software boundary; no integrated image exists yet.
+
+| Coverage | Current hardware evidence and production gap |
+| --- | --- |
+| CPU/timers/topology/idle | UART01 exact e9e8d63/b71, bootfd955840/taint0: all-core C1; C2 84.3473%; C3 3,647 checked returns,65.2450%,zero restore failures/same boot. Baseline02 boot88 readback enables automatic C3; exact-RC cold boot/residency and after-full-resume regression remain. |
+| Full suspend/power | Baseline02 compiled8584ccd/b71 full RTC trial FAIL: warm recovery to88b85fa3, unmatched CS43131 1-0030 resume entry7407, no COMPLETE/EXIT. Same scratch hashes/ext4 errors0 prove recovery, not resume. New codec rollback/notes, SPM restoration and product quiescence are source/software only; ordinary unqualified full sleep refuses. Charging/offline/electrical/endurance gates remain. |
+| Storage/filesystems/USB | Baseline02 passive MMC/SD tuning, DATA+SD1k scans and fsynced scratch hashes are bounded physical passes; same-card reinsertion diskseq2→3 observed. Different-card/FAT/exFAT/absent-boot/desktop/endurance are open. New configfs/MTP exposes files through the sole Linux filesystem owner, never raw writable blocks; sealed USB080 candidate is separate/uninstalled. MTP hardware/Windows/macOS/GNOME/KDE matrix must qualify the integrated image. |
+| Radios/codecs | New event-driven Bluetooth and bounded Wi-Fi readiness/power policy have software evidence; Baseline02 Wi-Fi HTTP/DNS and old worker overhead are retained. Real headset/active PCM/reconnect/coexistence, codec hardware and new-policy target execution remain. No old receipt qualifies the new binaries. |
+| Wired/highres/media | Native S16 stereo44.1/48 is the proven hardware contract;24/32 and88.2/96 remain conditional on unproven AFE/I2S payload. Software low-bit packing, FD/custom-AVIO metadata, checked JPEG reduction and media limits pass. Physical fidelity/bit capture/formats/endurance remain. |
+| DB/Reborn/graphics/input | Baseline02 private native1k/10k/50k DB comparisons and temporary performance069415a binarySHA7871ec67 show bounded improvements, with ingest/prune/cold-list and original two-sample Play/Pause regressions retained. Supplemental32-event replay improves tails; stock/policy/data restored on boot88/taint0. New integration claim/worker/input contracts have software checks; exact-RC UI/controls/KMS/audio/source/eject regressions remain. The input owner's120-second physical window contained zero events, not a counted-button pass. |
+| Boot/install/update/recovery | Preserve stock loaders, D08/MMC layouts, data schema1, BOOTIMG+ANDROID preserving update allowlist, independent recovery and paired fallback. No owner tree/main mutation, flash or push. Exact new release identity and package closure must be built/verified before an owner install step is concrete. |
+| Release/distribution | One source-bound personalized integration candidate is authorized after composition/software gates. Owner-local firmware remains without established redistribution permission; optional private codecs remain conditional; MTP adds its pinned GPL3+ source/notices obligation. No public release, signing/channel/rollback or endurance gate is waived. |
+
+Production scope now composes the already authorized subsystem implementations:
+configfs MTP/developer fallback and GPL3+ dependency, sole Linux filesystem owner,
+ABI/status unions, DB TEMP protocol/revision2, precision membrane, render batching,
+measured wired pacing and shared suspend gates. F134 must explicitly distinguish
+implemented MTP from unimplemented mass-storage/RNDIS within its retained feature
+ID. Layout/reservations/OPPs/physical highres ceilings and private data scope do
+not expand. Four artwork pixel caches own immutable claims and zero cached file
+FDs;49152-byte native vertex batch is bounded. Existing queue20k/session8MiB and
+catalog250k limits remain;50k is the largest native qualification, while250001
+SQL-only fixture checks rejection and is no hardware/RSS qualification.
+
+Roadmap/source admission advances to fresh integrated software qualification,
+with product readiness PARTIAL. Existing #16/#27/#28/#29/#31/#32/#33/#34 are
+open in the retained GitHub read; historical #30 closure is not a full-sleep
+pass. No epic/milestone is activated or closed by this composition, so no issue
+mutation or new hardware authorization is implied. The audit itself is
+documentation/evidence only: it neither builds/flashes nor repeats unchanged
+ROM/SPFT/recovery/source provenance. The separately authorized candidate build
+will run the broad qualification appropriate to production packaging.
+
 ## Platform 1.0 integration activation boundary — 2026-10-04
 
 The master reviews all eleven final paired handoffs at immutable observation
@@ -4634,3 +4679,254 @@ recovery. It is not implementation authorization from a planning document.
 Existing epics/gates remain open at their previously recorded status; no issue
 was created or externally changed. Current-state pages and complete catalogs
 are the first reading point; older task permissions/"ready" claims remain dated.
+
+
+<!-- Retained owner admission: bluetooth; frozen 2026-10-04 source. Historical admission does not authorize integrated hardware. -->
+
+## Bluetooth optimization admission — 2026-10-04
+
+Owner explicitly authorizes the Bluetooth implementation/research pass in isolated
+`codex/platform-v1-bluetooth` worktrees from Linux `b5aea93` / Reborn `b71b468`.
+Read-only locked SSH identifies installed **Baseline02**, Linux `8584ccd8`,
+Reborn `b71b4688`, kernel `6.18.0-y2linux-baseline-02`, root v1.21, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, taint 0. This supersedes the *installed
+identity* in the older UART01 receipt; it does not constitute the separate
+Baseline02 cold-boot/C3 qualification. Retained UART01 C1/C2/C3 evidence remains
+bounded to its own image/boot. No headset is available, as confirmed by the owner.
+
+F102/F103/F104 and #31 remain PARTIAL: the controller/BlueZ/BlueALSA are observable;
+peer pairing, audio, reconnect and endurance cannot be promoted by this pass.
+F105/F108/F229 retain peer/audio/coexistence evidence gates. #28/#31/#34 remain
+OPEN on read-only GitHub refresh. Idle measurement with Bluetooth off shows
+50.37 Reborn Bluetooth thread context switches/s and repeated 2s BlueZ snapshots;
+these justify localized event/wakeup fixes, not a new kernel power architecture.
+
+Proceed with signal-based observation, bounded-intent/recovery fixes, private-bus
+regressions, ARM userspace builds and temporary, restored runtime tests only when
+the nonblocking shared device lock is held. Preserve one reconnect owner and
+FFmpeg → shared DSP → final sink conversion → BlueALSA. No memory, firmware,
+calibration, protected storage, image packaging, flash, push, merge, release or
+milestone closure. The next acceptance boundary remains actual peer/audio and
+coexistence measurements on the final integrated artifact. Findings and final
+classification: [Bluetooth optimization receipt](../validation/Y2-PLATFORM-V1-BLUETOOTH-OPTIMIZATION.md).
+
+
+<!-- Retained owner admission: graphics; frozen 2026-10-04 source. Historical admission does not authorize integrated hardware. -->
+
+## Platform 1.0 graphics pass admission — 2026-10-04
+
+Owner requests an evidence-led GPU/display/power pass in isolated
+`codex/platform-v1-graphics` worktrees (Linux base `b5aea93`, Reborn
+`b71b4688`). No main edits, push, flash, memory/layout change or full-system
+suspend trial is authorized. Live access requires the shared non-blocking
+`/tmp/y2-platform-v1-device.lock`; admission attempts found it busy, so no
+device command ran. The retained UART01 and GPU-01 receipts supply real
+hardware evidence while fresh observation awaits exclusive access.
+
+| Coverage | Classification | Evidence / next boundary |
+| --- | --- | --- |
+| Mali-400 MP2, Lima/Mesa, GBM/EGL/GLES2, 480x360 KMS | CONFIRMED, retained awake scope | [GPU-01](../hardware-evidence/2026-09-18-gpu01/README.md): correct rendering, 30 FPS, static GPU runtime suspend. Preserve architecture, clocks and PM policy. |
+| C1/C2/C3 and screen/workload restoration | CONFIRMED, bounded UART01 scope | [UART01](../validation/Y2-CPU-C3-UART-PHYSICAL.md); this pass does not alter CPU idle or repeat dormant trials. |
+| Current Reborn static redraw, scrolling, artwork and blank/wake | PARTIAL | Source has dirty rendering and owned-CRTC sleep; collect exact running identity, counters and bounded product scenarios before claiming fresh physical success. |
+| Product v2 splash/dissolve/shutdown | PARTIAL | [Product v2](../validation/Y2-REBORN-PRODUCT-UI-V2.md) source/pixel/protocol evidence; retained receipts do not replace fresh visible cold-boot/shutdown observation. |
+| Graphics full system-suspend/context restore | PARTIAL | Lima force-suspend/resume hooks exist; another session owns same-boot system-suspend qualification. No duplicate experiment. |
+| Electrical savings / endurance / release | PARTIAL | Activity counters are not battery watts; no milestone or public-release acceptance. |
+
+GitHub #28/#31/#34 refreshed read-only and remain OPEN. #34's historical
+pre-Reborn text is superseded by the current repository and UART01 receipts;
+its full-resume gate remains open. Refreshed OPEN statuses preserve the
+independent gates; no issue/milestone closure is warranted. Proceed with source audit, localized host checks and
+locked runtime measurements; implement only demonstrated graphics defects.
+Next smallest evidence boundary is an exclusive current-product observation.
+Results and remaining gaps belong in
+[the graphics receipt](../validation/Y2-PLATFORM-V1-GRAPHICS.md).
+
+Same-day peer evidence subsequently identifies installed Baseline02
+`8584ccd8`/Reborn `b71b4688`, boot `27e6d684-3794-4490-95db-a489027cd4f4`,
+taint 0. The instrumented Reborn performance baseline shows 13 frames/10.09s
+on paused Home/Now Playing and zero screen-off frames; it restores installed
+`b71b4688`. Static invalidation is therefore a demonstrated gap, already
+being corrected by that parallel pass. Do not duplicate its renderer/event-loop
+work; final graphics acceptance depends on integration and physical after
+evidence. The local graphics branch separately reduces a measured full-size
+JPEG decode cost, with 68 Linux/238 Reborn tests, strict lint and ARM checks.
+At this intermediate point live graphics observation still awaited the lock,
+held by storage after the performance and Wi-Fi windows. The evidence boundary
+above supersedes that access status with fresh bounded results; release,
+full-resume and visual gates remain open.
+
+
+<!-- Retained owner admission: highres-audio; frozen 2026-10-04 source. Historical admission does not authorize integrated hardware. -->
+
+## Wired precision completion admission — 2026-10-04
+
+Owner explicitly authorizes isolated source implementation, exact MT6582/stock
+research and bounded locked physical audio tests; no flash, push or merge.
+Linux starts at b5aea93, Reborn at b71b468, on dedicated
+`codex/platform-v1-highres-audio` worktrees. Read-only device admission under
+`/tmp/y2-platform-v1-device.lock` observes installed Baseline02 kernel,
+boot 27e6d684-3794-4490-95db-a489027cd4f4, taint 0 and idle Y2Audio.
+Exact direct constraint intersections admit only S16_LE stereo 44100/48000;
+S24_LE/S32_LE and 88200/96000 are rejected. This is driver admission evidence,
+not silicon maximum or low-bit proof. Raw receipt: out/highres-audio/validation/device-admission.txt.
+Retained UART01 and native headphone evidence remains authoritative for its
+bounded tests; new-image general CPU qualification is outside this pass.
+
+| Coverage | Classification | Boundary |
+| --- | --- | --- |
+| Native wired audio; #29 | CONFIRMED S16 narrow scope / PARTIAL wider precision | Exact DL1/interconnect evidence must precede wider register or ALSA enablement. |
+| CPU/timers/idle/storage; #28/#33 | CONFIRMED retained bounded scope / PARTIAL wider qualification | Preserve architecture, memory and partition layout. |
+| Bluetooth/Wi-Fi/USB; #31 | PARTIAL | Concurrent isolated sessions own radio changes; no branch integration. |
+| GPU/display; #34 | CONFIRMED awake scope / PARTIAL full suspend | Preserve existing screen/runtime-PM behavior. |
+| Production/release; #32 | PARTIAL | No release or milestone closure; source/ROM/recovery provenance unchanged. |
+
+Open issues #16/#27/#28/#29/#31/#32/#33/#34 refreshed read-only. No remote
+status change is warranted or authorized. High-resolution implementation is
+ready only after exact fetch/packing/interconnect documentation or stock
+programming establishes every meaningful bit. If unavailable, retain the safe
+S16 contract and publish the unresolved hardware boundary without claiming a
+16-bit silicon ceiling. Next: exact vendor source and targeted stock analysis,
+software low-bit fixtures, truthful diagnostics and locked baseline tests.
+
+Bounded S16 test admission: a second locked read verifies the installed
+Linux 8584ccd85f052f351fe51650b2348c83ca894ed4 / Reborn b71b468,
+same Baseline02 boot/taint 0, suspended AFE, no PCM owner and headphone disabled
+at -60 dB. Exact stock HAL width/fetch functions return -ENOSYS; mixed-tree
+ASoC wide fields are unselected by its MT6582 defconfig and lack compatibility
+proof. No wider mode is admitted. New kernel diagnostics and S24 software
+rounding are host/ARM compiled, not installed. Ready for bounded existing S16
+DMA/rate/runtime-PM observation and offline three-format A7 CPU measurements
+under one non-blocking device lock. No source/memory/production scope expansion.
+
+
+<!-- Retained owner admission: input; frozen 2026-10-04 source. Historical admission does not authorize integrated hardware. -->
+
+## Platform 1.0 input pass admission — 2026-10-04
+
+Owner explicitly authorizes implementation, optimization and bounded physical
+input observation in isolated `codex/platform-v1-input` worktrees, based on Linux
+`b5aea93` and Reborn `b71b468`. No flash, push, main-worktree changes or full
+system-suspend implementation is authorized. The shared nonblocking device lock
+was busy on first attempt; no live access occurred.
+
+Retained UART01 hardware evidence remains authoritative for bounded C1/C2/C3:
+Linux `e9e8d63`, Reborn `b71b468`, boot `fd955840-35d9-47db-83e0-ff47d6bb2d2b`,
+taint 0, 3,647 checked C3 returns. Retained DEV02 and GPU01 evdev captures show
+APT32F press/release wheel records and all eight physical controls; they do not
+prove counted slow-detent accuracy, current-image bounce, presentation latency
+or human feel. Baseline02 new-image qualification remains PHYSICAL_NOT_RUN.
+
+| Coverage / dependency | Classification | Next evidence boundary |
+| --- | --- | --- |
+| APT32F IRQ/I2C/evdev, #28 | PARTIAL | Current installed identity, bounded capture and detent counters; preserve IRQ-only driver unless evidence requires change |
+| Reborn timing/actions/recovery, #28 | PARTIAL | Deterministic failure/timestamp/hold tests, targeted fixes, workspace checks and ARM build |
+| Display/presentation latency, #34 | PARTIAL | Correlated input/state/frame timestamps; physical actuation origin requires owner or external measurement |
+| C1/C2/C3 input compatibility, #28 | CONFIRMED bounded retained CPU scope; PARTIAL input scope | Observe untouched input IRQ/poll activity without changing CPU/radio policy |
+| Power/full suspend, #28 | PARTIAL | Typed Power and screen-state ownership here; full suspend belongs to another session |
+| Product v2 physical UX | PARTIAL | Counted detents/buttons, screen-off/wake and owner feel test on installed candidate |
+
+GitHub #28/#34 refreshed read-only: OPEN. No remote issue mutation or milestone
+closure; parallel sessions retain their ownership. Product v2 global controls,
+fine-control contexts and long-list acceleration remain the authority. Proceed
+with source mapping and deterministic reproduction while retrying the device
+lock. Recovery/protected partitions, memory, ROM provenance and production scope
+are unchanged. Admission is PARTIALLY READY: software work authorized, hardware
+counts and candidate acceptance pending. See
+[the input validation record](../validation/Y2-PLATFORM-V1-INPUT.md).
+
+
+<!-- Retained owner admission: storage; frozen 2026-10-04 source. Historical admission does not authorize integrated hardware. -->
+
+## Storage Platform 1.0 optimization admission — 2026-10-04
+
+Owner requests an isolated storage/filesystem pass from Linux `b5aea93` and
+Reborn `b71b4688` on `codex/platform-v1-storage`; no main-worktree edits, flash
+or push. This narrow review precedes implementation and physical measurement.
+Retained hardware authority: candidate3's 200 MHz SD data CRCs and clean bounded
+100 MHz reads ([SD characterization](../validation/Y2-SD-SDR104-DIAG.md));
+UART01's clean eMMC/SD SHA256 after real C2/C3 returns
+([physical receipt](../validation/Y2-CPU-C3-UART-PHYSICAL.md)). Candidate4's stock
+pad/card-driver changes are included in current source, but its original receipt
+is software-only. A read-only identity probe saw Baseline02 running at HS200 and
+SDR104 with zero counters, boot `27e6d684-3794-4490-95db-a489027cd4f4`;
+the lock acquisition raced another session, so no qualification is claimed from
+that probe and all further physical access requires the non-blocking device lock.
+
+| Coverage / existing gate | Admission classification and next evidence |
+| --- | --- |
+| eMMC / #28, #33 | CONFIRMED bounded HS200 negotiation/readback and post-idle integrity; PARTIAL sustained writes/fsync/performance/repeated boot |
+| SD / #28, #33 | PARTIAL: older 200 MHz CRC failures retained; candidate4/later pad and driver selection must be reconciled before choosing a production ceiling |
+| Filesystems/media / #32, #33 | PARTIAL ext4 physical evidence, FAT/exFAT source support; inode/ctime mount claims disagree with stable diskseq inventory and require a paired Reborn fix |
+| CPU idle / #28, #34 | CONFIRMED bounded C1/C2/C3 UART01; preserve every blocker mask; collect passive storage regression on installed Baseline02 |
+| Suspend/endurance/release / #30, #32, #34 | PARTIAL; full sleep/repeated boot/card matrix/endurance remain independent physical gates |
+
+Read-only GitHub refresh: #16/#27/#28/#29/#31/#32/#33/#34 OPEN, #30 CLOSED;
+no external status mutation or milestone closure. Preserve storage addressing,
+Y2DATA, recovery/backup/calibration obligations, exact fallback, memory map,
+regulators and idle guards. No raw writes, autoformat, mounted-media reset or
+SQLite optimization. Proceed with the smallest justified source fixes, targeted
+regressions and safe scratch measurement; owner is available for SD interaction.
+Final decisions and unobserved gates belong in
+[the storage report](../validation/Y2-PLATFORM-V1-STORAGE.md).
+
+
+<!-- Retained owner admission: storage; frozen 2026-10-04 source. Historical admission does not authorize integrated hardware. -->
+
+## Storage Platform 1.0 closing audit — 2026-10-04
+
+This boundary reviews the owner's isolated storage pass before local handoff.
+Actual installed Baseline02 is Linux `8584ccd85f052f351fe51650b2348c83ca894ed4`,
+Reborn `b71b468860233faa0a42b8448ec5777fa952b8e3`, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, taint 0. Final locked hardware receipts
+record clean scratch cleanup, mounted ext4 SD at SDR104, eMMC HS200, both clocks
+gated, zero PM mismatch/error and unchanged transport fault counters. The
+non-blocking lease was released normally before the reserved suspend lane;
+that lane's later qualification is separate from this pass. New source remains
+uninstalled: Linux implementation `2a603c1`, Reborn source identity `ee1c25a`
+and playback/sidecar guard `f726ae4`. Affected Reborn app38/platform77/library28/
+media22 plus architecture guards, denied-warning Clippy and pinned ARM build
+pass; final ARM ELF/dependency and QEMU pinned image pixels pass as emulation.
+See the [storage report](../validation/Y2-PLATFORM-V1-STORAGE.md) and
+[compact physical/software receipt](../validation/evidence/platform-v1-storage-20261004.json).
+
+| Coverage / existing gate | Closing classification and smallest remaining boundary |
+| --- | --- |
+| eMMC / #28, #33 | CONFIRMED bounded HS200 read/write/fsync/SHA/PM. Direct read 98.717 MB/s, guarded write 26.800; retain HS200. Mounted-root DDR52/HS52 renegotiation and repeated cold boots remain untested. |
+| SD / #28, #33 | CONFIRMED bounded one-card SDR104/DDR50/SDR50/HS, 4 GiB top-rung direct reads without CRC/timeouts; retain current ladder. Candidate3 failures remain historical, superseded only for installed later pads/card selection and this card. Card/temperature/endurance matrix remains PARTIAL. |
+| Filesystems/media / #32, #33 | CONFIRMED installed ext4 fsync/hash/eject/same-card reinsert and host scratch FAT32 Unicode/dirty-bit refusal/ext4/exFAT no-write checks. Paired stable claims/CID sources, dirty-mount gate and pinned playback admission are software-tested. Different-card/FAT/exFAT/large-file target acceptance remains PARTIAL. |
+| Music/scanning / #29, #32, #33 | CONFIRMED stock 1,000-file physical corpus on both volumes: all hashes match, initial scans 5.526/5.495 s, all incremental rows reused, zero failures/controller deltas. New app/native source guard still requires matching deployment and target acceptance; SQLite ownership remains separate. |
+| CPU idle / #28, #34 | CONFIRMED storage clock gating/retention and clear MSDC blocker bits; retain UART01 actual C2/C3/hash evidence. This USB/radio four-core boot has no new C2/C3 entries; intended-workload regression remains PARTIAL. No masks weakened. |
+| Suspend/power / #30, #34 | PARTIAL in this storage pass; no full sleep, electrical durability or power-loss claim. Reserved independent suspend lane owns its actual results. |
+| Release/security/boot/USB/radio/GPU / #16, #27–#29, #31–#34 | Existing scope retained; localized tests/config/DT/modules/ABI/offline BOOTIMG pass. No new paired release installation or broader acceptance, backup/calibration waiver or unchanged ROM/recovery recapture. |
+
+Fresh read-only GitHub refresh keeps #16/#27/#28/#29/#31/#32/#33/#34 OPEN and
+#30 CLOSED. No status mutation or milestone closure is warranted. Existing
+recovery/fallback, Y2DATA/protected partition, memory, supplies and firmware
+obligations remain unchanged. Final classification is **PARTIALLY READY**:
+local source/report handoff is ready, general Platform 1.0 qualification is not.
+Next boundary is paired Linux/Reborn/native integration with explicit source-key
+migration/media admission, then owner-supported repeated/absent boot, second-card
+and physical filesystem matrix. Do not infer hardware authorization from this
+planning row. No flash, push, autoformat, raw write or mounted-media reset.
+
+
+<!-- Retained storage owner admission, historical source scope. -->
+
+## Storage removable-mount gate audit — 2026-10-04
+
+A source review during the authorized filesystem pass found that `y2-media
+mount` identifies the card but does not run the existing read-only checker.
+The owned-host FAT32 test proves that a dirty clean-unmount bit produces a
+nonzero `fsck.fat -n` result without changing the image. Current physical media
+is clean ext4, with successful explicit `e2fsck -f -n` and remove/reinsert;
+no dirty user media is created. Adopt a bounded read-only preflight before SD
+mounts, reject checker faults/timeouts/source changes, and leave automatic
+repair/formatting disabled. Internal root/data boot gates stay unchanged.
+
+This is a localized production-admission change within #32/#33, not hardware,
+memory or filesystem-format expansion. Read-only checks may delay mounts or
+refuse media requiring journal recovery; that availability limit must remain
+visible. Existing MT6582 modes, fallback, runtime PM and C2/C3 guards remain
+unchanged. Paired claim/source-ID changes still require Linux/Reborn integration;
+new source is software-tested, not installed by this pass. Proceed with focused
+media/checker tests and update [the receipt](../validation/Y2-PLATFORM-V1-STORAGE.md).

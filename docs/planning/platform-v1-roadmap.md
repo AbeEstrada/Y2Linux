@@ -1,5 +1,26 @@
 # Platform v1 roadmap
 
+
+## Platform 1.0 production composition boundary — 2026-10-04
+
+The [repeated standing audit](roadmap-gap-audit.md#platform-10-production-composition-boundary--2026-10-04)
+compares all233 features, eleven frozen paired sources, issues/owner decisions
+and exact hardware receipts before production composition. Source units are
+integrated on paired isolated codex/platform-v1-integration branches;324 Reborn
+workspace tests/fmt/strict Clippy and affected Linux tests pass. Proceed to one
+fresh full ARM/kernel/DT/modules/ABI/production/package/privacy/source gate,
+then seal one y2linux-platform-v1-integration-candidate. Its physical state begins
+NOT_RUN; existing subsystem candidates/measurements remain separate.
+
+Retain UART01 C1/C2/C3, Baseline02 full RTC FAIL and restored boot88 integrity,
+temporary069415a performance proof and the native S16-only hardware ceiling.
+Reconcile F134's implemented MTP component without claiming mass-storage/RNDIS.
+No memory/layout/protected-data expansion, public distribution waiver or epic
+closure. Owner alone installs/flashes the reviewed preserving pair. One source-
+bound qualification coordinator will hold the existing nonblocking device lease,
+reuse affected subsystem helpers and retain pending human/equipment/endurance
+lanes. Readiness: INTEGRATION_IN_PROGRESS; product PARTIAL.
+
 ## Platform 1.0 integration activation boundary — 2026-10-04
 
 All eleven paired owner handoffs are now clean, source-frozen and reviewed.
@@ -1212,3 +1233,33 @@ router and 3/3 Internet-IP ping replies. DNS queries for two hostnames fail;
 the platform observer also retains intermittent supplicant_unavailable. Wi-Fi
 coverage is PARTIAL with DNS FAIL, not Online or full Session C acceptance.
 Next diagnose DNS/readiness; no network settings or production code were changed.
+
+
+<!-- Retained owner admission: bluetooth; frozen 2026-10-04 source. Historical admission does not authorize integrated hardware. -->
+
+## Bluetooth optimization boundary — 2026-10-04
+
+Owner explicitly authorizes the Bluetooth implementation/research pass in isolated
+`codex/platform-v1-bluetooth` worktrees from Linux `b5aea93` / Reborn `b71b468`.
+Read-only locked SSH identifies installed **Baseline02**, Linux `8584ccd8`,
+Reborn `b71b4688`, kernel `6.18.0-y2linux-baseline-02`, root v1.21, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, taint 0. This supersedes the *installed
+identity* in the older UART01 receipt; it does not constitute the separate
+Baseline02 cold-boot/C3 qualification. Retained UART01 C1/C2/C3 evidence remains
+bounded to its own image/boot. No headset is available, as confirmed by the owner.
+
+F102/F103/F104 and #31 remain PARTIAL: the controller/BlueZ/BlueALSA are observable;
+peer pairing, audio, reconnect and endurance cannot be promoted by this pass.
+F105/F108/F229 retain peer/audio/coexistence evidence gates. #28/#31/#34 remain
+OPEN on read-only GitHub refresh. Idle measurement with Bluetooth off shows
+50.37 Reborn Bluetooth thread context switches/s and repeated 2s BlueZ snapshots;
+these justify localized event/wakeup fixes, not a new kernel power architecture.
+
+Proceed with signal-based observation, bounded-intent/recovery fixes, private-bus
+regressions, ARM userspace builds and temporary, restored runtime tests only when
+the nonblocking shared device lock is held. Preserve one reconnect owner and
+FFmpeg → shared DSP → final sink conversion → BlueALSA. No memory, firmware,
+calibration, protected storage, image packaging, flash, push, merge, release or
+milestone closure. The next acceptance boundary remains actual peer/audio and
+coexistence measurements on the final integrated artifact. Findings and final
+classification: [Bluetooth optimization receipt](../validation/Y2-PLATFORM-V1-BLUETOOTH-OPTIMIZATION.md).
