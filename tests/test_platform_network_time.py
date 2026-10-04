@@ -160,6 +160,9 @@ class NetworkTime(unittest.TestCase):
         self.ctx.runner = runner
         first = wifi(self.ctx)
         self.assertEqual(first['rssi_dbm'], -50)
+        calls.clear()
+        self.assertEqual(wifi(self.ctx, signal_cache=first)['rssi_dbm'], -50)
+        self.assertFalse(any(c[-1] == 'signal_poll' for c, kw in calls))
         self.put('/run/y2/network.json', json.dumps(first))
         calls.clear()
         self.assertEqual(wifi(self.ctx)['rssi_dbm'], -50)

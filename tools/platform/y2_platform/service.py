@@ -89,7 +89,7 @@ def serve(ctx):
                 associating_since = None
             if dns_schedule.due(value, ctx.read('/run/y2/wifi-epoch'), before):
                 probe_dns(ctx, value)
-                value = wifi(ctx)
+                value = wifi(ctx, signal_cache=value)
             if value.get('radio_present') and value.get('supplicant_observation', {}).get('ok') is False:
                 query_failures += 1
             value.update(status_query_failures=query_failures, schema=1, boot_id=ctx.read('/proc/sys/kernel/random/boot_id'), monotonic_s=time.monotonic())

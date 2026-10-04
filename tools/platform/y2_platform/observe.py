@@ -435,7 +435,7 @@ def wifi_state(radio, wpa, address, route, dns, dhcp_error=None):
     return 'Online', None
 
 
-def wifi(ctx):
+def wifi(ctx, signal_cache=None):
     radio = ctx.path('/sys/class/net/wlan0').exists()
     status_started = time.monotonic_ns()
     # Station statistics can hold the control loop for about 2.1 s on this
@@ -470,7 +470,7 @@ def wifi(ctx):
     error = dhcp.get('error') if dhcp.get('boot_id') == boot and dhcp.get('epoch') == ctx.read('/run/y2/wifi-epoch') else None
     state, reason = wifi_state(radio, properties, addresses, default_route, dns_ready, error)
     stats = {p.name: number(read(p)) for p in ctx.glob('/sys/class/net/wlan0/statistics/*')}
-    previous = ctx.json('/run/y2/network.json', {})
+    previous = signal_cache if signal_cache is not None else ctx.json('/run/y2/network.json', {})
     signal = previous.get('signal_observation') or {}
     signal_time = signal.get('monotonic_s')
     signal_fresh = (signal.get('boot_id') == boot and

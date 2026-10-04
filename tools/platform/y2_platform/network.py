@@ -151,7 +151,7 @@ def probe_dns(ctx, observed):
     answer = ctx.command(['/usr/bin/python3', '-I', '-c',
                           'import socket,sys; print(len(socket.getaddrinfo(sys.argv[1],None,socket.AF_INET)))',
                           hostname], timeout=3)
-    after = wifi(ctx)
+    after = wifi(ctx, signal_cache=observed)
     if (ctx.read('/run/y2/wifi-epoch') != epoch or
             after.get('association_id') != observed.get('association_id') or
             after['ip_addresses'] != observed['ip_addresses'] or
