@@ -1,5 +1,32 @@
 # Platform v1 roadmap
 
+## Platform 1.0 graphics pass — 2026-10-04
+
+[Evidence-boundary audit](roadmap-gap-audit.md#platform-10-graphics-evidence-boundary--2026-10-04)
+records the completed isolated pass on installed Baseline02, Linux `8584ccd8`
+and stock Reborn `b71b4688`, same boot and taint 0. Mali/Lima/Mesa/480x360 scanout
+and GPU PM remain preserved. Fresh screen-off has zero frames/GPU-active time,
+MFG and scanout clocks off; five retained-context wake cycles and brightness
+4/16/32 readbacks pass. The temporary changed ARM JPEG decoder reduces median
+CPU 492.637→75.332 ms and peak RSS by 20,600 KiB for the 4096-square fixture;
+68 Linux/238 Reborn tests, strict lint and ARM release checks pass. The tested
+SDK is FFmpeg 9.0.2, with exact native membrane hashes in the receipt. Select one
+reduced-JPEG implementation when combining with the FFmpeg/media pass; retain
+its aggregate-I/O/cancellation guards and qualify the resulting native ABI.
+
+**Graphics acceptance remains PARTIAL.** Stock paused Home still presents 25
+frames/20.138 s with 4.148 s GPU active residence; the parallel performance pass
+owns event-loop/radio/renderer correction. Integrate and accept that correction
+before closing static-redraw scope. Source/host and current-boot splash protocol
+evidence do not replace visual cold-boot/shutdown, long-off content, forced-context
+loss, electrical savings or endurance gates. Retained UART01 C1/C2/C3 remains
+scoped to its artifact; C2/C3 did not enter in this attached-SSH observation.
+Full system suspend belongs to another session; #28/#31/#34 remain OPEN after
+read-only refresh. The device state is restored and lock released. No flash,
+push, main change, memory expansion or release acceptance. Exact results and
+localized changes are in
+[Y2-PLATFORM-V1-GRAPHICS](../validation/Y2-PLATFORM-V1-GRAPHICS.md).
+
 ## Baseline02 source integration into main — 2026-10-03
 
 Owner-authorized integration carries `cpu-idle-completion` at `acb5bb3` into

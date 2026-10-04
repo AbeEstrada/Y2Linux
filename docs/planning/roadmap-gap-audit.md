@@ -1,5 +1,87 @@
 # Roadmap gap audit
 
+## Platform 1.0 graphics evidence boundary — 2026-10-04
+
+Before completing the isolated graphics pass, this review compares the owner
+scope, unchanged Lima/Mesa/DRM foundation, Reborn commit `a2df691e`, the parallel
+performance work, current issues and fresh locked hardware evidence. The
+[receipt](../validation/Y2-PLATFORM-V1-GRAPHICS.md) and
+[physical summary](../validation/evidence/platform-v1-graphics/physical.json)
+identify installed Baseline02: Linux `8584ccd8`, running Reborn `b71b4688`,
+kernel `6.18.0-y2linux-baseline-02`, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, taint 0. The changed ARM decoder ran only
+as a temporary helper/library in `/run`; stock Reborn, original brightness and
+paused Home/screen-off were restored, scratch removed and the lock released.
+No flash, main edit, push, image rebuild, memory/layout expansion or full-system
+suspend trial occurred.
+
+| Coverage | Classification | Evidence and next boundary |
+| --- | --- | --- |
+| Mali-400 MP2, Lima/Mesa, GBM/EGL/GLES2 and 480x360 KMS; #34 | CONFIRMED, bounded current awake scope | Native scanout ownership and two graphics readback tests pass; foundation preserved. |
+| GPU runtime PM / screen-off display activity; #34 | CONFIRMED, bounded current off scope | 20.191 s off: zero frames/active GPU ms, MFG off, CRTC disabled, display/GPU enable counts zero, OVL/DSI IRQ totals unchanged. No electrical-power claim. |
+| Static UI / runtime CPU cost; #34 and performance pass | PARTIAL, demonstrated gap | Stock paused Home presents 25 frames/20.138 s, GPU active residence 4.148 s, process CPU 7.00%; off CPU remains 5.65%. Performance owns event-loop/radio/renderer correction; combined acceptance is next. |
+| Artwork dimensions/decode/memory; #34 | CONFIRMED, generated JPEG fixture scope | Reverse-order ARM check: 492.637→75.332 ms median CPU, peak RSS 29,920→9,320 KiB, unchanged 160x160 output; host regressions and 238 workspace tests pass. No GL-upload or full transition timing claim. |
+| Backlight / retained-context wake; #34 | CONFIRMED, bounded readback scope | Five cycles, zero context loss, active native scanout restored, 10/50/100% readback 4/16/32. Optical flash and long-off state changes retain separate gates. |
+| Product v2 boot / shutdown; #34 | PARTIAL | Same-boot splash log records READY→RELEASED→PRESENTED with errno 0; 26 splash tests plus shutdown/power contracts pass. No new cold boot, optical dissolve or poweroff observation. |
+| CPU C1/C2/C3; #28 | CONFIRMED, retained UART01 scope | This SSH-attached sample has WFI entries and no C2/C3 entries; SPM rejects dormant topology. No policy change or new deep-idle qualification. |
+| Full system suspend / context restore; #28/#31/#34 | PARTIAL, other session | Driver callbacks preserved; do not duplicate system-suspend work. |
+| Electrical / endurance / release | PARTIAL | Activity/RSS/CPU counters and short warm-device temperatures are not watts, battery life or release acceptance. |
+
+GitHub #28/#31/#34 were refreshed read-only at this boundary and remain OPEN;
+no milestone/epic closure or remote write is warranted. GPU-job IRQ deltas were
+not captured due to a harness regex defect; this does not erase the independent
+runtime-PM/scanout evidence or promote missing measurements. Native C warnings,
+68 Linux tests, 238 Reborn tests, fmt, strict clippy and ARM release build pass.
+The graphics decoder candidate is ready for source review within its bounded scope;
+master integration must select one reduced-JPEG implementation alongside the
+FFmpeg/media pass and preserve its aggregate-I/O and cancellation guards;
+**Platform 1.0 graphics acceptance remains PARTIAL** pending integration and
+qualification of the performance-owned static-redraw correction and the
+separate visual/full-resume gates. Update the roadmap before any such boundary;
+planning issues authorize no further hardware or production scope.
+
+## Platform 1.0 graphics pass admission — 2026-10-04
+
+Owner requests an evidence-led GPU/display/power pass in isolated
+`codex/platform-v1-graphics` worktrees (Linux base `b5aea93`, Reborn
+`b71b4688`). No main edits, push, flash, memory/layout change or full-system
+suspend trial is authorized. Live access requires the shared non-blocking
+`/tmp/y2-platform-v1-device.lock`; admission attempts found it busy, so no
+device command ran. The retained UART01 and GPU-01 receipts supply real
+hardware evidence while fresh observation awaits exclusive access.
+
+| Coverage | Classification | Evidence / next boundary |
+| --- | --- | --- |
+| Mali-400 MP2, Lima/Mesa, GBM/EGL/GLES2, 480x360 KMS | CONFIRMED, retained awake scope | [GPU-01](../hardware-evidence/2026-09-18-gpu01/README.md): correct rendering, 30 FPS, static GPU runtime suspend. Preserve architecture, clocks and PM policy. |
+| C1/C2/C3 and screen/workload restoration | CONFIRMED, bounded UART01 scope | [UART01](../validation/Y2-CPU-C3-UART-PHYSICAL.md); this pass does not alter CPU idle or repeat dormant trials. |
+| Current Reborn static redraw, scrolling, artwork and blank/wake | PARTIAL | Source has dirty rendering and owned-CRTC sleep; collect exact running identity, counters and bounded product scenarios before claiming fresh physical success. |
+| Product v2 splash/dissolve/shutdown | PARTIAL | [Product v2](../validation/Y2-REBORN-PRODUCT-UI-V2.md) source/pixel/protocol evidence; retained receipts do not replace fresh visible cold-boot/shutdown observation. |
+| Graphics full system-suspend/context restore | PARTIAL | Lima force-suspend/resume hooks exist; another session owns same-boot system-suspend qualification. No duplicate experiment. |
+| Electrical savings / endurance / release | PARTIAL | Activity counters are not battery watts; no milestone or public-release acceptance. |
+
+GitHub #28/#31/#34 refreshed read-only and remain OPEN. #34's historical
+pre-Reborn text is superseded by the current repository and UART01 receipts;
+its full-resume gate remains open. Refreshed OPEN statuses preserve the
+independent gates; no issue/milestone closure is warranted. Proceed with source audit, localized host checks and
+locked runtime measurements; implement only demonstrated graphics defects.
+Next smallest evidence boundary is an exclusive current-product observation.
+Results and remaining gaps belong in
+[the graphics receipt](../validation/Y2-PLATFORM-V1-GRAPHICS.md).
+
+Same-day peer evidence subsequently identifies installed Baseline02
+`8584ccd8`/Reborn `b71b4688`, boot `27e6d684-3794-4490-95db-a489027cd4f4`,
+taint 0. The instrumented Reborn performance baseline shows 13 frames/10.09s
+on paused Home/Now Playing and zero screen-off frames; it restores installed
+`b71b4688`. Static invalidation is therefore a demonstrated gap, already
+being corrected by that parallel pass. Do not duplicate its renderer/event-loop
+work; final graphics acceptance depends on integration and physical after
+evidence. The local graphics branch separately reduces a measured full-size
+JPEG decode cost, with 68 Linux/238 Reborn tests, strict lint and ARM checks.
+At this intermediate point live graphics observation still awaited the lock,
+held by storage after the performance and Wi-Fi windows. The evidence boundary
+above supersedes that access status with fresh bounded results; release,
+full-resume and visual gates remain open.
+
 ## Baseline02 source integration into main — 2026-10-03
 
 The owner authorizes merging and publishing the current Baseline02 source and

@@ -1,5 +1,14 @@
 # Y2 production GPU platform
 
+The [2026-10-04 Platform 1.0 graphics pass](../validation/Y2-PLATFORM-V1-GRAPHICS.md)
+audits current Reborn rendering, artwork and display power in isolated
+worktrees. It preserves this Lima/Mesa/GBM/KMS foundation and records a measured
+JPEG decode reduction with source/host/ARM validation and fresh Y2 measurements.
+Current screen-off runtime PM, scanout gating, five wakes and brightness readback
+pass; static UI still redraws and the performance pass owns its correction.
+Remaining handoff/system-resume gates are stated in that receipt. The
+historical GPU-01 limits below still belong to their exact tested image.
+
 <!-- knowledge-base-scope: retained-research-/-scoped-evidence -->
 > **Historical record.** The dates, candidate identity, "current" claims,
 > next steps and permissions below belong to this recorded boundary. See
