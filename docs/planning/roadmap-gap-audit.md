@@ -1,5 +1,80 @@
 # Roadmap gap audit
 
+<a id="wired-high-resolution-completion-boundary"></a>
+## Wired high-resolution completion boundary — 2026-10-04
+
+The standing review is repeated for the owner's one wired-precision task,
+using the connected Baseline01 rather than promoting unrelated milestones.
+Selected Linux3f35bc68/Reborn2444e0f6 remain the newest integrated Baseline-final
+pair; isolated branches preserve the original checkouts. Real installed
+Linux98daf3f0/Reborn9cd12bae, rootv1.24/kernelBaseline01 were verified before
+and after the conservative locked audio session. No image was flashed.
+
+| Changed coverage | Closing classification and remaining limit |
+| --- | --- |
+| DL1 wide fetch | PROVEN_SOURCE hardware-limited16: complete exact MT6582 specification documents two16-bit outputs, no wide fetch selector; PBUF[19:16] is a threshold. |
+| I05/I06→O00/O01 | PROVEN_SOURCE route receives16-bit DL1 values; PHYSICALLY_OBSERVED CONN0=0x00400020. Independent width of every AFE internal block is not claimed. |
+| Second I2S | PROVEN_SOURCE16/32-word serializer; PHYSICALLY_OBSERVED32-word configuration, not24/32 meaningful DL1 payload. |
+| CS43131 | PROVEN_SOURCE16/24/32 receiver; PHYSICALLY_OBSERVED ASP/channel16 and32-bit slots,44.1/48. |
+| Decode/DSP/packing | SOFTWARE_VALIDATED exact signed24 in S24/S32 software outputs; full32 FLTP loss remains. Six live S16 ring snapshots match native conversion byte-for-byte. |
+| Native formats/rates | PHYSICALLY_OBSERVED S16 stereo44.1/48; direct24/32 rejected, plug downconverts. Wider precision HARDWARE_PROVEN_UNSUPPORTED on DL1;88.2/96 not enabled without a matching clock/rate contract. |
+| Device safety/cleanup | Temporary test process/data removed; both observers removed by normal reboot because unloading is disabled; same image, PCM closed, -60dB/headphone off, preexisting taint512 restored, lease released. |
+| Physical bit capture | EXTERNAL_CAPTURE_STILL_REQUIRED for independent serial/analog measurements. No wider physical PASS or endurance qualification. |
+
+The previous unknown-width evidence gate is resolved by the complete exact-SoC
+contract, not by the driver's S16 mask. Outcome B applies to the specified DL1
+chain. Native feature F075 remains unimplemented and physically unqualified,
+but its hardware-conditional admission decision is now explicit. Existing
+audio issue #29 and remote milestone states remain for owner review; no remote
+closure or public/platform-wide qualification is performed. The next scoped
+owner step is review of [the completion record](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md),
+not flashing another S16 image. Existing release/endurance and unrelated
+subsystem gates are preserved without auditing them again. Source/evidence
+handoff is READY; no wider native candidate has a supported implementation.
+
+<a id="wired-high-resolution-completion-admission"></a>
+## Wired high-resolution completion admission — 2026-10-04T18:56:50.640168+00:00
+
+The owner authorizes one task: meaningful wired PCM precision on the physical
+MT6582/CS43131 Y2, with exact-SoC research, conservative live playback, matching
+read-only diagnostics and one coherent preserving candidate if needed. No flash,
+push, radio work or unrelated audit. This instruction narrows the standing audit
+to the changed audio coverage and supersedes the earlier stop at unknown width.
+Existing audio issue #29 remains open; no remote mutation or milestone closure.
+
+Newest integrated source selected after inspecting both repository histories,
+branches and worktrees: Linux 3f35bc68e7537bffe356f145dcb35837c9d2e9a6
+(Baseline-final descendant of integration de9f26d) and Reborn
+2444e0f65811e688250a8cd069a57dd780b2d6d3 (descendant of 9cd12ba).
+Implementation uses isolated paired codex/highres-audio-completion branches.
+Original checkouts and their existing documentation changes are preserved.
+
+Initial read-only device identity: kernel 6.18.0-y2linux-platform-v1-baseline-01,
+root 2025.02.18-platform-v1.24, compiled Linux 98daf3f0220f4a1580bb4893094ee9f0e02362a5,
+Reborn 9cd12baeeb70b204e08299bd4c91c8c35604c304, boot
+ef2c8f2f-56d9-418a-b8a8-2dfd329d0973, taint 0. PCM was closed,
+Master -60 dB/headphone off, native single stereo playback endpoint. Source
+proves current S16 44.1/48 policy, not a silicon precision ceiling. Current
+Reborn decode/DSP is FLTP; full32 source low bits can collapse before packing.
+The prior precision pass's source/stock stub/codec evidence is retained without
+repeating unchanged ROM/recovery provenance.
+
+| Changed coverage | Classification | Required next evidence |
+| --- | --- | --- |
+| Native DL1 fetch and packing | UNKNOWN above16; current16 IMPLEMENTED | Exact MT6582 register/packing contract; vendor build selection must prove SoC applicability |
+| AFE I05/I06→O00/O01 width | UNKNOWN above16 | Exact wide-field evidence or explicit physical limit |
+| Second I2S |32-slot setting PROVEN_SOURCE; meaningful wide payload UNKNOWN | Payload alignment and width independent of slots |
+| CS43131 |16/24/32 receiver PROVEN_SOURCE | Running word/channel readback during admitted playback |
+| Software precision |24 packing SOFTWARE_VALIDATED in prior integrated pass; arbitrary32 FLTP loss established | Sink/gain/DMA byte comparisons and actual capability negotiation |
+| Live qualification |PARTIAL initial identity only | Shared lock is held by another active qualification; acquire before any further device access/test |
+
+Scope readiness: READY for independent exact-SoC research; live work waits for
+exclusive device access. No register guessing, undocumented clock/power writes,
+raw sectors, data migration or layout change is admitted. Candidate sealing
+requires a repeated audio-only boundary audit and relevant broad build/package
+checks. Physical low-bit success remains unclaimed until observed.
+
+
 ## Baseline01 installed physical admission — 2026-10-04
 
 Owner reports newest preserving firmware installed and authorizes its tests.

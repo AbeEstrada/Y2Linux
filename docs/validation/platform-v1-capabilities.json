@@ -1165,61 +1165,72 @@
       "area": "AUDIO",
       "capability": "S24_LE internal output",
       "starting_state": "Not established end-to-end",
-      "implementation": "Exact offline precision/channel fixtures and source trace; no format-mask-only enablement",
+      "implementation": "Not exposed: documented MT6582 DL1 hardware output is 16 bits per channel; read-only observer and low-bit probes implemented",
       "commits": [
         "648fbea"
       ],
-      "tests": "real fixture byte/channel tests; vendor source inventory",
+      "tests": "Complete exact-SoC register contract; actual ARM software packing; live S16 DMA/DL1/I2S/DAC observations",
       "workflow_status": [
-        "BLOCKED_BY_EVIDENCE",
-        "PHYSICAL_GATE"
+        "HARDWARE_PROVEN_UNSUPPORTED_ON_DL1_PATH"
       ],
-      "evidence_levels": [],
+      "evidence_levels": [
+        "PROVEN_SOURCE",
+        "SOFTWARE_VALIDATED",
+        "PHYSICALLY_OBSERVED"
+      ],
       "arm_build": "No new implemented target capability to qualify; unavailable/gate reporting is packaged",
       "image_validation": "Unavailable or disabled as documented; no functionality qualification claimed",
       "physically_qualified": false,
       "endurance_qualified": false,
-      "remaining_risk": "AFE fetch/interconnect/clock-family evidence missing before physical word/clock/audio qualification"
+      "remaining_risk": "No native 24/32 hardware functionality claim. External serial/analog capture not performed; all-block AFE internal maximum not independently specified.",
+      "completion_record": "docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md"
     },
     {
       "area": "AUDIO",
       "capability": "S32_LE internal output",
       "starting_state": "Not established end-to-end",
-      "implementation": "Exact offline precision/channel fixtures and source trace; no format-mask-only enablement",
+      "implementation": "Not exposed: documented MT6582 DL1 hardware output is 16 bits per channel; read-only observer and low-bit probes implemented",
       "commits": [
         "648fbea"
       ],
-      "tests": "real fixture byte/channel tests; vendor source inventory",
+      "tests": "Complete exact-SoC register contract; actual ARM software packing; live S16 DMA/DL1/I2S/DAC observations",
       "workflow_status": [
-        "BLOCKED_BY_EVIDENCE",
-        "PHYSICAL_GATE"
+        "HARDWARE_PROVEN_UNSUPPORTED_ON_DL1_PATH"
       ],
-      "evidence_levels": [],
+      "evidence_levels": [
+        "PROVEN_SOURCE",
+        "SOFTWARE_VALIDATED",
+        "PHYSICALLY_OBSERVED"
+      ],
       "arm_build": "No new implemented target capability to qualify; unavailable/gate reporting is packaged",
       "image_validation": "Unavailable or disabled as documented; no functionality qualification claimed",
       "physically_qualified": false,
       "endurance_qualified": false,
-      "remaining_risk": "AFE fetch/interconnect/clock-family evidence missing before physical word/clock/audio qualification"
+      "remaining_risk": "No native 24/32 hardware functionality claim. External serial/analog capture not performed; all-block AFE internal maximum not independently specified.",
+      "completion_record": "docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md"
     },
     {
       "area": "AUDIO",
       "capability": "preserved 24-bit internal precision",
       "starting_state": "Not established end-to-end",
-      "implementation": "Exact offline precision/channel fixtures and source trace; no format-mask-only enablement",
+      "implementation": "Actual ARM neutral decode/FLTP/S24 and S32 output preserves signed 24 fixture values; physical DL1 sink remains 16",
       "commits": [
         "648fbea"
       ],
-      "tests": "real fixture byte/channel tests; vendor source inventory",
+      "tests": "Native probe at 44.1/48 plus QEMU and existing workspace low-bit packing tests",
       "workflow_status": [
-        "BLOCKED_BY_EVIDENCE",
-        "PHYSICAL_GATE"
+        "SOFTWARE_VALIDATED",
+        "HARDWARE_OUTPUT_LIMITED_TO_16"
       ],
-      "evidence_levels": [],
-      "arm_build": "No new implemented target capability to qualify; unavailable/gate reporting is packaged",
+      "evidence_levels": [
+        "SOFTWARE_VALIDATED"
+      ],
+      "arm_build": "Production ARM and strict native probe builds PASS; live24 software conversion bytes verified",
       "image_validation": "Unavailable or disabled as documented; no functionality qualification claimed",
       "physically_qualified": false,
       "endurance_qualified": false,
-      "remaining_risk": "AFE fetch/interconnect/clock-family evidence missing before physical word/clock/audio qualification"
+      "remaining_risk": "Software neutral same-rate preservation is not native 24 DAC output; DSP/gain/resampling modify values; binary32 cannot preserve arbitrary full32",
+      "completion_record": "docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md"
     },
     {
       "area": "AUDIO",

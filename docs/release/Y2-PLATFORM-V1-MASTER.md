@@ -1,5 +1,12 @@
 # Y2 + Reborn Platform 1.0 master report
 
+Wired-precision update: [the connected-Y2 completion](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
+resolves F075 as HARDWARE_PROVEN_UNSUPPORTED on the exact MT6582 DL1 route.
+Software24 packing and native S16 register/DMA observations pass; native24/32
+output is not qualified or advertised. No high-resolution candidate or owner
+flash action exists. This scoped update does not change the dated platform-wide
+qualification state or other subsystem gates below.
+
 ## Independent final baseline — 2026-10-04
 
 Current software handoff: **Y2LINUX-PLATFORM-V1-BASELINE-01 — READY_FOR_PLATFORM_V1_PHYSICAL_QUALIFICATION**.
