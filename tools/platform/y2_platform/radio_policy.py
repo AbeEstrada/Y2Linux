@@ -13,16 +13,38 @@ def wifi_policy(ctx, activity=None):
     activity = activity or {}
     requested = mode == 'standard' or (mode == 'automatic' and policy.get('automatic_standard') is True
                                        and not activity.get('wifi_heavy_transfer'))
-    result = ctx.command(['/usr/sbin/iw', 'dev', 'wlan0', 'set', 'power_save', 'on' if requested else 'off'], timeout=2)
-    observed = ctx.command(['/usr/sbin/iw', 'dev', 'wlan0', 'get', 'power_save'], timeout=2) if result['ok'] else None
-    actual = None
-    if observed and observed['ok']:
-        actual = {'Power save: on': True, 'Power save: off': False}.get((observed['output'] or '').strip())
-    value = {'schema': 1, 'mode': mode, 'requested': requested, 'enabled': actual,
+    def readback():
+        answer = ctx.command(['/usr/sbin/iw', 'dev', 'wlan0', 'get', 'power_save'], timeout=3)
+        actual = ({'Power save: on': True, 'Power save: off': False}.get(
+                  (answer['output'] or '').strip()) if answer['ok'] else None)
+        return actual, answer
+
+    # GET checks cfg80211's current state, including interface recreation and
+    # external changes. Avoid resending CMD_ID_POWER_SAVE_MODE every 30 seconds
+    # when this same setting is already in effect. Readback is host state, not
+    # proof of firmware sleep or electrical savings.
+    actual, result = readback()
+    boot = ctx.read('/proc/sys/kernel/random/boot_id')
+    epoch = ctx.read('/run/y2/wifi-epoch')
+    ifindex = ctx.read('/sys/class/net/wlan0/ifindex')
+    previous = ctx.json('/run/y2/wifi-power.json', {})
+    initialized = (previous.get('state') == 'Ready' and previous.get('boot_id') == boot and
+                   previous.get('epoch') == epoch and previous.get('ifindex') == ifindex and
+                   previous.get('requested') is requested)
+    # Establish policy once per association/interface; cfg80211's initial flag
+    # alone cannot establish what firmware chose during interface creation.
+    applied = actual is not requested or not initialized
+    if applied:
+        result = ctx.command(['/usr/sbin/iw', 'dev', 'wlan0', 'set', 'power_save',
+                              'on' if requested else 'off'], timeout=2)
+        actual = readback()[0] if result['ok'] else None
+    value = {'schema': 1, 'mode': mode, 'requested': requested, 'enabled': actual, 'applied': applied,
              'state': 'Ready' if actual is requested else 'Unavailable',
              'reason': None if actual is requested else result.get('reason') or 'power_save_readback_unavailable',
-             'provisional': True, 'monotonic_s': time.monotonic(),
-             'boot_id': ctx.read('/proc/sys/kernel/random/boot_id')}
+             'provisional': True, 'requested_driver_profile': 'FAST_PSP' if requested else 'CAM',
+             'epoch': epoch, 'ifindex': ifindex,
+             'monotonic_s': time.monotonic(),
+             'boot_id': boot}
     atomic_json(ctx.path('/run/y2/wifi-power.json'), value)
     return value
 

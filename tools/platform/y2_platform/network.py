@@ -5,6 +5,7 @@ import ipaddress
 import json
 import os
 import re
+import select
 import socket
 import time
 import uuid
@@ -138,12 +139,32 @@ def probe_dns(ctx, observed):
     after = wifi(ctx)
     if (ctx.read('/run/y2/wifi-epoch') != epoch or
             after.get('association_id') != observed.get('association_id') or
-            after['ip_addresses'] != observed['ip_addresses']):
+            after['ip_addresses'] != observed['ip_addresses'] or
+            after.get('default_route') != observed.get('default_route')):
         return None
     ok = answer['ok'] and (answer['output'] or '').isdigit() and int(answer['output']) > 0
     return publish(ctx, 'dns', {'epoch': epoch, 'ok': ok, 'address': observed['ip_addresses'][0],
                    'bssid': observed.get('association_id'), 'probe_host': hostname,
                    'reason': None if ok else 'dns_unavailable'})
+
+
+class DnsProbeSchedule:
+    """Probe newly usable leases immediately; bound retries on the same lease."""
+    def __init__(self):
+        self.key = None
+        self.deadline = 0
+
+    def due(self, observed, epoch, now):
+        if (observed.get('association') != 'COMPLETED' or not epoch or
+                not observed.get('ip_addresses') or not observed.get('default_route')):
+            return False
+        key = (epoch, observed.get('association_id'), tuple(observed['ip_addresses']))
+        if key != self.key:
+            self.key, self.deadline = key, 0
+        if now < self.deadline:
+            return False
+        self.deadline = now + 30
+        return True
 
 
 class EventMonitor:
@@ -189,6 +210,17 @@ class EventMonitor:
                     break
                 self.event(raw)
         except (OSError, ValueError):
+            self.close()
+
+    def wait(self, timeout):
+        # Events wake readiness immediately. DHCP remains owned by wpa-event;
+        # the bounded acquisition cadence also observes its lease publication.
+        if self.sock is None:
+            time.sleep(timeout)
+            return
+        try:
+            select.select([self.sock], [], [], timeout)
+        except OSError:
             self.close()
 
     def event(self, text):

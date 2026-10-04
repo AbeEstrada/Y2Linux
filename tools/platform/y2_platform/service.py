@@ -8,7 +8,7 @@ from .boot import private_directory
 import json
 from .common import atomic_json, read
 from .media import inventory
-from .network import EventMonitor, probe_dns
+from .network import DnsProbeSchedule, EventMonitor, probe_dns
 from .observe import wifi
 from .timekeeping import status as time_status
 
@@ -64,12 +64,16 @@ def serve(ctx):
     running = [True]
     signal.signal(signal.SIGTERM, lambda *_: running.__setitem__(0, False))
     signal.signal(signal.SIGINT, lambda *_: running.__setitem__(0, False))
-    next_probe = next_maintenance = next_ntp = 0
+    dns_schedule = DnsProbeSchedule()
+    next_maintenance = next_ntp = 0
     associating_since = None
     from .radio_policy import Coexistence, wifi_policy
     coexistence = Coexistence()
     next_radio_policy = 0
     settled = False
+    previous = ctx.json('/run/y2/network.json', {})
+    query_failures = previous.get('status_query_failures', 0) if previous.get('boot_id') == ctx.read('/proc/sys/kernel/random/boot_id') else 0
+    query_failures = query_failures if isinstance(query_failures, int) and query_failures >= 0 else 0
     try:
         while running[0]:
             before = time.monotonic()
@@ -83,11 +87,12 @@ def serve(ctx):
                     value.update(state='Failed', reason='authentication_timeout')
             else:
                 associating_since = None
-            if before >= next_probe and value['association'] == 'COMPLETED':
-                next_probe = before + 30
+            if dns_schedule.due(value, ctx.read('/run/y2/wifi-epoch'), before):
                 probe_dns(ctx, value)
                 value = wifi(ctx)
-            value.update(schema=1, boot_id=ctx.read('/proc/sys/kernel/random/boot_id'), monotonic_s=time.monotonic())
+            if value.get('radio_present') and value.get('supplicant_observation', {}).get('ok') is False:
+                query_failures += 1
+            value.update(status_query_failures=query_failures, schema=1, boot_id=ctx.read('/proc/sys/kernel/random/boot_id'), monotonic_s=time.monotonic())
             atomic_json(runtime / 'network.json', value)
             activity = coexistence.observe(ctx, value, before)
             if before >= next_radio_policy and value['association'] == 'COMPLETED':
@@ -111,7 +116,9 @@ def serve(ctx):
                 if (ready.get('boot_id') == ctx.read('/proc/sys/kernel/random/boot_id') and
                         ready.get('first_frame') is True and journal.get('last_stage') in ('platform_start', 'services_started')):
                     ctx.command(['/usr/sbin/y2-platform', 'boot-stage', 'application_ready'], timeout=2)
-            time.sleep(max(.05, interval - (time.monotonic() - before)))
+            if value['state'] in ('Scanning', 'Associating', 'AcquiringIP'):
+                interval = min(interval, 1)
+            monitor.wait(max(.05, interval - (time.monotonic() - before)))
     finally:
         monitor.close()
         os.close(fd)

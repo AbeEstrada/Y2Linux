@@ -438,7 +438,9 @@ def wifi_state(radio, wpa, address, route, dns, dhcp_error=None):
 def wifi(ctx):
     radio = ctx.path('/sys/class/net/wlan0').exists()
     status_started = time.monotonic_ns()
-    wpa = ctx.command(['wpa_cli', '-i', 'wlan0', 'status']) if radio else {'output': None}
+    # Station statistics can hold the control loop for about 2.1 s on this
+    # firmware. Bound the observation above that measured delay.
+    wpa = ctx.command(['wpa_cli', '-i', 'wlan0', 'status'], timeout=3) if radio else {'output': None}
     status_duration_ns = time.monotonic_ns() - status_started if radio else None
     properties = key_values(wpa['output'], '=')
     failure = ctx.json('/run/y2/wifi-failure.json', {})
@@ -459,15 +461,32 @@ def wifi(ctx):
     boot = ctx.read('/proc/sys/kernel/random/boot_id')
     # Configuration alone never constitutes DNS readiness. Match network epoch.
     dns_time = dns.get('monotonic_s')
+    epoch = ctx.read('/run/y2/wifi-epoch')
     dns_ready = (isinstance(dns_time, (int, float)) and dns.get('ok') is True and dns.get('boot_id') == boot and
+                 bool(epoch) and dns.get('epoch') == epoch and
                  dns.get('address') in addresses and dns.get('bssid') == properties.get('bssid') and
                  0 <= time.monotonic() - dns_time < 120)
     dhcp = ctx.json('/run/y2/dhcp.json', {})
     error = dhcp.get('error') if dhcp.get('boot_id') == boot and dhcp.get('epoch') == ctx.read('/run/y2/wifi-epoch') else None
     state, reason = wifi_state(radio, properties, addresses, default_route, dns_ready, error)
     stats = {p.name: number(read(p)) for p in ctx.glob('/sys/class/net/wlan0/statistics/*')}
-    signal_poll = ctx.command(['wpa_cli', '-i', 'wlan0', 'signal_poll']) if radio else {'output': None}
-    signal_values = key_values(signal_poll['output'], '=')
+    previous = ctx.json('/run/y2/network.json', {})
+    signal = previous.get('signal_observation') or {}
+    signal_time = signal.get('monotonic_s')
+    signal_fresh = (signal.get('boot_id') == boot and
+                    signal.get('bssid') == properties.get('bssid') and
+                    isinstance(signal_time, (int, float)) and
+                    0 <= time.monotonic() - signal_time < 30)
+    rssi = previous.get('rssi_dbm') if signal_fresh else None
+    if properties.get('wpa_state') == 'COMPLETED' and not signal_fresh:
+        signal_poll = ctx.command(['wpa_cli', '-i', 'wlan0', 'signal_poll'], timeout=3)
+        signal_values = key_values(signal_poll['output'], '=')
+        rssi = number(signal_values.get('RSSI'))
+        signal = {'boot_id': boot, 'bssid': properties.get('bssid'),
+                  'monotonic_s': time.monotonic(), 'ok': signal_poll.get('ok'),
+                  'reason': signal_poll.get('reason')}
+    elif properties.get('wpa_state') != 'COMPLETED':
+        rssi, signal = None, None
     return {'state': state, 'reason': reason, 'radio_present': radio,
             # A missed control query does not prove a radio disconnect. Preserve
             # the actual failure and latency separately from event counters.
@@ -477,7 +496,7 @@ def wifi(ctx):
             'association': properties.get('wpa_state'), 'association_id': properties.get('bssid'),
             'ip_addresses': addresses,
             'default_route': default_route, 'dns_ready': dns_ready,
-            'rssi_dbm': number(signal_values.get('RSSI')), 'traffic_counters': stats,
+            'rssi_dbm': rssi, 'signal_observation': signal, 'traffic_counters': stats,
             'events': ctx.json('/run/y2/wifi-events.json'), 'reconnect_owner': 'wpa_supplicant',
             'power_save': ctx.json('/run/y2/wifi-power.json'),
             'coexistence': ctx.json('/run/y2/coexistence.json')}

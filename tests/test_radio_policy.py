@@ -56,6 +56,27 @@ class RadioPolicy(unittest.TestCase):
         self.ctx.runner = lambda *a, **k: {'ok': False, 'reason': 'timeout', 'output': None}
         self.assertIsNone(wifi_policy(self.ctx)['enabled'])
 
+    def test_set_only_on_change_and_reestablish_after_epoch_or_interface_change(self):
+        self.put('/data/network/power-save.json', {'schema': 1, 'mode': 'standard'})
+        self.assertTrue(wifi_policy(self.ctx)['applied'])
+        self.calls.clear()
+        value = wifi_policy(self.ctx)
+        self.assertFalse(value['applied'])
+        self.assertEqual(value['requested_driver_profile'], 'FAST_PSP')
+        self.assertFalse(any('set' in c for c in self.calls))
+        # An external change, new association or interface recreation requires
+        # a fresh firmware command even when the cfg80211 flag already agrees.
+        self.enabled = False
+        self.assertTrue(wifi_policy(self.ctx)['applied'])
+        self.ctx.path('/run/y2/wifi-epoch').write_text('new-lease')
+        self.assertTrue(wifi_policy(self.ctx)['applied'])
+        self.assertFalse(wifi_policy(self.ctx)['applied'])
+        dest = self.ctx.path('/sys/class/net/wlan0/ifindex')
+        dest.parent.mkdir(parents=True)
+        dest.write_text('5')
+        self.assertTrue(wifi_policy(self.ctx)['applied'])
+        self.assertFalse(wifi_policy(self.ctx)['applied'])
+
     def test_automatic_ps_conservative_default_and_heavy_transfer_hook(self):
         self.assertFalse(wifi_policy(self.ctx)['enabled'])
         self.put('/data/network/power-save.json', {'schema': 1, 'mode': 'automatic', 'automatic_standard': True})
