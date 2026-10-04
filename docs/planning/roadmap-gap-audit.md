@@ -1,5 +1,104 @@
 # Roadmap gap audit
 
+## FFmpeg, metadata and library software closing review — 2026-10-04
+
+Repeat the standing boundary review before closing this owner-authorized
+software subpass. Reborn `a22107c` + `43a695c` on the isolated media branch
+preserve the direct FFmpeg/float-DSP/sink architecture and add bounded inspection,
+correct extraction, bounded artwork and lean incremental ingestion. Linux changes
+are planning documentation only. The [media receipt](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md)
+and checked-in measurements distinguish host/ARM/QEMU results from hardware.
+The blueprint and owner scope exclude flash, push, production installation,
+kernel/partition/memory-layout changes and interference with parallel radio/audio
+work. The app and its extended private native ABI must be built/packaged together.
+
+Real-hardware evidence remains retained [UART01](../validation/Y2-CPU-C3-UART-PHYSICAL.md):
+Linux `e9e8d63`, Reborn `b71b4688`, boot `fd955840-35d9-47db-83e0-ff47d6bb2d2b`,
+taint 0, bounded playback/storage and C1/C2/C3. [Baseline02](../validation/Y2-BASELINE-02.md)
+supplies the exact software SDK used here; its retained document is not this
+candidate's cold-boot receipt. Device-lock admission was nonblocking and busy;
+this lane performed no device operation. The parallel storage owner's SDR104
+report is separate, not media-candidate throughput qualification. No unchanged
+ROM/recovery/source provenance is repeated.
+
+| Coverage / existing epic | Classification at this boundary | Evidence / next smallest gap |
+| --- | --- | --- |
+| Boot/observation/USB, #16/#27/#28 | CONFIRMED bounded retained scope; PARTIAL production acceptance | Carry UART01 boot/logging and recovery controls; no new image or protected-area operation |
+| CPU/timers/memory/core platform, #28 | CONFIRMED bounded retained C1/C2/C3; PARTIAL wider power/endurance | No memory layout or kernel change; full suspend, wake and electrical measurements retain their gates |
+| Audio, #29 | CONFIRMED retained bounded playback; PARTIAL physical candidate acceptance | Fresh decoder/float DSP/sink fixtures pass; analog/native high-rate work belongs to its lane |
+| Metadata/artwork/ingest, #29/#32 | CONFIRMED software scope; PARTIAL physical workload | 252 host tests, ARM build, 32+30 QEMU tests, six fresh daemon checks, malformed fixtures and native sanitizer ownership stress pass |
+| Large-library scan/RAM, #32/#33 | CONFIRMED measured host/ARM-emulation scope; UNTESTED candidate physical SD | Host 10k median initial 7408→1084 ms, incremental 191→130 ms, peak 66488→53720 KiB; QEMU is not hardware timing/RAM |
+| Storage/source lifecycle, #33 | CONFIRMED software guards; PARTIAL physical candidate workload | Existing source UUID/mount checks, SQL failure/recovery and complete-source pruning retained; size/mtime identity limitations explicit |
+| Wi-Fi/Bluetooth, #31 | PARTIAL, independent owner lane | No new radio availability/coexistence/endurance claim from media tests |
+| GPU/display/input, #34/#28 | CONFIRMED retained awake/bounded scope; PARTIAL resume/endurance | Artwork runs on its existing worker; no display/input driver or physical visual claim |
+| Updates/security/release, #32/#33 | PARTIAL | Native local-only policy and matched ABI checks pass; installed-image/recovery/calibration/backups and public release gates remain independent |
+
+All active issues #16/#27/#28/#29/#31/#32/#33/#34 were refreshed read-only and
+remain OPEN. No external epic closure or production waiver is appropriate.
+The next software phase is READY for integration with explicit limitations;
+the next hardware boundary is PARTIALLY READY, requiring a matched candidate,
+guarded SD scan and concurrent playback under the shared lock. No planning epic
+is hardware authorization. Existing backup/calibration/fallback and protected
+storage obligations carry forward. Verdict: PLATFORM_V1_READY_WITH_LIMITATION
+for this software subpass, not whole-platform milestone acceptance. Updating
+the audit/roadmap closes the software evidence task only; this documentation
+review itself performs no build, flash or hardware test.
+
+## Metadata cache revision boundary — 2026-10-04
+
+The media pass found that existing indexed rows otherwise retain the old AIFF
+artist mapping, album-artist alias behavior and Opus duration after extractor
+corrections. Before this localized database extension, repeat the standing review
+against retained [UART01](../validation/Y2-CPU-C3-UART-PHYSICAL.md) and
+[Baseline02](../validation/Y2-BASELINE-02.md) evidence. Hardware coverage and image
+identities remain as recorded in this pass's admission; new code is host/ARM/QEMU
+qualified only. The shared physical device lock is busy with separate storage
+qualification, so no physical access occurs here. The owner's parallel SDR104
+result is separate evidence, not a measured media-pass result.
+
+Add one default-zero per-file extractor revision column, retaining public SQLite
+schema/user_version 1 and all existing row IDs/columns. Old rows reparse once;
+successful rows record the revision, and malformed rows cannot force the rest of
+the source to reparse forever. No raw artwork/tag corpus is stored, no SQLite
+architecture replacement, data reset, hardware, memory-layout, partition or
+package change is authorized or performed. The owner explicitly authorized
+metadata correctness and incremental ingestion; this is necessary cache
+invalidation within that scope. Validate migration, one-time reparse and subsequent
+reuse, alongside the requested final software checks. #29/#32 remain PARTIAL for
+media acceptance pending the final receipt; #16/#27/#28/#31/#33/#34 retain their
+independent OPEN gates after read-only refresh. No external status mutation,
+release waiver, provenance repetition, flash or push.
+
+## FFmpeg, metadata and library pass admission — 2026-10-04
+
+Owner explicitly authorizes the Reborn Platform 1.0 media pass in isolated
+`codex/platform-v1-ffmpeg-metadata` worktrees. Entry source: Reborn `b71b4688`,
+Linux `b5aea93`. Preserve file → FFmpeg → media abstractions → float DSP → sink
+conversion; no engine replacement, kernel/hardware/partition change, flash or push.
+Parallel radio and wired-audio work remains separate.
+
+Retained [UART01 real hardware evidence](../validation/Y2-CPU-C3-UART-PHYSICAL.md)
+identifies Linux `e9e8d63`, Reborn `b71b4688`, boot
+`fd955840-35d9-47db-83e0-ff47d6bb2d2b`, taint 0. It proves bounded playback,
+storage and C1/C2/C3 behavior; it does not measure large-library metadata throughput.
+[Baseline02](../validation/Y2-BASELINE-02.md) provides ARM/QEMU/software evidence,
+not new-image cold-boot acceptance. GitHub #29 and #32 refreshed read-only: OPEN;
+stale historical issue text does not supersede retained newer hardware receipts.
+No external issue status change is authorized or needed for this software subpass.
+
+| Coverage / gate | Classification | Next evidence boundary |
+| --- | --- | --- |
+| Direct FFmpeg local playback, #29 | CONFIRMED, bounded installed scope | Preserve decoder/DSP behavior; fixture and ARM/QEMU regressions |
+| Metadata correctness, artwork, ingest, #29/#32 | PARTIAL, existing source and narrow fixtures | Measure current actual scan; repair demonstrated bugs and bound resource use |
+| Large-library throughput and RAM, #32 | UNTESTED for this pass | Reproducible 100/1k/10k host mixed fixtures and representative ARM checks |
+| Physical SD scan performance, #29/#32 | UNTESTED | Optional bounded device test only with nonblocking shared lock; QEMU is not hardware timing |
+| Release/cold boot/suspend/battery, #28/#31/#34 | PARTIAL, independent gates | Carry existing limitations; no milestone closure or production waiver |
+
+The software pass is ready to proceed. The smallest blocker is missing measured
+metadata/scan evidence, not hardware authorization from a planning epic. Existing
+backup/calibration/fallback, memory layout and production obligations remain.
+This documentation audit performs no build/device test or provenance repetition.
+
 ## Baseline02 source integration into main — 2026-10-03
 
 The owner authorizes merging and publishing the current Baseline02 source and

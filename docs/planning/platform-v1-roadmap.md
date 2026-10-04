@@ -1,5 +1,94 @@
 # Platform v1 roadmap
 
+## FFmpeg, metadata and library software closing review — 2026-10-04
+
+The owner-authorized Reborn media subpass is software-ready with limitations,
+following the [closing gap audit](roadmap-gap-audit.md#ffmpeg-metadata-and-library-software-closing-review--2026-10-04).
+Reborn `a22107c` + `43a695c` retain FFmpeg/float DSP/SQLite ownership while
+repairing metadata/gapless/artwork correctness and bounding scan work. The
+[complete media receipt](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md)
+records 252 host tests, ARM release, 32+30 QEMU tests, native ownership stress,
+component/ABI checks and 100/1k/10k benchmarks. Host 10k initial scan median
+7408→1084 ms, unchanged 191→130 ms, process peak 66488→53720 KiB.
+
+Retained UART01 Linux `e9e8d63` / Reborn `b71b4688`, boot
+`fd955840-35d9-47db-83e0-ff47d6bb2d2b`, taint 0, governs bounded installed
+playback/storage/CPU evidence. Baseline02 SDK/QEMU results do not qualify this
+new media candidate on SD. The nonblocking device lock was busy with the storage
+lane; no physical device operation, flash, installation or push occurred here.
+Parallel owner-reported SDR104 results do not substitute for media measurements.
+
+| Gate | Current classification | Next boundary |
+| --- | --- | --- |
+| Metadata/artwork/ingest, #29/#32 | CONFIRMED software; PARTIAL physical acceptance | Integrate matched app/native membrane and preserve fixture/migration receipts |
+| Large-library performance/RAM, #32/#33 | CONFIRMED host and ARM emulation; UNTESTED physical candidate | Guarded SD mixed/music-sized scan with concurrent playback and whole-app RSS |
+| Source lifecycle, #33 | CONFIRMED software guards; PARTIAL physical endurance | Preserve source identities, complete-source pruning and guarded replacement/removal evidence |
+| Audio/radio/GPU/core, #29/#31/#34/#28 | Independent retained CONFIRMED/PARTIAL scopes | Do not promote high-rate, radio coexistence, full resume, electrical or release gates |
+| Boot/logging/updates/recovery, #16/#27/#32/#33 | Independent retained scopes; PARTIAL production acceptance | Carry backups/calibration/fallback and protected-storage obligations |
+
+All eight active epics remain OPEN after read-only refresh. No hardware/memory/
+partition scope changed and no production waiver is inferred. Software
+integration is READY; candidate physical qualification is PARTIALLY READY and
+requires its existing lock/admission controls. PLATFORM_V1_READY_WITH_LIMITATION
+applies only to this software pass. No engine or SQLite rewrite is justified.
+The closing documentation audit does not build/flash or repeat unchanged
+ROM/recovery provenance.
+
+## Metadata cache revision boundary — 2026-10-04
+
+The media pass found that existing indexed rows otherwise retain the old AIFF
+artist mapping, album-artist alias behavior and Opus duration after extractor
+corrections. Before this localized database extension, repeat the standing review
+against retained [UART01](../validation/Y2-CPU-C3-UART-PHYSICAL.md) and
+[Baseline02](../validation/Y2-BASELINE-02.md) evidence. Hardware coverage and image
+identities remain as recorded in this pass's admission; new code is host/ARM/QEMU
+qualified only. The shared physical device lock is busy with separate storage
+qualification, so no physical access occurs here. The owner's parallel SDR104
+result is separate evidence, not a measured media-pass result.
+
+Add one default-zero per-file extractor revision column, retaining public SQLite
+schema/user_version 1 and all existing row IDs/columns. Old rows reparse once;
+successful rows record the revision, and malformed rows cannot force the rest of
+the source to reparse forever. No raw artwork/tag corpus is stored, no SQLite
+architecture replacement, data reset, hardware, memory-layout, partition or
+package change is authorized or performed. The owner explicitly authorized
+metadata correctness and incremental ingestion; this is necessary cache
+invalidation within that scope. Validate migration, one-time reparse and subsequent
+reuse, alongside the requested final software checks. #29/#32 remain PARTIAL for
+media acceptance pending the final receipt; #16/#27/#28/#31/#33/#34 retain their
+independent OPEN gates after read-only refresh. No external status mutation,
+release waiver, provenance repetition, flash or push.
+
+## FFmpeg, metadata and library pass admission — 2026-10-04
+
+Owner explicitly authorizes the Reborn Platform 1.0 media pass in isolated
+`codex/platform-v1-ffmpeg-metadata` worktrees. Entry source: Reborn `b71b4688`,
+Linux `b5aea93`. Preserve file → FFmpeg → media abstractions → float DSP → sink
+conversion; no engine replacement, kernel/hardware/partition change, flash or push.
+Parallel radio and wired-audio work remains separate.
+
+Retained [UART01 real hardware evidence](../validation/Y2-CPU-C3-UART-PHYSICAL.md)
+identifies Linux `e9e8d63`, Reborn `b71b4688`, boot
+`fd955840-35d9-47db-83e0-ff47d6bb2d2b`, taint 0. It proves bounded playback,
+storage and C1/C2/C3 behavior; it does not measure large-library metadata throughput.
+[Baseline02](../validation/Y2-BASELINE-02.md) provides ARM/QEMU/software evidence,
+not new-image cold-boot acceptance. GitHub #29 and #32 refreshed read-only: OPEN;
+stale historical issue text does not supersede retained newer hardware receipts.
+No external issue status change is authorized or needed for this software subpass.
+
+| Coverage / gate | Classification | Next evidence boundary |
+| --- | --- | --- |
+| Direct FFmpeg local playback, #29 | CONFIRMED, bounded installed scope | Preserve decoder/DSP behavior; fixture and ARM/QEMU regressions |
+| Metadata correctness, artwork, ingest, #29/#32 | PARTIAL, existing source and narrow fixtures | Measure current actual scan; repair demonstrated bugs and bound resource use |
+| Large-library throughput and RAM, #32 | UNTESTED for this pass | Reproducible 100/1k/10k host mixed fixtures and representative ARM checks |
+| Physical SD scan performance, #29/#32 | UNTESTED | Optional bounded device test only with nonblocking shared lock; QEMU is not hardware timing |
+| Release/cold boot/suspend/battery, #28/#31/#34 | PARTIAL, independent gates | Carry existing limitations; no milestone closure or production waiver |
+
+The software pass is ready to proceed. The smallest blocker is missing measured
+metadata/scan evidence, not hardware authorization from a planning epic. Existing
+backup/calibration/fallback, memory layout and production obligations remain.
+This documentation audit performs no build/device test or provenance repetition.
+
 ## Baseline02 source integration into main — 2026-10-03
 
 Owner-authorized integration carries `cpu-idle-completion` at `acb5bb3` into
