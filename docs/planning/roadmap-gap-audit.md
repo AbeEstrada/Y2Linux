@@ -1,5 +1,27 @@
 # Roadmap gap audit
 
+## Platform 1.0 full suspend implementation admission — 2026-10-04
+
+Owner explicitly authorizes implementation and bounded whole-device qualification
+on dedicated `codex/platform-v1-suspend` worktrees (Linux base b5aea93, Reborn
+b71b468), with no flash or push. A non-blocking shared device lock governs every
+physical operation. First locked read observes Baseline02 kernel, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, taint 0, active charging and no current
+retained suspend journal. Installed source identity needs a complete receipt;
+this new image does not inherit blanket physical qualification from UART01.
+
+Retained UART01 evidence proves C1/C2/C3 in its bounded runtime scope. Retained
+Fix02 evidence proves SPM/RTC/reset-vector/CPU/device return followed by a stall
+before kernel EXIT and watchdog recovery, not successful same-boot resume.
+Current staged PM, Power/RTC wake and all full-suspend subsystem restoration
+remain PARTIAL/NOT_RUN. Existing #28/#30/#31/#34 and production gates remain open;
+no external issue change or milestone closure. Preserve C1/C2/C3, exact MT6582
+PCM and register contracts, charger refusal, storage and memory layout. Next:
+trace the installed image, run safe staged PM before one RTC and one Power wake,
+then bounded mixed cycles only after checked same-boot restoration. Source work
+continues while the shared device lock or charging prevents physical entry.
+See [implementation receipt](../validation/Y2-PLATFORM-V1-SUSPEND.md).
+
 ## Baseline02 source integration into main — 2026-10-03
 
 The owner authorizes merging and publishing the current Baseline02 source and

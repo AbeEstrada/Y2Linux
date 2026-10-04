@@ -77,6 +77,7 @@ static bool y2_dormant_context_ready(void)
 }
 static u64 resume_restore_ns;
 static dma_addr_t pcm_address, normal_address;
+static unsigned suspend_restore_failures;
 static unsigned entries, resumes, aborts, last_wake, last_ticks, last_debug, last_event, last_r13;
 static int last_result;
 static struct generic_pm_domain y2_mfg_domain;
@@ -319,6 +320,19 @@ static int y2_spm_finish(unsigned long unused)
 		return -EIO;
 	}
 	if (!unused) {
+		unsigned context;
+		/* Full suspend uses the same Linux stash as qualified C3. Validate
+		 * it after cpu_suspend has saved it, before removing coherency. */
+		if (!y2_dormant_context_ready()) {
+			y2_pm_note("suspend_context", -EIO);
+			return -EIO;
+		}
+		context = READ_ONCE(sleep_save_sp.save_ptr_stash[0]);
+		if ((context & 3) || !pfn_valid(context >> PAGE_SHIFT) ||
+		    !pfn_valid((context + 64) >> PAGE_SHIFT)) {
+			y2_pm_note("suspend_buffer", -EIO);
+			return -EIO;
+		}
 		y2_spm_journal_snapshot();
 		y2_pm_mark(Y2_PM_BEFORE_SPM_ENTRY, 0);
 		/* An owner-armed RGU backstop never counts inside SPM sleep. */
@@ -365,7 +379,7 @@ static int y2_spm_enter(suspend_state_t state)
 	unsigned long flags;
 	unsigned biu;
 	u64 restore_start = 0;
-	int ret;
+	int ret, restore;
 	if (state != PM_SUSPEND_MEM || num_online_cpus() != 1 ||
 	    smp_processor_id() != 0 || READ_ONCE(spm_broken)) return -EBUSY;
 	raw_spin_lock_irqsave(&spm_lock, flags);
@@ -390,38 +404,43 @@ static int y2_spm_enter(suspend_state_t state)
 		y2_pm_mark(Y2_PM_CPU_CONTEXT_SAVING, 0);
 		ret = cpu_suspend(0, y2_spm_finish);
 		y2_pm_backstop_pause(false);
+		if (!ret) resumes++; /* reset return, even if a later restore fails */
 		y2_pm_mark(Y2_PM_AFTER_SPM_RETURN, ret);
 		y2_pm_mark(Y2_PM_CPU_CONTEXT_RESTORED, ret);
 		restore_start = ktime_get_mono_fast_ns();
 		writel(biu, spm_biu);
+		dsb(sy);
+		if (readl(spm_biu) != biu) { suspend_restore_failures++; y2_pm_note("suspend_biu", -EIO); ret = -EIO; }
 		last_wake = spm_read(spm_base, SPM_PCM_REG9_DATA);
 		last_ticks = spm_read(spm_base, SPM_PCM_TIMER_OUT);
 		last_debug = spm_read(spm_base, SPM_PCM_REG_DATA_INI);
 		last_event = spm_read(spm_base, SPM_PCM_EVENT_REG_STA);
 		last_r13 = spm_read(spm_base, SPM_PCM_REG13_DATA);
 		y2_spm_journal_snapshot();
-		if (!ret) resumes++; /* only return through real cpu_resume counts */
 		if (last_debug) { WRITE_ONCE(spm_broken, true); ret = -EIO; }
 	}
-	y2_spm_suspend_clean(&spm_io);
-	y2_spm_normal(&spm_io, normal_address);
+	restore = y2_spm_suspend_restore(&spm_io, normal_address);
+	if (restore) { suspend_restore_failures++; ret = restore; }
 	y2_pm_mark(Y2_PM_NORMAL_PCM_RESTORED, ret);
 	cpu_cluster_pm_exit();
 exit_cpu:
 	cpu_pm_exit();
+	if (!y2_local_timer_context_ok()) { suspend_restore_failures++; y2_pm_note("suspend_timer", -EIO); ret = -EIO; }
 	y2_pm_mark(Y2_PM_TIMER_RESTORED, ret);
 exit_cirq:
 	y2_cirq_end();
+	if (!y2_cirq_restore_ok()) { suspend_restore_failures++; y2_pm_note("suspend_cirq", -EIO); ret = -EIO; }
 	y2_pm_mark(Y2_PM_CIRQ_REPLAYED, ret);
 unlock:
 	if (ret) {
 		/* Normal firmware is mandatory on every abort, including CPU PM
 		 * notifier refusal before the suspend PCM was installed. */
-		y2_spm_suspend_clean(&spm_io);
-		y2_spm_normal(&spm_io, normal_address);
+		restore = y2_spm_suspend_restore(&spm_io, normal_address);
+		if (restore) { suspend_restore_failures++; ret = restore; }
 		y2_pm_mark(Y2_PM_ABORTED, ret);
 		aborts++;
 	}
+	if (ret == -EIO || ret == -ETIMEDOUT) WRITE_ONCE(spm_broken, true);
 	last_result = ret;
 	if (restore_start) resume_restore_ns = ktime_get_mono_fast_ns() - restore_start;
 	raw_spin_unlock_irqrestore(&spm_lock, flags);
@@ -628,6 +647,7 @@ static ssize_t state_show(struct device *dev, struct device_attribute *attr, cha
 	ret = sysfs_emit(buf, "mode=SPM_CPU_SHUTDOWN_INFRA_RETAINED broken=%u entries=%u resumes=%u aborts=%u result=%d wake=%#x ticks32k=%u event=%#x debug=%#x r13=%#x power=%#x/%#x\n",
 		spm_broken, entries, resumes, aborts, last_result, last_wake, last_ticks,
 		last_event, last_debug, last_r13, spm_read(spm_base, 0x60c), spm_read(spm_base, 0x610));
+	ret += sysfs_emit_at(buf, ret, "suspend_restore_failures=%u\n", suspend_restore_failures);
 	ret += sysfs_emit_at(buf, ret, "dormant_entries=%u dormant_resumes=%u dormant_aborts=%u dormant_failures=%u dormant_result=%d dormant_broken=%u\n",
 		dormant_entries, dormant_resumes, dormant_aborts, dormant_failures, dormant_result, dormant_broken);
 	ret += sysfs_emit_at(buf, ret, "dormant_stage=%s resume_restore_ns=%llu\n", dormant_stage, resume_restore_ns);

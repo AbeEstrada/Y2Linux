@@ -34,7 +34,7 @@ class Reply:
         pass
 
     def recv(self, unused):
-        return json.dumps({'version': 1, 'id': 6582, 'ok': self.ok}).encode() + b'\n'
+        return json.dumps({'version': 1, 'id': 6582, 'ok': self.ok, 'result': {'sleep_ready': True, 'screen_off': False}}).encode() + b'\n'
 
 
 class SleepProduct(unittest.TestCase):
@@ -43,9 +43,10 @@ class SleepProduct(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.ctx = Context(self.tmp.name)
         self.write('/proc/sys/kernel/random/boot_id', 'boot-one')
-        self.write('/sys/firmware/y2_pm/state', 'valid=1 stage=EXIT failed_stage=NONE error=0 wake=0x20')
+        self.write('/sys/firmware/y2_pm/state', 'valid=1 stage=EXIT failed_stage=NONE error=0 wake=0x20 reset_resume_entry=0x59325253 pcm_length=596')
         self.write('/sys/firmware/y2_pm/stage', '')
         self.write('/sys/power/state', '')
+        self.write('/sys/power/pm_test', '[none] core processors platform devices freezer')
 
     def write(self, name, text):
         path = self.ctx.path(name)
@@ -152,6 +153,53 @@ class SleepProduct(unittest.TestCase):
         self.assertIsNone(product({}, None)['same_boot'])
         self.write('/data/system/platform/suspend-last.json', '[]')
         self.assertEqual(status(self.ctx)['state'], 'idle')
+
+    def test_pm_test_return_never_proves_deep_sleep(self):
+        for mode in ('freezer', 'devices', 'platform', 'processors', 'core'):
+            self.write('/sys/power/pm_test', '[' + mode + '] none')
+            record(self.ctx, 'quiescing_radios', 0)
+            record(self.ctx, 'kernel_suspend', 0)
+            record(self.ctx, 'restoring_radios', 0)
+            with patch('y2_platform.suspend_record.socket.socket', return_value=Reply()):
+                value = record(self.ctx, 'complete_result_0', 0)
+            self.assertEqual(value['result'], 0)
+            self.assertEqual(value['product']['state'], 'idle')
+            self.assertFalse(value['product']['kernel_completed'])
+            self.assertNotEqual(self.ctx.read('/sys/firmware/y2_pm/stage'), 'REBORN_READY')
+
+    def test_exit_without_reset_pcm_or_wake_is_not_deep_resume(self):
+        for kernel in ('valid=1 stage=EXIT error=0',
+                       'valid=1 stage=EXIT error=0 reset_resume_entry=0x59325253 pcm_length=479 wake=0x20',
+                       'valid=1 stage=EXIT error=0 reset_resume_entry=0x59325253 pcm_length=596 wake=0x0'):
+            record(self.ctx, 'quiescing_radios', 0)
+            record(self.ctx, 'kernel_suspend', 0)
+            self.write('/sys/firmware/y2_pm/state', kernel)
+            value = record(self.ctx, 'restoring_radios', 0)
+            self.assertFalse(value['product']['kernel_completed'])
+
+    def test_failed_suspend_still_restores_the_application(self):
+        record(self.ctx, 'quiescing_radios', 0)
+        record(self.ctx, 'kernel_suspend', 0)
+        record(self.ctx, 'restoring_radios', 1)
+        with patch('y2_platform.suspend_record.socket.socket', return_value=Reply()) as rpc:
+            value = record(self.ctx, 'complete_result_1', 1)
+        rpc.assert_called_once()
+        self.assertTrue(value['reborn_restore'])
+        self.assertEqual(value['result'], 1)
+        self.assertEqual(value['product']['state'], 'restore_failed')
+
+    def test_preparation_has_a_distinct_state_and_requires_acknowledgement(self):
+        from y2_platform.sleep import prepare
+        record(self.ctx, 'requested', 0)
+        with patch('y2_platform.sleep.prepare'):
+            self.assertEqual(status(self.ctx)['state'], 'requested')
+        with patch('y2_platform.suspend_record.application_rpc', return_value={'sleep_ready': True, 'screen_off': True}):
+            self.assertEqual(prepare(self.ctx)['state'], 'preparing')
+        value = record(self.ctx, 'quiescing_radios', 0)
+        self.assertTrue(value['reborn_prepared'])
+        with patch('y2_platform.suspend_record.application_rpc', return_value={'sleep_ready': False}):
+            with self.assertRaises(ValueError):
+                prepare(self.ctx)
 
     def test_state_directory_symlink_is_refused(self):
         self.ctx.path('/data').mkdir()

@@ -278,6 +278,7 @@ class SdInventoryIdentity(unittest.TestCase):
 
 
 DEVICE = r'''
+enum { Y2_PM_PHASE_RESUME_NOIRQ = 5, Y2_PM_PHASE_EARLY = 6, Y2_PM_PHASE_RESUME = 7 };
 struct device { const char *name; };
 static const char *dev_name(const struct device *d) { return d->name; }
 static int sysfs_emit_at(char *buf, int at, const char *fmt, ...) { va_list a; va_start(a, fmt); int n = vsnprintf(buf + at, 8192 - at, fmt, a); va_end(a); return n; }

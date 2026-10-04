@@ -7,7 +7,7 @@ from .boot import private_directory
 
 SCHEMA = 'org.y2linux.sleep/v1'
 RECEIPT = '/data/system/platform/suspend-last.json'
-STATES = {'requested', 'refused', 'sleeping', 'restoring', 'restored', 'restore_failed'}
+STATES = {'requested', 'preparing', 'refused', 'sleeping', 'restoring', 'waking', 'restored', 'restore_failed'}
 
 
 def product(value, boot_id):
@@ -23,7 +23,7 @@ def product(value, boot_id):
     if result['state'] in {'restored', 'refused'} and result['same_boot'] is False:
         result.update(state='idle', reason=None, request_boot_id=None, same_boot=None,
                       kernel_completed=False, wake_reason='unknown')
-    if result['state'] in {'requested', 'sleeping', 'restoring'} and result['same_boot'] is False:
+    if result['state'] in {'requested', 'preparing', 'sleeping', 'restoring', 'waking'} and result['same_boot'] is False:
         result.update(state='restore_failed', reason='boot_changed_before_restoration', kernel_completed=False)
     return result
 
@@ -61,8 +61,10 @@ def transition(value, stage, result, boot_id, reason=None):
     if stage in {'requested', 'quiescing_radios'} or stage.startswith('refused_'):
         p.update(state='requested', reason=None, request_boot_id=boot_id,
                  same_boot=True if boot_id else None, kernel_completed=False, wake_reason='unknown')
+    if stage in {'reborn_prepared', 'quiescing_radios', 'syncing'}:
+        p.update(state='preparing')
     if stage.startswith('refused_'):
-        p.update(state='refused', reason=stage.removeprefix('refused_'))
+        p.update(state='refused', reason=reason or stage.removeprefix('refused_'))
     elif stage == 'kernel_suspend':
         # Durable intent immediately before the blocking kernel write. Actual
         # SPM entry is proven only by the kernel journal after wake/reset.
@@ -70,20 +72,26 @@ def transition(value, stage, result, boot_id, reason=None):
     elif stage == 'restoring_radios':
         kernel = dict(re.findall(r'(\w+)=(\S+)', value.get('persistent_kernel') or ''))
         p['kernel_completed'] = (kernel.get('valid') == '1' and kernel.get('stage') == 'EXIT'
-                                 and kernel.get('error') == '0' and p['same_boot'] is True)
+                                 and kernel.get('error') == '0' and p['same_boot'] is True
+                                 and value.get('pm_test') == 'none'
+                                 and kernel.get('reset_resume_entry') == '0x59325253'
+                                 and kernel.get('pcm_length') == '596'
+                                 and kernel.get('wake') not in {None, '0', '0x0'})
         before, after = value.get('wake_irqs_before', {}), value.get('wake_irqs_after', {})
         if p['kernel_completed']:
             sources = [name for name in ('rtc', 'power') if name in before and name in after
                        and after[name] > before[name]]
             p['wake_reason'] = sources[0] if len(sources) == 1 else 'multiple' if sources else 'unknown'
         if p['state'] != 'refused':
-            p.update(state='restoring', reason=reason)
+            p.update(state='waking', reason=reason)
         if kernel.get('failed_stage') == 'DPM_PREPARED' and kernel.get('error') == '-16':
             p.update(state='refused', reason='device_prepare_refused')
     elif stage.startswith('complete_result_'):
         if reason or result or value.get('error'):
             if p['state'] != 'refused':
                 p.update(state='restore_failed', reason=reason or value.get('error') or 'platform_restoration_failed')
+        elif value.get('pm_test') not in {None, 'none'}:
+            p.update(state='idle', reason='pm_test_completed', kernel_completed=False)
         elif p['same_boot'] is not True:
             p.update(state='restore_failed', reason='same_boot_not_proven')
         elif not p.get('kernel_completed'):
@@ -93,6 +101,18 @@ def transition(value, stage, result, boot_id, reason=None):
         else:
             p.update(state='restored', reason=None)
     return p
+
+
+def prepare(ctx):
+    from .suspend_record import application_rpc, record
+    try:
+        ack = application_rpc(ctx, 'sleep_prepare')
+        if ack.get('sleep_ready') is not True or ack.get('screen_off') is not True:
+            raise ValueError('reborn_sleep_preparation_failed')
+    except (OSError, ValueError) as error:
+        record(ctx, 'refused_reborn_preparation', 1, reason=str(error))
+        raise
+    return record(ctx, 'reborn_prepared', 0, reborn_ack=True)['product']
 
 
 def request(ctx):

@@ -179,6 +179,16 @@ void y2_pm_device(const struct device *dev, unsigned phase, int result, bool lea
 		name += length - Y2_PM_RING_NAME;
 	raw_spin_lock_irqsave(&journal_lock, flags);
 	ring_write(name, phase, result, leave);
+	/* Linux logs device resume errors and continues unwinding; pm_suspend()
+	 * can consequently return zero. Preserve that first restoration failure
+	 * in the existing retained receipt as well as the callback ring. */
+	if (leave && result && !journal_record[4] &&
+	    (phase == Y2_PM_PHASE_RESUME_NOIRQ || phase == Y2_PM_PHASE_EARLY ||
+	     phase == Y2_PM_PHASE_RESUME)) {
+		journal_record[3] = journal_record[2];
+		journal_record[4] = result;
+		commit();
+	}
 	raw_spin_unlock_irqrestore(&journal_lock, flags);
 	/* Callback progress extends the backstop too: only a single stalled
 	 * call (no progress for its full period) resets, not a long phase. */
