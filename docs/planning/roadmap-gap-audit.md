@@ -1,5 +1,36 @@
 # Roadmap gap audit
 
+## Platform 1.0 input software candidate boundary — 2026-10-04
+
+The admitted input-only source pass is software complete: Reborn `a701e0b`,
+Linux tooling `99087ba` (kernel/DT unchanged), 256 workspace tests including
+36 input and40 UI tests, fmt/strict Clippy, ARM Cortex-A7 release build and
+5 targeted Linux input tests pass. The userspace candidate is sealed under
+`out/platform-v1-input-candidate/`; no BOOTIMG/Y2ROOT image, flash or push.
+The owner explicitly requests continued waiting for the busy device lock;
+no live-device access has occurred. This is not physical pass closure.
+
+Fresh analysis of retained physical DEV02/GPU01 raw records finds218 wheel
+press/release pairs; zero same-direction gaps <8ms; minimum active gap30.957ms.
+No counted hand detents or latency data exist in those captures. Retain the
+8ms filter and acceleration tiers. Existing UART01 C1/C2/C3 receipts remain
+hardware authority; no CPU/radio/poll policy or full-suspend subsystem change.
+
+| Coverage / dependency | Classification | Remaining gate |
+| --- | --- | --- |
+| APT32F/I2C/evdev, #28 | CONFIRMED retained pulse behavior; PARTIAL counted/current behavior |100CW+100CCW counted detents and button counts |
+| Reborn timing/recovery, #28 | CONFIRMED deterministic software; PARTIAL physical | Candidate holds/rebind/drop/wake and human feel |
+| Input->state/frame, #34 | PARTIAL | New bounded microsecond trace on candidate; physical median/p95/worst pending |
+| Input idle/C1/C2/C3, #28 | CONFIRMED retained whole-system scope; PARTIAL new input measurement | Observe idle IRQs/timers/CPU under lock;20ms navigation polling retained limitation |
+| Power/full suspend, #28 | PARTIAL | Typed gesture/reset contract provided; platform-owned full wake qualification |
+| Product v2 controls | CONFIRMED software invariants; PARTIAL physical UX | Screen/list/volume listening and owner acceptance |
+
+Existing epics remain OPEN; no status/milestone promotion or remote write.
+[Input report](../validation/Y2-PLATFORM-V1-INPUT.md) records bugs, exclusions,
+exact candidate identity and physical owner protocol. Next smallest boundary
+is a free device window and installed-identity/capture; no new hardware,
+memory, protected-data or recovery provenance scope is admitted.
+
 ## Platform 1.0 input pass admission — 2026-10-04
 
 Owner explicitly authorizes implementation, optimization and bounded physical

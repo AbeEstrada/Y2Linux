@@ -1,5 +1,19 @@
 # Platform v1 roadmap
 
+## Platform 1.0 input software candidate — 2026-10-04
+
+Reborn `a701e0b` / Linux input tooling `99087ba`: source and software checks
+complete (256 workspace tests,36 input/40 UI, fmt/strict Clippy/ARM,5 Linux
+input cases). Userspace candidate `out/platform-v1-input-candidate/` is sealed;
+kernel/DT/images unchanged. [Boundary review](roadmap-gap-audit.md#platform-10-input-software-candidate-boundary--2026-10-04).
+
+Retained218 physical wheel pairs have no same-direction gaps below8ms;
+keep existing wheel filtering and acceleration. Current100CW/100CCW accuracy,
+20/button, input->frame and idle/owner feel remain pending the shared lock.
+The owner requests continued waiting for the other measurement. No device
+access, flash, push or physical milestone closure; #28/#34 remain OPEN.
+[Full input receipt](../validation/Y2-PLATFORM-V1-INPUT.md).
+
 ## Platform 1.0 input pass — 2026-10-04
 
 Input implementation and bounded physical observation are active only in the
