@@ -253,86 +253,56 @@ diff --color -ruN -x obj -x umtprd -x 'mtp-safe.*' -x '*.o' mtp-src.orig/src/usb
 diff --color -ruN -x obj -x umtprd -x 'mtp-safe.*' -x '*.o' mtp-src.orig/src/y2_rx.c mtp-src/src/y2_rx.c
 --- a/src/y2_rx.c
 +++ b/src/y2_rx.c
-@@ -0,0 +1,175 @@
+@@ -0,0 +1,133 @@
 +/* SPDX-License-Identifier: GPL-3.0-or-later */
 +#define _GNU_SOURCE
 +#include <errno.h>
-+#include <linux/aio_abi.h>
 +#include <pthread.h>
++#include <signal.h>
 +#include <stdlib.h>
 +#include <string.h>
 +#include <sys/prctl.h>
-+#include <sys/syscall.h>
 +#include <time.h>
 +#include <unistd.h>
 +#include "y2_rx.h"
 +
-+/* Bulk-OUT receive with several FunctionFS read requests always in flight.
-+ * The controller starts the next queued request straight from its completion
-+ * interrupt, so a host packet never meets an idle endpoint, and USB reception
-+ * overlaps the (slower) storage writes of the consumer. */
++/* Bulk-OUT receive on its own thread. USB reception overlaps the slower storage
++ * writes of the consumer: while one request is being written, later requests
++ * are already queued on the endpoint and land in the ring. When the ring is
++ * full the endpoint simply NAKs the host (the controller keeps one received
++ * packet in its FIFO and the kernel hands it to the next queued request). */
 +#define SLOTS 32
-+#define DEPTH 4
-+enum { FREE, PENDING, READY };
-+static struct slot { unsigned char *buffer; int length, state; struct iocb cb; } slots[SLOTS];
++static struct slot { unsigned char *buffer; int length; } slots[SLOTS];
 +static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-+static pthread_cond_t data = PTHREAD_COND_INITIALIZER;
++static pthread_cond_t data = PTHREAD_COND_INITIALIZER, space = PTHREAD_COND_INITIALIZER;
 +static pthread_t thread;
-+static aio_context_t aio;
-+static int running, failed, tail, head, inflight, ready_count, descriptor = -1, borrowed;
++static int running, failed, head, tail, count, descriptor = -1, borrowed;
 +static size_t slot_size;
 +
-+static long io_setup_(unsigned n, aio_context_t *c) { return syscall(SYS_io_setup, n, c); }
-+static long io_destroy_(aio_context_t c) { return syscall(SYS_io_destroy, c); }
-+static long io_submit_(aio_context_t c, long n, struct iocb **p) { return syscall(SYS_io_submit, c, n, p); }
-+static long io_getevents_(aio_context_t c, long min, long max, struct io_event *e, struct timespec *t)
-+{ return syscall(SYS_io_getevents, c, min, max, e, t); }
-+
-+/* Called with the lock held. Slots are submitted and consumed in ring order. */
-+static void fill(void)
-+{
-+    while (running && !failed && inflight < DEPTH) {
-+        struct slot *slot = &slots[head];
-+        if (slot->state != FREE) break;
-+        memset(&slot->cb, 0, sizeof slot->cb);
-+        slot->cb.aio_fildes = descriptor;
-+        slot->cb.aio_lio_opcode = IOCB_CMD_PREAD;
-+        slot->cb.aio_buf = (unsigned long)slot->buffer;
-+        slot->cb.aio_nbytes = slot_size;
-+        slot->cb.aio_data = (unsigned long)(slot - slots);
-+        struct iocb *list[1] = { &slot->cb };
-+        if (io_submit_(aio, 1, list) != 1) {
-+            if (errno == EINTR || errno == EAGAIN) break;
-+            failed = 1;
-+            pthread_cond_broadcast(&data);
-+            break;
-+        }
-+        slot->state = PENDING;
-+        head = (head + 1) % SLOTS;
-+        inflight++;
-+    }
-+}
-+
-+static void *reaper(void *unused)
++static void *reader(void *unused)
 +{
 +    (void)unused;
 +    prctl(PR_SET_NAME, (unsigned long)"y2_rx");
-+    struct io_event events[DEPTH];
 +    for (;;) {
-+        struct timespec wait = { 0, 200 * 1000000L };
-+        long n = io_getevents_(aio, 1, DEPTH, events, &wait);
 +        pthread_mutex_lock(&lock);
++        while (running && count == SLOTS) pthread_cond_wait(&space, &lock);
 +        if (!running) { pthread_mutex_unlock(&lock); break; }
-+        if (n < 0 && errno != EINTR) { failed = 1; pthread_cond_broadcast(&data); pthread_mutex_unlock(&lock); break; }
-+        for (long i = 0; i < n; i++) {
-+            struct slot *slot = &slots[events[i].data];
-+            if (events[i].res < 0) failed = 1;
-+            else { slot->length = (int)events[i].res; slot->state = READY; ready_count++; }
-+            inflight--;
++        struct slot *slot = &slots[head];
++        pthread_mutex_unlock(&lock);
++        ssize_t n = read(descriptor, slot->buffer, slot_size);
++        pthread_mutex_lock(&lock);
++        if (n < 0) {
++            if (errno == EINTR && running) { pthread_mutex_unlock(&lock); continue; }
++            failed = 1;
++            pthread_cond_broadcast(&data);
++            pthread_mutex_unlock(&lock);
++            break;
 +        }
++        slot->length = (int)n;
++        head = (head + 1) % SLOTS;
++        count++;
 +        pthread_cond_broadcast(&data);
 +        pthread_mutex_unlock(&lock);
-+        if (failed) break;
 +    }
 +    return NULL;
 +}
@@ -344,16 +314,11 @@ diff --color -ruN -x obj -x umtprd -x 'mtp-safe.*' -x '*.o' mtp-src.orig/src/y2_
 +    for (int i = 0; i < SLOTS; i++) {
 +        if (slots[i].buffer && size != slot_size) { free(slots[i].buffer); slots[i].buffer = NULL; }
 +        if (!slots[i].buffer && !(slots[i].buffer = malloc(size))) { pthread_mutex_unlock(&lock); return -1; }
-+        slots[i].state = FREE;
++        slots[i].length = 0;
 +    }
-+    slot_size = size; descriptor = fd;
-+    head = tail = inflight = ready_count = failed = borrowed = 0;
-+    aio = 0;
-+    if (io_setup_(DEPTH * 2, &aio)) { pthread_mutex_unlock(&lock); return -1; }
-+    running = 1;
-+    fill();
++    slot_size = size; descriptor = fd; head = tail = count = failed = borrowed = 0; running = 1;
 +    pthread_mutex_unlock(&lock);
-+    if (pthread_create(&thread, NULL, reaper, NULL)) { y2_rx_stop(); return -1; }
++    if (pthread_create(&thread, NULL, reader, NULL)) { running = 0; return -1; }
 +    return 0;
 +}
 +
@@ -362,10 +327,11 @@ diff --color -ruN -x obj -x umtprd -x 'mtp-safe.*' -x '*.o' mtp-src.orig/src/y2_
 +    pthread_mutex_lock(&lock);
 +    if (!running) { pthread_mutex_unlock(&lock); return; }
 +    running = 0;
++    pthread_cond_broadcast(&space);
 +    pthread_cond_broadcast(&data);
 +    pthread_mutex_unlock(&lock);
-+    /* Destroying the context cancels reads still queued on the endpoint. */
-+    io_destroy_(aio);
++    /* SIGUSR1 has a no-op handler without SA_RESTART: it interrupts a blocked read. */
++    pthread_kill(thread, SIGUSR1);
 +    pthread_join(thread, NULL);
 +}
 +
@@ -374,19 +340,14 @@ diff --color -ruN -x obj -x umtprd -x 'mtp-safe.*' -x '*.o' mtp-src.orig/src/y2_
 +void y2_rx_flush(void)
 +{
 +    pthread_mutex_lock(&lock);
-+    if (!borrowed) {
-+        while (ready_count > 0 && slots[tail].state == READY) {
-+            slots[tail].state = FREE; tail = (tail + 1) % SLOTS; ready_count--;
-+        }
-+        fill();
-+    }
++    if (!borrowed) { tail = head; count = 0; pthread_cond_broadcast(&space); }
 +    pthread_mutex_unlock(&lock);
 +}
 +
 +static int wait_data(volatile int *cancel, volatile int *stop)
 +{
 +    for (;;) {
-+        if (slots[tail].state == READY) return 0;
++        if (count > 0) return 0;
 +        if (failed || !running || (stop && *stop)) return -1;
 +        if (cancel && *cancel) return -1;
 +        struct timespec until;
@@ -411,10 +372,7 @@ diff --color -ruN -x obj -x umtprd -x 'mtp-safe.*' -x '*.o' mtp-src.orig/src/y2_
 +void y2_rx_done(void)
 +{
 +    pthread_mutex_lock(&lock);
-+    if (borrowed && slots[tail].state == READY) {
-+        slots[tail].state = FREE; tail = (tail + 1) % SLOTS; ready_count--;
-+        fill();
-+    }
++    if (borrowed && count > 0) { tail = (tail + 1) % SLOTS; count--; pthread_cond_signal(&space); }
 +    borrowed = 0;
 +    pthread_mutex_unlock(&lock);
 +}
