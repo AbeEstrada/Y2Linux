@@ -1,14 +1,15 @@
 --- a/drivers/i2c/busses/i2c-mt65xx.c
 +++ b/drivers/i2c/busses/i2c-mt65xx.c
-@@ -4,6 +4,7 @@
+@@ -4,6 +4,8 @@
   * Author: Xudong Chen <xudong.chen@mediatek.com>
   */
  
 +#include "/project/kernel/platform/boot.h"
++#include "/project/kernel/platform/pm-replay-trace.h"
  #include <linux/clk.h>
  #include <linux/completion.h>
  #include <linux/delay.h>
-@@ -522,6 +523,7 @@
+@@ -522,6 +524,7 @@
  };
  
  static const struct of_device_id mtk_i2c_of_match[] = {
@@ -16,7 +17,7 @@
  	{ .compatible = "mediatek,mt2712-i2c", .data = &mt2712_compat },
  	{ .compatible = "mediatek,mt6577-i2c", .data = &mt6577_compat },
  	{ .compatible = "mediatek,mt6589-i2c", .data = &mt6589_compat },
-@@ -868,7 +870,7 @@
+@@ -868,7 +871,7 @@
  	return 0;
  }
  
@@ -25,7 +26,7 @@
  {
  	unsigned int clk_src;
  	unsigned int step_cnt;
-@@ -938,6 +940,7 @@
+@@ -938,6 +941,7 @@
  
  		break;
  	}
@@ -33,10 +34,32 @@
  }
  
  static void i2c_dump_register(struct mtk_i2c *i2c)
-@@ -1195,6 +1198,25 @@
+@@ -1008,6 +1012,7 @@
+ 	int ret;
+ 
+ 	i2c->irq_stat = 0;
++	y2_pm_replay_note(i2c->dev, "i2c_msg_begin", 0);
+ 
+ 	if (i2c->auto_restart)
+ 		restart_flag = I2C_RS_TRANSFER;
+@@ -1181,6 +1186,7 @@
+ 		writel((msgs + 1)->len, i2c->pdmabase + OFFSET_RX_LEN);
+ 	}
+ 
++	y2_pm_replay_note(i2c->dev, "i2c_dma_go", 0);
+ 	writel(I2C_DMA_START_EN, i2c->pdmabase + OFFSET_EN);
+ 
+ 	if (!i2c->auto_restart) {
+@@ -1192,9 +1198,30 @@
+ 	}
+ 	mtk_i2c_writew(i2c, start_reg, OFFSET_START);
+ 
++	y2_pm_replay_note(i2c->dev, "i2c_wait_begin", 0);
  	ret = wait_for_completion_timeout(&i2c->msg_complete,
  					  i2c->adap.timeout);
- 
+-
++	y2_pm_replay_note(i2c->dev, "i2c_wait_done", ret ? 0 : -ETIMEDOUT);
++
 +    if (of_device_is_compatible(i2c->dev->of_node, "mediatek,mt6582-i2c") &&
 +        (!ret || (i2c->irq_stat & (I2C_HS_NACKERR | I2C_ACKERR)))) {
 +        dev_warn(i2c->dev, "Y2I2C result=%s irq_seen=%04x parent=%lu div=%u bus=%u op=%u\n",
@@ -59,7 +82,16 @@
  	/* Clear interrupt mask */
  	mtk_i2c_writew(i2c, ~(restart_flag | I2C_HS_NACKERR | I2C_ACKERR |
  			    I2C_ARB_LOST | I2C_TRANSAC_COMP), OFFSET_INTR_MASK);
-@@ -1250,7 +1272,10 @@
+@@ -1243,14 +1270,19 @@
+ 	bool write_then_read_en = false;
+ 	struct mtk_i2c *i2c = i2c_get_adapdata(adap);
+ 
++	y2_pm_replay_note(i2c->dev, "i2c_clk_begin", 0);
+ 	ret = clk_bulk_enable(I2C_MT65XX_CLK_MAX, i2c->clocks);
++	y2_pm_replay_note(i2c->dev, "i2c_clk_done", ret);
+ 	if (ret)
+ 		return ret;
+ 
  	i2c->auto_restart = i2c->dev_comp->auto_restart;
  
  	/* checking if we can skip restart and optimize using WRRD mode */
@@ -71,7 +103,15 @@
  		if (!(msgs[0].flags & I2C_M_RD) && (msgs[1].flags & I2C_M_RD) &&
  		    msgs[0].addr == msgs[1].addr) {
  			i2c->auto_restart = 0;
-@@ -1375,6 +1400,10 @@
+@@ -1300,6 +1332,7 @@
+ 
+ err_exit:
+ 	clk_bulk_disable(I2C_MT65XX_CLK_MAX, i2c->clocks);
++	y2_pm_replay_note(i2c->dev, "i2c_xfer_done", ret < 0 ? ret : 0);
+ 	return ret;
+ }
+ 
+@@ -1375,6 +1408,10 @@
  	int ret = 0;
  	struct mtk_i2c *i2c;
  	int i, irq, speed_clk;
@@ -82,7 +122,7 @@
  
  	i2c = devm_kzalloc(&pdev->dev, sizeof(*i2c), GFP_KERNEL);
  	if (!i2c)
-@@ -1457,7 +1486,10 @@
+@@ -1457,7 +1494,10 @@
  
  	strscpy(i2c->adap.name, I2C_DRV_NAME, sizeof(i2c->adap.name));
  

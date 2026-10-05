@@ -1,5 +1,106 @@
 # Roadmap gap audit
 
+## POWER-FINAL-02 pre-candidate audit — 2026-10-05
+
+Evidence since the full-sleep failure, all on installed POWER01 boot c884ae1c with
+taint zero: the codec rail enable took 2835 ms against a nominal 150 ms, suggesting
+post-resume timer/interrupt delay in addition to the unresolved cache replay (two
+`jiffies` notes added, sleep-only). A bounded ABA Wi-Fi comparison (CAM/FAST_PSP/CAM,
+180 s, PC USB attached) is confounded by charger phase and shows no `y2-wifi` IRQ
+change; FAST_PSP raised gateway latency to 100.8 ms maximum, so the CAM default stays.
+Source changes pending (unbuilt on hardware): DAC idle bias, blocking connectivity
+supervisor (with child-reaping fix), sleep-only breadcrumbs, audit reset handling,
+Power screen-off fallback when sleep is gated. Scope is not widened: no new hardware
+subsystem, memory or production claim. Coverage #28-#34 remain PARTIAL; no readiness
+promotion, flash, push or issue closure. Candidate-02 needs an owner flash to
+validate rails, supervisor and the breadcrumbs.
+
+## POWER01 full RTC cache-replay failure — 2026-10-05
+
+The admitted resident sequence completed freezer/devices/platform/processors/core
+on boot 69d8df3a with valid same-boot, clean filesystem/taint, helper return and
+zero deep-entry deltas. Exactly one real RTC12/backstop30 trial then reached
+SPM EINT wake0x20, PCM596, reset return0x59325253 and DEVICES_RESUMING. The codec
+trace completes supply enable (2835 ms), access/reset and 2 ms delay, and stops
+at cs_cache_begin without cs_cache_done. Recovery is boot c884ae1c, taint zero,
+not successful full resume. No automatic retry or Power trial follows.
+
+This narrows the former unmatched codec callback to regcache_sync, not yet its
+mutex, traversal, I2C clock, DMA or completion instruction. Admit sleep-only
+retained breadcrumbs at that register-cache lock/traversal and existing I2C
+clock/transfer/completion boundaries, restricted to this Y2 codec/controller.
+No new timer, MMIO write, timeout change, arbitrary power control, wake mask,
+voltage or USB alteration. Keep the board-local idle-bias correction separate
+from the unexplained full-reset replay stall; a skipped callback cannot alone
+prove safe subsequent playback. Next owner image must validate idle rails,
+playback restore and same-boot RTC/Power independently. Coverage #28/#29/#30/
+#31/#32/#33/#34 remains PARTIAL; full sleep FAIL, ordinary autosuspend refused.
+Recovered image identity/source and preserved DATA/USB remain POWER01. Canonical
+POWER01 seal is unchanged. No flash, push, issue/milestone closure or battery
+hardware blame follows this diagnosis.
+
+## POWER01 idle audio and supervisor boundary — 2026-10-05
+
+The owner confirms working display and controls on boot 69d8df3a, taint zero.
+Detached paused/dark/radios-off 300.295 s has 9765 matching DORMANT returns,
+62.6446% CPU0 C3, 27.7221% C1, 4.9101% C2 and zero UART/clock restore failures.
+Direct voltage 4.043627 to 4.036816 V / estimated SOC 83 to 83 is short-window
+evidence, not endurance or pack current. GPU/display/AFE/CONSYS/MUSB are suspended;
+the closed PCM's CS43131 remains runtime-active, DAPM Standby, five codec supply
+references held. Exact Linux 6.18 DAPM source traces this to the codec's upstream
+idle_bias_on policy. Admit Y2 card-local idle-bias-off using the supported DAPM
+API, before the core's initial sync, preserving managed PM order, normal stream
+references, safe disabled headphone pin and existing checked rail/cache callbacks.
+No direct rail writes, forced runtime suspend, volume change or generic codec
+policy change. Target stop/start, rails, playback and full-resume remain gates.
+
+Global task births are approximately 0.929/s and SD IRQs 0.962/s. The legacy
+connectivity shell polls netdev existence every two seconds and spawns sleep and
+health-check cat/readlink children; bounded ptrace identification precedes a
+netlink-driven supervisor replacement. Keep single Bluetooth reconnect ownership,
+calibration exclusivity, wpa action hooks, restart limits and saved radio intent.
+Do not infer electrical savings from task/IRQ counts. Input GPIO navigation's
+50 Hz timer remains hardware-routing-unproved; do not guess EINT or slow input.
+Current full-suspend entries remain zero; staged tests then one backstopped real
+trial are still required, ordinary automatic suspend remains refused.
+
+Coverage #28/#29/#30/#31/#32/#33/#34 remains PARTIAL. No milestone/issue closure,
+new electrical limits, USB transport, partition/memory scope, flash or push.
+POWER01 package stays sealed; any further built-in repair requires a distinct
+source-bound candidate after coherent fixes and affected validation.
+
+## POWER01 post-owner-install physical admission — 2026-10-05
+
+The owner installed the reviewed preserving pair and explicitly requested continued
+checks. Locked USB SSH identifies POWER-FINAL-01, Linux
+`fedc005ba68b3f5020a45258e38d641aa191b12a`, Reborn
+`ccf450ac1388228dbd859318a05e13adf667c9aa`, kernel
+`6.18.0-y2linux-platform-v1-power-final-01`, root v1.27, boot
+`69d8df3a-1b2d-4c1b-b26b-d744a7859f7a`, taint zero. PWRAP runtime idle
+slots 5/6/7 read `0x21e:0x48`, readiness one, error zero; the previously
+zero-address runtime PCM slot defect is corrected on installed hardware.
+C3 production policy Enabled/budget -1, with active PC charging correctly vetoing
+entry. USB ECM/MTP is Ready/configured; SDP 500 mA allocation selects the existing
+450 mA ceiling, Charging/fault zero, 4.075488 V at the bounded read. No display
+WARN/flip timeout appears in the captured fresh boot; owner visual confirmation
+and repeated blank/wake are pending. Sole loaded module is mediatek_drm.
+Private evidence: ignored `out/platform-v1-power-final/private/post-flash/`.
+
+| Coverage / existing gates | Current classification | Next evidence boundary |
+| --- | --- | --- |
+| Boot/source/DATA/USB #16/#27/#31/#34 | Exact source pair and ECM/MTP CONFIRMED, preserving package previously validated | Application/display response, real desktop transfer/hash, retained DATA smoke |
+| C1/C2/C3, PMIC, DVFS #30 | Correct slots and policy CONFIRMED, warning-free boot; active charge veto works | Matched PC and unplugged 60-second/five-minute windows, actual C3 restoration/residency |
+| Display/audio/storage/input #28/#29/#33 | Driver/source availability and fresh boot scanout; full product qualification PARTIAL | Physical controls, rendering/blank/wake, paused/audio device clocks, playback |
+| Battery/radios/journal #30/#31/#32 | Safe existing charging and voltage observed; calibrated current/capacity/NTC unknown | PC/wall source/near-full, radio states, cumulative journal, safe longer battery-only windows |
+| Full sleep/endurance/release #30/#34 | Previous RTC failure remains OPEN; new-image NOT_RUN | Staged PM first; one bounded backstopped real trial only after prerequisites; same-boot RTC and Power separately |
+
+Admission is PARTIALLY READY for the already authorized bounded physical power
+pass. No battery-health verdict, milestone closure, electrical/memory change,
+forced guard bypass or production autosuspend promotion follows from this read.
+Existing issue statuses remain open. Continue the existing investigation without
+repeating unchanged source/ROM/recovery provenance. Update evidence after each
+real boundary; keep main and the owner's USB worktree unchanged.
+
 ## Power candidate owner handoff — 2026-10-05
 
 Standing boundary audit repeated before the canonical preserving handoff. Actual

@@ -42,3 +42,15 @@ class Audit(unittest.TestCase):
         b['boot_id'] = 'two'
         with self.assertRaises(ValueError):
             audit.delta(a, b, 10)
+
+    def test_hotplug_idle_reset_invalidates_entries_and_residency_together(self):
+        for reset in ('time', 'usage'):
+            a, b = self.samples()
+            b['files']['/sys/devices/system/cpu/cpu0/cpuidle/state2/' + reset] = '0'
+            result = audit.delta(a, b, 10)
+            row = result['cpuidle'][0]
+            self.assertTrue(row['counter_discontinuity'])
+            self.assertIsNone(row['time_us'])
+            self.assertIsNone(row['entries'])
+            self.assertIsNone(row['percent_wall_time'])
+            self.assertIsNone(result['cpu0_idle_exits_per_second'])

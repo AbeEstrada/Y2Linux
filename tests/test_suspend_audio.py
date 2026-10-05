@@ -20,6 +20,7 @@ class CodecSleepUnwind(unittest.TestCase):
 #define CS43130_XTAL_ERR_INT_SHIFT 0
 #define PM_SUSPEND_ON 0
 static unsigned pm_suspend_target_state = 3;
+static unsigned long jiffies = 100;
 struct regmap { unsigned cache[4], hw[4]; bool only, dirty; };
 struct cs43130_private { struct regmap *regmap; void *reset_gpio; unsigned xtal_ibias; int supplies[5]; };
 struct device { struct cs43130_private *data; };

@@ -1,5 +1,35 @@
 # Platform v1 roadmap
 
+## POWER01 full-sleep failure localization — 2026-10-05
+
+Five staged tests PASS. The [actual RTC boundary](roadmap-gap-audit.md#power01-full-rtc-cache-replay-failure--2026-10-05)
+FAILS: reset-return reaches codec register-cache replay, then the backstop produces
+boot c884ae1c. Add bounded sleep-only cache/I2C breadcrumbs alongside the measured
+idle DAC/supervisor corrections. No repeated failed entry, automatic sleep or
+readiness promotion. Playback after full wake must be tested even if idle-bias
+off causes the initial resume callback to stay suspended.
+
+## POWER01 measured idle follow-up — 2026-10-05
+
+Owner controls/display PASS; detached five-minute runtime C3 62.6446%, 9765 clean
+returns, same boot/taint zero. The [idle boundary audit](roadmap-gap-audit.md#power01-idle-audio-and-supervisor-boundary--2026-10-05)
+admits board-local DAPM idle-bias-off for the observed closed-PCM codec Standby
+and a measured event-driven connectivity supervisor follow-up. Preserve USB02,
+charging limits, input responsiveness and sole reconnect owner. Exact target
+playback/rail restoration, full RTC/Power resume and endurance remain open;
+ordinary autosuspend and platform readiness are not promoted by runtime C3.
+
+## Installed POWER01 physical continuation — 2026-10-05
+
+Owner installation is complete: exact Linux fedc005 / Reborn ccf450a, POWER-FINAL-01,
+boot 69d8df3a, taint zero; read-back runtime idle PMIC slots 5–7 are correct.
+PC ECM/MTP and SDP 450 mA charging are available with fault zero. Follow the
+[post-install gap audit](roadmap-gap-audit.md#power01-post-owner-install-physical-admission--2026-10-05):
+healthy display/USB/product smoke, matched idle/radio/audio/charging windows,
+then safe longer idle and staged/backstopped full resume. Overnight battery,
+termination, RTC/Power same-boot sleep and battery health remain open. This
+supersedes OWNER_INSTALLATION_NEXT only; no platform readiness promotion.
+
 ## Power handoff and continuation — 2026-10-05
 
 The [fresh hardware handoff audit](roadmap-gap-audit.md#power-candidate-owner-handoff--2026-10-05)

@@ -35,6 +35,7 @@ def main():
     sleep.add_argument('action', choices=['request', 'status', 'prepare'])
     sub.add_parser('power-daemon')
     sub.add_parser('service-daemon')
+    sub.add_parser('connectivity-daemon')
     usb_mode = sub.add_parser('usb-mode')
     usb_mode.add_argument('mode', choices=['mtp', 'developer'])
     codec_runtime = sub.add_parser('codec-runtime')
@@ -223,6 +224,10 @@ def main():
         import os
         result = lease_event(ctx, args.event) if args.command == 'wifi-event' else dhcp_event(ctx, args.event, os.environ)
         print(json.dumps(result))
+        return 0
+    if args.command == 'connectivity-daemon':
+        from .connectivity import serve
+        serve(ctx)
         return 0
     if args.command == 'service-daemon':
         from .service import serve

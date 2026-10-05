@@ -82,7 +82,7 @@
       "path": "drivers/i2c/busses/i2c-mt65xx.c",
       "patch": "0008-mt6582-i2c.patch",
       "base_sha256": "97a7193f00827341b26f074ed26fb5b4ed7839e45b87b7a2a2c03681c46d7b69",
-      "result_sha256": "70717634ed81d3dfb5651432037cd377a22f49e75a94302be28839308b2c09ca"
+      "result_sha256": "6226b74053d08bdc2d39ee34357c0efb370041d42a6903c99588261eba5bf294"
     },
     {
       "path": "drivers/mmc/host/mtk-sd.c",
@@ -178,7 +178,7 @@
       "path": "sound/soc/codecs/cs43130.c",
       "patch": "0030-cs43130-system-pm.patch",
       "base_sha256": "e3f2d840943600a6cb9d474ba367b1bb6a225cd98fc502f3c09570a7d6033099",
-      "result_sha256": "21b060f6e894a1786b7891df63e5a2f212d01b3d2d0e57829bdc86ca56826545"
+      "result_sha256": "9b0bace6c38bca1da30a0f121291a9cf5d02edd5d0214ad2bf4e0a579c05e486"
     },
     {
       "path": "drivers/usb/gadget/legacy/cdc2.c",
@@ -299,6 +299,12 @@
       "patch": "0065-y2-musb-pio-progress.patch",
       "base_sha256": "c0948905903b9e2998408d01adefbb69195bd493f165c209b350e019760a97a4",
       "result_sha256": "8b1c57ca95d1da852612412af6a5159382494ab3251e8b47996debf9d09206d0"
+    },
+    {
+      "path": "drivers/base/regmap/regcache.c",
+      "base_sha256": "1f5c9b1e6ece8b2719ef44c9fdfd23a3923f8066a04f9cc27fa20a612ae67774",
+      "result_sha256": "3c66058dabbff1a684766cf56bdc58209fd9318e0c0c8ac0dca0319930587411",
+      "patch": "0062-y2-codec-cache-pm-trace.patch"
     }
   ]
 }

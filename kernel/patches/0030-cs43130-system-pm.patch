@@ -1,9 +1,18 @@
 --- a/sound/soc/codecs/cs43130.c
 +++ b/sound/soc/codecs/cs43130.c
-@@ -36,0 +37,2 @@
+@@ -34,6 +34,8 @@
+ 
+ #include "cs43130.h"
+ #include "cirrus_legacy.h"
 +#include <linux/suspend.h>
 +#include "/project/kernel/platform/pm-journal.h"
-@@ -2674,0 +2677,37 @@
+ 
+ static const struct reg_default cs43130_reg_defaults[] = {
+ 	{CS43130_SYS_CLK_CTL_1, 0x06},
+@@ -2672,62 +2674,130 @@
+ 	regulator_bulk_disable(CS43130_NUM_SUPPLIES, cs43130->supplies);
+ }
+ 
 +/* Baseline02 full wake reaches this codec callback without returning. Keep
 + * its regulator/reset/cache boundaries in the existing retained PM ring only
 + * during system sleep, rather than tracing ordinary runtime audio traffic. */
@@ -41,7 +50,9 @@
 +	return 0;
 +}
 +
-@@ -2678,3 +2717,4 @@
+ static int cs43130_runtime_suspend(struct device *dev)
+ {
+ 	struct cs43130_private *cs43130 = dev_get_drvdata(dev);
 -
 -	if (cs43130->xtal_ibias != CS43130_XTAL_UNUSED)
 -		regmap_update_bits(cs43130->regmap, CS43130_INT_MASK_1,
@@ -49,13 +60,17 @@
 +
 +	if (cs43130->xtal_ibias != CS43130_XTAL_UNUSED) {
 +		ret = regmap_update_bits(cs43130->regmap, CS43130_INT_MASK_1,
-@@ -2682,0 +2723,3 @@
+ 				   CS43130_XTAL_ERR_INT,
+ 				   1 << CS43130_XTAL_ERR_INT_SHIFT);
 +		if (ret)
 +			return ret;
 +	}
-@@ -2686 +2728,0 @@
+ 
+ 	regcache_cache_only(cs43130->regmap, true);
+ 	regcache_mark_dirty(cs43130->regmap);
 -
-@@ -2689,3 +2731,14 @@
+ 	gpiod_set_value_cansleep(cs43130->reset_gpio, 0);
+ 
 -	regulator_bulk_disable(CS43130_NUM_SUPPLIES, cs43130->supplies);
 -
 -	return 0;
@@ -73,17 +88,27 @@
 +		dev_err(dev, "Failed to disable supplies: %d\n", ret);
 +	}
 +	return ret;
-@@ -2697,2 +2750,3 @@
+ }
+ 
+ static int cs43130_runtime_resume(struct device *dev)
+ {
+ 	struct cs43130_private *cs43130 = dev_get_drvdata(dev);
 -	int ret;
 -
 +	int ret, cleanup;
 +
++	/* jiffies stamps separate slow rail enables from a stalled timer tick. */
++	cs43130_pm_note("cs_jiffies_begin", (int)jiffies);
 +	cs43130_pm_note("cs_rails_begin", 0);
-@@ -2700 +2754,2 @@
+ 	ret = regulator_bulk_enable(CS43130_NUM_SUPPLIES, cs43130->supplies);
 -	if (ret != 0) {
 +	cs43130_pm_note("cs_rails_done", ret);
++	cs43130_pm_note("cs_jiffies_done", (int)jiffies);
 +	if (ret) {
-@@ -2705,18 +2760,5 @@
+ 		dev_err(dev, "Failed to enable supplies: %d\n", ret);
+ 		return ret;
+ 	}
+ 
 -	regcache_cache_only(cs43130->regmap, false);
 -
 -	gpiod_set_value_cansleep(cs43130->reset_gpio, 1);
@@ -107,7 +132,7 @@
 +		return 0;
 +
 +	dev_err(dev, "Failed to restore codec state: %d\n", ret);
-@@ -2724,2 +2766,26 @@
+ 	regcache_cache_only(cs43130->regmap, true);
 -	regulator_bulk_disable(CS43130_NUM_SUPPLIES, cs43130->supplies);
 -
 +	gpiod_set_value_cansleep(cs43130->reset_gpio, 0);
@@ -136,5 +161,12 @@
 +	cs43130_pm_note("cs_force_begin", 0);
 +	ret = pm_runtime_force_resume(dev);
 +	cs43130_pm_note("cs_force_done", ret);
-@@ -2730,0 +2797 @@
+ 	return ret;
+ }
+ 
+ static const struct dev_pm_ops cs43130_runtime_pm = {
+ 	RUNTIME_PM_OPS(cs43130_runtime_suspend, cs43130_runtime_resume, NULL)
 +	SYSTEM_SLEEP_PM_OPS(cs43130_system_suspend, cs43130_system_resume)
+ };
+ 
+ #if IS_ENABLED(CONFIG_OF)

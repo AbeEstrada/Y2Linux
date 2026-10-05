@@ -20,6 +20,7 @@ class CombinedI2C(unittest.TestCase):
 #define I2C_MAX_FAST_MODE_PLUS_FREQ 1000000
 #define EINVAL 22
 #define dev_dbg(...) ((void)0)
+static void y2_pm_replay_note(void *dev,const char *step,int ret){(void)dev;(void)step;(void)ret;}
 enum { I2C_MASTER_WR=1, I2C_MASTER_RD, I2C_MASTER_WRRD };
 struct device {bool of_node;};
 struct compat {int auto_restart;};

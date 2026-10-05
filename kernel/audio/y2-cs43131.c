@@ -46,6 +46,12 @@ static int y2_late_probe(struct snd_soc_card *card)
 	    !device_link_add(card->dev, snd_soc_rtd_to_codec(rtd, 0)->dev,
 			     DL_FLAG_AUTOREMOVE_CONSUMER))
 		return -ENOMEM;
+	/* This headphone-only board needs no codec jack-detect standby bias.
+	 * Let the core's initial DAPM sync and later stream shutdown balance the
+	 * codec runtime-PM reference. A live stream still raises bias normally;
+	 * the checked codec callbacks own reset, cache and supply sequencing. */
+	snd_soc_dapm_set_idle_bias(snd_soc_component_get_dapm(
+				 snd_soc_rtd_to_codec(rtd, 0)->component), false);
 	/* No automatic output: owner enables the pin after setting a safe level.
 	 * Upstream codec reset volume is -60 dB; no startup state restoration. */
 	return snd_soc_dapm_disable_pin(&card->dapm, "Headphone");

@@ -166,10 +166,14 @@ def delta(a, b, duration):
                 continue
             parent = path.rsplit('/', 1)[0]
             usage = parent + '/usage'
+            time_us = int(end) - int(val)
+            entries = int(b['files'][usage]) - int(a['files'][usage])
+            discontinuity = time_us < 0 or entries < 0
             idle.append({'path': parent, 'name': a['files'].get(parent+'/name'),
-                         'time_us': int(end)-int(val),
-                         'percent_wall_time': (int(end)-int(val))/duration/10000,
-                         'entries': int(b['files'][usage])-int(a['files'][usage])})
+                         'time_us': None if discontinuity else time_us,
+                         'percent_wall_time': None if discontinuity else time_us/duration/10000,
+                         'entries': None if discontinuity else entries,
+                         'counter_discontinuity': discontinuity})
     frequency = []
     path = '/sys/devices/system/cpu/cpufreq/policy0/stats/time_in_state'
     def opps(sample):
@@ -198,11 +202,13 @@ def delta(a, b, duration):
         changes = {key: int(wb[name][key])-int(wa[name][key]) for key in ('event_count', 'wakeup_count', 'active_count')
                    if key in wa[name] and key in wb[name]}
         wakes.append({'name': name, 'deltas': changes})
-    cpu0_exits = sum(row['entries'] for row in idle if '/cpu0/' in row['path'])
+    cpu0_rows = [row for row in idle if '/cpu0/' in row['path']]
+    cpu0_exits = (sum(row['entries'] for row in cpu0_rows)
+                 if cpu0_rows and all(row['entries'] is not None for row in cpu0_rows) else None)
     return {'top_cpu_threads': sorted(offenders, key=lambda x:x['ticks'], reverse=True)[:25],
             'top_context_switch_threads': sorted(offenders, key=lambda x:x['context_switches_per_second'], reverse=True)[:25],
             'irqs': sorted(irq, key=lambda x:x['delta'] or 0, reverse=True), 'cpuidle': idle,
-            'cpu0_idle_exits_per_second': cpu0_exits/duration,
+            'cpu0_idle_exits_per_second': cpu0_exits/duration if cpu0_exits is not None else None,
             'frequency_residency': frequency,
             'frequency_reason': None if frequency else 'Kernel does not expose OPP residency counters.',
             'scheduler': scheduler, 'wakeup_sources': wakes,
