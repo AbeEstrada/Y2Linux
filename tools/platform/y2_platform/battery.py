@@ -63,7 +63,7 @@ class Soc:
     def observe(self, now, voltage, present, status, hardware_percent=None,
                 current=None, temperature=None, counter=None):
         charging = status == 'Charging'
-        result = dict(percent=None, source='unavailable', confidence='unavailable',
+        result = dict(percent=None, source='unavailable', confidence='unavailable', status=status,
                       charging=charging, voltage_uv=voltage, current_ua=current,
                       temperature_millicelsius=temperature, charge_counter_uah=counter,
                       provisional=True, resting=False)

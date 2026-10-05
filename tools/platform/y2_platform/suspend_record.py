@@ -55,6 +55,9 @@ def record(ctx, stage, result=None, reason=None, reborn_ack=None):
         if marker.exists():
             marker.write_text('REBORN_READY\n')
     atomic_json(path, value, durable=True)
+    from .power_journal import PowerJournal
+    PowerJournal(ctx).observe('Suspend', ctx.json('/run/y2/power.json', {}).get('battery', {}),
+                              event='suspend_' + stage)
     parent = os.open(directory.parent, os.O_RDONLY | os.O_DIRECTORY)
     try:
         os.fsync(parent)

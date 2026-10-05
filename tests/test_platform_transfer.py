@@ -1,6 +1,8 @@
 import hashlib
 import json
 import os
+import signal
+import socket
 from pathlib import Path
 import sys
 import tempfile
@@ -10,7 +12,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'tools/platform'))
 from y2_platform.common import Context
-from y2_platform.ssh import entropy_ready, prerequisites
+from y2_platform.ssh import AddressEvents, entropy_ready, prerequisites, serve, usb_address
 from y2_platform.transfer import begin, commit, discard
 from tools.production.validate import validate_ssh_programs
 
@@ -93,6 +95,56 @@ class Transfer(unittest.TestCase):
         self.ctx.path('/data/.y2data-schema').write_text('1')
         self.ctx.runner=lambda *a,**k:{'ok':True,'output':json.dumps([{'ifname':'usb0','addr_info':[{'local':'10.42.0.1','prefixlen':24}]}])}
         self.assertEqual(prerequisites(self.ctx,True)[0],'Ready')
+
+    def test_ssh_passive_address_events_and_signal_fd_wake(self):
+        events = AddressEvents.__new__(AddressEvents)
+        left, right = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+        left.setblocking(False)
+        events.sock = left
+        rd, wr = os.pipe2(os.O_NONBLOCK)
+        try:
+            right.send(b'address-change')
+            self.assertTrue(events.wait(1, rd))
+            os.write(wr, b'signal')
+            self.assertFalse(events.wait(1, rd))
+            with self.assertRaises(BlockingIOError):
+                os.read(rd, 1)
+        finally:
+            events.close()
+            right.close()
+            os.close(rd)
+            os.close(wr)
+
+    def test_ssh_ready_heartbeat_does_not_fork_ip_each_second(self):
+        for name, value in (('/root/.ssh/authorized_keys', 'owner'), ('/data/.y2data-schema', '1'),
+                            ('/proc/net/tcp', 'header\n0: 01002A0A:0016 00000000:0000 0A\n')):
+            path = self.ctx.path(name)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(value)
+        self.ctx.runner = lambda *a, **k: {'output': '[{"ifname":"usb0","addr_info":[{"local":"10.42.0.1","prefixlen":24}]}]'}
+        from y2_platform import ssh
+        clock, waits = [0], []
+        class Events:
+            sock = True
+            def wait(self, timeout, fd):
+                waits.append(timeout)
+                clock[0] += timeout
+                if len(waits) == 5:
+                    signal.getsignal(signal.SIGTERM)(signal.SIGTERM, None)
+                return False
+            def close(self):
+                pass
+        class Child:
+            pid = 123456
+            def poll(self):
+                return 0 if len(waits) == 5 else None
+        with patch.object(ssh, 'AddressEvents', Events), patch.object(ssh, 'entropy_ready', return_value=True), \
+                patch.object(ssh.subprocess, 'Popen', return_value=Child()), \
+                patch.object(ssh.time, 'monotonic', side_effect=lambda: clock[0]), \
+                patch.object(ssh, 'usb_address', wraps=usb_address) as address:
+            serve(self.ctx)
+            self.assertEqual(address.call_count, 1)
+            self.assertEqual(waits, [1, 5, 5, 5, 5])
 
 
 if __name__=='__main__': unittest.main()

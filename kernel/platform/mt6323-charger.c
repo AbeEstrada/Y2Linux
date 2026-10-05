@@ -19,6 +19,16 @@
 #include "charger-policy.h"
 #include "source-policy.h"
 #include "source.h"
+#include "charger-idle.h"
+
+/* A wakeup-source reference excludes system sleep, not runtime cpuidle.
+ * Keep the charger/watchdog's awake requirement visible to CPU0 DORMANT.
+ * Until probe establishes verified engine/watchdog-off, fail closed. */
+static bool charger_dormant_blocked = true;
+bool y2_charger_dormant_blocked(void)
+{
+	return READ_ONCE(charger_dormant_blocked);
+}
 
 #define Y2_POLL_MS 1000
 #define Y2_PET_LATE_MS 2500
@@ -45,6 +55,8 @@ struct y2_charger {
 	unsigned fault, con0, con4, ov, baton_con, wdt, thr;
 	u64 first_fault_ms;
 	unsigned first_fault, first_con0, first_cv, first_ov, first_wdt, first_thr;
+	unsigned mismatch_reg, mismatch_mask, mismatch_expected, mismatch_actual;
+	int mismatch_error;
 	int first_uv, first_sample_error;
 	unsigned charge_ua, selector, charge_ceiling_ua;
 	enum y2_source_type source;
@@ -59,16 +71,30 @@ struct y2_charger {
 
 static int y2_charge_read(void *context, unsigned reg, unsigned *value)
 {
-	return regmap_read(context, reg, value);
+	struct y2_charger *c = context;
+	return regmap_read(c->map, reg, value);
 }
 static int y2_charge_update(void *context, unsigned reg, unsigned mask,
 			    unsigned value, int force)
 {
-	return force ? regmap_write_bits(context, reg, mask, value) :
-		regmap_update_bits(context, reg, mask, value);
+	struct y2_charger *c = context;
+	return force ? regmap_write_bits(c->map, reg, mask, value) :
+		regmap_update_bits(c->map, reg, mask, value);
+}
+static void y2_charge_mismatch(void *context, unsigned reg, unsigned mask,
+			       unsigned expected, unsigned actual, int error)
+{
+	struct y2_charger *c = context;
+	if (c->mismatch_error) return;
+	c->mismatch_reg = reg; c->mismatch_mask = mask;
+	c->mismatch_expected = expected; c->mismatch_actual = actual;
+	c->mismatch_error = error;
+	dev_err_ratelimited(c->dev, "charger check reg=%#x mask=%#x expected=%#x actual=%#x error=%d\n",
+		reg, mask, expected, actual, error);
 }
 static void y2_charge_awake(struct y2_charger *c, bool awake)
 {
+	WRITE_ONCE(charger_dormant_blocked, awake);
 	if (c->awake == awake) return;
 	c->awake = awake;
 	if (awake) pm_stay_awake(c->dev);
@@ -230,6 +256,7 @@ static void y2_charger_run(struct y2_charger *c)
 			c->fault = 0;
 			c->first_fault = 0;
 			c->last_error = 0;
+			c->mismatch_error = 0;
 			c->cycle = (struct y2_charge_cycle){};
 		}
 		c->status = POWER_SUPPLY_STATUS_DISCHARGING;
@@ -352,10 +379,13 @@ static void y2_charger_poll(struct work_struct *work)
 	struct y2_charger *c = container_of(to_delayed_work(work), struct y2_charger, work);
 	unsigned old_fault;
 	int old_status;
+	bool old_online;
+	enum y2_source_type old_source;
 
 	mutex_lock(&c->lock);
 	if (c->paused || c->stopping) goto out;
 	old_fault = c->fault; old_status = c->status;
+	old_online = c->online; old_source = c->source;
 	y2_charger_run(c);
 	if (old_fault != c->fault || old_status != c->status ||
 	    ktime_get_boottime_seconds() >= c->report_at) {
@@ -368,7 +398,11 @@ static void y2_charger_poll(struct work_struct *work)
 		c->report_at = ktime_get_boottime_seconds() + 60;
 		power_supply_changed(c->bat);
 	}
-	power_supply_changed(c->usb);
+	/* ONLINE/USB_TYPE are events. Re-emitting unchanged values every second
+	 * wakes netlink consumers and readiness despite no cable/source transition.
+	 * Keep the existing safety sampling and four-second watchdog service. */
+	if (old_online != c->online || old_source != c->source)
+		power_supply_changed(c->usb);
 	queue_delayed_work(c->wq, &c->work, msecs_to_jiffies(Y2_POLL_MS));
 out:
 	mutex_unlock(&c->lock);
@@ -536,14 +570,17 @@ static ssize_t charging_state_show(struct device *dev, struct device_attribute *
 		"battery_uv=%d baton_raw=%d isense_raw=%d pmic_die_mc=%d input_budget_ua=%d\n"
 		"chr_con0=0x%04x cv_status=0x%04x battery_ovp=0x%04x baton=0x%04x watchdog=0x%04x thermal=0x%04x\n"
 		"watchdog_pets=%llu last_pet_ms=%llu total_seconds=%llu cv_seconds=%llu precharge_seconds=%llu hold=%d full=%d timeout=%d\n"
-		"first_fault=0x%x at_ms=%llu battery_uv=%d sample_error=%d chr=0x%x cv=0x%x ovp=0x%x watchdog=0x%x thermal=0x%x\n",
+		"first_fault=0x%x at_ms=%llu battery_uv=%d sample_error=%d chr=0x%x cv=0x%x ovp=0x%x watchdog=0x%x thermal=0x%x\n"
+		"dormant_blocked=%u check_reg=%#x check_mask=%#x check_expected=%#x check_actual=%#x check_error=%d\n",
 		y2_charger_phase(c), c->source, c->source_valid, c->charge_ua,
 		c->active, c->online, c->present, c->fault, c->sample_error, c->stop_error, c->paused, c->last_error,
 		c->uv, c->baton_raw, c->isense_raw, c->die_mc, c->input_ua,
 		c->con0, c->con4, c->ov, c->baton_con, c->wdt, c->thr,
 		c->pets, c->last_pet_ms, c->cycle.total, c->cycle.cv, c->cycle.precharge, c->cycle.hold, c->cycle.full, c->cycle.timed_out,
 		c->first_fault, c->first_fault_ms, c->first_uv, c->first_sample_error,
-		c->first_con0, c->first_cv, c->first_ov, c->first_wdt, c->first_thr);
+		c->first_con0, c->first_cv, c->first_ov, c->first_wdt, c->first_thr,
+		y2_charger_dormant_blocked(), c->mismatch_reg, c->mismatch_mask,
+		c->mismatch_expected, c->mismatch_actual, c->mismatch_error);
 	mutex_unlock(&c->lock);
 	return n;
 }
@@ -647,7 +684,7 @@ static int y2_charger_probe(struct platform_device *pdev)
 	c = devm_kzalloc(dev, sizeof(*c), GFP_KERNEL);
 	if (!c) return -ENOMEM;
 	c->dev = dev; c->map = chip->regmap;
-	c->io = (struct y2_charge_io){ c->map, y2_charge_read, y2_charge_update };
+	c->io = (struct y2_charge_io){ c, y2_charge_read, y2_charge_update, y2_charge_mismatch };
 	mutex_init(&c->lock);
 	c->status = POWER_SUPPLY_STATUS_UNKNOWN;
 	c->stopping = true; /* notifier cannot queue work until all devres are ready */

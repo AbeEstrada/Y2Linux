@@ -476,6 +476,7 @@ static char *dormant_stage;
 static u64 dormant_residency_us,ns;
 static unsigned cpu,online=1,khz=598000,suspends;
 static bool disabled,events=true,cirq=true,dark=true,workload,context=true;
+static bool charger_busy,pmic_slots_ready=true;
 static int timer_error,clock_error,cirq_error,pm_error,cluster_error,arm_error,finish_error,restore_error;
 static bool timer_ok=true,cirq_ok=true,clocks_owned,cirq_owned,cpu_owned,cluster_owned;
 static bool y2_deep_idle_disabled(void){return disabled;}
@@ -486,6 +487,8 @@ static unsigned num_online_cpus(void){return online;}
 static unsigned cpufreq_quick_get(unsigned c){return khz;}
 static bool y2_backlight_dark(void){return dark;}
 static bool y2_workload_idle_blocked(void){return workload;}
+static bool y2_charger_dormant_blocked(void){return charger_busy;}
+static int y2_pmic_idle_slots_ready(void){return pmic_slots_ready;}
 static bool y2_dormant_context_ready(void){return context;}
 static bool y2_cirq_restore_ok(void){return cirq_ok;}
 static bool y2_local_timer_context_ok(void){return timer_ok;}
@@ -524,6 +527,11 @@ int main(void){
  khz=1300000;assert(y2_spm_dormant_idle()==-EBUSY);khz=598000;
  dark=false;assert(y2_spm_dormant_idle()==-EBUSY);dark=true;
  workload=true;assert(y2_spm_dormant_idle()==-EBUSY);workload=false;
+ charger_busy=true;assert(y2_spm_dormant_idle()==-EBUSY && !suspends && !clocks_owned);
+ charger_busy=false;pmic_slots_ready=false;
+ assert(y2_spm_dormant_idle()==-EIO && !suspends && !dormant_uart_sleep.attempts && !clocks_owned);
+ assert(dormant_broken); /* Uncertain PMIC state quarantines this boot. */
+ pmic_slots_ready=true;dormant_broken=false; /* Independent synthetic boot. */
  dormant_budget=0;assert(y2_spm_dormant_idle()==-EACCES);dormant_budget=1;
  timer_error=-ETIME;assert(y2_spm_dormant_idle()==-ETIME && dormant_budget==1);timer_error=0;
  regs[0]=0x800;assert(y2_spm_dormant_idle()==-EBUSY && !spm_lock);regs[0]=0;

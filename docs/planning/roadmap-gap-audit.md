@@ -1,5 +1,123 @@
 # Roadmap gap audit
 
+## Power candidate build admission — 2026-10-05
+
+Repeat the standing audit before packaging the owner's single preserving power
+candidate. Fresh locked SSH still identifies installed USB02, boot e043cb75,
+taint 512, C3 safely Skipped. PC SDP charging remains active at the existing
+450 mA ceiling, fault zero, 3.880371 V; original Reborn has been restored.
+The owner confirms the screen remains frozen after a short Power wake.
+Current display failure prevents valid target UI, full sleep and endurance
+qualification; it does not justify bypassing warning or charger safeguards.
+
+| Coverage / existing issue | Evidence and remaining gate |
+| --- | --- |
+| Battery/charging / #28, #32 | Real overnight 3.400268 V orderly shutdown; original full charge unproved. Detached DCP charging fault with C3 active, five-minute charging PASS with C3 quarantined. Slots 5–7 read as zero and the exact PCM requests 5/6: checked VPROC initialization and charger guard are implemented, target proof remains pending. Limits, capacity and sensor uncertainty stay. |
+| CPU/display / #28, #30, #34 | Fresh kernel/modules and 72 affected native CPU/charger cases PASS. First OVL ownership repair passes actual-function fault tests; no owner-installed display/C3 acceptance yet. No OPP, voltage floor, clock masks or memory change. |
+| USB/radios/Reborn / #29, #31–#34 | Matched MTP wait 49.76→0 context switches/s and Bluetooth helper approximately 15→0.20/s. MTP 16 MiB upload/download hashes PASS. Reborn full 326 tests, fmt and strict Clippy PASS; new live UI measurements blocked by the inherited DRM failure. Preserve yesterday's USB receive ring/DMA/FIFO/lifecycle and single Bluetooth reconnect owner. |
+| Journal/diagnostics / #28, #32 | Five-minute bounded journal and endpoint-only machine audit implemented, observer cost reported separately. No new high-frequency production timer. |
+| Full suspend/endurance/release / #16, #27–#34 | Power/RTC same-boot full resume, complete A–J matrix and 30-minute/two-hour endurance remain NOT_RUN on the corrected image. Ordinary full sleep stays refused. No physical/public readiness or issue closure. |
+
+Proceed with the fresh source-bound kernel/DT/modules/ABI, ARM rootfs, production,
+QEMU and package gates. Deliver BOOTIMG and Y2ROOT only, preserving Y2DATA,
+fallback and protected partitions. Existing issue states remain open as recorded
+in admission; no external status change is warranted. The next hardware boundary
+is owner installation followed by identity/smoke before the same power matrix.
+Classification: **PARTIALLY READY**, software candidate preparation authorized;
+physical power-platform acceptance remains open. No flash, push or main merge.
+
+## Runtime PCM / PMIC-wrapper slot defect — 2026-10-05
+
+Standing audit repeated before the shared CPU/PMIC initialization boundary. The
+physical USB02 PWRAP readback has slots0/1/2=21e:58/50/48 but slots5/6/7=0:0.
+The exact unchanged480-word d53dd75c DORMANT PCM contains a request to
+10006604 using e2200006/e2200005: the same AP-DVFS slot register used by the
+normal CPU-voltage request. Exact MT6582 vendor cpufreq initializes all eight
+addresses to VPROC and identifies slots5/6/7 as SPM idle/sleep. Our driver only
+initializes those slots in full-suspend prepare; ordinary runtime C3 has never
+called that prepare. Therefore its autonomous requests can address PMIC CHR_CON0
+at zero, bypassing the software regmap write guard and clearing protections/
+engine state. This is a concrete source/hardware-readback defect, not a measured
+PMIC bus trace; the relation to the observed full charger-regulation reset still
+needs post-fix hardware confirmation.
+
+Admit initialization and readback of slots5/6/7 during existing checked CPU-DVFS
+prepare, to the verified active VPROC bank and existing1.15V floor only. Never
+adopt vendor1.05V sleep, flip selector mode, alter arbitration, allow arbitrary
+PMIC writes, add OPPs or change charger limits. Runtime C3 must fail closed until
+those slots are initialized; source-bound C1/C2/UART/timer/CIRQ restore remains.
+Keep conservative active-charger DORMANT veto until charging interaction is
+qualified. Exact worker/wrapper native fault tests, fresh kernel/ABI/package
+checks and owner-installed C3/charging proof remain separate gates. Update #28/
+#30/#32 coverage as PARTIAL, no issue closure/public readiness/flash/push.
+
+## First display ownership boundary — 2026-10-05
+
+Real USB02 reboot e043cb75 emits first vblank WARN at1.025s, repeated mutex/
+commit timeouts, and taint512 gates C3. Good preceding boot e416d48c had live
+frame IRQs and taint0. Current source parks inherited DSI before DRM binds,
+clears inherited mutex membership, but never stops inherited OVL before first
+configuration. OVL config deliberately skips reset when EN remains1 to avoid
+the documented enabled-reset/SOF deadlock. This leaves the loader's enabled
+OVL/FIFO state in the first Linux modeset. Admit one localized first-clock
+ownership fix: with DSI already parked, mask stale OVL IRQs, stop inherited
+OVL/layers, verify off, then let normal Linux config/start own the pipeline.
+No live-frame reset, panel timing/rail/PLL change, warning suppression or C3
+guard bypass. Native real-function tests and fresh kernel/module build precede
+one owner candidate; actual warm/cold boot and warning-free C3 remain unproved.
+This is a source ownership defect and proposed repair, not yet a proved cause
+of every display failure. The owner subsequently confirmed a frozen screen
+after a short Power wake, establishing visible failure in this boot. Existing
+#28/#32/#34 remain open; Platform1.0 PARTIAL. USB/DATA/recovery are preserved.
+
+## Charging/C3 isolation boundary — 2026-10-05
+
+Repeated the standing real-hardware gap audit before changing runtime DORMANT
+admission. On exact USB02 boot e416d48c, the detached DCP five-minute window
+started Charging/650000 uA and developed protection fault0x80, loss of HV enable
+and charger regulation fields, then stopped charging; voltage declined. A fresh
+boot e043cb75 automatically quarantined C3 after DRM vblank WARN/taint512. With
+that guard respected, detached DCP charged throughout300.299s:3.701513→3.740185V,
+no fault, C2 residency64.48%, C3zero. Different boots prevent a definitive C3
+causality claim. The next conservative implementation boundary excludes runtime
+DORMANT while the charger/watchdog requires the AP awake, preserving C1/C2 and
+all source-backed limits/protections. No PMIC field/voltage/arbitration write is
+expanded. The exact PMIC-reset mechanism and DRM warm-boot failure remain open;
+we will retain first failed register evidence instead of clearing a fault.
+
+Full sleep remains unqualified/product-refused; no automatic sleep promotion.
+Five-minute evidence is not endurance, battery health or electrical current.
+Yesterday's USB descriptors, queued receive/DMA/FIFO and single lifecycle owner
+remain unchanged. Platform1.0 PARTIAL; no memory/layout/OPP/DATA changes, flash,
+push, public promotion or issue closure. Next: affected charger/CPU native tests,
+matched userspace trials, kernel build, then coherent owner installation if needed.
+
+## Installed USB02 power investigation admission — 2026-10-05
+
+Owner authorizes power forensics, implementation and bounded live experiments,
+one coherent preserving candidate if needed, no flash/push. The shared nonblocking
+lease was acquired before SSH. Current and prior overnight source pair is Linux
+0cb779267ca90740853dc02695166d75f36faa29 / Reborn
+2444e0f65811e688250a8cd069a57dd780b2d6d3: USB-FINAL-02, kernel USB02, root
+v1.26. Dedicated power worktrees start at this installed pair and retain both
+the twelve-session integration and yesterday's receive/FIFO/reconnect/MTP/ECM
+and charging allocation fixes. Main and its preexisting dirty documentation stay.
+
+| Coverage / existing issue | Current real hardware evidence and limit | Next boundary |
+| --- | --- | --- |
+| Incident / #28/#32 | Prior boot 6f2838c9 records orderly shutdown_complete after voltage reaches 3.400268 V. Retained rows peak at 3.920141 V, full=0. Owner saw 88%; actual preceding full termination is unproved. Clock adjustments require monotonic durations. | Persistent low-rate power journal and separate charge/SOC evidence. No inferred current or battery blame. |
+| CPU / #28, historical #30 | Current boot enables C3 budget -1. Quiet PC/Wi-Fi-connected 60.63 s: C1 89.16%, C2/C3 zero; CONN/APDMA/BTIF/USB ownership blocks. Observer uses 1.225 CPU s at endpoints. | Radio-off/detached 60 s and 5 min windows with improved observer accounting, original guards retained. |
+| Polling / #31/#32/#34 | MTP io_thread 49.71 switches/s; Reborn main 20.65/s; reconnect main 19.18/s despite BT Off. | Fix source of timed waits and unrelated filesystem notifications, regression-test cancellation, reconnect, transfer, input and shutdown. |
+| Charging / #28/#32 | PC SDP actively charging, programmed 450 mA, fault=0, positive voltage trend. Overnight 2 mA USB allowance is neither active charging nor measured pack current. | Preserve current validated 70/450/650 mA and 4.175 V limits; physical wall/full/source tests. |
+| Suspend / #28/#32/#34 | Campaign codec/restore fixes present; ordinary deep sleep remains gated. Previous Baseline02 RTC resume FAIL remains history. | Staged PM then one backstopped exact-image real trial; same boot/complete restoration before policy promotion. |
+| Storage/USB/audio/display/input | USB02 is authoritative; previous bounded receipts do not qualify new behavior. | Preserve partition/data/native S16/CPU/scanout/USB contracts; targeted source and matched live tests. |
+| Endurance/distribution | Optimized 30 min/2 h/overnight and electrical/pack capacity unmeasured. | Safe increasing duration; product status PARTIAL, no milestone/public-release promotion. |
+
+Read-only GitHub refresh retains #16/#27/#28/#29/#31/#32/#33/#34 OPEN. Existing
+bookmarks cover this task; no external mutation is requested. This admission
+does not change memory, OPP, charging protections, protected data or recovery.
+
+
 ## Baseline01 physical pause / USB observation boundary — 2026-10-04
 
 Standing audit repeated on actual installed-image receipts before closing this

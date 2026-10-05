@@ -29,14 +29,18 @@ struct y2_charge_io {
 	void *context;
 	int (*read)(void *, unsigned, unsigned *);
 	int (*update)(void *, unsigned, unsigned, unsigned, int);
+	void (*mismatch)(void *, unsigned, unsigned, unsigned, unsigned, int);
 };
 
 static inline int y2_charge_expect(const struct y2_charge_io *io,
 				   unsigned reg, unsigned mask, unsigned expected)
 {
-	unsigned value;
+	unsigned value = 0;
 	int ret = io->read(io->context, reg, &value);
-	return ret ? ret : (value & mask) == expected ? 0 : -EIO;
+	if (!ret && (value & mask) != expected) ret = -EIO;
+	if (ret && io->mismatch)
+		io->mismatch(io->context, reg, mask, expected, value, ret);
+	return ret;
 }
 
 static inline int y2_charge_set(const struct y2_charge_io *io,

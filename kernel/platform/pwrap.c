@@ -26,6 +26,7 @@ struct y2_wrap {
 static DEFINE_MUTEX(y2_wrap_lock);
 static struct y2_wrap *y2_wrap;
 static bool cpu_dvfs_prepared;
+static bool cpu_idle_slots_prepared;
 static unsigned cpu_selector_address;
 static int cpu_voltage_error, cpu_voltage_first_error;
 static const char *cpu_voltage_stage = "not_attempted", *cpu_voltage_first_stage = "none";
@@ -163,6 +164,7 @@ int y2_pmic_cpu_dvfs_prepare(void)
 	unsigned slot, reg, control, address, actual;
 	int ret = -EPROBE_DEFER;
 	mutex_lock(&y2_wrap_lock);
+	smp_store_release(&cpu_idle_slots_prepared, false);
 	if (!y2_wrap) goto out;
 	cpu_voltage_stage = "active_selector";
 	ret = y2_pmic_cpu_selector(y2_wrap);
@@ -199,6 +201,20 @@ int y2_pmic_cpu_dvfs_prepare(void)
 			ret = -EIO; goto out;
 		}
 	}
+	/* The retained DORMANT PCM requests slots 5/6 through SPM_AP_DVFS_CON.
+	 * Full suspend also owns slot 7. Prepare them BEFORE admitting runtime
+	 * DORMANT: inherited zero addresses would target charger register 0.
+	 * All idle/sleep requests retain the validated 1.15-V CPU floor. */
+	cpu_voltage_stage = "pwrap_idle_slots";
+	for (slot = 5; slot < 8; slot++) {
+		reg = 0xe4 + slot * 8;
+		writel(address, y2_wrap->base + reg);
+		writel(72, y2_wrap->base + reg + 4);
+		if (readl(y2_wrap->base + reg) != address ||
+		    readl(y2_wrap->base + reg + 4) != 72) {
+			ret = -EIO; goto out;
+		}
+	}
 	/* Baseline request proves the normal PCM handshake without raising VPROC. */
 	cpu_voltage_stage = "baseline_spm_handshake_and_readback";
 	ret = y2_spm_cpu_voltage_request(2);
@@ -209,6 +225,7 @@ int y2_pmic_cpu_dvfs_prepare(void)
 	if (!ret) {
 		cpu_selector_address = address;
 		cpu_dvfs_prepared = true;
+		smp_store_release(&cpu_idle_slots_prepared, true);
 	}
 out:
 	cpu_voltage_error = ret;
@@ -218,6 +235,10 @@ out:
 	mutex_unlock(&y2_wrap_lock);
 	if (ret == -EIO || ret == -ETIMEDOUT) y2_cpu_dvfs_fault();
 	return ret;
+}
+int y2_pmic_idle_slots_ready(void)
+{
+	return smp_load_acquire(&cpu_idle_slots_prepared);
 }
 int y2_pmic_cpu_voltage_set(unsigned selector)
 {
@@ -257,6 +278,7 @@ int y2_pmic_cpu_voltage_set(unsigned selector)
 	if (!ret) ret = regmap_read(y2_wrap->map, 0x224, &actual);
 	if (!ret && (actual & 0x7f) != selector) ret = -EIO;
 out:
+	if (ret < 0) smp_store_release(&cpu_idle_slots_prepared, false);
 	cpu_voltage_error = ret;
 	if (ret < 0 && ret != -EPROBE_DEFER && ret != -EBUSY && !cpu_voltage_first_error) {
 		cpu_voltage_first_error = ret; cpu_voltage_first_stage = cpu_voltage_stage;
@@ -283,10 +305,10 @@ static int cpu_voltage_state_get(char *buffer, const struct kernel_param *kp)
 		if (!ret) ret = regmap_read(y2_wrap->map, 0x224, &actual);
 	}
 	mutex_unlock(&y2_wrap_lock);
-	return sysfs_emit(buffer, "owner=SPM_PWRAP mode=%s control=%#x address=%#x selector=%#x active_selector=%#x prepared=%u prepared_address=%#x last_error=%d read_error=%d stage=%s first_error=%d first_stage=%s\n",
+	return sysfs_emit(buffer, "owner=SPM_PWRAP mode=%s control=%#x address=%#x selector=%#x active_selector=%#x prepared=%u idle_slots_prepared=%u prepared_address=%#x last_error=%d read_error=%d stage=%s first_error=%d first_stage=%s\n",
 		mode & 2 ? "hardware_VOSEL_ON" : "software_VOSEL", mode,
 		mode & 2 ? 0x220 : 0x21e, selector, actual, cpu_dvfs_prepared,
-		cpu_selector_address, cpu_voltage_error, ret, cpu_voltage_stage, cpu_voltage_first_error, cpu_voltage_first_stage);
+		y2_pmic_idle_slots_ready(), cpu_selector_address, cpu_voltage_error, ret, cpu_voltage_stage, cpu_voltage_first_error, cpu_voltage_first_stage);
 }
 static const struct kernel_param_ops voltage_state_ops = { .get = cpu_voltage_state_get };
 module_param_cb(cpu_voltage_state, &voltage_state_ops, NULL, 0400);
@@ -348,6 +370,7 @@ int y2_pmic_spm_prepare(void)
 		writel(address, y2_wrap->base + reg);
 		writel(0x48, y2_wrap->base + reg + 4);
 		if (readl(y2_wrap->base + reg) != address || readl(y2_wrap->base + reg + 4) != 0x48) {
+			smp_store_release(&cpu_idle_slots_prepared, false);
 			ret = -EIO;
 			break;
 		}

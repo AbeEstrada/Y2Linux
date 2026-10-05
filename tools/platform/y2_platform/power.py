@@ -248,6 +248,8 @@ def serve(ctx):
             raise ValueError('unsafe_power_socket_path')
         address.unlink()
     coordinator = Coordinator(ctx)
+    from .power_journal import PowerJournal
+    journal = PowerJournal(ctx)
     battery = LowBattery()
     from .battery import Soc, load_profile, sample
     soc = Soc(load_profile(ctx))
@@ -263,11 +265,12 @@ def serve(ctx):
         while running[0]:
             if coordinator.clock() >= next_sample:
                 next_sample = coordinator.clock() + 10**9
-                voltage = ctx.integer('/sys/class/power_supply/BAT0/voltage_now')
                 battery_status = sample(ctx, soc, coordinator.clock() / 10**9)
+                voltage = battery_status['voltage_uv']
                 state = battery.observe(policy, voltage, ctx.integer('/sys/class/power_supply/BAT0/present'), battery_status)
                 if state == 'ShutdownPending' and not coordinator.intent:
                     coordinator.request('poweroff', 'low_battery', policy['grace_seconds'])
+                journal.observe(state, battery_status, coordinator.intent)
                 atomic_json(runtime / 'power.json', {'schema': 1, 'boot_id': coordinator.boot_id,
                             'monotonic_ns': time.monotonic_ns(), 'state': state, 'voltage_uv': voltage,
                             'reason': reason, 'thresholds_enabled': policy is not None,
@@ -275,6 +278,7 @@ def serve(ctx):
                             'qualification_reference': policy.get('qualification_reference') if policy else None,
                             'shutdown': coordinator.intent})
             if coordinator.due():
+                journal.observe(state, battery_status, coordinator.intent, event='shutdown_execute')
                 coordinator.execute()
             wait = coordinator.wait_seconds(next_sample)
             if not wait:

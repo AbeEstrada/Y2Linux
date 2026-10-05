@@ -4,6 +4,7 @@ import fcntl
 import os
 import tempfile
 import time
+from .boot import private_directory
 
 
 def intent(ctx, operation):
@@ -13,7 +14,8 @@ def intent(ctx, operation):
     if not boot or len(boot) != 36:
         raise ValueError('boot_identity_unavailable')
     now = time.monotonic_ns() // 1000
-    directory = ctx.path('/run/y2')
+    # The reconnect observer must not wake for unrelated power/USB status files.
+    directory = private_directory(ctx.path('/run/y2/bt-intent'))
     fd, temporary = tempfile.mkstemp(dir=directory, prefix='.bt-control.')
     try:
         with os.fdopen(fd, 'w') as stream:

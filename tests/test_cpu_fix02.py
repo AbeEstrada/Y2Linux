@@ -29,13 +29,14 @@ PWRAP_FIXTURE = r'''
 #include "pwrap-readiness-policy.h"
 #define BIT(n) (1U<<(n))
 #define EPROBE_DEFER 517
+#define smp_store_release(p,v) (*(p)=(v))
 struct regmap { int unused; };
 struct y2_wrap { unsigned char *base; struct regmap *map; };
 static unsigned mmio[0x200/4], pmic[0x400/2], writes, spm_requests, faults, fail_read, fail_spm, feedback_lag;
 static struct regmap map;
 static struct y2_wrap wrap = { (unsigned char *)mmio, &map }, *y2_wrap = &wrap;
 static int y2_wrap_lock, cpu_voltage_error, cpu_voltage_first_error;
-static bool cpu_dvfs_prepared;
+static bool cpu_dvfs_prepared, cpu_idle_slots_prepared;
 static unsigned cpu_selector_address;
 static const char *cpu_voltage_stage = "not_attempted", *cpu_voltage_first_stage = "none";
 static unsigned ready_mux, ready_wrap, ready_arb;
@@ -68,7 +69,7 @@ static void board(unsigned arb)
 	memset(mmio, 0, sizeof(mmio)); memset(pmic, 0, sizeof(pmic));
 	mmio[0] = 0; mmio[1] = 1; mmio[0x50 / 4] = arb;
 	pmic[0x216 / 2] = 0; pmic[0x21e / 2] = 0x48; pmic[0x224 / 2] = 0x48;
-	cpu_dvfs_prepared = false; cpu_selector_address = 0; cpu_voltage_first_error = 0;
+	cpu_dvfs_prepared = cpu_idle_slots_prepared = false; cpu_selector_address = 0; cpu_voltage_first_error = 0;
 	writes = spm_requests = faults = fail_read = fail_spm = feedback_lag = 0;
 }
 '''
@@ -104,6 +105,10 @@ int main(void){
  /* Real board state admits and programs slots 0/1/2 to the active 21e bank. */
  board(0x7f);
  assert(!y2_pmic_cpu_dvfs_prepare() && cpu_dvfs_prepared && cpu_selector_address==0x21e);
+ assert(cpu_idle_slots_prepared);
+ for(unsigned slot=5;slot<=7;slot++){
+  assert(mmio[(0xe4+slot*8)/4]==0x21e && mmio[(0xe8+slot*8)/4]==72);
+ }
  assert(!strcmp(ready_reason,"ready") && ready_arb==0x7f && !faults);
  assert(mmio[0xe4/4]==0x21e && mmio[0xe8/4]==88 && mmio[0xec/4]==0x21e && mmio[0xf0/4]==80 && mmio[0xf4/4]==0x21e && mmio[0xf8/4]==72);
  assert(spm_requests==1 && pmic[0x21e/2]==72); /* baseline handshake at 1.15 V */
@@ -129,6 +134,7 @@ int main(void){
  board(0x7f); feedback_lag=1; pmic[0x224/2]=0x48;
  assert(!y2_pmic_cpu_dvfs_prepare());
  assert(y2_pmic_cpu_voltage_set(80)==-EIO && !strcmp(cpu_voltage_stage,"voltage_spm_handshake_and_readback"));
+ assert(!cpu_idle_slots_prepared);
  /* Failed SPM voltage request is an error, never a silent success. */
  board(0x7f); assert(!y2_pmic_cpu_dvfs_prepare()); fail_spm=1;
  assert(y2_pmic_cpu_voltage_set(80)==-ETIMEDOUT && pmic[0x21e/2]==72);

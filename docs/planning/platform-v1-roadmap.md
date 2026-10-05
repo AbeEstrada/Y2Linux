@@ -1,5 +1,55 @@
 # Platform v1 roadmap
 
+## Power candidate preparation — 2026-10-05
+
+The [build-boundary audit](roadmap-gap-audit.md#power-candidate-build-admission--2026-10-05)
+retains actual USB02 low-voltage shutdown, charging/C3 slot defect and frozen
+display evidence. Matched MTP and Bluetooth polling improvements are proved;
+kernel, display, Reborn idle and endurance need the owner-installed correction.
+Prepare one fresh preserving POWER-FINAL-01 pair with all software/package gates.
+No physical/public acceptance follows packaging. Resume with exact identity and
+warning-free display, then the same A–J power states and staged/full sleep tests.
+No memory, charging limits, USB transport foundation, DATA or recovery changes.
+
+## Runtime PCM slots — 2026-10-05
+
+The [slot defect audit](roadmap-gap-audit.md#runtime-pcm--pmic-wrapper-slot-defect--2026-10-05)
+records live zero-address slots5–7 and matching stock PCM slot5/6 requests. Checked
+initialization to the current VPROC bank/existing1.15V floor and a fail-closed
+C3 prerequisite are admitted. No voltage/current limit or arbitration changes.
+Physical C3/charge/endurance and full resume remain open until owner installation.
+
+## First display takeover — 2026-10-05
+
+The [ownership audit](roadmap-gap-audit.md#first-display-ownership-boundary--2026-10-05)
+admits checked first-only OVL stop after DSI parking, so normal Linux config can
+reset stale loader state before starting scanout. Display timing and C3 taint
+guards stay. Native/build validation and owner-installed physical proof are
+separate. No full-sleep/readiness promotion follows a source repair.
+
+## Charging/idle boundary — 2026-10-05
+
+The [charging/C3 audit](roadmap-gap-audit.md#chargingc3-isolation-boundary--2026-10-05)
+records a protection-register failure with C3 active and a successful five-minute
+DCP charge with C3 quarantined. Conservative charger/watchdog DORMANT exclusion
+is admitted; C1/C2, limits and guards stay. Causality and the DRM warm-boot
+warning still require localization. Software polling fixes undergo matched
+live trials; full suspend/endurance remain open. No platform readiness promotion.
+
+## USB02 overnight power investigation — 2026-10-05
+
+The [admission audit](roadmap-gap-audit.md#installed-usb02-power-investigation-admission--2026-10-05)
+binds current hardware to installed Linux0cb7792/Reborn2444e0f, USB02/rootv1.26,
+and admits isolated power branches from that exact pair. Yesterday's USB work
+remains the foundation. Voltage decline and orderly low-voltage shutdown are
+observed; an initial genuine full charge and pack capacity/current are unproved.
+Current C3 production policy is Enabled/-1 but active radio/USB ownership blocks
+the observed window. Quantified userspace timed waits and shared-directory
+notifications are the next localized fixes. Radio-off/detached counters,
+staged/real same-boot sleep and charging/long endurance remain separate gates.
+Platform 1.0 remains PARTIAL; no flash, push, main merge or closure follows.
+
+
 ## Baseline01 physical pause / USB diagnosis next — 2026-10-04
 
 The [standing audit](roadmap-gap-audit.md#baseline01-physical-pause--usb-observation-boundary--2026-10-04)

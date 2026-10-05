@@ -14,6 +14,7 @@ static inline void y2_cpu_dvfs_fault(void) { }
 static inline int y2_spm_cpu_voltage_request(unsigned slot) { return -EOPNOTSUPP; }
 #endif
 int y2_pmic_cpu_dvfs_prepare(void);
+int y2_pmic_idle_slots_ready(void);
 int y2_pmic_cpu_voltage_get(void);
 int y2_pmic_cpu_voltage_set(unsigned selector);
 #endif

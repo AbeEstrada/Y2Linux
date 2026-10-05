@@ -4,6 +4,7 @@
 #include "../../tools/connectivity/reconnect.c"
 #undef main
 #include <assert.h>
+#include <sys/resource.h>
 
 static const char *peer="/org/bluez/hci0/dev_00_11_22_33_44_55";
 static gint enumerations, requests, server_ready, unknown_reply;
@@ -74,7 +75,31 @@ static void intent(const char *operation)
 {
  gint64 now=g_get_monotonic_time();
  char *text=g_strdup_printf("[intent]\nversion=1\nboot_id=%s\nsequence=%lld\noperation=%s\ndeadline_us=%lld\n",boot_id,(long long)now,operation,(long long)(now+30000000));
- write_runtime("bt-control.ini",text);g_free(text);spin(180);
+ char *path=g_build_filename(intent_path,"bt-control.ini",NULL);
+ assert(g_file_set_contents(path,text,-1,NULL));g_free(path);g_free(text);spin(180);
+}
+static gpointer unrelated_status(gpointer unused)
+{
+ (void)unused;
+ for(unsigned i=0;i<40;i++) {write_runtime("power.json","{}\n");g_usleep(10000);}
+ return NULL;
+}
+static gboolean end_idle(gpointer loop)
+{
+ g_main_loop_quit(loop);return G_SOURCE_REMOVE;
+}
+static void unrelated_files_do_not_wake_observer(void)
+{
+ GMainLoop *loop=g_main_loop_new(NULL,FALSE);
+ struct rusage before,after;
+ GThread *writer=g_thread_new("status-writer",unrelated_status,NULL);
+ g_timeout_add(500,end_idle,loop);
+ assert(!getrusage(RUSAGE_THREAD,&before));g_main_loop_run(loop);
+ assert(!getrusage(RUSAGE_THREAD,&after));g_thread_join(writer);
+ long switches=after.ru_nvcsw-before.ru_nvcsw;
+ printf("unrelated_status_idle_switches=%ld\n",switches);
+ assert(switches<=8);g_main_loop_unref(loop);
+ unlinkat(runtime_directory,"power.json",0);
 }
 int main(void)
 {
@@ -90,6 +115,7 @@ int main(void)
  strcpy(boot_id,"11111111-1111-1111-1111-111111111111");strcpy(preferred,"00:11:22:33:44:55");
  connected=g_hash_table_new_full(g_str_hash,g_str_equal,g_free,NULL);
  assert(start_observer());spin(180);assert(!was_powered);assert(enumerations==1);
+ unrelated_files_do_not_wake_observer();
  spin(2200);assert(enumerations==1);assert(requests==0);
  /* Atomic committed intent wakes through inotify, without a 30s delay. */
  intent("power_pending");assert(inhibited);
@@ -123,7 +149,9 @@ int main(void)
  gint calls=requests;spin(2200);assert(requests==calls);
  printf("PASS: idle snapshots=1; bounded attempts; intent dispatch<500ms; bond/forget/off/owner guards\n");
  /* Isolated bus and thread exit together; no real service was touched. */
- const char *files[]={"bt-control.ini","bt-reconnect.json","bt-reconnect.ini","bt-operation.lock",NULL};
+ char *control_path=g_build_filename(intent_path,"bt-control.ini",NULL);
+ unlink(control_path);g_free(control_path);rmdir(intent_path);g_free(intent_path);
+ const char *files[]={"bt-reconnect.json","bt-reconnect.ini","bt-operation.lock",NULL};
  for(const char **name=files;*name;name++) unlinkat(runtime_directory,*name,0);
  close(operation_lock);close(runtime_directory);rmdir(temporary);g_free(temporary);
  g_test_dbus_stop(test);

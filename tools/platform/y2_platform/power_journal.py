@@ -1,0 +1,95 @@
+"""Bounded incident history, driven by the existing safety sample; no new timer."""
+# SPDX-License-Identifier: GPL-2.0-only
+import json
+import fcntl
+import os
+import stat
+import time
+from .boot import private_directory
+from .common import read
+
+PATH = '/data/system/platform/power-journal.jsonl'
+PERIOD = 300
+LIMIT = 262144
+
+
+class PowerJournal:
+    def __init__(self, ctx):
+        self.ctx = ctx
+        self.next_snapshot = 0
+        self.next_event = 0
+        self.signature = None
+        self.failures = 0
+
+    def observe(self, state, battery, shutdown=None, event=None, now=None):
+        now = time.monotonic() if now is None else now
+        signature = (state, battery.get('status'), battery.get('charging'))
+        safety = state == 'ShutdownPending' and signature != self.signature
+        if not (event or safety or now >= self.next_snapshot or
+                (signature != self.signature and now >= self.next_event)):
+            return False
+        self.next_snapshot = now + PERIOD
+        self.next_event = now + 60
+        self.signature = signature
+        try:
+            # Do not create persistent state on an unverified/missing data mount.
+            from .observe import mountinfo
+            mounts = [m for m in mountinfo(self.ctx.read('/proc/self/mountinfo')) if m['path'] == '/data']
+            if (self.ctx.read('/data/.y2data-schema') != '1' or len(mounts) != 1 or
+                    mounts[0]['source'] != self.ctx.read('/run/y2-data-device')):
+                return False
+            ctx = self.ctx
+            row = {'schema': 1, 'event': event or ('state_change' if safety else 'snapshot'),
+                   'wall_time': time.time(), 'monotonic_s': now,
+                   'boot_id': ctx.read('/proc/sys/kernel/random/boot_id'),
+                   'build': ctx.json('/etc/y2linux/versions.json'), 'state': state,
+                   'battery': battery, 'shutdown': shutdown,
+                   'usb': {p.name: read(p / 'state') for p in ctx.glob('/sys/class/udc/*')},
+                   'charger': ctx.read('/sys/class/power_supply/BAT0/charging_state'),
+                   'backlight': {p.parent.name: read(p) for p in ctx.glob('/sys/class/backlight/*/bl_power')},
+                   'radios': {p.name: {'type': read(p / 'type'), 'blocked': read(p / 'soft')}
+                              for p in ctx.glob('/sys/class/rfkill/*')},
+                   'idle_policy': ctx.json('/run/y2/cpu-idle-policy.json'),
+                   'sleep': ctx.json('/run/y2/sleep.json')}
+            self.append(row, durable=bool(event or safety))
+            return True
+        except (OSError, ValueError, TypeError):
+            # A journal failure must never delay or disable battery protection.
+            self.failures += 1
+            return False
+
+    def append(self, row, durable=False):
+        path = self.ctx.path(PATH)
+        private_directory(path.parent)
+        lock = os.open(path.parent / '.power-journal.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self._append(path, row, durable)
+        finally:
+            os.close(lock)
+
+    def _append(self, path, row, durable):
+        encoded = (json.dumps(row, separators=(',', ':')) + '\n').encode()
+        if len(encoded) > 16384:
+            raise ValueError('power_journal_row_too_large')
+        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK, 0o600)
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise ValueError('power_journal_not_regular')
+            if os.fstat(fd).st_size + len(encoded) > LIMIT:
+                os.close(fd)
+                fd = -1
+                os.replace(path, path.with_suffix('.previous.jsonl'))
+                fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+            # Regular-file append is bounded; handle short writes without dropping a row.
+            remaining = memoryview(encoded)
+            while remaining:
+                n = os.write(fd, remaining)
+                if n <= 0:
+                    raise OSError('power_journal_short_write')
+                remaining = remaining[n:]
+            if durable:
+                os.fsync(fd)
+        finally:
+            if fd >= 0:
+                os.close(fd)

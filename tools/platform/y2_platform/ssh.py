@@ -3,7 +3,9 @@
 import fcntl
 import json
 import os
+import select
 import signal
+import socket
 import subprocess
 import time
 from .boot import private_directory
@@ -17,22 +19,69 @@ def entropy_ready(getrandom=os.getrandom):
         return False
 
 
-def prerequisites(ctx, entropy):
-    if not ctx.read('/root/.ssh/authorized_keys'):
-        return 'Unavailable', 'no_owner_authorized_key'
-    if not entropy:
-        return 'Starting', 'kernel_crng_not_ready'
+def usb_address(ctx):
     result = ctx.command(['ip', '-j', '-4', 'addr', 'show', 'dev', 'usb0'], timeout=1)
     try:
         interfaces = json.loads(result['output'] or '')
         if not any(a.get('local') == '10.42.0.1' and a.get('prefixlen') == 24
                    for i in interfaces if i.get('ifname') == 'usb0' for a in i.get('addr_info', [])):
-            return 'Starting', 'usb_address_not_ready'
+            return False, 'usb_address_not_ready'
+        return True, None
     except (ValueError, TypeError, AttributeError):
-        return 'Starting', 'usb_interface_not_ready'
+        return False, 'usb_interface_not_ready'
+
+
+def prerequisites(ctx, entropy, address=None):
+    if not ctx.read('/root/.ssh/authorized_keys'):
+        return 'Unavailable', 'no_owner_authorized_key'
+    if not entropy:
+        return 'Starting', 'kernel_crng_not_ready'
+    valid, reason = usb_address(ctx) if address is None else address
+    if not valid:
+        return 'Starting', reason
     if ctx.read('/data/.y2data-schema') != '1':
         return 'Failed', 'data_schema_unavailable'
     return 'Ready', 'usb_address_key_and_crng_ready'
+
+
+class AddressEvents:
+    """Passive link/IPv4-address events; never configures the USB interface."""
+    def __init__(self):
+        self.sock = None
+        try:
+            self.sock = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW | socket.SOCK_NONBLOCK,
+                                      socket.NETLINK_ROUTE)
+            self.sock.bind((0, 1 | 0x10))  # RTMGRP_LINK | RTMGRP_IPV4_IFADDR
+        except OSError:
+            self.close()
+
+    def close(self):
+        if self.sock is not None:
+            self.sock.close()
+        self.sock = None
+
+    def wait(self, timeout, wake_fd):
+        readers = [wake_fd] + ([] if self.sock is None else [self.sock])
+        ready, _, _ = select.select(readers, [], [], timeout)
+        if wake_fd in ready:
+            while True:
+                try:
+                    if not os.read(wake_fd, 4096):
+                        break
+                except BlockingIOError:
+                    break
+        changed = self.sock in ready
+        if changed:
+            # Drain a bounded burst. Remaining events stay readable next time.
+            for _ in range(32):
+                try:
+                    self.sock.recv(65536)
+                except BlockingIOError:
+                    break
+                except OSError:
+                    self.close()  # refresh on the bounded fallback cadence
+                    break
+        return changed
 
 
 def serve(ctx):
@@ -40,12 +89,22 @@ def serve(ctx):
     lock = os.open(runtime/'ssh.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     running = [True]
-    signal.signal(signal.SIGTERM, lambda *_: running.__setitem__(0, False))
-    signal.signal(signal.SIGINT, lambda *_: running.__setitem__(0, False))
+    wake_read, wake_write = os.pipe2(os.O_NONBLOCK | os.O_CLOEXEC)
+    previous_wake = signal.set_wakeup_fd(wake_write)
+    previous_handlers = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGCHLD)}
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(sig, lambda *_: running.__setitem__(0, False))
+    signal.signal(signal.SIGCHLD, lambda *_: None)
+    events = AddressEvents()
+    address, refresh_at, changed = None, 0, True
     child = None
     try:
         while running[0]:
-            ready, reason = prerequisites(ctx, entropy_ready())
+            now = time.monotonic()
+            if changed or events.sock is None or address is None or now >= refresh_at:
+                address = usb_address(ctx)
+                refresh_at = now + (60 if address[0] else 1)
+            ready, reason = prerequisites(ctx, entropy_ready(), address)
             if child is None and ready == 'Ready':
                 # Fixed policy, never credentials/configuration-derived shell text.
                 child = subprocess.Popen(['/usr/sbin/dropbear', '-F', '-E', '-R', '-s', '-g', '-j', '-k',
@@ -66,8 +125,16 @@ def serve(ctx):
                         'bind': '10.42.0.1:22', 'interface': 'usb0', 'authentication': 'owner_public_key',
                         'sftp': ctx.path('/usr/libexec/y2-sftp-server').is_file(),
                         'pid': child.pid if child else None})
-            time.sleep(1)
+            # Keep the existing <10-second readiness freshness contract.
+            # SIGTERM/child death and kernel address changes wake immediately.
+            changed = events.wait(5 if ready == 'Ready' else 1, wake_read)
     finally:
+        events.close()
+        signal.set_wakeup_fd(previous_wake)
+        for sig, handler in previous_handlers.items():
+            signal.signal(sig, handler)
+        os.close(wake_read)
+        os.close(wake_write)
         if child and child.poll() is None:
             os.killpg(child.pid, signal.SIGTERM)
             try:

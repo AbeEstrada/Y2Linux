@@ -36,7 +36,42 @@
  	unsigned int addr;
  	unsigned int gmc_bits;
  	unsigned int layer_nr;
-@@ -327,6 +342,10 @@
+@@ -158,6 +173,7 @@
+  * @data: platform data
+  */
+ struct mtk_disp_ovl {
++	bool y2_owned;
+ 	struct drm_crtc			*crtc;
+ 	struct clk			*clk;
+ 	void __iomem			*regs;
+@@ -246,8 +262,24 @@
+ int mtk_ovl_clk_enable(struct device *dev)
+ {
+ 	struct mtk_disp_ovl *ovl = dev_get_drvdata(dev);
+-
+-	return clk_prepare_enable(ovl->clk);
++	int ret = clk_prepare_enable(ovl->clk);
++
++	if (ret || !ovl->data->mt6582 || ovl->y2_owned)
++		return ret;
++	/* The Y2 DSI probe parks the loader's stream before DRM binds. Stop
++	 * its OVL exactly once before Linux's first config: otherwise EN=1
++	 * skips the required initial reset and retains a stale FIFO/SOF state.
++	 * Never reset an enabled live stream or disturb subsequent plane updates. */
++	writel(0, ovl->regs + DISP_REG_OVL_INTEN);
++	writel(0, ovl->regs + DISP_REG_OVL_EN);
++	writel(0, ovl->regs + DISP_REG_OVL_SRC_CON);
++	if (readl(ovl->regs + DISP_REG_OVL_EN) ||
++	    readl(ovl->regs + DISP_REG_OVL_SRC_CON)) {
++		clk_disable_unprepare(ovl->clk);
++		return -EIO;
++	}
++	ovl->y2_owned = true;
++	return 0;
+ }
+ 
+ void mtk_ovl_clk_disable(struct device *dev)
+@@ -327,6 +359,10 @@
  	mtk_ddp_write_relaxed(cmdq_pkt, OVL_COLOR_ALPHA, &ovl->cmdq_reg,
  			      ovl->regs, DISP_REG_OVL_ROI_BGCLR);
  
@@ -47,7 +82,7 @@
  	mtk_ddp_write(cmdq_pkt, 0x1, &ovl->cmdq_reg, ovl->regs, DISP_REG_OVL_RST);
  	mtk_ddp_write(cmdq_pkt, 0x0, &ovl->cmdq_reg, ovl->regs, DISP_REG_OVL_RST);
  }
-@@ -384,6 +403,7 @@
+@@ -384,6 +420,7 @@
  	else
  		gmc_value = gmc_thrshd_l | gmc_thrshd_l << 8 |
  			    gmc_thrshd_h << 16 | gmc_thrshd_h << 24;
@@ -55,7 +90,7 @@
  	mtk_ddp_write(cmdq_pkt, gmc_value,
  		      &ovl->cmdq_reg, ovl->regs, DISP_REG_OVL_RDMA_GMC(idx));
  	mtk_ddp_write_mask(cmdq_pkt, BIT(idx), &ovl->cmdq_reg, ovl->regs,
-@@ -421,6 +441,26 @@
+@@ -421,6 +458,26 @@
  	 */
  	if (ovl->data->blend_modes & BIT(DRM_MODE_BLEND_PREMULTI))
  		blend_mode = state->base.pixel_blend_mode;
@@ -82,7 +117,7 @@
  
  	switch (fmt) {
  	default:
-@@ -528,7 +568,7 @@
+@@ -528,7 +585,7 @@
  		 * For RGB888 related formats, whether CONST_BLD is enabled or not won't
  		 * affect the result. Therefore we use !has_alpha as the condition.
  		 */
@@ -91,7 +126,7 @@
  			ignore_pixel_alpha = OVL_CONST_BLEND;
  	}
  
-@@ -569,6 +609,18 @@
+@@ -569,6 +626,18 @@
  
  	mtk_ovl_set_bit_depth(dev, idx, fmt, cmdq_pkt);
  	mtk_ovl_layer_on(dev, idx, cmdq_pkt);
@@ -110,7 +145,7 @@
  }
  
  void mtk_ovl_bgclr_in_on(struct device *dev)
-@@ -670,6 +722,17 @@
+@@ -670,6 +739,17 @@
  	.formats = mt8173_formats,
  	.num_formats = ARRAY_SIZE(mt8173_formats),
  };
@@ -128,7 +163,7 @@
  
  static const struct mtk_disp_ovl_data mt8173_ovl_driver_data = {
  	.addr = DISP_REG_OVL_ADDR_MT8173,
-@@ -742,6 +805,8 @@
+@@ -742,6 +822,8 @@
  static const struct of_device_id mtk_disp_ovl_driver_dt_match[] = {
  	{ .compatible = "mediatek,mt2701-disp-ovl",
  	  .data = &mt2701_ovl_driver_data},

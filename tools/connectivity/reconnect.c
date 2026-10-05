@@ -33,6 +33,7 @@ static unsigned failures, completed, total_attempts;
 static char boot_id[64];
 static int runtime_directory;
 static const char *runtime_path="/run/y2";
+static char *intent_path;
 static int operation_lock;
 static const char *last_error;
 static int directory;
@@ -96,7 +97,7 @@ static void load_state(void)
 static void control(void)
 {
 	GKeyFile *file=g_key_file_new();
-	char *path=g_build_filename(runtime_path,"bt-control.ini",NULL);
+	char *path=g_build_filename(intent_path,"bt-control.ini",NULL);
 	if(g_key_file_load_from_file(file,path,G_KEY_FILE_NONE,NULL)) {
 		char *boot=g_key_file_get_string(file,"intent","boot_id",NULL);
 		char *operation=g_key_file_get_string(file,"intent","operation",NULL);
@@ -337,7 +338,17 @@ static gboolean start_observer(void)
 	g_signal_connect(manager,"object-removed",G_CALLBACK(objects_changed),NULL);
 	g_signal_connect(manager,"interface-proxy-properties-changed",G_CALLBACK(properties_changed),NULL);
 	g_signal_connect(manager,"notify::name-owner",G_CALLBACK(owner_changed),NULL);
-	GFile *runtime=g_file_new_for_path(runtime_path);
+	/* Monitor only explicit intents. /run/y2 receives many unrelated atomic
+	 * status updates; filtering after GIO dispatch still wakes both threads. */
+	intent_path=g_build_filename(runtime_path,"bt-intent",NULL);
+	if(mkdirat(runtime_directory,"bt-intent",0700) && errno!=EEXIST) return FALSE;
+	int intent_fd=openat(runtime_directory,"bt-intent",O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC);
+	struct stat intent_stat;
+	if(intent_fd<0) return FALSE;
+	int invalid=fstat(intent_fd,&intent_stat) || intent_stat.st_uid!=geteuid() || (intent_stat.st_mode&077);
+	close(intent_fd);
+	if(invalid) return FALSE;
+	GFile *runtime=g_file_new_for_path(intent_path);
 	GFileMonitor *monitor=g_file_monitor_directory(runtime,G_FILE_MONITOR_NONE,NULL,NULL);
 	g_object_unref(runtime);
 	if(!monitor) return FALSE;

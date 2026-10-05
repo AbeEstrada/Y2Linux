@@ -168,7 +168,7 @@ class BluetoothObservation(unittest.TestCase):
             self.assertEqual(calls, [])
         self.assertFalse(power(self.ctx, 'on')['ok'])
         self.assertEqual(len(calls), 1)
-        self.assertIn('operation=uncertain', (directory/'bt-control.ini').read_text())
+        self.assertIn('operation=uncertain', (directory/'bt-intent/bt-control.ini').read_text())
 
     def test_observer_numeric_manufacturer_keys_and_64_bit_counters_are_valid_json(self):
         flags = subprocess.run(['pkg-config', '--cflags', '--libs', 'gio-2.0'], capture_output=True, text=True)

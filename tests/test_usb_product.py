@@ -345,11 +345,16 @@ class USBFiles(unittest.TestCase):
             base=Path(temporary)
             with tarfile.open(archive) as source: source.extractall(base,filter='data')
             source=next(base.glob('uMTP-Responder-*'))
-            patchfile=ROOT/'buildroot/package/y2-mtp/0001-y2-safe-media-transfers.patch'
-            subprocess.run(['patch','--batch','--fuzz=0','-p1','-i',str(patchfile)],cwd=source,check=True,stdout=subprocess.DEVNULL)
+            for patchfile in sorted((ROOT/'buildroot/package/y2-mtp').glob('*.patch')):
+                subprocess.run(['patch','--batch','--fuzz=0','-p1','-i',str(patchfile)],cwd=source,check=True,stdout=subprocess.DEVNULL)
             for name in ('h','c'): shutil.copyfile(ROOT/('tools/usb/mtp-safe.'+name),source/('inc' if name=='h' else 'src')/('mtp-safe.'+name))
             build=subprocess.run(['make','-j4'],cwd=source,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
             self.assertEqual(build.returncode,0,build.stdout)
+            receive_test=base/'receive-test'
+            subprocess.run(['cc','-Wall','-Wextra','-Werror','-pthread','-I'+str(source/'inc'),
+                            str(ROOT/'tests/native/mtp-rx-events.c'),str(source/'src/y2_rx.c'),
+                            '-o',str(receive_test)],check=True)
+            subprocess.run([str(receive_test)],check=True,timeout=10)
             flags=['cc','-I'+str(source/'inc')]
             main=base/'main.o'
             subprocess.run(flags+['-Dmain=umtprd_original_main','-c',str(source/'src/umtprd.c'),'-o',str(main)],check=True)

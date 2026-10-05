@@ -41,6 +41,7 @@
 #include "connectivity/domain.h"
 #include "gpu-policy.h"
 #include "cpu-dvfs.h"
+#include "charger-idle.h"
 
 static void __iomem *spm_base;
 static DEFINE_RAW_SPINLOCK(spm_lock);
@@ -476,6 +477,12 @@ int y2_spm_dormant_idle(void)
 	if (!y2_dormant_opp(cpufreq_quick_get(0))) { ret = -EBUSY; goto out_idle; }
 	dormant_stage = "screen_workload";
 	if (!y2_backlight_dark() || y2_workload_idle_blocked()) { ret = -EBUSY; goto out_idle; }
+	/* pm_stay_awake() covers full system sleep only. Charging watchdog
+	 * service must not overlap the unqualified DORMANT/PMIC interaction. */
+	dormant_stage = "charger_watchdog";
+	if (y2_charger_dormant_blocked()) { ret = -EBUSY; goto out_idle; }
+	dormant_stage = "pmic_idle_slots";
+	if (!y2_pmic_idle_slots_ready()) { ret = -EIO; goto out_idle; }
 	dormant_stage = "budget";
 	if (!READ_ONCE(dormant_budget) || READ_ONCE(dormant_budget) < -1) { ret = -EACCES; goto out_idle; }
 	dormant_stage = "qualification_backstop";
@@ -693,6 +700,8 @@ static ssize_t dormant_preflight_show(struct device *dev, struct device_attribut
 		{ "frequency", y2_dormant_opp(khz) },
 		{ "screen_off", y2_backlight_dark() },
 		{ "workload", !y2_workload_idle_blocked() },
+		{ "charger_watchdog", !y2_charger_dormant_blocked() },
+		{ "pmic_idle_slots", y2_pmic_idle_slots_ready() },
 		{ "runtime_budget", budget == -1 || budget > 0 },
 		{ "qualification_backstop", budget < 0 || y2_pm_dormant_backstop_ready() },
 		{ "linux_context", y2_dormant_context_ready() },
@@ -716,7 +725,7 @@ static ssize_t dormant_preflight_show(struct device *dev, struct device_attribut
 		(a | b) & (unsigned)(Y2_SPM_SECONDARY_CPU_MASK | BIT(0) | BIT(1) | BIT(4) | BIT(5) | BIT(7)),
 		clocks, peri, infra, bus, display, disp0, disp1);
 	n += sysfs_emit_at(buf, n, "resume_vector=%#x expected_vector=%#lx resume_enable=%#x context_stash=%#x context_last=%#x pcm_address=%#x pcm_words=480 pcm_origin=MT6582_d53dd75c_dpidle\n",
-		vector, __pa_symbol(y2_cpu_resume), enable, sleep_save_sp.save_ptr_stash_phys,
+		vector, (unsigned long)__pa_symbol(y2_cpu_resume), enable, sleep_save_sp.save_ptr_stash_phys,
 		dormant_context_phys, (unsigned)idle_address);
 	n += sysfs_emit_at(buf, n, "deadline_rule=architectural_future_2ms_and_GPT4_future_26000_ticks checked_at=admission_and_finisher\n");
 	n += sysfs_emit_at(buf, n, "uart_sleep_admission=conditional_MT6582_PIO_owner_then_global_ACK uart_sleep_ack_checked_at=PCM_fetch_before_power_run_WFI\n");

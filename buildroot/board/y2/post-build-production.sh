@@ -45,7 +45,7 @@ mkdir -p "$target/usr/lib/y2-platform/y2_platform"
 install -m 644 "$project"/tools/platform/y2_platform/*.py "$target/usr/lib/y2-platform/y2_platform/"
 install -m 644 "$project/tools/platform/main.py" "$target/usr/lib/y2-platform/main.py"
 install -m 644 "$project/tools/platform/suspend-record.py" "$target/usr/lib/y2-platform/suspend-record.py"
-for command in y2-platform y2-status y2-health y2-suspend-record; do
+for command in y2-platform y2-status y2-health y2-suspend-record y2-power-audit; do
     install -m 755 "$project/tools/platform/$command" "$target/usr/sbin/$command"
 done
 install -m 644 "$project/tools/platform/capabilities.json" "$target/etc/y2linux/capabilities.json"

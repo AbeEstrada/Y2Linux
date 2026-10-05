@@ -55,7 +55,7 @@ static int io_update(void *ctx,unsigned reg,unsigned mask,unsigned v,int force){
  if(reg==0x1e && (v&mask&2)) {assert(force);regs[reg/2]&=~4;}
  return 0;
 }
-static struct y2_charge_io io={0,io_read,io_update};
+static struct y2_charge_io io={0,io_read,io_update,0};
 static void reset(void){
  memset(regs,0,sizeof(regs));
  operations=fail_at=force_count=starts=adc_fail=0; clock_ms=10000;
@@ -190,6 +190,7 @@ static int iio_read_channel_raw(struct iio_channel *ch,int *v){
 static int iio_read_channel_processed(struct iio_channel *ch,int *v){return iio_read_channel_raw(ch,v);}
 static void pm_stay_awake(struct device *d){d->awake=1;}
 static void pm_relax(struct device *d){d->awake=0;}
+static bool charger_dormant_blocked=true;
 #define dev_err_ratelimited(...) ((void)0)
 #define dev_info(...) ((void)0)
 ''' + declarations + ''.join(function(s,n) for n in (
@@ -202,7 +203,7 @@ static struct y2_charger charger(void){
 }
 int main(void){
  reset();struct y2_charger c=charger();
- y2_charger_run(&c);assert(c.active && dev.awake && !c.fault && c.pets==1);
+ y2_charger_run(&c);assert(c.active && dev.awake && charger_dormant_blocked && !c.fault && c.pets==1);
  unsigned end=operations;
  /* Every initial prepare/sample/enable/service failure reaches inhibit. */
  for(unsigned fail=1;fail<=end;fail++) {
@@ -233,7 +234,7 @@ int main(void){
  }
  supply.budget=500000;
  reset();c=charger();y2_charger_run(&c);supply.budget=2000;
- clock_ms+=1000;y2_charger_run(&c);assert(!c.active && !c.fault && !dev.awake);
+ clock_ms+=1000;y2_charger_run(&c);assert(!c.active && !c.fault && !dev.awake && !charger_dormant_blocked);
  supply.budget=500000;clock_ms+=1000;y2_charger_run(&c);assert(c.active && starts==2);
  regs[0]&=~0x20;clock_ms+=1000;y2_charger_run(&c);
  assert(!c.active && !(regs[0]&0x18) && c.status==POWER_SUPPLY_STATUS_DISCHARGING);
@@ -261,7 +262,7 @@ int main(void){
  bat.raw=17000;
  reset();c=charger();y2_charger_run(&c);persistent=1;
  clock_ms+=1000;y2_charger_run(&c);
- assert(c.stop_error && dev.awake && (regs[0x1a/2]&0x10)); /* never disable watchdog on unknown engine */
+ assert(c.stop_error && dev.awake && charger_dormant_blocked && (regs[0x1a/2]&0x10)); /* never disable watchdog on unknown engine */
  persistent=0;clock_ms+=1000;y2_charger_run(&c);assert(!c.active && !dev.awake);
  /* Dedicated source ignores USB data budget, but uses the same 450 mA
   * deep-discharge/precharge ceiling until the normal 650 mA profile is safe. */
