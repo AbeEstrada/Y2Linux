@@ -86,10 +86,16 @@ def check(data, initrd_size, production=True):
     gpu=GPU in nodes
     require(tuple(reserved)==RESERVED[:1], 'DEV low boot reservation changed')
     require(nodes['/']['model']==strings('Innioasis Y2'),'DEV identity')
-    expected={'/reserved-memory/loader@81800000':(0x81800000,0x02800000), '/reserved-memory/high-owned@bdf00000':(0xbdf00000,0x02100000)}
+    expected={'/reserved-memory/loader@81800000':(0x81800000,0x02800000), '/reserved-memory/high-owned@bdf00000':(0xbdf00000,0x02100000),
+              '/reserved-memory/ramoops@bde00000':(0xbde00000,0x00100000)}
     require({p for p in nodes if p.startswith('/reserved-memory/')}==set(expected),'unreviewed reserved region')
     for path,region in expected.items():
         props=dict(nodes[path])
+        if path.endswith('/ramoops@bde00000'):
+            # Crash/stall evidence only: pstore console below the radio window.
+            require(props=={'reg':cells(*region),'no-map':b'','compatible':strings('ramoops'),
+                            'record-size':cells(0x10000),'console-size':cells(0x80000)},'reservation '+path)
+            continue
         if connectivity and path.endswith('/high-owned@bdf00000'):
             require(len(props.pop('phandle',b''))==4,'owned radio reservation handle')
         require(props=={'reg':cells(*region),'no-map':b''},'reservation '+path)
