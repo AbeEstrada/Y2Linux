@@ -15,6 +15,14 @@ subsystem, memory or production claim. Coverage #28-#34 remain PARTIAL; no readi
 promotion, flash, push or issue closure. Candidate-02 needs an owner flash to
 validate rails, supervisor and the breadcrumbs.
 
+Candidate-02 built and sealed from clean commits (Linux `eb824a6`, Reborn `05af011`,
+which contain POWER01 `fedc005`/`ccf450a` and USB02 `0cb7792`/`2444e0f`): BOOTIMG
+`79f0925f...b307`, Y2ROOT `93c1bf99...f147`, preserving scatter identical to POWER01,
+fallback = the POWER01 pair. Container production profile 511 cases (10 skips, 0
+failures), Reborn fmt/clippy/tests, installed ARM 35 modules, ELF 384 files/1411
+edges, package/inventory/legal-info pass. Unsigned; no physical acceptance. Docs
+commit after this seal is not compiled source.
+
 ## POWER01 full RTC cache-replay failure — 2026-10-05
 
 The admitted resident sequence completed freezer/devices/platform/processors/core
