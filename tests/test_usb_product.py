@@ -97,6 +97,15 @@ class USBProduct(unittest.TestCase):
         self.assertTrue(self.service.terminal)
         self.assertEqual(self.service.tick()['state'],'Failed')
 
+    def test_failure_budget_decays_after_a_stable_responder(self):
+        self.ready()
+        self.service.failures = 4
+        self.service.started -= 120
+        self.service.child.result = 1
+        self.service.tick()
+        self.assertEqual(self.service.failures, 1)
+        self.assertFalse(self.service.terminal)
+
     def test_bind_failure_never_reports_host_ownership(self):
         self.service.tick()
         for i in (1,2,3): self.put('/dev/ffs-mtp/ep%s' % i,'')

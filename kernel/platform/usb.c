@@ -568,22 +568,31 @@ static u16 y2_musb_clearw(void __iomem *base,u32 offset)
 static void y2_musb_disable(struct musb *musb)
 { writel(0,musb->mregs+0xa4); }
 
+#define Y2_FIFO_ENTRIES 6
+static const struct musb_fifo_cfg y2_fifo[Y2_FIFO_ENTRIES];
+/* The FIFO layout is the platform's validated table (y2_fifo below, declared
+ * after this function): ECM plus ACM or MTP, two bulk pairs and two 16-byte
+ * notification endpoints. The registers must still hold exactly what the table
+ * describes before the pull-up is raised; anything else is a terminal fault. */
 static int y2_musb_fifos(struct musb *musb)
 {
     void __iomem *b=musb->mregs;
     u8 index=readb(b+MUSB_INDEX);
-    int ok;
-    /* ECM plus ACM or MTP: two bulk pairs, two 16-byte notifications, 2144 bytes. */
-    writeb(1,b+MUSB_INDEX);
-    ok=readb(b+MUSB_TXFIFOSZ)==6 && readb(b+MUSB_RXFIFOSZ)==6 &&
-        readw(b+MUSB_TXFIFOADD)==8 && readw(b+MUSB_RXFIFOADD)==72;
-    writeb(2,b+MUSB_INDEX);
-    ok=ok && readb(b+MUSB_TXFIFOSZ)==1 && readw(b+MUSB_TXFIFOADD)==136;
-    writeb(3,b+MUSB_INDEX);
-    ok=ok && readb(b+MUSB_TXFIFOSZ)==6 && readb(b+MUSB_RXFIFOSZ)==6 &&
-        readw(b+MUSB_TXFIFOADD)==138 && readw(b+MUSB_RXFIFOADD)==202;
-    writeb(4,b+MUSB_INDEX);
-    ok=ok && readb(b+MUSB_TXFIFOSZ)==1 && readw(b+MUSB_TXFIFOADD)==266;
+    unsigned offset=64, i;
+    int ok=1;
+    for(i=0; i<Y2_FIFO_ENTRIES; i++) {
+        const struct musb_fifo_cfg *cfg=&y2_fifo[i];
+        unsigned size=cfg->maxpacket, code=0, dpb=cfg->mode==BUF_DOUBLE;
+        while((8U<<code)<size) code++;
+        writeb(cfg->hw_ep_num,b+MUSB_INDEX);
+        if(cfg->style==FIFO_TX)
+            ok=ok && readb(b+MUSB_TXFIFOSZ)==(code|(dpb?MUSB_FIFOSZ_DPB:0)) &&
+                readw(b+MUSB_TXFIFOADD)==(offset>>3);
+        else
+            ok=ok && readb(b+MUSB_RXFIFOSZ)==(code|(dpb?MUSB_FIFOSZ_DPB:0)) &&
+                readw(b+MUSB_RXFIFOADD)==(offset>>3);
+        offset+=size<<dpb;
+    }
     writeb(index,b+MUSB_INDEX);
     return ok;
 }
@@ -910,10 +919,14 @@ static const struct musb_platform_ops y2_musb_ops={
     .readb=y2_musb_readb,.writeb=y2_musb_writeb,.clearb=y2_musb_clearb,
     .readw=y2_musb_readw,.writew=y2_musb_writew,.clearw=y2_musb_clearw,
 };
-static const struct musb_fifo_cfg y2_fifo[]={
-    MUSB_EP_FIFO_SINGLE(1,FIFO_TX,512),MUSB_EP_FIFO_SINGLE(1,FIFO_RX,512),
+/* Bulk FIFOs are double buffered: with a single 512-byte buffer a host OUT packet
+ * is NAKed until the previous one has been read, and the host's retry cadence
+ * (not the CPU) limited device receive to about 7 MB/s while the CPU idled.
+ * 4192 of the controller's 8192 bytes of FIFO RAM are used. */
+static const struct musb_fifo_cfg y2_fifo[Y2_FIFO_ENTRIES]={
+    MUSB_EP_FIFO_DOUBLE(1,FIFO_TX,512),MUSB_EP_FIFO_DOUBLE(1,FIFO_RX,512),
     MUSB_EP_FIFO_SINGLE(2,FIFO_TX,16),
-    MUSB_EP_FIFO_SINGLE(3,FIFO_TX,512),MUSB_EP_FIFO_SINGLE(3,FIFO_RX,512),
+    MUSB_EP_FIFO_DOUBLE(3,FIFO_TX,512),MUSB_EP_FIFO_DOUBLE(3,FIFO_RX,512),
     MUSB_EP_FIFO_SINGLE(4,FIFO_TX,16),
 };
 static const struct musb_hdrc_config y2_musb_config={

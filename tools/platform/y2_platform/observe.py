@@ -560,6 +560,11 @@ def system(ctx):
         text = read(sources[0], limit=8192) or ''
         fields = dict(re.findall(r'\b(transfer|dma_[a-z_]+|pio_[a-z_]+|irq_[a-z_]+)=([a-z_]+|-?\d+)\b', text))
         dma = {key: value if key == 'transfer' else number(value) for key, value in fields.items()}
+        link = dict(re.findall(r'\b(detached|reconnect_retries|reconnect_failures|monitor_failures|monitor_transients|runtime_held)=(\d+)\b', text))
+        link = {key: number(value) for key, value in link.items()}
+    else:
+        link = {}
+    usb_extra = usb_diagnostics(ctx, udcs, link)
     return {'uptime_seconds': (ctx.read('/proc/uptime') or '').split(' ')[0] or None,
             'versions': ctx.json('/etc/y2linux/versions.json'),
             'boot_history': ctx.json('/data/system/platform/boot.json'),
@@ -577,9 +582,47 @@ def system(ctx):
             'rtc': rtcs, 'time': clock, 'ssh': ssh,
             'entropy_available_bits': ctx.integer('/proc/sys/kernel/random/entropy_avail'),
             'crng_ready': clock['entropy_ready'], 'usb': {'mode': 'peripheral', 'udcs': udcs, 'dma': dma,
-                        'file_transfer': ctx.json('/run/y2/usb-transfer.json', {})},
+                        'file_transfer': ctx.json('/run/y2/usb-transfer.json', {}), **usb_extra},
             'update': update_status(ctx),
             'reborn_supervisor': ctx.json('/data/reborn/logs/supervisor-last.json')}
+
+
+def source_type(text):
+    """The kernel marks the detected BC1.1 class in brackets: 'Unknown [SDP] DCP CDP'."""
+    found = re.search(r'\[(\w+)\]', text or '')
+    return found.group(1) if found else None
+
+
+def usb_diagnostics(ctx, udcs, link):
+    """Read-only USB platform diagnostics: negotiated speed, link lifecycle,
+    charging source/ceiling, USB network, MTP storage roots and OUT-path counters."""
+    base = '/sys/class/power_supply/'
+    speed = next((u['speed'] for u in udcs if u.get('speed')), None)
+    gadget = '/sys/kernel/config/usb_gadget/y2/'
+    functions = sorted(p.name for p in ctx.glob(gadget + 'configs/c.1/*') if p.is_symlink())
+    rx = {}
+    sources = ctx.glob('/sys/bus/platform/drivers/y2-usb/*/rxdiag')
+    if len(sources) == 1:
+        first = (read(sources[0], limit=4096) or '').splitlines()[:1]
+        rx = {key: number(value) for key, value in re.findall(r'\b([a-z_]+)=(\d+)\b', first[0] if first else '')}
+    network = {'operstate': read(ctx.path('/sys/class/net/usb0/operstate')),
+               'address': read(ctx.path('/sys/class/net/usb0/address'))}
+    answer = ctx.command(['/sbin/ip', '-4', '-o', 'addr', 'show', 'dev', 'usb0'], timeout=0.5)
+    if answer.get('ok'):
+        found = re.search(r'inet (\S+)', answer.get('output') or '')
+        network['ipv4'] = found.group(1) if found else None
+    return {
+        'negotiated_speed': speed, 'functions': functions, 'link': link,
+        'charging': {
+            'source_type': source_type(read(ctx.path(base + 'y2-usb-presence/usb_type'))),
+            'host_allowance_ua': ctx.integer(base + 'y2-usb-input/current_max'),
+            'selected_charge_ceiling_ua': ctx.integer(base + 'BAT0/constant_charge_current'),
+            'state': read(ctx.path(base + 'BAT0/status')),
+            'usb_online': read(ctx.path(base + 'y2-usb-presence/online')),
+        },
+        'network': network, 'mtp_roots': ctx.json('/run/y2/mtp-roots.json', {}),
+        'out_path': rx,
+    }
 
 
 def readiness(status):

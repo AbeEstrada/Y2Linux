@@ -15,6 +15,7 @@ from .observe import mountinfo, storage
 GADGET = '/sys/kernel/config/usb_gadget/y2'
 FUNCTIONS = {'mtp': ('ffs.mtp', 'ecm.usb0'), 'developer': ('acm.usb0', 'ecm.usb0')}
 SCHEMA = 'org.y2linux.usb-transfer/v1'
+STABLE_SECONDS = 60
 
 
 def selection(mode):
@@ -351,6 +352,9 @@ class USBService:
                 self.reconcile(views)
             if self.child and self.child.poll() is not None:
                 self.stop()
+                # A responder that served for a minute before dying is a new
+                # incident, not another step toward the permanent-failure budget.
+                if time.monotonic() - self.started > STABLE_SECONDS: self.failures = 0
                 self.failures += 1
                 if self.failures >= 5:
                     self.terminal = True
@@ -388,6 +392,7 @@ class USBService:
                 self.stop()
             except OSError:
                 self.terminal = True
+            if self.started and time.monotonic() - self.started > STABLE_SECONDS: self.failures = 0
             self.failures += 1
             self.terminal = self.terminal or self.failures >= 5
             if self.failures < 5:
