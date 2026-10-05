@@ -1,5 +1,51 @@
 # Roadmap gap audit
 
+## Power candidate owner handoff — 2026-10-05
+
+Standing boundary audit repeated before the canonical preserving handoff. Actual
+installed hardware remains USB02 Linux `0cb7792` / Reborn `2444e0f`, current boot
+`e043cb75-9d76-4967-b3a6-1a3396a17dd9`, taint 512. The owner confirms the display
+remains black/frozen after short Power. The incident had a real 3.400268 V
+orderly shutdown and no proved full starting charge. The final 1800.312 s PC
+window gained 3.881469 → 3.937500 V / estimated SOC 47 → 58%, source SDP,
+450 mA selected, fault zero, CPU0 online, C2 85.7193%, C3 quarantined. Original
+Reborn/MTP/Bluetooth components and saved Wi-Fi state are restored; ECM/MTP Ready.
+Raw evidence stays private; seven sanitized windows are retained in
+[the final power report](../validation/Y2-PLATFORM-V1-POWER-BATTERY-FINAL.md).
+
+| Coverage / existing gate | Classification at this boundary | Remaining qualification |
+| --- | --- | --- |
+| Boot, DATA, memory, recovery / #16, #27, #34 | Existing observed geometry retained; new package SOFTWARE_VALIDATED | Owner preserving BOOTIMG/ANDROID install, no-SD and DATA preservation smoke; no memory or partition change |
+| CPU, DVFS, C1/C2 / #30 | CONFIRMED bounded old-image behavior; new source built | Warning-free new-image OPP, parking and matching idle checks |
+| Runtime C3 / #30 | Concrete zero PMIC-slot defect FIXED_IN_SOURCE; first wall C3 entered; current WARN quarantine respected | New-image slot readback, real battery-only C3 entries/residency and repeat wake integrity |
+| Display/GPU / #29, #33 | Owner-visible failure on current boot; first OVL takeover correction SOFTWARE_VALIDATED | Cold/warm display, controls, blank/wake and clean taint on installed pair |
+| Full suspend / #30 | PARTIAL, historical RTC FAIL; no same-boot product qualification | Staged PM then separate RTC/Power same-boot wake and subsystem restoration; automatic sleep stays gated |
+| Battery/charging / #30 | Real voltage, independent floor, bounded PC/wall gain; current ceiling is not measured current | Near-full hold/recharge, source transitions, controlled safe battery-only endurance; capacity/NTC/shunt unproven |
+| USB / #31 | Yesterday's USB02 foundation retained; new isolated receive wait passes 16 MiB desktop round trip | Exact combined candidate desktop/SSH/source/reconnect checks; no transport rollback |
+| Radios / #31 | BT off-state notification load reduced in matched live trial; Wi-Fi saved on restored | Disconnected/connected radio matrix and available peer tests; no phantom EINT or power-save claim |
+| Audio/storage/input / #28, #29, #31, #33 | Bounded old-image idle states retained; UUID/ADC wait fixes SOFTWARE_VALIDATED | Playback/idle/resume integrity; legitimate 50 Hz GPIO navigation polling remains until routing is proved |
+| Diagnostics/journal / #28, #32 | Bounded machine audit and 300 s journal implemented; counter collector measured 0.08886 CPU s/row | Observe actual next-night counters/shutdown reason; no per-second logging or current fiction |
+| Release/endurance | SOFTWARE_VALIDATED / PHYSICAL_NOT_RUN for POWER01 | Five-/30-minute, two-hour, then overnight; no Platform 1.0, battery-health or public readiness promotion |
+
+Compiled source is Linux `fedc005ba68b3f5020a45258e38d641aa191b12a` / Reborn
+`ccf450ac1388228dbd859318a05e13adf667c9aa`. Kernel/modules/config/DT/ABI,
+498 production cases (487 pass, eleven locked-host dependency skips all covered
+by 59 passing native cases), 326 Rust tests, formatting/strict Clippy, installed
+ARM/QEMU, ELF closure, package/privacy/inventory and source seal pass. Canonical
+candidate is `out/y2linux-platform-v1-power-final-candidate/`; only BOOTIMG and
+ANDROID are selected, no DATA payload. Source/license records retain legal-info
+limitations and owner-local distribution. A later documentation commit does not
+replace compiled identity. Main and the owner's USB worktree remain unchanged.
+
+Readiness is **MORE_WORK_REQUIRED / OWNER_INSTALLATION_NEXT**, not milestone
+closure. No flash, push, external issue mutation, new electrical limit, memory,
+calibration, recovery or unqualified product autosuspend is authorized by this
+planning record. The owner already authorized preparation and ongoing physical
+qualification; only owner installation of the reviewed kernel/root pair is the
+next external dependency. After confirmation, continue existing measurements,
+not a new investigation. Current open issues remain open; no GitHub status is
+promoted without physical acceptance.
+
 ## Power candidate build admission — 2026-10-05
 
 Repeat the standing audit before packaging the owner's single preserving power

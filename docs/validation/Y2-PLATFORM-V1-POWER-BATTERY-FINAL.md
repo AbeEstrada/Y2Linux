@@ -27,6 +27,9 @@ agree. Fresh image hashes are BOOTIMG
 Main and older baseline labels do not identify this installed image. Both dedicated
 `codex/platform-v1-power-final` worktrees start at this exact pair. Yesterday's USB
 transport, lifecycle, FIFO, DMA and responder queue changes remain inherited.
+Manifest comparison and `git merge-base --is-ancestor` confirm both source ancestors.
+The USB worktree remains at `0cb7792`; its uncommitted host benchmark, lab and
+documentation work remains with the owner and changes no installed firmware source.
 
 The 12-session campaign integrated CPU idle, suspend instrumentation/rollback,
 USB/MTP, charging, radio workers, storage, GPU/input, Reborn performance, precision
@@ -142,8 +145,13 @@ Current boot reports SDP, 500 mA USB allocation, 450 mA selected, Charging and
 fault 0, with positive voltage trend and ECM/MTP available. This is a bounded
 charging pass, not proof of actual mA or near-full termination. The first wall
 fault stayed latched on PC reattachment until the one graceful diagnostic-module
-removal/recovery reboot. The separate 30-minute PC recorder is pending retrieval;
-its frozen-display / C3-quarantined state must remain explicit.
+removal/recovery reboot. The 1800.312-second PC window gained **3.881469 → 3.937500 V**, provisional
+SOC **47 → 58%**, at the unchanged 450 mA ceiling with fault zero. CPU0 was online
+throughout; C1 52492 entries / 6.2767%, C2 205957 / 85.7193%, C3 zero.
+Recorded OPP residency was 90.605% at 598 MHz. IRQ rate was 164.046/s and context
+switches 368.132/s. The original components were restored. Two brief SSH read
+probes occurred; the frozen-display/C3-quarantined state prevents treating this
+as optimized battery-only endurance or a matched after-fix result.
 
 ## 8. WALL CHARGING
 
@@ -408,7 +416,9 @@ existing safety floor. Do not deliberately exhaust the pack.
 
 ## 32. BEFORE / AFTER POWER MATRIX
 
-The machine report retains six sanitized windows and raw-receipt hashes.
+The machine report retains seven sanitized windows and raw-receipt hashes.
+The long PC charge window is reported separately from the 60-second component
+comparisons; its longer settling cannot be attributed to the candidate fixes.
 
 | Same-boot PC comparison | Context switches/s | IRQ/s |
 | --- | ---: | ---: |
@@ -431,7 +441,10 @@ The audit uses approximately 0.62 CPU seconds of counter endpoint work in a
 60-second interval (~1% of one core); approximately 1.8 CPU seconds of heavy
 state descriptions are outside the counter window. It performs no scheduled
 sampling during the declared interval. Longer intervals reduce endpoint bias.
-The journal's cheap-counter collector records its own CPU cost per due row.
+Five read-only device trials of the journal counter collector averaged
+**0.08886 CPU seconds** per due row (0.0296% of one core at five-minute cadence),
+maximum encoded counter block 1847 bytes. This does not measure persistent-write
+latency. No service was replaced for this collector measurement.
 
 ## 34. CHANGES MADE
 
@@ -462,23 +475,55 @@ audit: two; display ownership: one; SSH/transfer: seven. MTP actual receive,
 cancel, filesystem/protocol and native Bluetooth event fixtures pass.
 Reborn `cargo fmt --all -- --check`, strict all-target workspace Clippy and
 326 workspace tests pass. Prior failed receipts are retained and not called passes.
-A fresh production rebuild from the final reviewed pair, installed ARM/QEMU,
-ELF/config/DT/ABI/package/source gates will be appended with exact exit receipts.
+The final fresh source-bound kernel/modules/config/DT/ABI and ARM build pass.
+The production profile has **498 cases: 487 pass, eleven locked-host dependency
+skips**, all eleven covered by **59 passing native host cases**. Installed ARM/QEMU
+imports cover 34 platform modules; SQLite, OpenSSL, null ALSA constraints, Reborn
+defaults/library benchmark and codec contracts pass. ELF closure covers 384 files
+and 1411 dependency edges. Package/privacy, inventory, legal-info collector and
+source seal pass. The seal contains 451 source/license records and all successful
+validation exit receipts. Legal-info warnings remain explicit; public distribution
+is not asserted. Earlier cache-path/missing-input attempts are retained separately
+and are not final passing receipts. The exact pinned source archives were used;
+no parallel build output was substituted for the fresh rootfs.
 Inherited vendor Wi-Fi warnings are retained; this pass does not rewrite that driver.
 
 ## 37. COMMITS
 
 Implementation Linux `bff021e7dc5dc57ed4fe0a3d1ac527a252e6c639`, charger-context
-correction `ffc1787` and cumulative journal `447bc9b`; Reborn
+correction `ffc1787e76c5b049e39ecbb8f4360c96322d60ea` and cumulative journal
+`447bc9b4aaab12d68b6f8a2e0c52ab71eef15352`; compiled Linux
+`fedc005ba68b3f5020a45258e38d641aa191b12a`; Reborn
 `ccf450ac1388228dbd859318a05e13adf667c9aa`. Full compiled source pair is recorded
 in candidate metadata; later documentation seal HEAD must not replace it.
 Configured Git identity is preserved; no model attribution or push.
 
 ## 38. CANDIDATE / HASHES IF BUILT
 
-Build in progress. Canonical destination:
+Sealed owner-local candidate. Canonical destination:
 `/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-power-final-candidate/`.
-One preserving BOOTIMG/Y2ROOT pair, no Y2DATA payload or reset. Exact hashes,
-manifest, validation receipt and OWNER-HANDOFF will be appended only after checks.
+Build `Y2LINUX-PLATFORM-V1-POWER-FINAL-01`, kernel
+`6.18.0-y2linux-platform-v1-power-final-01`, root `2025.02.18-platform-v1.27`.
+One preserving BOOTIMG/Y2ROOT pair, no Y2DATA payload or reset.
+BOOTIMG (7239680 bytes):
+`716c686064764112310e0d1ef621d0308fafd4054650d57eb8b74d35e6fb2109`.
+Y2ROOT (536870912 bytes):
+`a23a03b8ee87492edca986b59e95b83ae41227204c7894a90df12245c822627d`.
+SHA256SUMS, manifest, source archives, validation receipts and OWNER-HANDOFF
+are included. The fallback is the exact installed USB02 BOOTIMG/Y2ROOT pair.
+Use SPFT Download Only / preserving scatter, BOOTIMG and ANDROID only; DATA and
+every other partition remain unselected.
 The owner flashes; the agent does not. After confirmation, verify installed
 identity and resume the pending matched matrix without restarting forensics.
+
+
+Post-test restoration is verified on the same current boot: original Reborn, MTP,
+Bluetooth helper and Python module match backups; saved Wi-Fi on is restored at
+runtime; Bluetooth intent remains off; ECM/MTP Ready, charger fault zero, sole
+loaded module mediatek_drm. DRM taint/C3 quarantine remains, not bypassed.
+The supplied handoff contains the overnight procedure for use after five-/30-
+minute and two-hour acceptance, and repeated same-boot RTC/Power success.
+
+**Final verdict: MORE_WORK_REQUIRED.** The software candidate is complete and
+needs owner installation. There is no claim that overnight drain, healthy
+new-image C3, full resume or battery health is already qualified.

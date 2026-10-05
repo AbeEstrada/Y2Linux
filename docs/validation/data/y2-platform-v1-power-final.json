@@ -1,6 +1,6 @@
 {
   "schema": "org.y2linux.platform-v1-power-final/v1",
-  "status": "IN_PROGRESS_NEEDS_BUILT_IN_OWNER_INSTALLATION",
+  "status": "SOFTWARE_CANDIDATE_SEALED_NEEDS_OWNER_INSTALLATION_AND_HARDWARE_QUALIFICATION",
   "installed": {
     "release": "1.0.0-platform-v1-usb-final-candidate.2",
     "build": "Y2LINUX-PLATFORM-V1-USB-FINAL-02",
@@ -46,7 +46,19 @@
     "measured_pack_current_uA": null,
     "termination_current_measured": false,
     "pc_observed": "Charging 450000 configured ceiling; no fault in current boot.",
-    "wall_observed": "650000 configured ceiling; C3-enabled test protection fault0x80; C3-gated five-minute test positive voltage slope/no fault."
+    "wall_observed": "650000 configured ceiling; C3-enabled test protection fault0x80; C3-gated five-minute test positive voltage slope/no fault.",
+    "pc_30minute": {
+      "duration_seconds": 1800.311526261,
+      "start_voltage_uv": 3881469,
+      "end_voltage_uv": 3937500,
+      "start_soc_percent": 47,
+      "end_soc_percent": 58,
+      "source": "SDP",
+      "configured_ceiling_ua": 450000,
+      "observed_fault": 0,
+      "near_full_qualified": false,
+      "current_measured": false
+    }
   },
   "runtime_pcm_defect": {
     "pcm_words": 480,
@@ -5087,6 +5099,1052 @@
         "note": "Endpoint counter skew is bounded by collection time; descriptions are outside the window."
       },
       "condition_limit": "DRM-WARN boot, taint 512, C3 quarantined; second wall charge. Different boot and starting voltage from first wall test; not matched after-fix proof."
+    },
+    {
+      "id": "H-PC-charge-30min",
+      "raw_sha256": "36a199be98d9e620be0b95298d9cde611720fabd20c9e5a730b162890f591baf",
+      "state": "H-PC-charge-current-DRM-fault",
+      "boot_id": "e043cb75-9d76-4967-b3a6-1a3396a17dd9",
+      "duration_seconds": 1800.311526261,
+      "same_boot": true,
+      "start": {
+        "voltage_uv": 3881469,
+        "soc_percent": 47,
+        "cores_online": "0",
+        "runtime_pm": {
+          "/sys/bus/platform/devices/10000000.clock-controller/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10005000.pinctrl/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10006000.power-controller/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10007000.watchdog/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10008000.timer/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/1000d000.pwrap/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/1000d000.pwrap:pmic/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10010000.mipi-tx/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10011000.keypad/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10204000.interrupt-latch/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10206100.efuse/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/11002000.serial/power/runtime_status": "active",
+          "/sys/bus/platform/devices/11007000.i2c/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/11008000.i2c/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/1100b000.thermal/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/11200000.usb/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/11220000.audio-controller/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/11230000.mmc/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/11240000.mmc/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/13000000.clock-controller/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/13010000.gpu/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/14000000.syscon/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/14007000.ovl/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/14008000.rdma/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/1400b000.color/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/1400c000.dsi/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/1400e000.mutex/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/18070000.connectivity/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/alarmtimer.3.auto/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/clk-mt6582-mm.1.auto/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/cpufreq-dt/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/local-timer/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mediatek-drm.2.auto/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/mt6323-auxadc/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mt6323-keys/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mt6323-led/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mt6323-pwrc/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mt6323-regulator/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mt6323-rtc/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mtk-socinfo.0.auto/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/musb-hdrc.4.auto/power/runtime_status": "active",
+          "/sys/bus/platform/devices/navigation-keys/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/regulator-dac15/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/regulator-dac18/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/regulator-dac20/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/serial8250/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/sound/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/y2-backlight/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/y2-mt6323-charger/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/y2-mt6582-wifi/power/runtime_status": "unsupported",
+          "/sys/bus/i2c/devices/0-0051/power/runtime_status": "unsupported",
+          "/sys/bus/i2c/devices/1-0030/power/runtime_status": "active"
+        },
+        "backlight": {
+          "/sys/class/backlight/y2-backlight/brightness": "32",
+          "/sys/class/backlight/y2-backlight/bl_power": "4"
+        },
+        "radios": {
+          "/sys/class/rfkill/rfkill0/type": "bluetooth",
+          "/sys/class/rfkill/rfkill1/type": "wlan",
+          "/sys/class/rfkill/rfkill0/soft": "0",
+          "/sys/class/rfkill/rfkill1/soft": "1"
+        },
+        "charger": "phase=CONSTANT_CURRENT source=1 source_valid=1 charge_limit_ua=450000\nactive=1 online=1 present=1 fault=0x0 sample_error=0 stop_error=0 paused=0 last_error=0\nbattery_uv=3868725 baton_raw=10388 isense_raw=18043 pmic_die_mc=45128 input_budget_ua=500000\nchr_con0=0x007b cv_status=0x008e battery_ovp=0x0003 baton=0x0005 watchdog=0x0001 thermal=0x0000\nwatchdog_pets=3949 last_pet_ms=4180797 total_seconds=3471 cv_seconds=0 precharge_seconds=0 hold=0 full=0 timeout=0\nfirst_fault=0x0 at_ms=0 battery_uv=0 sample_error=0 chr=0x0 cv=0x0 ovp=0x0 watchdog=0x0 thermal=0x0",
+        "usb": {
+          "/sys/class/udc/musb-hdrc.4.auto/state": "configured",
+          "/sys/class/udc/musb-hdrc.4.auto/current_speed": "high-speed"
+        },
+        "alsa": {
+          "/proc/asound/card0/pcm0p/sub0/status": "closed"
+        },
+        "application": {
+          "screen_off": true,
+          "playback_state": "paused",
+          "scanning": false,
+          "audio_state": "stopped",
+          "graphics": {
+            "backend": null,
+            "frames": null,
+            "context_losses": null
+          }
+        },
+        "c3_policy": {
+          "boot_id": "e043cb75-9d76-4967-b3a6-1a3396a17dd9",
+          "policy": "qualified_CPU0_DORMANT",
+          "reasons": [
+            "kernel_tainted_or_unknown"
+          ],
+          "schema": "org.y2linux.cpu-idle-policy/v1",
+          "state": "Skipped"
+        }
+      },
+      "end": {
+        "voltage_uv": 3937500,
+        "soc_percent": 58,
+        "cores_online": "0",
+        "runtime_pm": {
+          "/sys/bus/platform/devices/10000000.clock-controller/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10005000.pinctrl/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10006000.power-controller/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10007000.watchdog/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10008000.timer/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/1000d000.pwrap/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/1000d000.pwrap:pmic/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10010000.mipi-tx/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10011000.keypad/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10204000.interrupt-latch/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/10206100.efuse/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/11002000.serial/power/runtime_status": "active",
+          "/sys/bus/platform/devices/11007000.i2c/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/11008000.i2c/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/1100b000.thermal/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/11200000.usb/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/11220000.audio-controller/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/11230000.mmc/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/11240000.mmc/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/13000000.clock-controller/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/13010000.gpu/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/14000000.syscon/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/14007000.ovl/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/14008000.rdma/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/1400b000.color/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/1400c000.dsi/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/1400e000.mutex/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/18070000.connectivity/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/alarmtimer.3.auto/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/clk-mt6582-mm.1.auto/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/cpufreq-dt/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/local-timer/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mediatek-drm.2.auto/power/runtime_status": "suspended",
+          "/sys/bus/platform/devices/mt6323-auxadc/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mt6323-keys/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mt6323-led/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mt6323-pwrc/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mt6323-regulator/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mt6323-rtc/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/mtk-socinfo.0.auto/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/musb-hdrc.4.auto/power/runtime_status": "active",
+          "/sys/bus/platform/devices/navigation-keys/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/regulator-dac15/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/regulator-dac18/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/regulator-dac20/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/serial8250/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/sound/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/y2-backlight/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/y2-mt6323-charger/power/runtime_status": "unsupported",
+          "/sys/bus/platform/devices/y2-mt6582-wifi/power/runtime_status": "unsupported",
+          "/sys/bus/i2c/devices/0-0051/power/runtime_status": "unsupported",
+          "/sys/bus/i2c/devices/1-0030/power/runtime_status": "active"
+        },
+        "backlight": {
+          "/sys/class/backlight/y2-backlight/brightness": "32",
+          "/sys/class/backlight/y2-backlight/bl_power": "4"
+        },
+        "radios": {
+          "/sys/class/rfkill/rfkill0/type": "bluetooth",
+          "/sys/class/rfkill/rfkill1/type": "wlan",
+          "/sys/class/rfkill/rfkill0/soft": "0",
+          "/sys/class/rfkill/rfkill1/soft": "1"
+        },
+        "charger": "phase=CONSTANT_CURRENT source=1 source_valid=1 charge_limit_ua=450000\nactive=1 online=1 present=1 fault=0x0 sample_error=0 stop_error=0 paused=0 last_error=0\nbattery_uv=3935083 baton_raw=10388 isense_raw=18362 pmic_die_mc=43959 input_budget_ua=500000\nchr_con0=0x007b cv_status=0x008e battery_ovp=0x0003 baton=0x0005 watchdog=0x0001 thermal=0x0000\nwatchdog_pets=5710 last_pet_ms=6012237 total_seconds=5303 cv_seconds=0 precharge_seconds=0 hold=0 full=0 timeout=0\nfirst_fault=0x0 at_ms=0 battery_uv=0 sample_error=0 chr=0x0 cv=0x0 ovp=0x0 watchdog=0x0 thermal=0x0",
+        "usb": {
+          "/sys/class/udc/musb-hdrc.4.auto/state": "configured",
+          "/sys/class/udc/musb-hdrc.4.auto/current_speed": "high-speed"
+        },
+        "alsa": {
+          "/proc/asound/card0/pcm0p/sub0/status": "closed"
+        },
+        "application": {
+          "screen_off": true,
+          "playback_state": "paused",
+          "scanning": false,
+          "audio_state": "stopped",
+          "graphics": {
+            "backend": null,
+            "frames": null,
+            "context_losses": null
+          }
+        },
+        "c3_policy": {
+          "boot_id": "e043cb75-9d76-4967-b3a6-1a3396a17dd9",
+          "policy": "qualified_CPU0_DORMANT",
+          "reasons": [
+            "kernel_tainted_or_unknown"
+          ],
+          "schema": "org.y2linux.cpu-idle-policy/v1",
+          "state": "Skipped"
+        }
+      },
+      "cpu_frequency_residency": [
+        {
+          "khz": 598000,
+          "ticks": 163118,
+          "percent_recorded_residency": 90.60500355492357
+        },
+        {
+          "khz": 747500,
+          "ticks": 3945,
+          "percent_recorded_residency": 2.1912771062922145
+        },
+        {
+          "khz": 1040000,
+          "ticks": 2994,
+          "percent_recorded_residency": 1.663037682189833
+        },
+        {
+          "khz": 1196000,
+          "ticks": 1159,
+          "percent_recorded_residency": 0.6437744400995379
+        },
+        {
+          "khz": 1300000,
+          "ticks": 8816,
+          "percent_recorded_residency": 4.896907216494846
+        }
+      ],
+      "cpuidle": [
+        {
+          "path": "/sys/devices/system/cpu/cpu0/cpuidle/state0",
+          "name": "WFI",
+          "time_us": 112999768,
+          "percent_wall_time": 6.276678583216373,
+          "entries": 52492
+        },
+        {
+          "path": "/sys/devices/system/cpu/cpu0/cpuidle/state1",
+          "name": "SLIDLE",
+          "time_us": 1543214336,
+          "percent_wall_time": 85.7192943270793,
+          "entries": 205957
+        },
+        {
+          "path": "/sys/devices/system/cpu/cpu0/cpuidle/state2",
+          "name": "DORMANT",
+          "time_us": 0,
+          "percent_wall_time": 0.0,
+          "entries": 0
+        },
+        {
+          "path": "/sys/devices/system/cpu/cpu1/cpuidle/state0",
+          "name": "WFI",
+          "time_us": 0,
+          "percent_wall_time": 0.0,
+          "entries": 0
+        },
+        {
+          "path": "/sys/devices/system/cpu/cpu1/cpuidle/state1",
+          "name": "SLIDLE",
+          "time_us": 0,
+          "percent_wall_time": 0.0,
+          "entries": 0
+        },
+        {
+          "path": "/sys/devices/system/cpu/cpu1/cpuidle/state2",
+          "name": "DORMANT",
+          "time_us": 0,
+          "percent_wall_time": 0.0,
+          "entries": 0
+        },
+        {
+          "path": "/sys/devices/system/cpu/cpu2/cpuidle/state0",
+          "name": "WFI",
+          "time_us": 0,
+          "percent_wall_time": 0.0,
+          "entries": 0
+        },
+        {
+          "path": "/sys/devices/system/cpu/cpu2/cpuidle/state1",
+          "name": "SLIDLE",
+          "time_us": 0,
+          "percent_wall_time": 0.0,
+          "entries": 0
+        },
+        {
+          "path": "/sys/devices/system/cpu/cpu2/cpuidle/state2",
+          "name": "DORMANT",
+          "time_us": 0,
+          "percent_wall_time": 0.0,
+          "entries": 0
+        },
+        {
+          "path": "/sys/devices/system/cpu/cpu3/cpuidle/state0",
+          "name": "WFI",
+          "time_us": 0,
+          "percent_wall_time": 0.0,
+          "entries": 0
+        },
+        {
+          "path": "/sys/devices/system/cpu/cpu3/cpuidle/state1",
+          "name": "SLIDLE",
+          "time_us": 0,
+          "percent_wall_time": 0.0,
+          "entries": 0
+        },
+        {
+          "path": "/sys/devices/system/cpu/cpu3/cpuidle/state2",
+          "name": "DORMANT",
+          "time_us": 0,
+          "percent_wall_time": 0.0,
+          "entries": 0
+        }
+      ],
+      "wakeups_per_second": null,
+      "wakeups_reason": "Context switches and IRQs are proxies; they are not independent unique CPU wakes.",
+      "cpu0_idle_exits_per_second": 143.55793218563852,
+      "irq_deltas": [
+        {
+          "irq": "25",
+          "name": "GIC-0 29 Level arch_timer",
+          "delta": 282740,
+          "per_second": 157.05059700818123,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "IPI5",
+          "name": "IRQ work interrupts",
+          "delta": 10129,
+          "per_second": 5.6262484865808435,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "222",
+          "name": "MT_SYSIRQ 40 Level 11240000.mmc",
+          "delta": 1731,
+          "per_second": 0.9615002596773068,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "221",
+          "name": "MT_SYSIRQ 39 Level 11230000.mmc",
+          "delta": 584,
+          "per_second": 0.32438830251389206,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "213",
+          "name": "MT_SYSIRQ 32 Level musb-hdrc.4.auto",
+          "delta": 150,
+          "per_second": 0.08331891331692433,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "24",
+          "name": "MT_SYSIRQ 112 Level timer@10008000",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "52",
+          "name": "mt-eint 25 Level mt6397-pmic",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "82",
+          "name": "mt-eint 55 Edge apt32f-wheel",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "197",
+          "name": "mt6397-irq 10 Edge mt6323-chrdet",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "198",
+          "name": "mt6397-irq 20 Edge mt6397-rtc",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "199",
+          "name": "mt6397-irq 5 Edge mtk-pmic-keys",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "201",
+          "name": "MT_SYSIRQ 117 Level y2-spm",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "202",
+          "name": "MT_SYSIRQ 50 Level 18070000.connectivity",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "203",
+          "name": "MT_SYSIRQ 71 Level 18070000.connectivity",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "204",
+          "name": "MT_SYSIRQ 72 Level 18070000.connectivity",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "205",
+          "name": "MT_SYSIRQ 185 Level 18070000.connectivity",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "206",
+          "name": "MT_SYSIRQ 100 Level y2-calibration",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "207",
+          "name": "MT_SYSIRQ 171 Level gpmmu",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "208",
+          "name": "MT_SYSIRQ 173 Level ppmmu0",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "209",
+          "name": "MT_SYSIRQ 175 Level ppmmu1",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "210",
+          "name": "MT_SYSIRQ 170 Level gp",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "211",
+          "name": "MT_SYSIRQ 172 Level pp0",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "212",
+          "name": "MT_SYSIRQ 174 Level pp1",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "214",
+          "name": "MT_SYSIRQ 153 Level 14007000.ovl",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "215",
+          "name": "MT_SYSIRQ 152 Level 14008000.rdma",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "216",
+          "name": "MT_SYSIRQ 157 Level 1400c000.dsi",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "217",
+          "name": "MT_SYSIRQ 104 Level mt6582-afe",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "218",
+          "name": "MT_SYSIRQ 44 Level 11007000.i2c",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "219",
+          "name": "MT_SYSIRQ 45 Level 11008000.i2c",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "220",
+          "name": "MT_SYSIRQ 116 Edge mt6582-keypad",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "IPI0",
+          "name": "CPU wakeup interrupts",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "IPI1",
+          "name": "Timer broadcast interrupts",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "IPI2",
+          "name": "Rescheduling interrupts",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "IPI3",
+          "name": "Function call interrupts",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "IPI4",
+          "name": "CPU stop interrupts",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "IPI6",
+          "name": "completion interrupts",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        },
+        {
+          "irq": "Err",
+          "name": "",
+          "delta": 0,
+          "per_second": 0.0,
+          "counter_discontinuity": false
+        }
+      ],
+      "scheduler": {
+        "processes": {
+          "delta": 3415,
+          "per_second": 1.8968939265153106
+        },
+        "intr": {
+          "delta": 295334,
+          "per_second": 164.0460529702702
+        },
+        "ctxt": {
+          "delta": 662752,
+          "per_second": 368.1318429241216
+        }
+      },
+      "wakeup_sources": [
+        {
+          "name": "mmc0",
+          "deltas": {
+            "event_count": 0,
+            "wakeup_count": 0,
+            "active_count": 0
+          }
+        },
+        {
+          "name": "mmc1",
+          "deltas": {
+            "event_count": 0,
+            "wakeup_count": 0,
+            "active_count": 0
+          }
+        },
+        {
+          "name": "y2-mt6323-charger",
+          "deltas": {
+            "event_count": 0,
+            "wakeup_count": 0,
+            "active_count": 0
+          }
+        },
+        {
+          "name": "deleted",
+          "deltas": {
+            "event_count": 0,
+            "wakeup_count": 0,
+            "active_count": 0
+          }
+        },
+        {
+          "name": "mt6323-keys",
+          "deltas": {
+            "event_count": 0,
+            "wakeup_count": 0,
+            "active_count": 0
+          }
+        },
+        {
+          "name": "y2-usb-presence",
+          "deltas": {
+            "event_count": 1731,
+            "wakeup_count": 0,
+            "active_count": 1731
+          }
+        },
+        {
+          "name": "y2-usb-input",
+          "deltas": {
+            "event_count": 0,
+            "wakeup_count": 0,
+            "active_count": 0
+          }
+        },
+        {
+          "name": "BAT0",
+          "deltas": {
+            "event_count": 30,
+            "wakeup_count": 0,
+            "active_count": 30
+          }
+        },
+        {
+          "name": "alarmtimer.3.auto",
+          "deltas": {
+            "event_count": 0,
+            "wakeup_count": 0,
+            "active_count": 0
+          }
+        },
+        {
+          "name": "mt6323-rtc",
+          "deltas": {
+            "event_count": 0,
+            "wakeup_count": 0,
+            "active_count": 0
+          }
+        },
+        {
+          "name": "musb-hdrc.4.auto",
+          "deltas": {
+            "event_count": 0,
+            "wakeup_count": 0,
+            "active_count": 0
+          }
+        }
+      ],
+      "top_cpu_threads": [
+        {
+          "thread": "359:359:510",
+          "name": "python3",
+          "ticks": 2190,
+          "cpu_percent_one_core": 1.2164561344270952,
+          "context_switches_per_second": 6.956018343118957
+        },
+        {
+          "thread": "410:410:582",
+          "name": "python3",
+          "ticks": 2147,
+          "cpu_percent_one_core": 1.1925713792762436,
+          "context_switches_per_second": 9.483358713732327
+        },
+        {
+          "thread": "8488:8501:302024",
+          "name": "watchdog",
+          "ticks": 1761,
+          "cpu_percent_one_core": 0.9781640423406917,
+          "context_switches_per_second": 3.0755788202387335
+        },
+        {
+          "thread": "8488:8488:302004",
+          "name": "reborn",
+          "ticks": 1447,
+          "cpu_percent_one_core": 0.8037497837972634,
+          "context_switches_per_second": 21.01969545159367
+        },
+        {
+          "thread": "397:397:577",
+          "name": "python3",
+          "ticks": 1089,
+          "cpu_percent_one_core": 0.6048953106808707,
+          "context_switches_per_second": 1.947996193349691
+        },
+        {
+          "thread": "3801:3821:148611",
+          "name": "io_thread",
+          "ticks": 331,
+          "cpu_percent_one_core": 0.18385706871934637,
+          "context_switches_per_second": 49.66807060648493
+        },
+        {
+          "thread": "4475:4477:180420",
+          "name": "gmain",
+          "ticks": 326,
+          "cpu_percent_one_core": 0.18107977160878222,
+          "context_switches_per_second": 23.181543522456803
+        },
+        {
+          "thread": "4475:4475:180418",
+          "name": "y2-bt-reconnect",
+          "ticks": 283,
+          "cpu_percent_one_core": 0.15719501645793058,
+          "context_switches_per_second": 19.22056238337022
+        },
+        {
+          "thread": "55:55:26",
+          "name": "sugov:0",
+          "ticks": 195,
+          "cpu_percent_one_core": 0.10831458731200164,
+          "context_switches_per_second": 5.6262484865808435
+        },
+        {
+          "thread": "59:59:26",
+          "name": "kworker/u21:0-y2-charger",
+          "ticks": 192,
+          "cpu_percent_one_core": 0.10664820904566315,
+          "context_switches_per_second": 4.891375671125571
+        },
+        {
+          "thread": "299:299:378",
+          "name": "y2-observer",
+          "ticks": 149,
+          "cpu_percent_one_core": 0.0827634538948115,
+          "context_switches_per_second": 1.022600796109718
+        },
+        {
+          "thread": "8488:8502:302024",
+          "name": "avrcp",
+          "ticks": 124,
+          "cpu_percent_one_core": 0.06887696834199078,
+          "context_switches_per_second": 5.355184288589784
+        },
+        {
+          "thread": "389:389:576",
+          "name": "connectivity",
+          "ticks": 113,
+          "cpu_percent_one_core": 0.06276691469874966,
+          "context_switches_per_second": 1.6902630214893384
+        },
+        {
+          "thread": "14:14:0",
+          "name": "rcu_sched",
+          "ticks": 105,
+          "cpu_percent_one_core": 0.058323239321847034,
+          "context_switches_per_second": 21.01969545159367
+        },
+        {
+          "thread": "8488:8495:302023",
+          "name": "wifi",
+          "ticks": 73,
+          "cpu_percent_one_core": 0.04054853781423651,
+          "context_switches_per_second": 0.6726613601786358
+        },
+        {
+          "thread": "372:372:566",
+          "name": "dbus-daemon",
+          "ticks": 62,
+          "cpu_percent_one_core": 0.03443848417099539,
+          "context_switches_per_second": 0.8904014536468647
+        },
+        {
+          "thread": "493:493:759",
+          "name": "kworker/u22:1-y2-idle-demand",
+          "ticks": 35,
+          "cpu_percent_one_core": 0.019441079773949013,
+          "context_switches_per_second": 3.8487783358197913
+        },
+        {
+          "thread": "10713:10713:418050",
+          "name": "python3",
+          "ticks": 29,
+          "cpu_percent_one_core": 0.016108323241272038,
+          "context_switches_per_second": 0.02388475515085164
+        },
+        {
+          "thread": "8488:8496:302023",
+          "name": "bluetooth",
+          "ticks": 26,
+          "cpu_percent_one_core": 0.01444194497493355,
+          "context_switches_per_second": 0.26884236030260916
+        },
+        {
+          "thread": "8488:8493:302023",
+          "name": "playback",
+          "ticks": 23,
+          "cpu_percent_one_core": 0.012775566708595065,
+          "context_switches_per_second": 2.0090967297821023
+        },
+        {
+          "thread": "8488:8494:302023",
+          "name": "audio",
+          "ticks": 22,
+          "cpu_percent_one_core": 0.012220107286482236,
+          "context_switches_per_second": 1.9940993253850556
+        },
+        {
+          "thread": "706:706:1743",
+          "name": "wpa_supplicant",
+          "ticks": 11,
+          "cpu_percent_one_core": 0.006110053643241118,
+          "context_switches_per_second": 0.5282419104293002
+        },
+        {
+          "thread": "8488:8491:302022",
+          "name": "database",
+          "ticks": 10,
+          "cpu_percent_one_core": 0.005554594221128289,
+          "context_switches_per_second": 1.0148243642001384
+        },
+        {
+          "thread": "8488:8492:302022",
+          "name": "scanner",
+          "ticks": 10,
+          "cpu_percent_one_core": 0.005554594221128289,
+          "context_switches_per_second": 1.009825229401123
+        },
+        {
+          "thread": "376:376:567",
+          "name": "bluetoothd",
+          "ticks": 9,
+          "cpu_percent_one_core": 0.00499913479901546,
+          "context_switches_per_second": 0.051657726256493085
+        }
+      ],
+      "top_context_switch_threads": [
+        {
+          "thread": "3801:3821:148611",
+          "name": "io_thread",
+          "ticks": 331,
+          "cpu_percent_one_core": 0.18385706871934637,
+          "context_switches_per_second": 49.66807060648493
+        },
+        {
+          "thread": "4475:4477:180420",
+          "name": "gmain",
+          "ticks": 326,
+          "cpu_percent_one_core": 0.18107977160878222,
+          "context_switches_per_second": 23.181543522456803
+        },
+        {
+          "thread": "14:14:0",
+          "name": "rcu_sched",
+          "ticks": 105,
+          "cpu_percent_one_core": 0.058323239321847034,
+          "context_switches_per_second": 21.01969545159367
+        },
+        {
+          "thread": "8488:8488:302004",
+          "name": "reborn",
+          "ticks": 1447,
+          "cpu_percent_one_core": 0.8037497837972634,
+          "context_switches_per_second": 21.01969545159367
+        },
+        {
+          "thread": "4475:4475:180418",
+          "name": "y2-bt-reconnect",
+          "ticks": 283,
+          "cpu_percent_one_core": 0.15719501645793058,
+          "context_switches_per_second": 19.22056238337022
+        },
+        {
+          "thread": "410:410:582",
+          "name": "python3",
+          "ticks": 2147,
+          "cpu_percent_one_core": 1.1925713792762436,
+          "context_switches_per_second": 9.483358713732327
+        },
+        {
+          "thread": "359:359:510",
+          "name": "python3",
+          "ticks": 2190,
+          "cpu_percent_one_core": 1.2164561344270952,
+          "context_switches_per_second": 6.956018343118957
+        },
+        {
+          "thread": "55:55:26",
+          "name": "sugov:0",
+          "ticks": 195,
+          "cpu_percent_one_core": 0.10831458731200164,
+          "context_switches_per_second": 5.6262484865808435
+        },
+        {
+          "thread": "8488:8502:302024",
+          "name": "avrcp",
+          "ticks": 124,
+          "cpu_percent_one_core": 0.06887696834199078,
+          "context_switches_per_second": 5.355184288589784
+        },
+        {
+          "thread": "59:59:26",
+          "name": "kworker/u21:0-y2-charger",
+          "ticks": 192,
+          "cpu_percent_one_core": 0.10664820904566315,
+          "context_switches_per_second": 4.891375671125571
+        },
+        {
+          "thread": "493:493:759",
+          "name": "kworker/u22:1-y2-idle-demand",
+          "ticks": 35,
+          "cpu_percent_one_core": 0.019441079773949013,
+          "context_switches_per_second": 3.8487783358197913
+        },
+        {
+          "thread": "8488:8501:302024",
+          "name": "watchdog",
+          "ticks": 1761,
+          "cpu_percent_one_core": 0.9781640423406917,
+          "context_switches_per_second": 3.0755788202387335
+        },
+        {
+          "thread": "8488:8493:302023",
+          "name": "playback",
+          "ticks": 23,
+          "cpu_percent_one_core": 0.012775566708595065,
+          "context_switches_per_second": 2.0090967297821023
+        },
+        {
+          "thread": "8488:8494:302023",
+          "name": "audio",
+          "ticks": 22,
+          "cpu_percent_one_core": 0.012220107286482236,
+          "context_switches_per_second": 1.9940993253850556
+        },
+        {
+          "thread": "397:397:577",
+          "name": "python3",
+          "ticks": 1089,
+          "cpu_percent_one_core": 0.6048953106808707,
+          "context_switches_per_second": 1.947996193349691
+        },
+        {
+          "thread": "389:389:576",
+          "name": "connectivity",
+          "ticks": 113,
+          "cpu_percent_one_core": 0.06276691469874966,
+          "context_switches_per_second": 1.6902630214893384
+        },
+        {
+          "thread": "299:299:378",
+          "name": "y2-observer",
+          "ticks": 149,
+          "cpu_percent_one_core": 0.0827634538948115,
+          "context_switches_per_second": 1.022600796109718
+        },
+        {
+          "thread": "8488:8491:302022",
+          "name": "database",
+          "ticks": 10,
+          "cpu_percent_one_core": 0.005554594221128289,
+          "context_switches_per_second": 1.0148243642001384
+        },
+        {
+          "thread": "8488:8492:302022",
+          "name": "scanner",
+          "ticks": 10,
+          "cpu_percent_one_core": 0.005554594221128289,
+          "context_switches_per_second": 1.009825229401123
+        },
+        {
+          "thread": "372:372:566",
+          "name": "dbus-daemon",
+          "ticks": 62,
+          "cpu_percent_one_core": 0.03443848417099539,
+          "context_switches_per_second": 0.8904014536468647
+        },
+        {
+          "thread": "8488:8495:302023",
+          "name": "wifi",
+          "ticks": 73,
+          "cpu_percent_one_core": 0.04054853781423651,
+          "context_switches_per_second": 0.6726613601786358
+        },
+        {
+          "thread": "706:706:1743",
+          "name": "wpa_supplicant",
+          "ticks": 11,
+          "cpu_percent_one_core": 0.006110053643241118,
+          "context_switches_per_second": 0.5282419104293002
+        },
+        {
+          "thread": "125:125:107",
+          "name": "kworker/u17:3-flush-179:0",
+          "ticks": 4,
+          "cpu_percent_one_core": 0.0022218376884513154,
+          "context_switches_per_second": 0.33160927500135884
+        },
+        {
+          "thread": "13:13:0",
+          "name": "ksoftirqd/0",
+          "ticks": 1,
+          "cpu_percent_one_core": 0.0005554594221128289,
+          "context_switches_per_second": 0.2710641979910605
+        },
+        {
+          "thread": "8488:8496:302023",
+          "name": "bluetooth",
+          "ticks": 26,
+          "cpu_percent_one_core": 0.01444194497493355,
+          "context_switches_per_second": 0.26884236030260916
+        }
+      ],
+      "observer": {
+        "pid": 10713,
+        "total_cpu_seconds": 1.8182288450000001,
+        "counter_cpu_seconds": 0.5710323070000002,
+        "counter_collection_seconds": 0.6124266930009981,
+        "max_rss_kib": 11084,
+        "note": "Endpoint counter skew is bounded by collection time; descriptions are outside the window."
+      },
+      "condition_limit": "Installed USB02; original components restored; PC charging, radios runtime off, paused/dark; DRM WARN taint 512, C3 quarantined. Two brief SSH read probes occurred during the interval. This is a charging baseline, not optimized battery-only endurance."
     }
   ],
   "matrix": {
@@ -5128,7 +6186,43 @@
     "2_hour": false,
     "overnight_optimized": false
   },
-  "candidate": null,
+  "candidate": {
+    "path": "/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-power-final-candidate",
+    "release": "1.0.0-platform-v1-power-final-candidate.1",
+    "build": "Y2LINUX-PLATFORM-V1-POWER-FINAL-01",
+    "kernel": "6.18.0-y2linux-platform-v1-power-final-01",
+    "rootfs": "2025.02.18-platform-v1.27",
+    "y2linux_commit": "fedc005ba68b3f5020a45258e38d641aa191b12a",
+    "reborn_commit": "ccf450ac1388228dbd859318a05e13adf667c9aa",
+    "payloads": {
+      "BOOTIMG.img": {
+        "file": "BOOTIMG.img",
+        "size_bytes": 7239680,
+        "sha256": "716c686064764112310e0d1ef621d0308fafd4054650d57eb8b74d35e6fb2109"
+      },
+      "Y2ROOT.img": {
+        "file": "Y2ROOT.img",
+        "size_bytes": 536870912,
+        "sha256": "a23a03b8ee87492edca986b59e95b83ae41227204c7894a90df12245c822627d"
+      }
+    },
+    "selected_partitions": [
+      "BOOTIMG",
+      "ANDROID"
+    ],
+    "preserve_y2data": true,
+    "flashed_by_agent": false,
+    "pushed_by_agent": false,
+    "current_candidate_physical_qualified": false,
+    "source_ancestry": {
+      "verified": true,
+      "base_candidate_path": "/home/luca/Dokumente/Code/worktrees/platform-v1-usb-final/Y2Linux/out/y2linux-platform-v1-usb-validation-02",
+      "base_y2linux_commit": "0cb779267ca90740853dc02695166d75f36faa29",
+      "base_reborn_commit": "2444e0f65811e688250a8cd069a57dd780b2d6d3",
+      "usb_worktree_head_matches_base": true,
+      "usb_worktree_uncommitted_files": "Host mtpbench, lab tools and USB documentation; no changed production firmware source. Preserved in owner worktree."
+    }
+  },
   "verdict": "MORE_WORK_REQUIRED",
   "journal": {
     "period_seconds": 300,
@@ -5148,6 +6242,103 @@
       "runtime_pm",
       "clock_blockers"
     ],
-    "hardware_collector_cost_measured": false
-  }
+    "hardware_collector_cost_measured": true,
+    "collector_samples": 5,
+    "mean_collector_cpu_seconds": 0.08885533940000004,
+    "largest_collector_json_bytes": 1847,
+    "mean_one_core_cpu_percent_at_300s": 0.02961844646666668,
+    "persistent_write_cost_measured": false
+  },
+  "software_validation": {
+    "schema": "org.y2linux.power-candidate-validation/v1",
+    "versions": {
+      "release_version": "1.0.0-platform-v1-power-final-candidate.1",
+      "rootfs_version": "2025.02.18-platform-v1.27",
+      "build_id": "Y2LINUX-PLATFORM-V1-POWER-FINAL-01",
+      "platform_api_version": 1,
+      "feature_contract_version": 2,
+      "battery_profile_schema": 1,
+      "low_battery_policy_schema": 2,
+      "layout_version": 1,
+      "kernel_version": "6.18.0-y2linux-platform-v1-power-final-01",
+      "data_schema_version": 1,
+      "reborn_version": "0.2.0",
+      "build_git_commit": "fedc005ba68b3f5020a45258e38d641aa191b12a",
+      "reborn_source_commit": "ccf450ac1388228dbd859318a05e13adf667c9aa"
+    },
+    "production_cases": 498,
+    "production_passed": 487,
+    "locked_host_dependency_skips": [
+      "test_fresh_seed_has_only_public_key_and_empty_state (tests.test_first_owner.FirstOwner.test_fresh_seed_has_only_public_key_and_empty_state)",
+      "test_whole_ext4_includes_deleted_private_bytes (tests.test_release_privacy.Privacy.test_whole_ext4_includes_deleted_private_bytes)",
+      "test_real_image_versions_and_compatible_boot_are_required (tests.test_system_update_fallback.OverlayFallback.test_real_image_versions_and_compatible_boot_are_required)",
+      "test_actual_responder_operations_and_descriptors (tests.test_usb_product.USBFiles.test_actual_responder_operations_and_descriptors)",
+      "test_native_observer_private_bus_with_missing_owners_is_not_ready (tests.test_platform_bluetooth.BluetoothObservation.test_native_observer_private_bus_with_missing_owners_is_not_ready)",
+      "test_observer_numeric_manufacturer_keys_and_64_bit_counters_are_valid_json (tests.test_platform_bluetooth.BluetoothObservation.test_observer_numeric_manufacturer_keys_and_64_bit_counters_are_valid_json)",
+      "test_reconnect_signal_cache_intents_and_bounded_recovery (tests.test_platform_bluetooth.BluetoothObservation.test_reconnect_signal_cache_intents_and_bounded_recovery)",
+      "test_actual_alsa_null_constraints_do_not_claim_hardware (tests.test_platform_evidence.EvidenceTests.test_actual_alsa_null_constraints_do_not_claim_hardware)",
+      "test_exfat_read_only_checker_preserves_new_image (tests.test_filesystems.Filesystems.test_exfat_read_only_checker_preserves_new_image)",
+      "test_ext4_read_only_checker_preserves_new_image (tests.test_filesystems.Filesystems.test_ext4_read_only_checker_preserves_new_image)",
+      "test_fat32_unicode_long_names_hashes_and_read_only_dirty_check (tests.test_filesystems.Filesystems.test_fat32_unicode_long_names_hashes_and_read_only_dirty_check)"
+    ],
+    "native_dependency_cases": 59,
+    "all_dependency_skips_covered": true,
+    "reborn_workspace_tests": 326,
+    "installed_arm_modules": 34,
+    "elf_files": 384,
+    "elf_dependency_edges": 1411,
+    "current_candidate_physical": "NOT_RUN",
+    "endurance_qualified": false,
+    "full_resume_qualified": false,
+    "public_distribution_ready": false,
+    "source_pair_rebuilt_after_review_corrections": true,
+    "prior_failed_build_and_cache_path_attempts": "Retained separately; not final successful receipts. Source remains pinned."
+  },
+  "device_restoration": {
+    "boot_id": "e043cb75-9d76-4967-b3a6-1a3396a17dd9",
+    "kernel_taint": 512,
+    "c3_guard_preserved": true,
+    "original_reborn_sha256": "d5a83f0fb8ba8c2d115e71a6003a3bb99031ec6b4b3d9ad087e35dbd1d58472b",
+    "original_mtp_sha256": "8eb4c80bc853a2d8bb23d2309a47a17573aacea477aa5e267ecf458cb2f1e1b7",
+    "original_bluetooth_helper_sha256": "17da38bf8645a2a944664ff50f92c03cefc40666b1c8a82cd702dbe3b042d2cf",
+    "original_bt_python_matches_backup": true,
+    "wifi_saved_on_runtime_restored": true,
+    "bluetooth_saved_off": true,
+    "usb_mtp_ecm_ready": true,
+    "charger_fault": 0,
+    "loaded_modules": [
+      "mediatek_drm"
+    ],
+    "display_owner_observation": "Still black or frozen after short Power wake"
+  },
+  "commits": {
+    "linux_implementation": "bff021e7dc5dc57ed4fe0a3d1ac527a252e6c639",
+    "charger_callback": "ffc1787e76c5b049e39ecbb8f4360c96322d60ea",
+    "journal_counters": "447bc9b4aaab12d68b6f8a2e0c52ab71eef15352",
+    "linux_compiled": "fedc005ba68b3f5020a45258e38d641aa191b12a",
+    "reborn_compiled": "ccf450ac1388228dbd859318a05e13adf667c9aa",
+    "documentation_commit_rule": "Post-build report seal is separate from the compiled source pair."
+  },
+  "primary_sources": [
+    {
+      "url": "https://android.googlesource.com/kernel/mediatek/+/d53dd75c3ff77cac3f5be58fddfe660e94f94d64/drivers/misc/mediatek/power/mt6582/charging_hw_pmic.c",
+      "downloaded_sha256": "a51d5e0974316f7f06c70e31fa57b4131acf23a73b5faf3c04dba954a603be8b"
+    },
+    {
+      "url": "https://android.googlesource.com/kernel/mediatek/+/d53dd75c3ff77cac3f5be58fddfe660e94f94d64/drivers/misc/mediatek/power/mt6582/battery_meter_hal.c",
+      "downloaded_sha256": "f0abff44297fa5613cec5e8e74cd0bfe60b67348156e1df6bf36d5b5b453cc0c"
+    },
+    {
+      "url": "https://android.googlesource.com/kernel/mediatek/+/d53dd75c3ff77cac3f5be58fddfe660e94f94d64/drivers/misc/mediatek/mach/mt6582/include/mach/upmu_hw.h",
+      "downloaded_sha256": "62eb6f463981dbc8aa901927f977b05e8571988a9984ffbf33d6ad8c8007654e"
+    },
+    {
+      "url": "https://android.googlesource.com/kernel/mediatek/+/d53dd75c3ff77cac3f5be58fddfe660e94f94d64/drivers/misc/mediatek/mach/mt6582/mt_cpufreq.c",
+      "downloaded_sha256": "ee1bca6f97bdfebc662bd9cff0621995abd4f1f278e67446da10fead229d8e21"
+    },
+    {
+      "url": "https://android.googlesource.com/kernel/mediatek/+/d53dd75c3ff77cac3f5be58fddfe660e94f94d64/drivers/misc/mediatek/gpio/mt6582/mt_gpio_base_linux.c",
+      "downloaded_sha256": "84390fa885812df40b3b5803485317e24a90599ccaaf966745499f031256cc28"
+    }
+  ]
 }

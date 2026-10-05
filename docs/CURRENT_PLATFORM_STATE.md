@@ -1,5 +1,31 @@
 # Current Y2Linux platform state
 
+## USB02 power investigation / POWER01 owner installation next — 2026-10-05
+
+The actually installed pair is USB-FINAL-02 Linux `0cb7792` / Reborn `2444e0f`,
+root v1.26, not the older baseline identities below. Last night's recorded
+3.400268 V orderly shutdown is real; the owner's 88% UI and retained maximum
+3.920141 V/full=0 do not prove a full starting pack. No system sleep occurred.
+Current recovery boot `e043cb75…` has DRM WARN/taint512, frozen display and safe
+C3 quarantine. A 30-minute PC window gains 3.881469→3.937500 V at the validated
+450 mA configured ceiling/fault0; C2 85.7193%, C3 zero. Original components and
+saved Wi-Fi state are restored; MTP/ECM Ready. Battery capacity/health/current/NTC
+remain unproven.
+
+One source-bound preserving POWER-FINAL-01 candidate is software validated:
+Linux `fedc005ba68b3f5020a45258e38d641aa191b12a` / Reborn
+`ccf450ac1388228dbd859318a05e13adf667c9aa`, kernel
+`6.18.0-y2linux-platform-v1-power-final-01`, root v1.27. It corrects runtime PCM
+PMIC slots, charging C3 admission, first display takeover and measured polling,
+and adds a bounded power/idle journal. Canonical location:
+`out/y2linux-platform-v1-power-final-candidate/`. BOOTIMG/ANDROID only; DATA is
+preserved. No flash/push/main merge has occurred. Full suspend, warning-free
+new-image idle, near-full charge and endurance remain open: **MORE_WORK_REQUIRED**.
+See [the final power report](validation/Y2-PLATFORM-V1-POWER-BATTERY-FINAL.md),
+[machine windows](validation/data/y2-platform-v1-power-final.json) and
+[handoff audit](planning/roadmap-gap-audit.md#power-candidate-owner-handoff--2026-10-05).
+Resume this investigation immediately after the owner confirms installation.
+
 ## Baseline01 physical gate interrupted / USB diagnosis pending — 2026-10-04
 
 Exact installed Baseline01 Linux `98daf3f` / Reborn `9cd12bae`, kernel baseline-01

@@ -1,5 +1,19 @@
 # Platform v1 roadmap
 
+## Power handoff and continuation — 2026-10-05
+
+The [fresh hardware handoff audit](roadmap-gap-audit.md#power-candidate-owner-handoff--2026-10-05)
+records the same WARN-tainted USB02 boot, real incident voltage-floor shutdown,
+seven power windows, restored original components and a successful 30-minute PC
+charge trend. The single preserving POWER-FINAL-01 pair is built, software/package
+validated and source sealed from Linux fedc005 / Reborn ccf450a. Yesterday's USB
+work and all electrical/data/memory guards remain. Owner installation is the next
+smallest blocker; the agent does not flash or push. Platform 1.0 remains PARTIAL.
+Continue with exact installed identity and clean display/PMIC admission, the same
+A–J matrix, near-full charging, staged and actual same-boot RTC/Power wake, and
+five-/30-minute/two-hour/overnight acceptance. No automatic suspend, endurance,
+battery degradation or readiness claim precedes those results.
+
 ## Power candidate preparation — 2026-10-05
 
 The [build-boundary audit](roadmap-gap-audit.md#power-candidate-build-admission--2026-10-05)
