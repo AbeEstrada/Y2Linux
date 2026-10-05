@@ -172,10 +172,11 @@ static int y2_charge_sample(struct y2_charger *c)
 
 static int y2_wait_source(void *context, unsigned ms)
 {
+	struct y2_charger *c = context;
 	unsigned value;
 	int ret;
 	msleep(ms);
-	ret = regmap_read(context, 0, &value);
+	ret = regmap_read(c->map, 0, &value);
 	return ret ? ret : value & BIT(5) ? 0 : -ENODEV;
 }
 

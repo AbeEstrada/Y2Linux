@@ -166,7 +166,10 @@ struct iio_channel {int raw;};struct power_supply {int budget;};
 struct delayed_work {int dummy;};struct notifier_block {int dummy;};
 struct mutex {int dummy;};struct workqueue_struct {int dummy;};
 union power_supply_propval {int intval;};
-static int regmap_read(struct regmap *m,unsigned r,unsigned *v){return io_read(m,r,v);}
+static struct regmap map_identity;
+static int regmap_read(struct regmap *m,unsigned r,unsigned *v){assert(m==&map_identity);return io_read(m,r,v);}
+static int regmap_update_bits(struct regmap *m,unsigned r,unsigned mask,unsigned v){assert(m==&map_identity);return io_update(m,r,mask,v,0);}
+static int regmap_write_bits(struct regmap *m,unsigned r,unsigned mask,unsigned v){assert(m==&map_identity);return io_update(m,r,mask,v,1);}
 static struct power_supply supply={500000};
 static int source_kind, bc_step, phy_error, removed_at_wait, waits;
 static bool phy_owned;
@@ -194,46 +197,47 @@ static bool charger_dormant_blocked=true;
 #define dev_err_ratelimited(...) ((void)0)
 #define dev_info(...) ((void)0)
 ''' + declarations + ''.join(function(s,n) for n in (
-            'y2_charge_awake','y2_charger_inhibit','y2_charge_account_now',
+            'y2_charge_read','y2_charge_update','y2_charge_mismatch','y2_charge_awake','y2_charger_inhibit','y2_charge_account_now',
             'y2_charge_sample','y2_wait_source','y2_charger_detect','y2_charger_target','y2_charger_sample_fault','y2_charger_run')) + r'''
 static struct device dev;
 static struct iio_channel bat={17000},baton={10388},isense={17000},die={25000};
-static struct y2_charger charger(void){
- return (struct y2_charger){.charge_ceiling_ua=650000,.dev=&dev,.io=io,.battery=&bat,.baton=&baton,.isense=&isense,.die=&die,.input=&supply};
+static void charger(struct y2_charger *c){
+ *c=(struct y2_charger){.map=&map_identity,.charge_ceiling_ua=650000,.dev=&dev,.io=io,.battery=&bat,.baton=&baton,.isense=&isense,.die=&die,.input=&supply};
+ c->io=(struct y2_charge_io){c,y2_charge_read,y2_charge_update,y2_charge_mismatch};
 }
 int main(void){
- reset();struct y2_charger c=charger();
+ reset();struct y2_charger c;charger(&c);
  y2_charger_run(&c);assert(c.active && dev.awake && charger_dormant_blocked && !c.fault && c.pets==1);
  unsigned end=operations;
  /* Every initial prepare/sample/enable/service failure reaches inhibit. */
  for(unsigned fail=1;fail<=end;fail++) {
-  reset();c=charger();fail_at=fail;
+  reset();charger(&c);fail_at=fail;
   y2_charger_run(&c);
   assert(!c.active && !(regs[0]&0x18));
   assert(c.fault && c.status!=POWER_SUPPLY_STATUS_CHARGING);
  }
- reset();c=charger();y2_charger_run(&c);
+ reset();charger(&c);y2_charger_run(&c);
  clock_ms+=1000;y2_charger_run(&c);assert(c.active && c.pets==2);
  unsigned active_ops=operations-end;
  for(unsigned fail=1;fail<=active_ops;fail++) {
-  reset();c=charger();y2_charger_run(&c);
+  reset();charger(&c);y2_charger_run(&c);
   fail_at=operations+fail;clock_ms+=1000;y2_charger_run(&c);
   assert(!c.active && !(regs[0]&0x18) && c.fault);
  }
  /* SDP reset / USB suspend inhibits; 100mA budget permits only 70mA. */
  int budgets[]={0,2000,8000};
  for(unsigned i=0;i<3;i++) {
-  reset();c=charger();supply.budget=budgets[i];y2_charger_run(&c);
+  reset();charger(&c);supply.budget=budgets[i];y2_charger_run(&c);
   assert(!c.active && !starts);
  }
  int ordinary[]={100000,499999,500000,-1};
  unsigned currents[]={70000,70000,450000,70000};
  for(unsigned i=0;i<4;i++) {
-  reset();c=charger();supply.budget=ordinary[i];y2_charger_run(&c);
+  reset();charger(&c);supply.budget=ordinary[i];y2_charger_run(&c);
   assert(c.active && c.charge_ua==currents[i]);
  }
  supply.budget=500000;
- reset();c=charger();y2_charger_run(&c);supply.budget=2000;
+ reset();charger(&c);y2_charger_run(&c);supply.budget=2000;
  clock_ms+=1000;y2_charger_run(&c);assert(!c.active && !c.fault && !dev.awake && !charger_dormant_blocked);
  supply.budget=500000;clock_ms+=1000;y2_charger_run(&c);assert(c.active && starts==2);
  regs[0]&=~0x20;clock_ms+=1000;y2_charger_run(&c);
@@ -251,16 +255,16 @@ int main(void){
  unsigned faultregs[]={0,0xc,0xe,0x44,0x1e};
  unsigned faultbits[]={0x80,0x40,0x1000,0x100,4};
  for(unsigned i=0;i<5;i++) {
-  reset();c=charger();y2_charger_run(&c);regs[faultregs[i]/2]|=faultbits[i];
+  reset();charger(&c);y2_charger_run(&c);regs[faultregs[i]/2]|=faultbits[i];
   clock_ms+=1000;y2_charger_run(&c);assert(!c.active && c.fault);
  }
  /* A configured 500 mA host keeps the validated 450 mA PMIC profile
   * below 3.2 V; the old 70 mA deep-discharge clamp is forbidden. */
  bat.raw=14000;source_kind=0;supply.budget=500000;
- reset();c=charger();y2_charger_run(&c);
+ reset();charger(&c);y2_charger_run(&c);
  assert(c.active && c.charge_ua==Y2_DEEP_DISCHARGE_MAX_UA);
  bat.raw=17000;
- reset();c=charger();y2_charger_run(&c);persistent=1;
+ reset();charger(&c);y2_charger_run(&c);persistent=1;
  clock_ms+=1000;y2_charger_run(&c);
  assert(c.stop_error && dev.awake && charger_dormant_blocked && (regs[0x1a/2]&0x10)); /* never disable watchdog on unknown engine */
  persistent=0;clock_ms+=1000;y2_charger_run(&c);assert(!c.active && !dev.awake);
@@ -269,22 +273,22 @@ int main(void){
  source_kind=4;supply.budget=0;
  int raws[]={14000,15000,17000};unsigned levels[]={450000,450000,650000};
  for(unsigned i=0;i<3;i++) {
-  reset();c=charger();bat.raw=raws[i];y2_charger_run(&c);
+  reset();charger(&c);bat.raw=raws[i];y2_charger_run(&c);
   assert(c.active && c.source==Y2_SOURCE_DCP && c.charge_ua==levels[i]);
  }
  bat.raw=17000;source_kind=0;supply.budget=500000;
  /* A busy PHY defers classification and leaves engines off; never guesses DCP. */
- reset();c=charger();phy_error=-EAGAIN;y2_charger_run(&c);
+ reset();charger(&c);phy_error=-EAGAIN;y2_charger_run(&c);
  assert(!c.active && !c.source_valid && !c.fault && !phy_owned);
  phy_error=0;clock_ms+=1000;y2_charger_run(&c);assert(c.active);
  /* A PHY readback failure latches a SOURCE fault (charging stays inhibited), but a
   * classification error is retried a bounded number of times, 2 s apart, instead of
   * waiting for a cable removal: this was the "second connect never registers" lock-up. */
- reset();c=charger();phy_error=-EIO;y2_charger_run(&c);
+ reset();charger(&c);phy_error=-EIO;y2_charger_run(&c);
  assert(!c.active && c.fault==Y2_FAULT_SOURCE && !phy_owned);
  phy_error=0;clock_ms+=1000;y2_charger_run(&c);assert(!c.active && c.fault==Y2_FAULT_SOURCE);
  clock_ms+=1500;y2_charger_run(&c);assert(c.active && !c.fault && c.source_valid);
- reset();c=charger();phy_error=-EIO;y2_charger_run(&c);
+ reset();charger(&c);phy_error=-EIO;y2_charger_run(&c);
  for(unsigned n=0;n<8;n++){clock_ms+=2100;y2_charger_run(&c);}
  assert(!c.active && c.fault==Y2_FAULT_SOURCE && c.source_retries==Y2_SOURCE_RETRIES);
  phy_error=0;clock_ms+=2100;y2_charger_run(&c);assert(!c.active && c.fault==Y2_FAULT_SOURCE);
@@ -292,15 +296,15 @@ int main(void){
  regs[0]|=0x20;clock_ms+=1000;y2_charger_run(&c);assert(c.active);
  /* Removal at every BC settling stage must inhibit and release the PHY. */
  for(unsigned n=1;n<=4;n++) {
-  reset();c=charger();waits=0;removed_at_wait=n;y2_charger_run(&c);
+  reset();charger(&c);waits=0;removed_at_wait=n;y2_charger_run(&c);
   assert(!c.active && !c.source_valid && !phy_owned && !(regs[0]&0x18));
  }
  removed_at_wait=0;
  /* Full requires active CV confirmations; high voltage at insertion is
   * merely a safe hold. Recharge must wait for sustained hysteresis. */
- reset();c=charger();bat.raw=19001;y2_charger_run(&c);
+ reset();charger(&c);bat.raw=19001;y2_charger_run(&c);
  assert(c.cycle.hold && !c.cycle.full && c.status==POWER_SUPPLY_STATUS_NOT_CHARGING);
- reset();c=charger();bat.raw=17000;y2_charger_run(&c);
+ reset();charger(&c);bat.raw=17000;y2_charger_run(&c);
  bat.raw=19001; /* 4.175V ADC crossing, CV comparator deliberately absent */
  clock_ms+=1000;y2_charger_run(&c);
  assert(!c.active && c.cycle.hold && !c.fault && !c.cycle.full);
@@ -321,7 +325,7 @@ int main(void){
  assert(!c.active && c.fault && !c.cycle.full);
  /* Capture BOTH distinct hardware detector paths before inhibit changes CHR. */
  for(unsigned which=0;which<2;which++) {
-  reset();c=charger();bat.raw=17000;y2_charger_run(&c);
+  reset();charger(&c);bat.raw=17000;y2_charger_run(&c);
   regs[which?0xc/2:0]|=which?0x40:0x80;
   clock_ms+=1000;y2_charger_run(&c);
   assert(!c.active && (c.first_fault&Y2_FAULT_OVP));
@@ -329,7 +333,7 @@ int main(void){
   regs[0]&=~0x20;clock_ms+=1000;y2_charger_run(&c);assert(c.fault);
  }
  bat.raw=17000;
- reset();c=charger();c.cycle.total=86400;c.cycle.timed_out=1;
+ reset();charger(&c);c.cycle.total=86400;c.cycle.timed_out=1;
  y2_charger_run(&c);assert(!c.active && (c.fault&Y2_FAULT_TIMEOUT));
 }
 ''')
