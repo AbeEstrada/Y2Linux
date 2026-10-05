@@ -190,6 +190,16 @@
         loader@81800000 { reg = <0x81800000 0x02800000>; no-map; };
         /* Both stock and donor connectivity locations stay unavailable. */
         radio_reserved: high-owned@bdf00000 { reg = <0xbdf00000 0x02100000>; no-map; };
+        /* Crash/stall evidence only: 1 MiB below the radio window, former plain RAM.
+         * Whether this board's DRAM survives the RGU warm reset is unproven; an
+         * empty pstore after reset means it does not and loses nothing. */
+        ramoops@bde00000 {
+            compatible = "ramoops";
+            reg = <0xbde00000 0x00100000>;
+            record-size = <0x10000>;
+            console-size = <0x80000>;
+            no-map;
+        };
     };
     cpus {
         enable-method = "innioasis,y2-smp";

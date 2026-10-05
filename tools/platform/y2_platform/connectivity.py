@@ -12,6 +12,10 @@ from .ssh import AddressEvents
 HELPERS = {'calibration': '/usr/sbin/y2-calibration', 'wpa': '/usr/sbin/wpa_supplicant',
            'bluealsa': '/usr/bin/bluealsad', 'reconnect': '/usr/sbin/y2-bt-reconnect'}
 HEALTH_S = 30
+# Without this the supplicant rescans every ~5 s forever while the saved AP is
+# absent (measured: 11 active scans/min, ~7 Wi-Fi IRQ/s). Exponential backoff to
+# two minutes bounds that; association with a present AP is unaffected.
+AUTOSCAN = 'exponential:2:120'
 
 
 def alive(ctx, name, binary):
@@ -102,6 +106,9 @@ class Supervisor:
             listed = ctx.command(['wpa_cli', '-g', '/run/wpa_supplicant/global', 'interface_list'], timeout=2)
             exists = listed.get('ok') and 'wlan0' in (listed.get('output') or '').splitlines()
         if exists:
+            # Runtime-only supplicant setting, re-applied whenever the interface
+            # is (re)added; best effort, never blocks the action-hook attach.
+            ctx.command(['wpa_cli', '-i', 'wlan0', 'autoscan', AUTOSCAN], timeout=2)
             action = ctx.command(['wpa_cli', '-i', 'wlan0', '-a', '/usr/libexec/y2/wpa-event',
                                   '-B', '-P', '/run/y2/wifi-action.pid'], timeout=3)
             self.attached = action.get('ok') is True

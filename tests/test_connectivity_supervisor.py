@@ -63,13 +63,15 @@ class ConnectivitySupervisor(unittest.TestCase):
     def test_warm_restart_reuses_supplicant_interface_and_action_hook(self):
         (self.root/'sys/class/net/wlan0').mkdir()
         self.answers = [{'ok': False, 'output': 'FAIL'}, {'ok': True, 'output': 'wlan0'},
-                        {'ok': True, 'output': ''}]
+                        {'ok': True, 'output': 'OK'}, {'ok': True, 'output': ''}]
         self.monitor.interface(0)
         self.assertTrue(self.monitor.attached)
+        # A missing AP must back off its scans instead of rescanning every ~5 s.
+        self.assertEqual(self.calls[-2], ['wpa_cli','-i','wlan0','autoscan','exponential:2:120'])
         self.assertEqual(self.calls[-1], ['wpa_cli','-i','wlan0','-a',
                          '/usr/libexec/y2/wpa-event','-B','-P','/run/y2/wifi-action.pid'])
         self.monitor.interface(60)
-        self.assertEqual(len(self.calls), 3)
+        self.assertEqual(len(self.calls), 4)
 
     def test_netdev_removal_runs_disconnect_cleanup_once(self):
         self.monitor.attached = True

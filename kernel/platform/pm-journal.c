@@ -18,6 +18,14 @@
 #include <linux/suspend.h>
 #include <linux/math64.h>
 #include <linux/sched/clock.h>
+#include <linux/sched/signal.h>
+#include <linux/workqueue.h>
+#include <linux/kdebug.h>
+#include <linux/notifier.h>
+#include <linux/panic_notifier.h>
+#include <linux/irqnr.h>
+#include <linux/irqdesc.h>
+#include <linux/kernel_stat.h>
 #include "pm-journal.h"
 #include "pm-journal-policy.h"
 #define Y2_PM_PHYS 0x0010dc00
@@ -26,6 +34,7 @@ static unsigned journal_record[Y2_PM_WORDS], previous[Y2_PM_WORDS], slot;
 static unsigned previous_reset_entry;
 static DEFINE_RAW_SPINLOCK(journal_lock);
 static bool ready;
+static void thaw_stall_mark(unsigned stage);
 /* Retained device-callback ring and what the previous boot left in SRAM. */
 static unsigned ring_sequence;
 static unsigned previous_ring[Y2_PM_RING_ENTRIES][Y2_PM_RING_WORDS];
@@ -221,6 +230,7 @@ void y2_pm_mark(unsigned stage, int error)
 	/* Timed stage entry interleaved with the callback trail. */
 	ring_put(stage << 16 | Y2_PM_PHASE_MARK << 8 | 1, error, NULL);
 	raw_spin_unlock_irqrestore(&journal_lock, flags);
+	thaw_stall_mark(stage);
 	/* Stage progress extends the backstop; a stall of its full period resets. */
 	y2_pm_backstop_ping();
 }
@@ -610,6 +620,81 @@ static ssize_t selftest_store(struct kobject *k, struct kobj_attribute *a,
 	unlock_system_sleep(sleep_flags);
 	return failure ? -EIO : size;
 }
+/* Post-resume stall evidence. A reset-return that completes every device
+ * callback can still stop before FILESYSTEMS_THAWED. If that mark is not
+ * reached within 3 s (then 15 s), keep a compact record in the existing ring:
+ * the suspending task's wait symbol (wchan, resolved offline against the
+ * build's System.map), up to five uninterruptible tasks, and the MMC
+ * interrupt counts. No timer or I/O is added to any normal path. */
+static struct delayed_work thaw_stall_work;
+static atomic_t thaw_stall_armed = ATOMIC_INIT(0);
+static unsigned thaw_stall_round;
+static pid_t thaw_suspender;
+static void thaw_stall_sample(struct work_struct *work)
+{
+	struct task_struct *g, *t, *s;
+	unsigned reported = 0, blocked = 0, irq;
+	char name[Y2_PM_RING_NAME];
+	if (!atomic_read(&thaw_stall_armed))
+		return;
+	y2_pm_note("thaw_stall", ++thaw_stall_round);
+	rcu_read_lock();
+	s = find_task_by_vpid(READ_ONCE(thaw_suspender));
+	if (s) {
+		snprintf(name, sizeof(name), "S:%s", s->comm);
+		y2_pm_note(name, (int)get_wchan(s));
+	}
+	for_each_process_thread(g, t) {
+		if (!(READ_ONCE(t->__state) & TASK_UNINTERRUPTIBLE))
+			continue;
+		blocked++;
+		if (t != s && reported < 5) {
+			snprintf(name, sizeof(name), "D:%s", t->comm);
+			y2_pm_note(name, (int)get_wchan(t));
+			reported++;
+		}
+	}
+	rcu_read_unlock();
+	y2_pm_note("thaw_blocked", blocked);
+	for (irq = 0; irq < 512; irq++) { /* sparse IRQ numbers; absent ones return NULL */
+		struct irq_desc *desc = irq_to_desc(irq);
+		if (desc && desc->action && desc->action->name && strstr(desc->action->name, ".mmc")) {
+			snprintf(name, sizeof(name), "I:%s", desc->action->name);
+			y2_pm_note(name, (int)kstat_irqs_usr(irq));
+		}
+	}
+	if (thaw_stall_round < 2 && atomic_read(&thaw_stall_armed))
+		schedule_delayed_work(&thaw_stall_work, 12 * HZ);
+}
+static void thaw_stall_mark(unsigned stage)
+{
+	if (stage == Y2_PM_TASKS_THAWED) {
+		WRITE_ONCE(thaw_suspender, current->pid);
+		thaw_stall_round = 0;
+		atomic_set(&thaw_stall_armed, 1);
+		mod_delayed_work(system_wq, &thaw_stall_work, 3 * HZ);
+	} else if (stage == Y2_PM_FILESYSTEMS_THAWED || stage == Y2_PM_ABORTED) {
+		atomic_set(&thaw_stall_armed, 0);
+		cancel_delayed_work(&thaw_stall_work);
+	}
+}
+/* A crash after resume otherwise looks like a hang until the backstop resets. */
+static int y2_pm_die(struct notifier_block *nb, unsigned long cmd, void *data)
+{
+	struct die_args *args = data;
+	if (cmd == DIE_OOPS && args->regs) {
+		y2_pm_note("oops_pc", (int)args->regs->ARM_pc);
+		y2_pm_note("oops_lr", (int)args->regs->ARM_lr);
+	}
+	return NOTIFY_DONE;
+}
+static int y2_pm_panic(struct notifier_block *nb, unsigned long cmd, void *data)
+{
+	y2_pm_note("panic", 0);
+	return NOTIFY_DONE;
+}
+static struct notifier_block y2_pm_die_nb = { .notifier_call = y2_pm_die };
+static struct notifier_block y2_pm_panic_nb = { .notifier_call = y2_pm_panic };
 static struct kobj_attribute state_attr = __ATTR_RO(state),
 			     previous_attr = __ATTR_RO(previous),
 			     devices_attr = __ATTR_RO(devices),
@@ -664,8 +749,12 @@ static int __init journal_init(void)
 		iounmap(journal);
 		journal = NULL;
 		release_mem_region(Y2_PM_PHYS, Y2_PM_REGION);
-	} else
+	} else {
+		INIT_DELAYED_WORK(&thaw_stall_work, thaw_stall_sample);
+		register_die_notifier(&y2_pm_die_nb);
+		atomic_notifier_chain_register(&panic_notifier_list, &y2_pm_panic_nb);
 		ready = true;
+	}
 	return ret;
 }
 subsys_initcall(journal_init);
