@@ -1,391 +1,484 @@
-# Y2 Platform 1.0 power / battery final investigation
+# Y2 Platform 1.0 power / battery investigation
 
-2026-10-05. **IN_PROGRESS; MORE_WORK_REQUIRED.** Hardware corrections need owner
-installation; endurance and full-suspend acceptance remain open.
-Machine evidence: [power report](data/y2-platform-v1-power-final.json).
-Private raw incident/media/network receipts remain ignored and are not exported.
+2026-10-05. **IN_PROGRESS; MORE_WORK_REQUIRED.** The installed USB02 firmware has
+confirmed software defects. A corrected kernel requires owner installation;
+healthy-display, full-suspend and endurance qualification remain open.
+The [machine report](data/y2-platform-v1-power-final.json) holds sanitized windows.
+Private raw incident, network and media evidence stays ignored and is not exported.
 
 ## 1. INSTALLED FIRMWARE IDENTITY
 
-SSH, persisted boot records and candidate metadata identify USB-FINAL-02, release
-1.0.0-platform-v1-usb-final-candidate.2, Linux0cb779267ca90740853dc02695166d75f36faa29 /
-Reborn2444e0f65811e688250a8cd069a57dd780b2d6d3. Kernel6.18.0-y2linux-platform-v1-usb-final-02;
-root2025.02.18-platform-v1.26; Buildroot2025.02.18. API1, featurecontract2,
-batteryprofile1, lowbatterypolicy2, DATA/layout1. mediatek_drm is the sole loaded
-module; radio/audio/power drivers are built in. The actual owner image is the
-USB-final worktree's usb-validation-02, not main or Baseline01.
-BOOTIMG rehash4fea3d1e0fac307d7cb444d38d560e0cbc4f29d5c4e6be574247dc6833047382;
-Y2ROOT fresh rehash ab5a93da8a8642b587fd7eef50dbb76c2026825a90114145110e28b70c0587ce.
-Dedicated paired codex/platform-v1-power-final worktrees start at that exact pair.
-All yesterday's USB source remains inherited.
+| Item | Independently observed identity |
+| --- | --- |
+| Release | `1.0.0-platform-v1-usb-final-candidate.2` |
+| Build | `Y2LINUX-PLATFORM-V1-USB-FINAL-02` |
+| Kernel | `6.18.0-y2linux-platform-v1-usb-final-02` |
+| Linux source | `0cb779267ca90740853dc02695166d75f36faa29` |
+| Reborn source | `2444e0f65811e688250a8cd069a57dd780b2d6d3` |
+| Root / Buildroot | `2025.02.18-platform-v1.26` / `2025.02.18` |
+| API / feature contract / DATA / layout | 1 / 2 / 1 / 1 |
+| Battery profile / low-battery policy | 1 / 2 |
+| Loaded modules | `mediatek_drm`; power, audio and radios are built in |
+
+SSH identity, persisted boots and the USB worktree's `usb-validation-02` manifest
+agree. Fresh image hashes are BOOTIMG
+`4fea3d1e0fac307d7cb444d38d560e0cbc4f29d5c4e6be574247dc6833047382` and Y2ROOT
+`ab5a93da8a8642b587fd7eef50dbb76c2026825a90114145110e28b70c0587ce`.
+Main and older baseline labels do not identify this installed image. Both dedicated
+`codex/platform-v1-power-final` worktrees start at this exact pair. Yesterday's USB
+transport, lifecycle, FIFO, DMA and responder queue changes remain inherited.
+
+The 12-session campaign integrated CPU idle, suspend instrumentation/rollback,
+USB/MTP, charging, radio workers, storage, GPU/input, Reborn performance, precision
+observability, codecs and platform contracts. The installed USB02 descends from
+that integration and subsequent baseline. Historical qualified UART01 C3 is kept
+separate from current-image policy and endurance. Full resume was never promoted
+by staged PM or source availability. Requested release documents, the 233-feature
+matrix and newest subsystem reports were reconstructed before power modifications;
+missing parallel-session/changelog/baseline-integration filenames map to the
+actual final-session and baseline changelog records, not invented documents.
 
 ## 2. OVERNIGHT INCIDENT FORENSICS
 
-Owner reports unplugging around01:00, dead around09:00, then wall charge required
-to power on; the preceding UI value was88%. Incident boot6f2838c9 records voltage
-decline, no full-system suspend and orderly shutdown_complete; no unclean boot.
-Last retained low-voltage sample is3.400268V at monotonic22449.233s. Retained
-maximum is3.920141V, full=0; there is no retained charge termination or>4.1V
-sample. This proves a real voltage-floor shutdown, not merely a displayed0%.
-It does not prove pack protection cutoff, initial usable capacity or that charge
-was full before retained logging. Minute voltage/status records and shutdown
-journal existed, but no exact last-night device/process/clock journal did.
-Wi-Fi was enabled/associated, playback was paused and display had blanked.
-NTP/wall-clock corrections mean durations must use monotonic timestamps.
-Old USB allowance2000uA/sourceSDP is a USB budget/state observation, not measured
-battery current or proof contradicting the owner's cable removal.
-New persistent journal retains events and five-minute snapshots with bounded
-rotation, no extra sampling timer, and a nonblocking writer lock.
+The owner unplugged around 01:00, found the device dead around 09:00, and needed
+wall charging to power it on. The preceding UI value was 88%, not a measured full
+charge. Incident boot `6f2838c9-3b59-4320-b02f-1d02119a2359` records a declining
+battery voltage and an orderly `shutdown_complete`, with no unclean boot.
+The last retained low-voltage sample is **3.400268 V**, monotonic 22449.233 seconds.
+This establishes a real voltage-floor shutdown, beyond a displayed 0%.
+It does not establish battery-protection cutoff or a genuinely full starting pack.
+
+The retained maximum is **3.920141 V**, `full=0`; no retained termination or sample
+above 4.1 V establishes full charge. Voltage declines from approximately 3.8 to
+3.4 V over six hours. Wi-Fi was enabled and associated, playback was paused, and
+screen blanking was recorded. No full-system suspend occurred overnight. Exact
+nighttime clocks, process activity, radio retries and C3 residency were not journaled.
+Wall-clock/NTP jumps prevent assigning precise owner-local timestamps to all rows;
+use monotonic differences. The retained SDP / 2000 uA USB allocation is a source
+state, not pack current or proof contradicting physical cable removal.
+
+The supported explanation is an incompletely evidenced starting charge followed
+by hours of awake runtime idle with Wi-Fi and known recurring userspace/input work.
+A concrete C3/PMIC slot defect also makes precharge reliability suspect, but the
+last night lacks a matching register trace. Its exact energy contribution cannot
+be retroactively measured. Battery degradation is not established.
+
+A new bounded journal captures five-minute snapshots, coalesced state events,
+immediate shutdown/suspend transitions, voltage, charging, radio/USB/backlight,
+actual C1/C2/C3 counters, OPP counters, scheduler totals and runtime PM. It uses
+existing safety samples, adds no timer, rotates two 256 KiB files, and never lets
+write or lock failure disable battery protection.
 
 ## 3. BATTERY MEASUREMENT ARCHITECTURE
 
-BAT0 voltage is a real MT6323 AUXADC observation. SOC is a provisional filtered
-voltage estimate. No validated pack-current, coulomb-counter or pack-temperature
-telemetry is exposed. PMIC ISENSE/BATSNS raw ADC channels exist; board differential
-shunt wiring/calibration is not established, so raw counts cannot become mA.
-A PMIC die temperature is not battery NTC temperature. Nominal capacity is unknown.
-Exact vendor battery net-current/coulomb methods are stubs; its charger differential
-ADC estimate assumes68mOhm, which is not verified on this Y2.
+BAT0 voltage is a real MT6323 AUXADC measurement; absolute calibration has not been
+checked externally. SOC is an estimate from filtered voltage. No validated pack
+current, coulomb count or pack NTC temperature is exposed. BATSNS and ISENSE ADC
+channels exist, but this board's shunt topology, value and offset are unproven.
+Raw differential counts cannot be converted honestly to battery mA. PMIC die
+and CPU die temperatures are distinct from battery temperature. Nominal capacity
+is unknown; no repository label or verified stock capacity supplies a safe value.
 
 ## 4. CHARGER / MT6323 ARCHITECTURE
 
-The built-in charger is the sole policy owner: source/budget selection,1Hz safety
-sampling, watchdog service, checked CV/OVP/thermal/engine state, latching faults,
-voltage-limited full/recharge. Its4-second hardware watchdog and2500ms late-service
-fault remain. USB supplies the allocation; a selected ceiling is not actual pack
-current. DORMANT PCM has autonomous PMIC-wrapper requests outside regmap write
-validation; those requests require correct slot initialization.
-Pinned primary source: [MT6582 vendor tree](https://android.googlesource.com/kernel/mediatek/+/d53dd75c3ff77cac3f5be58fddfe660e94f94d64/).
-The observed protection fault correctly inhibited charging; it was never cleared
-or bypassed experimentally.
+The built-in charger owns source classification, current-ceiling selection,
+checked regulation/protection fields, ADC checks, engine sequencing, watchdog,
+fault latching and voltage-limited hold/recharge. Its safety worker remains 1 Hz;
+the hardware watchdog is four seconds, with a 2500 ms late-service fault.
+USB provides an allocation, not measured current. Active charging holds a wake
+source. Autonomous DORMANT PCM requests bypass normal regmap write validation,
+so their PMIC-wrapper slots must point at VPROC before runtime C3 is admitted.
+
+Primary field/sequence evidence is the pinned
+[MT6582 vendor source](https://android.googlesource.com/kernel/mediatek/+/d53dd75c3ff77cac3f5be58fddfe660e94f94d64/),
+plus exact stock Y2 disassembly retained in [the charging contract](../knowledge/m4-charging.md)
+and [sensor acquisition](../knowledge/m4-battery-acquisition.md).
+The vendor net-current/coulomb methods are stubs; a charger differential estimate
+assumes a 68 milliohm shunt that has not been established on this Y2. Stock's
+constant 25 C public temperature is not a measured NTC. Protections were never
+experimentally bypassed or fault registers cleared to force charging.
 
 ## 5. SOC ALGORITHM
 
-Curve(uV,%):3400000/0,3500000/5,3600000/10,3700000/25,3800000/45,
-3900000/65,4000000/80,4100000/95,4175000/100. Filtering30s,rest120s,
-15mV deadband,75mV charging correction,1percentage-point/minute rate bound.
-ChargerFull plus>=4.160V permits100%. Load sag, relaxation, temperature, pack aging
-and unknown capacity defeat an exact voltage-to-percent mapping. There is no
-source hard88% cap; that owner observation does not prove full. SOC math is
-preserved pending calibrated charge/discharge evidence; drain is not fixed by
-changing the percentage. Fresh same-boot voltage from the protection owner is
-reused by Reborn; stale/absent/invalid records fall back to AUXADC.
+| Voltage, uV | Provisional percent |
+| ---: | ---: |
+| 3400000 | 0 |
+| 3500000 | 5 |
+| 3600000 | 10 |
+| 3700000 | 25 |
+| 3800000 | 45 |
+| 3900000 | 65 |
+| 4000000 | 80 |
+| 4100000 | 95 |
+| 4175000 | 100 |
+
+The implementation filters over 30 seconds, requires 120 seconds of rest, uses a
+15 mV deadband and 75 mV charging correction, and bounds movement to one percentage
+point per minute. Charger Full with at least 4.160 V permits 100%. There is no
+hard 88% cap in source. Voltage sag, relaxation, temperature, aging and unknown
+capacity limit accuracy. The UI observation does not prove termination. SOC math
+is preserved pending calibrated evidence; changing percentages cannot fix drain.
+Reborn now reuses fresh same-boot protection-owner voltage, falling back to AUXADC
+when the record is stale, absent or invalid.
 
 ## 6. SAFE CHARGING LIMITS
 
-Configured maxima: SDP>=500mA allocation450mA; SDP100–499mA70mA;
-SDP<100mA0; DCP/CDP/Apple650mA; unknown70mA. Deep-discharge/prechargeDCP
-is limited450mA. CV4.175V, independent upper guard4.2V. No current/voltage/
-temperature/low-voltage protection limit was raised or disabled.
+| Source / condition | Existing validated configured maximum |
+| --- | ---: |
+| SDP allocation at least 500 mA | 450 mA |
+| SDP allocation 100–499 mA | 70 mA |
+| SDP allocation below 100 mA | Inhibited |
+| Detected DCP / CDP / eligible Apple source | 650 mA |
+| Unknown eligible source | 70 mA |
+| DCP deep-discharge / precharge | 450 mA |
+
+CV stays **4.175 V**, independent upper guard **4.2 V**. Current, voltage,
+temperature and low-voltage limits were not raised or disabled. A programmed
+maximum is not measured actual charging or net battery current.
 
 ## 7. PC USB CHARGING
 
-Live current boot reports SDP,500mA allocation,450mA selected,Charging,fault0,
-positive voltage trend and working ECM/MTP. Baseline return after the first wall
-fault remained latched and did not charge until the one graceful diagnostic-module
-removal/recovery reboot. Current PC charging is a bounded PASS; near-full
-termination and actual charge-current accuracy are not qualified.
+Current boot reports SDP, 500 mA USB allocation, 450 mA selected, Charging and
+fault 0, with positive voltage trend and ECM/MTP available. This is a bounded
+charging pass, not proof of actual mA or near-full termination. The first wall
+fault stayed latched on PC reattachment until the one graceful diagnostic-module
+removal/recovery reboot. The separate 30-minute PC recorder is pending retrieval;
+its frozen-display / C3-quarantined state must remain explicit.
 
 ## 8. WALL CHARGING
 
-First detached DCP window300.620s selected650mA with C3 active; protection
-fault0x80 appeared at monotonic1610.374s:CHR_CON0=0x62 lost HV enable,
-subsequent verified stop and voltage decline. Read-only matching-kernel probe
-found broader regulation-field losses. Second detached DCP window300.299s with
-C3 automatically quarantined charged throughout,3.701513→3.740185V,SOC8→13,
-fault0. The device remained on wall charge beyond each bounded window.
-Different boots limit attribution; the second test is not a matched post-fix result.
-No wall enumeration dependency or MUSB IRQ activity was observed detached.
+| Bounded wall window | First | Second |
+| --- | ---: | ---: |
+| Duration | 300.620 s | 300.299 s |
+| Source / selected maximum | DCP / 650 mA | DCP / 650 mA |
+| C3 policy | Active | Automatically quarantined after DRM WARN |
+| Voltage | Fell after fault | 3.701513 → 3.740185 V |
+| SOC | Not a full-charge proof | 8 → 13% |
+| Outcome | Protection fault 0x80 | Charging throughout, fault 0 |
+
+In the first window, `CHR_CON0=0x62` at monotonic 1610.374 s loses HV-enable,
+followed by verified charging inhibition. A matching read-only diagnostic module
+found wider regulation-field losses. Fault protection worked; it was never bypassed.
+The second test is a different boot and is an isolation observation, not matched
+post-fix proof. Detached wall operation showed no enumeration dependency or
+MUSB interrupt activity. Source current remains a configured ceiling.
 
 ## 9. CPU FREQUENCY
 
-schedutil,598000–1300000kHz. Effective stats record all five OPPs598000,
-747500,1040000,1196000,1300000. Quiet PC windows are predominantly598MHz;
-no evidence of an overnight permanently high-frequency/QoS lock. Exact per-window
-frequency residency is in the JSON report. Safety floor/OPPs are unchanged.
+Governor `schedutil`; minimum 598000, maximum 1300000 kHz. Stats cover all five
+OPPs: 598000, 747500, 1040000, 1196000, 1300000. Quiet PC windows predominantly
+use 598 MHz. There is no evidence of a permanent overnight high-frequency/QoS
+lock. Window frequency deltas are in JSON. OPPs and the existing voltage floor
+are unchanged.
 
 ## 10. CORE PARKING
 
-Natural hotplug parks secondary cores after adaptive post-burst hold; all four
-can remain online during short observer-affected windows. Second wall window
-parked cores around257/262/267s. Heavy endpoint descriptions can trigger demand
-and extend hold, so report online states and per-CPU wall denominators rather
-than infer perfect core utilization. No forced core disable or arbitrary IRQ
-redistribution was applied.
+Natural hotplug parks secondaries after the existing adaptive post-burst hold.
+Observer work can restore demand and prolong this hold. The second wall window
+parked cores around 257/262/267 seconds. Endpoint online states and per-core wall
+denominators are retained; no arbitrary forced offline or IRQ-affinity policy
+was used.
 
 ## 11. C1
 
-Real WFI entries in every recorded idle window. First wall CPU0:14426 entries,
-83.5625%wall residency. Second wall:7471,28.9026%. USB windows have larger C1
-share because live USB owns required clocks. Machine report holds per-CPU counts.
+Real WFI entries occur in recorded windows. CPU0 in first wall window: 14426
+entries, 83.5625% wall residency. Second: 7471 entries, 28.9026%.
+Per-core values and exact denominators are in JSON.
 
 ## 12. C2
 
-Real SLIDLE works. First wall CPU0:1246entries,1.5491%;second wall18690,
-64.4756%. Clock restore safeguards remain. C2 persists during safe charger C3
-exclusion; active watchdog service does not require removing C2.
+SLIDLE works. First wall CPU0: 1246 entries, 1.5491%; second: 18690 entries,
+64.4756%. Existing restore guards remain. C1/C2 remain usable while charging
+excludes C3; the charge watchdog does not require disabling C2.
 
 ## 13. C3
 
-Implementation present and physically entered in the first wall window:2554
-CPU0 entries,11.7177%. This is context-loss DORMANT, not full-system suspend.
-Historical65.245%UART01 evidence is a different workload/image. Current WARN
-boot has0 entries and must remain quarantined.
-A concrete defect is identified: retained480-word PCM requests wrapper slots5/6,
-while normal CPU preparation initializes0–2 only; live5–7 were0:0. Full-suspend
-preparation populated them, but runtime C3 did not call it. Autonomous requests
-can then address charger register0 instead of VPROC. Source now initializes and
-readbacks5–7 to the verified active VPROC bank/selector72(existing1.15V floor)
-before C3 admission. Failed initialization/request checks quarantine C3. Physical
-post-fix proof is pending; no claim that all observed register losses are bus-traced.
+Implementation is present. The first wall window physically records CPU0 2554
+DORMANT entries and 11.7177% residency. Historical UART01 65.245% is a different
+image/workload. Current WARN boot records zero and remains quarantined.
+
+The retained 480-word runtime PCM requests wrapper slots 5/6. Installed normal
+CPU preparation initializes only slots 0–2; live slots 5–7 read **address 0,
+value 0**. Full-suspend preparation would populate them, but runtime C3 does not
+call it. These autonomous requests can address charger register 0 instead of
+VPROC. The candidate initializes and reads back slots 5–7 to the active VPROC
+bank with selector 72, retaining the verified **1.15 V** floor. Failed preparation
+or voltage-owner checks close C3 admission. Source plus live readback proves the
+slot defect; no PMIC bus trace proves every observed register loss resulted from it.
+Physical after-fix proof is required.
 
 ## 14. C3 PRODUCTION POLICY
 
-Installed USB02 fresh healthy boot:Enabled,budget-1,state2disable0. This firmware
-is not the historical fresh-boot budget-zero policy. Overnight logs show startup
-Enabled. After the necessary reboot, DRM WARN/taint512 makes policySkipped,
-reasonkernel_tainted_or_unknown,budget0,state2disable1. That guard was respected.
-Source adds PMIC-slot readiness and active-charger/watchdog prerequisites;
-USB/CONSYS/display/workload/topology/deadline/context/UART/CIRQ guards remain.
-Actual overnight residency is unknown because the old journal lacked counters.
+Installed USB02 fresh healthy boot: **Enabled, budget -1, state2 disable 0**.
+It is not the historical fresh-boot budget-zero configuration. The incident boot
+also logged startup Enabled. The later necessary reboot produced DRM WARN,
+taint 512, and **Skipped / kernel_tainted_or_unknown / budget 0 / disable 1**.
+That guard was respected. Candidate admission adds PMIC-slot readiness and
+active-charger/watchdog exclusion; all UART, timer, topology, CONSYS, USB,
+display, workload, deadline, context and CIRQ guards remain. Actual overnight
+residency is unknown because the prior journal lacked those counters.
 
 ## 15. CPUIDLE BLOCKERS
 
-| Blocker | Owner | Observed idle behavior | Action |
+| Blocker | Owner | Actual idle behavior | Fix / expected behavior |
 | --- | --- | --- | --- |
-| USB clock | MUSB/configfs/ECM | Valid whilePCconfigured; detachedoff/noIRQ | Preserve yesterday's lifecycle |
-| CONN/APDMA/BTIF | Shared CONSYS radios | Wi-FiOn owns clocks; runtimeOff releases | Test radio states; no fake clock gate |
-| Topology | Natural CPU parking | Post-burst adaptive hold | Preserve safe demand restore |
-| Display/vblank warning | DRM first takeover | Reboot warning quarantinesC3 | Checked first-only inheritedOVLstop |
-| PMIC wrapper idle slots | PWRAP/SPM | Slots5–7zero beforeruntimeC3 | Initialize/readbackactivebank1.15V |
-| Active charge watchdog | Charger | Needs1Hz safe service | Explicit DORMANT exclusion;C1/C2remain |
-| AFE/CS43131 | ALSA/DAC | PausedPCMclosed/runtime suspended | Preserve idle release |
-| eMMC/SD | MSDC | Clockgatebetweenrequests; UUIDprobes recurring | CacheUUIDbyfreshmount/diskseq |
-| UART | UARTPIO/SPM ACK | Existing conditionalrequest/ACK | Preserve validated handoff |
-| I2C/input | APT32F/keypad/GPIOkeys | Wheel/keypad IRQquiet; navigation50Hzpoll | No unverified EINT remux |
+| USB clocks | MUSB, ECM, configfs | Required when PC configured; detached off / no IRQ | Preserve current lifecycle and USB data |
+| CONN / APDMA / BTIF | Shared CONSYS | Wi-Fi enabled owns clocks; radio off releases them | No invented clock gate; measure radio matrix |
+| Core topology | Hotplug coordinator | Adaptive post-burst hold | Preserve demand restoration |
+| Display warning | First DRM takeover | Stalled display quarantines C3 | Checked first-only inherited OVL stop; physical proof pending |
+| Idle PMIC slots | PWRAP / SPM | Slots 5–7 uninitialized before runtime C3 | Initialize and verify active VPROC bank / 1.15 V |
+| Active charge watchdog | Charger | Requires safe 1 Hz service | Explicit C3 exclusion; preserve C1/C2 |
+| AFE / CS43131 | ALSA / codec | Paused PCM closed, codec suspended in healthy snapshots | Retain existing idle release |
+| eMMC / SD | MSDC / source observer | Clock gate between requests; recurring UUID probes | Cache UUID using fresh mount and disk sequence identity |
+| UART | UART PIO / SPM | Existing request / ACK ownership | Preserve bounded qualified handoff |
+| Input | APT32F, keypad, GPIO keys | Wheel/keypad IRQ quiet; navigation polls at 50 Hz | Do not guess unsupported EINT routing |
 
-Exact blocker registers/counters for each recorded window are retained privately;
-missing decoded-owner states are not guessed.
+Unknown owner states remain unknown; source availability is not hardware proof.
 
 ## 16. WAKEUP SOURCES
 
-No unique whole-CPU wakeups/s measurement is available; wakeup_sources counts
-system-suspend blockers, not every runtime idle exit. JSON separately reports
-IRQ/s, context-switch/s, per-thread CPU, cpuidle entries/exits and available wakeup
-source deltas. These proxies must not be renamed battery current or CPU wakeups.
+A unique whole-CPU wakeups/s counter is unavailable. `wakeup_sources` covers
+system-suspend wake blockers, not every runtime idle exit. JSON separately keeps
+IRQ rates, context switches, per-thread CPU, cpuidle entry/residency deltas and
+available wakeup-source deltas. They are proxies, not battery mA or unique wakes.
 
 ## 17. IRQ OFFENDERS
 
-Ranked IRQ deltas per window are in the JSON. Timer/IPI/scheduler activity dominates
-the retained short windows; no detached MUSB storm, untouchedwheel/I2C0/keypad
-storm or AFE playback activity was observed. Per-CPU IRQ counters can decrease
-across hotplug; report those discontinuities as unknown rather than fabricated
-negative/overflow event rates. Detailed timer attribution remains for healthy
-post-install windows.
+Timer/IPI/scheduler activity dominates the retained short windows. Detached
+MUSB interrupts were zero; untouched wheel/I2C0/keypad and inactive AFE show no
+storm. JSON ranks per-window IRQ deltas. Hotplug can decrease per-core counters;
+these discontinuities become unknown rates, never negative/overflow event counts.
+More precise timer ownership requires healthy post-install windows.
 
 ## 18. USERSPACE POLLING
 
-Same-boot PC/radiosOff/paused-screenOff60-second comparisons:
+Matched component trials used PC-connected, radios-off, paused/dark 60-second
+windows on the same WARN boot. The table measures thread context switches,
+not uniquely attributable CPU wakeups or battery current.
 
-| Source | Before | Isolated after | Unit |
-| --- | ---: | ---: | --- |
-| MTPio_thread |49.7586|0|threadcontext-switches/s |
-| BThelper main |15.1216|0.1989|threadcontext-switches/s |
-| BThelper gmain |15.6356|0|threadcontext-switches/s |
-| Reborn main |20.1124|NOT_MEASURED|threadcontext-switches/s |
-| Rebornwatchdog |1.2436|NOT_MEASURED|CPU%ofonecore |
+| Offender | Before switches/s | Isolated after switches/s |
+| --- | ---: | ---: |
+| MTP receive thread | 49.7586 | 0 |
+| Bluetooth reconnect main | 15.1216 | 0.1989 |
+| Bluetooth reconnect GLib thread | 15.6356 | 0 |
+| Reborn main | 20.1124 | Physical after measurement pending |
 
-MTP replaces20ms timedcondwait withsignaled blockingwait, preserving32×64KiB
-queue/DMA/FIFO/confinement/cancellation. BThelper watches only privateintentdir,
-not everypower.json publication in/run/y2. Sole reconnect ownership stays.
-SSH now waits on passive rtnetlink plus signal FD, retains5s fresh readiness
-heartbeat, checks stableUSBaddress at60s backstop ratherthan spawningipevery1s;
-address changes/childdeath/termination wakeimmediately. Reborn static/dark waits
-are workload-bound and evdev/control/AVRCP event-driven. No high-frequency new
-telemetry or permanent lab module is shipped.
+MTP now blocks on a signaled condition instead of 20 ms timeout polling, with
+all cancel/stop writers signaling under the same mutex. Bluetooth watches a
+private intent directory instead of unrelated `/run/y2/power.json` writes.
+The sole reconnect owner is preserved. SSH uses passive rtnetlink and signal
+wake descriptors, retaining its five-second readiness heartbeat and a 60-second
+stable-address backstop instead of one-second `ip` subprocesses. Address changes,
+child exit and shutdown still wake it immediately. No polling lab module ships.
 
 ## 19. REBORN IDLE
 
-Baseline main~0.85%onecore/20.11switches/s; watchdog~1.24% due recurring
-source/voltage probes. Source:pauseddark1s bounded wait;litstatic250ms;playing50ms;
-dirtylit34ms framebudget, with evdev/control/AVRCP wake descriptors. UUID caches
-are keyed by live device,mountID,kerneldev/diskseq and boundedfour; every source
-observation retains mount/card/CID revalidation. ADC reuse is freshsameboot<5s
-and positiveonly. AVRCP bus/projection/shutdown descriptorwait removes200ms
-polling; actualremotecommands wakeUI immediately and senderauthorization remains.
-The temporaryARMReborn trial hit the existing stalled DRM commit, controlRPC
-could not answer, so no matched after claim is made. Originalbinary restored;
-healthy image is required to qualify rendering/idle/control responsiveness.
+Before: main approximately 0.85% of one core / 20.11 switches/s; watchdog about
+1.24%, with recurring source/voltage probes. The candidate waits up to one second
+when paused/dark, 250 ms for lit static UI, 50 ms while playing, and 34 ms while
+lit/dirty. Evdev, control and AVRCP descriptors wake it immediately; held keys
+retain 15 ms pacing. AVRCP blocks on bus/state/shutdown descriptors instead of
+200 ms polling. UUID caching is bounded to four fresh mount/device/diskseq keys;
+card/CID/mount admission is still revalidated and failures are never cached.
+Same-boot protection samples younger than five seconds avoid duplicate AUXADC.
+
+A temporary ARM Reborn trial hit the pre-existing stalled DRM commit and its RPC
+could not answer. There is no valid physical after window. The original binary
+was restored and hash verified. ARM and workspace tests do not qualify actual
+rendering, idle power or remote-command responsiveness on the device.
 
 ## 20. DISPLAY / GPU
 
-Healthy first boot screen-off released scanout/Lima/MFG and backlight. Reboot
-firstvblank warnings then repeatedflip/commit/mutex timeout caused owner-visible
-black/frozen UI even after briefPower wake, taint512 andC3safeSkip. DSIprobe
-alreadyparks inheritedDSI, mutexownerclears membership, but OVLclk_enable leaves
-loaderOVL_EN1; config then intentionallyskipsreset toavoidreset-with-enabledSOF
-hang. Source now stops/verifies inheritedOVL/layers onlyatfirstownedclkenable,
-then normalconfig/reset/start. Subsequentliveplanes are unchanged. Native dropped
-write/clockerror/nonY2/live-pathtests pass; actual cold/warmboot fix is NOT_PROVEN.
-No warning suppression, C3 bypass, newtiming/PLL/rails or broadGPU redesign.
+The first healthy boot's dark state released scanout, Lima/MFG and backlight.
+The recovery boot warned in vblank, then timed out in flip/commit/mutex paths;
+the owner confirms black/frozen display even after brief Power. Taint 512 correctly
+quarantines C3. DSI probe parks the loader stream and the mutex owner clears
+membership, but installed OVL clock enable can leave loader EN=1, causing first
+configuration to skip its required reset. The candidate stops and verifies OVL
+and source layers only on first owned clock enable, then uses normal config/start.
+No subsequent live-plane reset, timing/PLL/rail change or warning suppression.
+Native clock/drop-write/non-Y2/subsequent-live-path tests pass; cold/warm physical
+boot repair is **not yet proved**.
 
 ## 21. AUDIO / CS43131
 
-Paused/stopped ALSAPCM is closed; AFE/I2S idle clocks gate andCS43131runtime
-suspends in retained healthy snapshots. No temporaryhighreslabmodule is installed.
-NativeS16/44.1/48 path, buffers/volume/pacing and codecPM rollback instrumentation
-remain. Audio idle/playback matrix and post-full-resume restoration must be rerun
-on the owner-installed warning-free build.
+Healthy paused/stopped snapshots show ALSA PCM closed, AFE/I2S clocks gated and
+CS43131 runtime suspended. No temporary high-resolution lab module was installed.
+Existing S16/44.1/48 paths, volume, buffering and codec PM rollback remain.
+Retest audio idle/playback and post-full-resume restoration on the healthy candidate.
 
 ## 22. WI-FI
 
-Wi-Fi was enabled/associated overnight and validly ownsCONSYS; no stored per-IRQ
-night trace establishes scans/retry count. RuntimeOff removesradio blockers.
-Campaign freshness/30sRSSI/inventory/DNSreuse is inherited. FAST_PSP was historically
-reverted toCAM and cannot be cited as successfulpower saving. On/disconnected/
-connected matched battery-only matrix remains pending; no arbitraryfullmac power
-mode/keepalive or reconnect owner changes were made.
+Incident Wi-Fi was enabled/associated and validly owned CONSYS. Nighttime scan,
+retry and IRQ counts were not retained. Runtime off releases these blockers.
+Campaign freshness, 30-second RSSI, inventory and DNS reuse are inherited. A
+historical FAST_PSP trial was reverted to CAM and cannot count as proven savings.
+Enabled/disconnected/connected battery-only comparisons remain open; no guessed
+fullmac power mode, reconnect or keepalive changes were made.
 
 ## 23. BLUETOOTH
 
-Saved/runtimeOff during recordedisolatedwindows,attempts0/completed0. No peer
-reconnect storm was observed; high helperwake rate came from shared-directory
-inotify notifications. Privateintentdirfix achieves0.199main/0gmain switches/s
-with intent responsiveness preserved by actualnativefixture. Realon/disconnected/
-connectedpeer tests remain pending; no availableheadset is assumed.
+Off during isolated recorded windows, reconnect attempts/completions zero. The
+measured wake load was unrelated directory notifications, not a peer retry storm.
+The private intent directory reduces main to 0.199 switches/s and GLib to zero;
+the actual native fixture preserves intent response. On/disconnected/connected
+peer qualification remains open; an available headset is not assumed.
 
 ## 24. USB
 
-DetachedMUSBbusclockoff,noMUSBIRQ; MTPresponder exits with cable detached, so
-its PC50Hz thread is not by itself the unpluggedovernight cause. Installed USB02
-lifecycle/configfs/MTP+ECM/PIO/DMA/FIFO/32×64KiB ring is inherited unchanged.
-MTPwaitfix passed real16MiB KDEdesktopupload/download withdevice andreturned
-SHA25684ebb5bc9e1e188628f3c87ff3c06906d45b775f2692555efc2be7deb7795696;
-ownedfiledeleted afterwards. ECM/SSH returned after responder replacement in
-sameboot,450mAcharging/no fault. Originalresponder restored andverified.
-Hostinterface wasbusy with desktopowners; none werekilled to force libusb access.
+Detached MUSB bus clock was off and its IRQ delta zero; the responder exits when
+unplugged. Its PC-only 50 Hz receive polling therefore cannot alone explain last
+night's disconnected drain. USB02 lifecycle, DMA/PIO, FIFO, ECM/MTP and 32 × 64 KiB
+queue are inherited. The isolated wait fix passed a real KDE desktop **16 MiB
+upload and download**, with device and returned SHA256
+`84ebb5bc9e1e188628f3c87ff3c06906d45b775f2692555efc2be7deb7795696`.
+Only the owned test file was removed. ECM/SSH returned in the same boot with
+450 mA selected and fault zero. Original responder was restored and hash verified.
+No competing desktop USB process was killed to force a libusb session.
 
 ## 25. STORAGE
 
-Recurring safe UUIDsuperblock probes every2s were traced towatchdog sources().
-Source caches only UUIDby fresh mount/diskseq identity; never caches oldcard
-admission, never skipsCID/currentmount/no-follow checks. Failedprobesare notcached.
-MMCclock/runtime-PM and ext4/journaling remain unchanged; no broadcache drop,
-filesystemreset, artificialwrite suppression ormedia-library modification.
-Persistentjournalsteadywrite cadence is5minutes,rotated2×256KiB.
+Recurring UUID superblock probes every two seconds came from watchdog source
+observations. The candidate caches only the UUID using freshly read mount/device/
+diskseq identity; it preserves CID, mount and no-follow checks. Failed probes are
+not cached. MSDC clocking, filesystem policy, database integrity and runtime PM
+are unchanged. The persistent power journal writes at five-minute cadence in
+steady state; no media rescan, forced cache drop or write suppression was added.
 
 ## 26. INPUT
 
-APT32F is interrupt-driven, oneI2Cread pervaliddataready IRQ, untouchedwheel
-IRQquiet. Hardwarekeypad/PMICPowerare IRQ-driven. Five GPIO navigationkeys remain
-upstreamgpio-keys-polled20ms, a real50Hz runtime-idle limitation. Exactnavigation
-GPIO/EINT mux is not proven; no guessedremux, slowedbuttons or losttransportkeys.
-Fullsuspend wouldfreeze this poll if qualified. Evdev heldkeytiming stays15ms
-whileheld, input/controlarrivalwake staticwait immediately.
+APT32F is interrupt-driven, with an I2C read per valid data-ready IRQ. Untouched
+wheel interrupts are quiet. Keypad and PMIC Power are IRQ-driven. Five GPIO
+navigation buttons still use upstream `gpio-keys-polled` at 20 ms: a real **50 Hz
+runtime-idle limitation**. Current pinctrl supports only established EINT lines;
+exact navigation GPIO-to-EINT routing is not proven, and the pinned vendor GPIO
+map is empty. No guessed remux or slower/lost controls. Qualified full suspend
+would stop that runtime polling; held-key UI pacing remains responsive.
 
 ## 27. TIMERS / RTC
 
-CONFIG_NO_HZ_IDLE andCPU_FREQ_STAT enabled. GPT/localarchitecturaltimer/dormant
-handoff are inherited. Requiredcharger safety/watchdog remains1Hz. Knownoptional
-20msMTP,50msdarkUI and sharedBThelpernotification work is removed in source;
-GPIOnavigation50Hz remains. Actualtimer/IRQ/softirq andcontextdeltas are captured
-at boundedendpoints; no perpetualtimerstats/trace observer runs overnight.
-Awake RTC and realfullsuspend RTC are separate gates.
+NO_HZ_IDLE and CPU_FREQ_STAT are enabled. GPT/local architectural timer/DORMANT
+handoff remain. Required charge safety remains 1 Hz. Optional 20 ms MTP receive,
+50 ms dark UI, 200 ms AVRCP and Bluetooth shared-directory work are addressed in
+source. GPIO navigation at 50 Hz remains. The bounded audit collects endpoint
+IRQ/softirq/context/OPP/idle/process counters without tracing during its interval.
+Awake RTC alarm and full-suspend RTC wake are distinct acceptance gates.
 
 ## 28. FULL SYSTEM SUSPEND
 
-Installedcode includes campaignSPMcontext/BIU/normalPCM/timer/CIRQrestore,
-CS43131rollback/substepjournal andRebornquiescence ACK. Ordinaryproductrequest
-still returnsphysical_qualification_required (orcharger_active). Overnight stayed
-runtimeidle. HistoricalBaseline02 RTC trial watchdogrebooted afterdevice resume:
-DEVICES_RESUMING,wake0x20,PCM596,reset59325253,unmatchedCS43131resumeentry.
-That isFAIL, notsamebootresume. CurrentWARN-tainted/displaystalledboot is unsuitable
-for newfullsuspend. After ownerinstallation:freezer/devices/platform/processors/core,
-thenboundedRTC/Power withbackstop; requirecompletejournal,positiveactualresidency,
-sameboot, restoredUI/audio/USB/storage/radios. No automatic sleep until qualified.
+Installed source includes campaign SPM context, BIU, normal PCM, timer and CIRQ
+restoration, codec PM rollback/substep journaling and Reborn quiescence ACK.
+Ordinary product sleep still refuses with `physical_qualification_required` or
+`charger_active`. Overnight stayed in runtime idle indefinitely.
+Historical Baseline02 RTC trial ended in watchdog reboot: DEVICES_RESUMING,
+wake 0x20, PCM 596, reset stamp 0x59325253, unmatched CS43131 resume entry.
+That is a failure, not same-boot resume. Current tainted/stalled-display boot is
+unsuitable for new full sleep. After installation: freezer, devices, platform,
+processors, core, then bounded RTC and Power wake with existing backstop. Require
+positive actual residency, complete EXIT/restoration, same boot and working UI,
+audio, USB, storage and radios. Automatic product sleep stays off until proven.
 
 ## 29. POWER-BUTTON POLICY
 
-Current shortpausedPower requests guarded fullsleep and mayonlyblank onrefusal;
-playingPowerblanks, darkshortPowerwakesdisplay, longPoweropensshutdownconfirmation.
-It cannot promise deep sleep. No five-/30minute automaticfullsuspend policy is
-activated because samebootwake is still unqualified. PreserveUX while closing
-that hardware gate; onceproven, add bounded paused-inactive sleep withplayback,
-transfer/update/charger busy exclusions and configurabletimeout.
+Paused short Power requests guarded full sleep and may only blank on refusal;
+playing Power blanks, dark short Power wakes, long Power opens the shutdown
+confirmation. Screen-off currently cannot promise deep sleep. No unqualified
+five-/30-minute automatic suspend is activated. After repeated same-boot Power/
+RTC success, add configurable paused-inactive sleep with playback, transfer,
+update, scanner and unsafe charging exclusions. This investigation continues
+through that gate after owner installation.
 
 ## 30. LOW-BATTERY POLICY
 
-Independent3400000uV floor; low3500000/recover3600000;5consecutive1Hz
-samples;10sgrace; provisionalSOC alone cannot force shutdown. Existingfloor
-caused orderlyincident shutdown. No deepdischarge, loweredfloor or protection
-bypass. Shutdownjournal records exactreasonandvoltage forfutureincidents.
+Independent floor **3400000 uV**; warning 3500000, recovery 3600000; five consecutive
+one-second samples and ten-second grace. SOC alone cannot force shutdown. The
+incident reached this actual voltage boundary and completed orderly shutdown.
+The new journal retains reason and voltage. No lowered floor or intentional
+protection cutoff/deep discharge was used.
 
 ## 31. BATTERY HEALTH EVIDENCE
 
-Unknownnominal/effectivecapacity and no packcurrentintegrator. The pack has not
-beenfully chargedunder verifiedterminationthencharacterized withcontrolledload.
-No justifieddegradationdiagnosis. Softwaredefects andmissingdeep sleep are real,
-but exact fraction ofovernightenergy explained is unknown. Aftersoftwarequalification,
-characterize safe normalidle/playback untilbeforeexistingfloor, recordingvoltage,
-SOC,time,sag/relaxation andstate; no intentionalprotectioncutoff.
+Nominal/effective capacity is unknown and no pack-current integrator exists.
+A verified full charge followed by controlled safe load characterization has
+not been completed. There is no justified degradation diagnosis. Missing deep
+sleep and software defects are real, but the exact fraction of overnight energy
+explained is unknown. After software qualification, characterize normal idle/
+playback with voltage, time, sag/relaxation and states, stopping before the
+existing safety floor. Do not deliberately exhaust the pack.
 
 ## 32. BEFORE / AFTER POWER MATRIX
 
-The JSON provides6 sanitizedwindows, exactdurations/counters andrawreceipt
-hashes. Matchedcomponentcomparisons arePC60s/radiosOff/pauseddark/sameWARNboot;
-whole-systembefore383.11context/s/259.87IRQ/s, MTPisolatedafter289.54/211.70.
-Thoseare eventrates, notuniquewakeups ormeasuredmA; hotplug/observer constraints
-are retained. BTisolatedafter342.73context/s/250.78IRQ/s withoriginalMTP restored.
-AllA–J healthy-final-buildstates,60sand5mincleanunpluggedC3,playing,radiopeer
-andfullsleep remain pending. Differentwallboots arediagnosticassociation only.
+The machine report retains six sanitized windows and raw-receipt hashes.
+
+| Same-boot PC comparison | Context switches/s | IRQ/s |
+| --- | ---: | ---: |
+| Original components | 383.11 | 259.87 |
+| Only MTP wait fix | 289.54 | 211.70 |
+| Only BT private intent fix; original MTP restored | 342.73 | 250.78 |
+
+These are matched component comparisons, not a combined candidate or measured
+battery current. Observer/hotplug constraints remain explicit. All healthy
+final-build A–J states, 60-second and five-minute unplugged C3, playback, radio
+peer and full sleep are pending. Different-boot wall tests establish association,
+not an after-fix comparison.
 
 ## 33. LONG-IDLE RESULTS
 
-Two5minwallwindows completed: firstfaulted/voltagefell, secondchargednormally
-withC3gated. Optimizedbattery-only5min,30min,2h andovernight NOT_RUN.
-Requirehealthyowner-installedkernel andsafechargedbattery beforeendurance;
-short/proxyresults are not battery-life qualification. Diagnosticobserver~0.62CPU
-seconds in60s atcounterendpoints (~1%onecore); heavy~1.8CPU seconds ofdescriptions
-areoutsidewindow. Itdoesnothing duringthe declared60s sleep. Five-minutewindows
-reduceendpointbias; no claimedzerooverhead.
+Two five-minute wall windows completed: first faulted and voltage fell, second
+charged with C3 gated. Optimized battery-only five-minute, 30-minute, two-hour and
+overnight results are **NOT_RUN**. A PC charging window is a separate workload.
+The audit uses approximately 0.62 CPU seconds of counter endpoint work in a
+60-second interval (~1% of one core); approximately 1.8 CPU seconds of heavy
+state descriptions are outside the counter window. It performs no scheduled
+sampling during the declared interval. Longer intervals reduce endpoint bias.
+The journal's cheap-counter collector records its own CPU cost per due row.
 
 ## 34. CHANGES MADE
 
-CheckedruntimePCMidle-slotinitialization/readiness;activechargerC3guard;
-firstprotectionregister-mismatchdiagnostics;source-change-onlyUSBsupplynotification;
-first-onlyOVLtakeover;event-drivenMTPRXwait;privateBTintentwatch;
-passiveSSHaddressmonitor;boundedpersistentpowerjournal;duplicateAUXADCreduction;
-Rebornpaused/staticeventwait andAVRCPnotifier;freshmount/diskseq UUIDcache;
-endpoint-onlypoweraudit withobserveraccounting/counterdiscontinuity handling.
-All changes stay on isolatedpairedpowerbranches; main/USBownerworktrees unchanged.
+Checked runtime PCM idle slots and readiness; active-charge C3 exclusion;
+first mismatched protection-register diagnostics and correct callback context;
+source-change-only USB supply notification; first-only OVL takeover;
+signaled MTP receive wait; private Bluetooth intent watcher; passive SSH address
+monitor; bounded persistent power/idle journal; duplicate ADC reduction;
+Reborn workload-sensitive wait and AVRCP wake descriptor; identity-bound UUID
+cache; endpoint-only power audit with discontinuity and observer accounting.
+Main, installed images and yesterday's USB owner worktree remain untouched.
 
 ## 35. CHANGES REJECTED
 
-No arbitrarychargeincrease,voltagefloorlowering,protectionfaultreset,coulomb/mA
-fiction,unsafe1.05Vvendoridleselector,guesspinmux/clockgate,forcedcoreoffline,
-C3taintbypass,unqualifiedautosuspend,wakeupreboot-as-success,high-frequencyjournal,
-stockfirmwareflash,USBtransportrollback orbatterydegradationblame. Original
-firmwarelive comparison mayuseexistingADB later; SSHpatchisnotneeded now.
+No higher charging limits, lower voltage floor, forced protection-fault reset,
+fabricated current/coulomb/capacity, unsafe 1.05 V idle selector, guessed pinmux,
+forced core parking, taint bypass, unqualified autosuspend, wake-by-reboot success,
+high-frequency journal or battery blame. Stock live comparison may later use
+existing ADB; no original-firmware flash or SSH patch is required for this pass.
 
 ## 36. TESTS
 
-Affected CPU/charger native suite72PASS; SSH/transfer7PASS;
-newpowerjournal5/poweraudit2/displaytakeover1PASS; USB28/nativeMTPringcancel/
-protocol/filesystemPASS; Bluetooth12/nativeeventfixturePASS. Rebornfmt/strict
-workspacealltargetClippy/fullworkspace326PASS afterAVRCPwatchregistration repair.
-Intermediatefailedtestreceipts retained; none treatedasPASS. ARMreleasebuilt before
-lastAVRCPadjustment; latestARM/fullproduction/QEMU/package gates pending.
-KernelImage/zImage/modulescompilePASS includingnewslot/OVL/chargercode; inherited
-vendorWi-Fiwarnings remain. Finalsource-boundcandidatechecks willbe appended.
+Affected CPU/charger suite: 72 pass. Extended targeted suite: 146 cases,
+145 pass / one emitted-kernel opt-in skip. Real charger callback/worker: four
+pass after a review-caught context correction, with actual regmap identity checked.
+Journal: six pass, including cumulative counters only when a row is due;
+audit: two; display ownership: one; SSH/transfer: seven. MTP actual receive,
+cancel, filesystem/protocol and native Bluetooth event fixtures pass.
+Reborn `cargo fmt --all -- --check`, strict all-target workspace Clippy and
+326 workspace tests pass. Prior failed receipts are retained and not called passes.
+A fresh production rebuild from the final reviewed pair, installed ARM/QEMU,
+ELF/config/DT/ABI/package/source gates will be appended with exact exit receipts.
+Inherited vendor Wi-Fi warnings are retained; this pass does not rewrite that driver.
 
 ## 37. COMMITS
 
-InstalledbaseLinux0cb7792/Reborn2444e0f; correctivework presentlyuncommitted.
-Recordcompiledsourcepair andsubsequentdocumentation-onlyseal separately.
+Implementation Linux `bff021e7dc5dc57ed4fe0a3d1ac527a252e6c639`, charger-context
+correction `ffc1787` and cumulative journal `447bc9b`; Reborn
+`ccf450ac1388228dbd859318a05e13adf667c9aa`. Full compiled source pair is recorded
+in candidate metadata; later documentation seal HEAD must not replace it.
+Configured Git identity is preserved; no model attribution or push.
 
 ## 38. CANDIDATE / HASHES IF BUILT
 
-NOT_BUILT. A coherentpreservingBOOTIMG/Y2ROOTpair willbe sealed aftersoftware
-andpackagevalidation. Userflashes; agentneverflashes/pushes. Futurecanonicalpath:
-/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-power-final-candidate.
-Afterownerflashresumeexactpendingmatrix; do notrestartforensics.
+Build in progress. Canonical destination:
+`/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-power-final-candidate/`.
+One preserving BOOTIMG/Y2ROOT pair, no Y2DATA payload or reset. Exact hashes,
+manifest, validation receipt and OWNER-HANDOFF will be appended only after checks.
+The owner flashes; the agent does not. After confirmation, verify installed
+identity and resume the pending matched matrix without restarting forensics.

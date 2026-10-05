@@ -922,7 +922,7 @@
         "max_rss_kib": 10004,
         "note": "Endpoint counter skew is bounded by collection time; descriptions are outside the window."
       },
-      "condition_limit": "USB PC windows use the same WARN-tainted boot; wall C3-enabled versus C3-gated windows use different boots and do not establish causal attribution."
+      "condition_limit": "Original healthy recovery boot; PC USB configured, radios off; endpoint observer and natural core hold affect runtime idle. Not the WARN boot."
     },
     {
       "id": "H-current-before",
@@ -1781,7 +1781,7 @@
         "max_rss_kib": 9972,
         "note": "Endpoint counter skew is bounded by collection time; descriptions are outside the window."
       },
-      "condition_limit": "USB PC windows use the same WARN-tainted boot; wall C3-enabled versus C3-gated windows use different boots and do not establish causal attribution."
+      "condition_limit": "DRM-WARN boot, taint 512, C3 automatically quarantined. Isolated PC component comparison; original components restored between trials."
     },
     {
       "id": "H-MTP-after",
@@ -2640,7 +2640,7 @@
         "max_rss_kib": 9872,
         "note": "Endpoint counter skew is bounded by collection time; descriptions are outside the window."
       },
-      "condition_limit": "USB PC windows use the same WARN-tainted boot; wall C3-enabled versus C3-gated windows use different boots and do not establish causal attribution."
+      "condition_limit": "DRM-WARN boot, taint 512, C3 automatically quarantined. Isolated PC component comparison; original components restored between trials."
     },
     {
       "id": "H-BT-after-input",
@@ -3499,7 +3499,7 @@
         "max_rss_kib": 10044,
         "note": "Endpoint counter skew is bounded by collection time; descriptions are outside the window."
       },
-      "condition_limit": "USB PC windows use the same WARN-tainted boot; wall C3-enabled versus C3-gated windows use different boots and do not establish causal attribution."
+      "condition_limit": "DRM-WARN boot, taint 512, C3 automatically quarantined. Isolated PC component comparison; original components restored between trials."
     },
     {
       "id": "I-wall-before",
@@ -4227,7 +4227,7 @@
         "cpu_seconds": 1.195586994,
         "max_rss_kib": 9876
       },
-      "condition_limit": "USB PC windows use the same WARN-tainted boot; wall C3-enabled versus C3-gated windows use different boots and do not establish causal attribution."
+      "condition_limit": "Healthy recovery boot, first wall charge, C3 active; protection fault in interval. Different boot from second wall test; causal attribution not established."
     },
     {
       "id": "I-wall-C3-gated",
@@ -5086,7 +5086,7 @@
         "max_rss_kib": 10068,
         "note": "Endpoint counter skew is bounded by collection time; descriptions are outside the window."
       },
-      "condition_limit": "USB PC windows use the same WARN-tainted boot; wall C3-enabled versus C3-gated windows use different boots and do not establish causal attribution."
+      "condition_limit": "DRM-WARN boot, taint 512, C3 quarantined; second wall charge. Different boot and starting voltage from first wall test; not matched after-fix proof."
     }
   ],
   "matrix": {
@@ -5129,5 +5129,25 @@
     "overnight_optimized": false
   },
   "candidate": null,
-  "verdict": "MORE_WORK_REQUIRED"
+  "verdict": "MORE_WORK_REQUIRED",
+  "journal": {
+    "period_seconds": 300,
+    "rotated_files": 2,
+    "per_file_max_bytes": 262144,
+    "additional_timer": false,
+    "events": [
+      "shutdown",
+      "suspend",
+      "coalesced_state_change"
+    ],
+    "counters": [
+      "per_core_cpuidle_entries_residency_rejections",
+      "opp_ticks",
+      "online",
+      "scheduler_intr_ctxt_processes",
+      "runtime_pm",
+      "clock_blockers"
+    ],
+    "hardware_collector_cost_measured": false
+  }
 }
