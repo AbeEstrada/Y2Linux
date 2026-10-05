@@ -70,3 +70,28 @@ class Journal(unittest.TestCase):
             self.assertFalse(self.journal.observe('ShutdownPending', {}, now=1))
         self.assertEqual(self.journal.failures, 1)
         self.assertEqual(len(self.rows()), 1)
+
+    def test_idle_counters_are_cumulative_and_collected_only_for_due_rows(self):
+        for name, value in {
+                '/sys/devices/system/cpu/online': '0',
+                '/sys/devices/system/cpu/cpu0/cpuidle/state2/name': 'DORMANT',
+                '/sys/devices/system/cpu/cpu0/cpuidle/state2/usage': '123',
+                '/sys/devices/system/cpu/cpu0/cpuidle/state2/time': '4500000',
+                '/sys/devices/system/cpu/cpu0/cpuidle/state2/disable': '0',
+                '/proc/stat': 'cpu 1 2 3 4\nintr 1500 100 1400\nctxt 2600\nprocesses 12\n',
+                '/sys/bus/platform/devices/13010000.gpu/power/runtime_status': 'suspended',
+        }.items():
+            path = self.ctx.path(name)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(value)
+        from y2_platform.power_journal import idle_counters
+        with patch('y2_platform.power_journal.idle_counters', wraps=idle_counters) as collect:
+            for now in range(601):
+                self.journal.observe('Normal', {'status': 'Discharging'}, now=now)
+            self.assertEqual(collect.call_count, 3)
+        row = self.rows()[-1]['idle_counters']
+        self.assertEqual(row['cpuidle']['0']['DORMANT']['usage'], 123)
+        self.assertIsNone(row['cpuidle']['0']['DORMANT']['rejected'])
+        self.assertEqual(row['scheduler'], {'intr': 1500, 'ctxt': 2600, 'processes': 12})
+        self.assertEqual(row['runtime_pm']['13010000.gpu'], 'suspended')
+        self.assertGreaterEqual(row['collector_cpu_seconds'], 0)

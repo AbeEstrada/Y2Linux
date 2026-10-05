@@ -13,6 +13,52 @@ PERIOD = 300
 LIMIT = 262144
 
 
+def idle_counters(ctx):
+    """Cheap cumulative counters only when a journal row is already due.
+
+    No AUXADC, subprocess, RPC, tracing, or additional periodic wakeup. Missing
+    interfaces stay null. Hotplug can reset per-core counters; readers must not
+    turn decreasing values into negative rates.
+    """
+    started = time.process_time()
+    idle = {}
+    for cpu in range(4):
+        states = {}
+        for index in range(3):
+            base = f'/sys/devices/system/cpu/cpu{cpu}/cpuidle/state{index}'
+            name = ctx.read(base + '/name', limit=64)
+            if name is not None:
+                states[name] = {field: ctx.integer(base + '/' + field)
+                                for field in ('usage', 'time', 'rejected', 'disable')}
+        if states:
+            idle[str(cpu)] = states
+    scheduler = {}
+    for line in (ctx.read('/proc/stat') or '').splitlines():
+        fields = line.split()
+        if fields and fields[0] in ('ctxt', 'intr', 'processes'):
+            try:
+                scheduler[fields[0]] = int(fields[1])
+            except (ValueError, IndexError):
+                scheduler[fields[0]] = None
+    runtime = {}
+    for path in ctx.glob('/sys/bus/platform/devices/*/power/runtime_status'):
+        name = path.parent.parent.name
+        if name.startswith(('11200000.', '11220000.', '11230000.', '11240000.',
+                            '13010000.', '14007000.', '14008000.', '18070000.')):
+            runtime[name] = read(path, limit=64)
+    result = {'online': ctx.read('/sys/devices/system/cpu/online', limit=64),
+              'cpuidle': idle, 'scheduler': scheduler, 'runtime_pm': runtime,
+              'frequency_khz': ctx.integer('/sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq'),
+              'frequency_ticks': ctx.read('/sys/devices/system/cpu/cpufreq/policy0/stats/time_in_state', limit=512),
+              'idle_rejections': {path.name: read(path, limit=128)
+                                  for path in ctx.glob('/sys/module/idle/parameters/*')},
+              'clock_blockers': {path.name: read(path, limit=128)
+                                 for path in ctx.glob('/sys/module/clocks/parameters/*blockers')},
+              'counter_reset_rule': 'decreasing per-core counters are unknown, not negative rates'}
+    result['collector_cpu_seconds'] = time.process_time() - started
+    return result
+
+
 class PowerJournal:
     def __init__(self, ctx):
         self.ctx = ctx
@@ -50,6 +96,7 @@ class PowerJournal:
                    'radios': {p.name: {'type': read(p / 'type'), 'blocked': read(p / 'soft')}
                               for p in ctx.glob('/sys/class/rfkill/*')},
                    'idle_policy': ctx.json('/run/y2/cpu-idle-policy.json'),
+                   'idle_counters': idle_counters(ctx),
                    'sleep': ctx.json('/run/y2/sleep.json')}
             self.append(row, durable=bool(event or safety))
             return True
