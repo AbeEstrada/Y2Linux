@@ -394,3 +394,8 @@ Platform 1.0 parallel integration observation (2026-10-04):
 | [Baseline01 installed physical qualification](validation/Y2-PLATFORM-V1-BASELINE-PHYSICAL.md) | Exact-image smoke/CPU results and preserved failures; overall acceptance remains partial |
 | [Y2-PLATFORM-V1-BASELINE-CHANGELOG.md](release/Y2-PLATFORM-V1-BASELINE-CHANGELOG.md) | Independent final source/software/handoff; hardware pending |
 | [Y2-PLATFORM-V1-INDEPENDENT-VERIFICATION.md](release/Y2-PLATFORM-V1-INDEPENDENT-VERIFICATION.md) | Independent final source/software/handoff; hardware pending |
+## Storage optimization pass
+
+| Page | Scope |
+| --- | --- |
+| [Storage Platform 1.0](validation/Y2-PLATFORM-V1-STORAGE.md) | Current isolated storage/filesystem pass, exact hardware evidence and remaining gates |
