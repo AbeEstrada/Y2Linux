@@ -214,5 +214,19 @@
       "Wi-Fi idle power-down after 5 dark minutes on battery"
     ]
   },
-  "verdict": "MORE_WORK_REQUIRED"
+  "verdict": "MORE_WORK_REQUIRED",
+  "candidate_04": {
+    "status": "built, sealed, not flashed; the working baseline",
+    "directory": "out/y2linux-platform-v1-power-final-candidate-04",
+    "relation": "POWER-FINAL-03 plus the 11 parallel branches and highres-audio-completion merged into main with 03 winning every collision; image behaviourally identical to 03 (tools, tests, docs added)",
+    "linux_compiled": "5aeba051c428451483402e5874dcf8222afca259",
+    "reborn_compiled": "8cd365da5f3454c8e3189df1434b966edbd06575",
+    "release": "1.0.0-platform-v1-power-final-candidate.4",
+    "kernel": "6.18.0-y2linux-platform-v1-power-final-04",
+    "root": "2025.02.18-platform-v1.30",
+    "bootimg_sha256": "be0f4379531be4b8f94fd927adda18106fbad1a567665cb63d5807908095aea4",
+    "y2root_sha256": "4fc765b931f85e0fee96c0b80c92592eca3a4f3f2a4e379d18abd71bc3978e64",
+    "fallback": "POWER-FINAL-02 pair (installed on the device today); 03 was never flashed",
+    "validation": "production profile 515 cases, 10 skips, 0 failures; Reborn fmt/clippy/tests pass; ARM 35 modules; ELF 384 files/1411 edges; package, inventory, legal-info pass"
+  }
 }

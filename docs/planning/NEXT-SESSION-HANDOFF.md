@@ -3,15 +3,17 @@
 Three jobs. **Do not start the cleanup before Job 0 is complete.**
 
 - **Job 0 — safety:** **DONE on 2026-10-06** (see below). Re-verify the three checks, then move on.
-- **Job 1 — hardware:** owner flashes POWER-FINAL-03, validate it, locate the suspend stall.
-- **Job 2 — cleanup:** `out/` keeps only 03, documentation is consolidated, both repos end clean.
+- **Job 1 — hardware:** owner flashes **POWER-FINAL-04**, validate it, locate the suspend stall.
+- **Job 2 — cleanup:** `out/` keeps only **04**, documentation is consolidated, both repos end clean.
 - **Job 3 — integrate the 11 parallel handoffs:** **DONE** (section below); the cleanup may now delete those merged branches.
 
 Job 1 and Job 2 are independent. If the owner has not flashed yet, start Job 2.
 
 ## State of `main` right now (updated)
 
-`main` in **both** repos is fast-forwarded to POWER-FINAL-03: Linux `23ddcff`, Reborn `b2c460e` (Reborn's checked-out branch
+**The working baseline is POWER-FINAL-04.** `main` in **both** repos contains it: Linux `main` (compiled commit `5aeba05`, later commits are docs only) and
+Reborn `main` `8cd365d`. 04 = 03 + the 11 parallel branches merged with 03 winning every collision; the image is behaviourally identical to 03 (the merge
+added tools, tests and docs only), so **03 was never flashed and can be discarded**. (Reborn's checked-out branch
 was switched from `cpu-idle-completion` to `main`; `cpu-idle-completion` is an ancestor and still exists). The earlier session's
 uncommitted `main` docs are preserved on branch `wip/main-dirty-docs-2026-10-06` (commit `0f02caf`) **and** as
 `/home/luca/Dokumente/Code/Y2Linux-backups/main-dirty-2026-10-06/` (patch + untracked copies). Decide whether to merge those
@@ -21,19 +23,19 @@ docs into the consolidated documentation (they describe the Baseline02 integrati
 
 ```
 Read /home/luca/Dokumente/Code/Y2Linux/docs/planning/NEXT-SESSION-HANDOFF.md completely
-(on branch codex/platform-v1-power-final-03 until it is merged), then do Job 0, then Job 2
-(cleanup) and, once I confirm POWER-FINAL-03 is installed, Job 1 (hardware validation).
+(it is on `main`), then re-verify Job 0, then do Job 2 (cleanup) and, once I confirm
+POWER-FINAL-04 is installed, Job 1 (hardware validation). We work with 04, not 03.
 Do not flash. Do not push. Preserve Git identity (Luca) via environment variables and add no
 model attribution. Never delete anything listed under "Must not be lost".
 ```
 
-## Is 03 the newest image with every fix I proposed?
+## Is 04 the newest image with every fix I proposed?
 
-**Yes, it is the newest image and contains every fix that was implemented.** It was built from
-clean commits, packaged, validated and sealed. It has **not been flashed**; the device runs
-POWER-FINAL-02. It is not "everything proposed": the table is exact.
+**Yes, 04 is the newest image and contains every fix that was implemented, plus the integrated parallel branches.** It was built from clean `main`
+commits, packaged, validated (515 production cases, 10 skips, 0 failures) and sealed. It has **not been flashed**; the device runs POWER-FINAL-02.
+The table below was written for 03; every row applies unchanged to 04. It is not "everything proposed": the table is exact.
 
-| Item | In 03? | Evidence |
+| Item | In 04 (and 03)? | Evidence |
 | --- | --- | --- |
 | DAC idle bias off (rails drop when paused) | yes (from 02) | hardware PASS |
 | Blocking connectivity supervisor + zombie reap fix | yes (from 02) | hardware PASS |
@@ -56,10 +58,10 @@ peer, 2-hour idle, overnight. **Full suspend still fails** (see below). Verdict:
 
 | What | Where |
 | --- | --- |
-| Source, Linux | branch `codex/platform-v1-power-final-03`, compiled `ffddeb8`, head `1ca3673` plus later docs/harness commit. **Saved into the main repo** at `/home/luca/Dokumente/Code/Y2Linux`; the working clone is `out/power-final-documentation/Y2Linux` |
-| Source, Reborn | branch `codex/platform-v1-power-final-03`, compiled `b2c460e`, saved into `/home/luca/Dokumente/Code/Y2Reborn` |
-| Sealed 03 package (flash this) | `out/y2linux-platform-v1-power-final-candidate-03/` BOOTIMG `8872666c3f1e3fdcbded7b0bea5986c5653344623ce787ad741da6a415f691f6`, Y2ROOT `0ae0bd785ea0ca5009f5ec5487d055c6dc60223c049c4487ee3df2e1e18bed28`; `fallback/` is the exact 02 pair |
-| 03 kernel symbols | `out/y2linux-platform-v1-power-final-candidate-03-symbols/` (`vmlinux`, `System.map`, `.config`): **needed to turn stall `wchan` numbers into function names** |
+| Source, Linux | `main` in `/home/luca/Dokumente/Code/Y2Linux`, **compiled `5aeba051c428451483402e5874dcf8222afca259`** (later commits on `main` are docs only). The build clone `out/power-final-documentation/Y2Linux` is only a build vehicle |
+| Source, Reborn | `main` in `/home/luca/Dokumente/Code/Y2Reborn`, **compiled `8cd365da5f3454c8e3189df1434b966edbd06575`** |
+| **Sealed 04 package (flash this)** | `out/y2linux-platform-v1-power-final-candidate-04/` release `…candidate.4`, build `Y2LINUX-PLATFORM-V1-POWER-FINAL-04`, kernel `6.18.0-y2linux-platform-v1-power-final-04`, root `2025.02.18-platform-v1.30`; BOOTIMG `be0f4379531be4b8f94fd927adda18106fbad1a567665cb63d5807908095aea4`, Y2ROOT `4fc765b931f85e0fee96c0b80c92592eca3a4f3f2a4e379d18abd71bc3978e64`; `fallback/` is the exact **02** pair (the image installed today). Superseded and discardable: candidate-03 (never flashed) and earlier |
+| 04 kernel symbols | `out/y2linux-platform-v1-power-final-candidate-04-symbols/` (`vmlinux`, `System.map`, `.config`): **needed to turn stall `wchan` numbers into function names** |
 | Installed on the device today | POWER-FINAL-02 (`79f0925f…b307` / `93c1bf99…f147`), plus a live symlink `/usr/bin/y2-platform` |
 | Private raw evidence | `out/platform-v1-power-final/private/` (network/media details, never publish) |
 | Owner firmware provisioning (needed for any build) | `out/cpu-idle-completion-02-owner-firmware/` |
@@ -94,7 +96,7 @@ Before deleting anything:
 ### Must not be lost
 
 - `codex/platform-v1-power-final-03` in both repos, then `main` after the fast-forward.
-- 03 package, 03 symbols directory, `out/platform-v1-power-final/private/` (ask owner: keep or archive).
+- 04 package, 04 symbols directory, `out/platform-v1-power-final/private/` (ask owner: keep or archive).
 - `out/cpu-idle-completion-02-owner-firmware/`: **move it out of `out/`** (suggest
   `/home/luca/Dokumente/Code/Y2Linux-private/owner-firmware`), then update the path wherever documentation or a runbook
   names it. It is required by `tools/production/build.py --owner-firmware`.
@@ -152,17 +154,17 @@ State measured at handoff: `out/` is **325 GB in 303 entries**. Linux has 49 reg
 clears the missing ones). 35 local Linux branches. **Y2Reborn has its own 36 worktrees and 23 branches** (same procedure, same
 locations). `Y2Reborn/target` is 4.1 GB; `Y2Linux/.cache` is 4.1 GB (**keep**, builds need it); `docs/` is 882 files / 16 MB.
 
-### A. `out/` keeps only 03
+### A. `out/` keeps only 04
 
-Keep exactly: the 03 package, the 03 symbols directory, `platform-v1-power-final/private/` (owner decision).
+Keep exactly: the 04 package, the 04 symbols directory, `platform-v1-power-final/private/` (owner decision).
 Everything else goes, in this order (the 11 parallel branches live in the repo and in `/home/luca/Dokumente/Code/worktrees/`, not only in `out/`):
 
 1. `git worktree list` — for each worktree under `out/`: `git worktree remove --force <path>`, then `git worktree prune`.
    Never `rm -rf` a registered worktree first; that leaves dangling registrations.
-2. Delete old builds and packages: all `*-build`, `*-package*`, `y2linux-*` directories except the 03 pair above
-   (includes POWER01, 02, USB02 and baseline packages; 03's `fallback/` already carries the 02 pair).
+2. Delete old builds and packages: all `*-build`, `*-package*`, `y2linux-*` directories except the 04 pair above
+   (includes POWER01, 02, 03, USB02 and baseline packages; 04's `fallback/` already carries the 02 pair, which is what the device runs today).
    **Consequence to state to the owner:** rolling back further than 02 will need a rebuild.
-3. Delete `out/power-final-documentation` last, only after Job 0 steps 1 and 3 are verified. Its `out/power-final-03-build`
+3. Delete `out/power-final-documentation` last, only after Job 0 steps 1 and 3 are verified. Its `out/power-final-04-build` (and the 03 build)
    can be deleted; a rebuild reproduces behaviour, not identical bytes, so the sealed package is the artifact.
 4. Delete the remaining historical evidence trees and tmp directories (`*-validation`, `*-physical`, `*-overlay`, logs).
 5. Result check: `du -sh out` is a few GB; `git status` in `Y2Linux` and `Y2Reborn` is clean (`out/` and `.cache/` are ignored).
@@ -206,26 +208,26 @@ Principle: keep one current truth per topic, push history to Git, never delete w
 5. **Delete as stale:** superseded per-candidate reports, dated `hardware-evidence/*` directories nothing references, duplicated
    candidate indexes, `CURRENT_PLATFORM_STATE.entry-2026-09-23.md`, and the old catalog rows. Evidence referenced from a kept document stays.
 6. Rewrite `DOCUMENTATION_CATALOG.md` from the final tree (script it: it is generated knowledge, not prose). Update every link.
-7. Verify: full host test run in the container (`tools/build/run.py … tools/production/tests.sh`, expect 511 cases, 10 skips, 0 failures),
+7. Verify: full host test run in the container (`tools/build/run.py … tools/production/tests.sh`, expect 515 cases, 10 skips, 0 failures),
    `git grep` for dead `docs/` paths, then one commit per step so each deletion is reviewable.
 8. Same pass for `Y2Reborn/docs` and its `readme.md`.
 
 Decisions needed from the owner (ask once, early): the dirty `main` docs, the USB owner worktree, keeping/archiving the private
 evidence, and whether to keep POWER01/02 packages anywhere outside `out/`.
 
-## Job 1 — hardware validation of 03 (after the owner flashes)
+## Job 1 — hardware validation of 04 (after the owner flashes)
 
 Take `/tmp/y2-platform-v1-device.lock` first (`flock -n … sleep N &`; release by killing that PID, not `pkill -f`). The classifier asks for explicit
 user consent before launching scripts that write on the device: say what will run, then run it.
 
-1. **Identity:** `/etc/y2linux/versions.json` = release `…candidate.3`, build `…POWER-FINAL-03`, kernel `…power-final-03`, Linux
-   `ffddeb8…`, Reborn `b2c460e…`; boot id, taint 0. Remove the live symlink `/usr/bin/y2-platform` only if you want to prove the Reborn fix:
-   after the flash `ls /usr/bin/y2-platform` must fail and Power must still work.
+1. **Identity:** `/etc/y2linux/versions.json` = release `…candidate.4`, build `…POWER-FINAL-04`, kernel `…power-final-04`, Linux
+   `5aeba051…`, Reborn `8cd365da…`; boot id, taint 0. The live symlink `/usr/bin/y2-platform` disappears with the new root: after the flash
+   `ls /usr/bin/y2-platform` must fail while Power still works, which proves the Reborn path fix.
 2. **Smoke gate, DAC, supervisor:** repeat `power-session/dac-readback.sh` and `proc-rates.sh` (they passed on 02).
 3. **Suspend (the main goal):** run `power-session/suspend-session.py` (README). After the recovery boot read:
    `cat /sys/firmware/y2_pm/state /sys/firmware/y2_pm/devices`; look for `thaw_stall`, `S:<comm>`, `D:<comm>`, `thaw_blocked`, `I:…mmc` entries.
    Each `S:`/`D:` entry's number is a kernel address: resolve it with
-   `awk` on `out/y2linux-platform-v1-power-final-candidate-03-symbols/System.map` (nearest lower symbol). Then
+   `awk` on `out/y2linux-platform-v1-power-final-candidate-04-symbols/System.map` (use the map that matches the running kernel; 03's map is not interchangeable) (nearest lower symbol). Then
    `mount -t pstore pstore /sys/fs/pstore; ls /sys/fs/pstore` — a `console-ramoops*` file means DRAM survived and gives the full dmesg of the
    stalled boot (enable `/sys/power/pm_print_times` and `pm_debug_messages` first). `oops_pc`/`oops_lr`/`panic` entries mean a crash,
    not a hang. Hypothesis to confirm or kill: storage I/O blocked after reset-return (`filesystems_thaw` waiting on `s_umount`
@@ -235,7 +237,7 @@ user consent before launching scripts that write on the device: say what will ru
 5. **Remaining matrix:** Bluetooth connected idle vs C3, missing Bluetooth peer (owner switches headphones off), Power then RTC wake cycles
    (5, then 10) once a same-boot resume exists, PC and wall charging and source transitions (ask the owner to connect the wall charger),
    5/30/120-minute idle, then an overnight procedure. Report programmed ceilings, never measured mA.
-6. If kernel or root changes are needed: accumulate fixes and build **one** `POWER-FINAL-04` (see
+6. If kernel or root changes are needed: accumulate fixes and build **one** `POWER-FINAL-05` (see
    `~/.claude/projects/…/memory/y2-power-candidate-build-lessons.md` for the exact build, package, validate and seal commands and the
    `.cache` pitfalls). Never flash, never push.
 
