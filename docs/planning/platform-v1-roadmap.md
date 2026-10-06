@@ -1,3 +1,5 @@
+# Platform v1 roadmap
+
 ## USB candidate handoff boundary — 2026-10-04
 
 One preserving USB candidate is sealed at out/y2linux-platform-v1-usb-candidate/.
@@ -145,8 +147,6 @@ automated failure tests and bounded current-image scratch baselines. New kernel/
 root changes require coherent implementation and one ARM/package candidate before
 owner installation. Y2DATA is preserved, never reformatted and never concurrently
 mounted as host block storage. No milestone closure or physical-ready verdict.
-
-# Platform v1 roadmap
 
 ## POWER01 full-sleep failure localization — 2026-10-05
 

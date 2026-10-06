@@ -1,3 +1,13 @@
+# Roadmap gap audit
+
+## POWER-FINAL-04 integrated baseline — 2026-10-06
+
+`main` now contains POWER-FINAL-03 plus the eleven parallel Platform 1.0 handoff branches and the high-resolution research branch, merged one at a time
+with 03 winning every collision (code lines each branch added were searched in the result; almost all were already present in adapted form). The merge
+added only research tools, tests and documentation, so the image is behaviourally identical to 03. POWER-FINAL-04 (Linux `5aeba05`, Reborn `8cd365d`,
+BOOTIMG `be0f4379…aea4`, Y2ROOT `4fc765b9…8e64`, fallback = the installed POWER-FINAL-02 pair) is the single base to flash and continue from. Production
+profile 515 cases, 10 skips, 0 failures. Coverage #28-#34 stay PARTIAL; full suspend still fails at the post-thaw stall; no readiness promotion, flash or push.
+
 ## USB candidate handoff boundary — 2026-10-04
 
 One preserving USB candidate is sealed at out/y2linux-platform-v1-usb-candidate/.
@@ -145,8 +155,6 @@ automated failure tests and bounded current-image scratch baselines. New kernel/
 root changes require coherent implementation and one ARM/package candidate before
 owner installation. Y2DATA is preserved, never reformatted and never concurrently
 mounted as host block storage. No milestone closure or physical-ready verdict.
-
-# Roadmap gap audit
 
 ## POWER-FINAL-02 pre-candidate audit — 2026-10-05
 

@@ -758,3 +758,8 @@ is unproven). Power wake and repeat cycles wait for a same-boot resume.
 **Charging.** PC USB: SDP, 450 mA programmed ceiling, HOLD near 4.175 V, fault 0, MTP and
 SSH configured; that is a configured ceiling, not measured current. Wall charging: not run.
 Verdict stays **MORE_WORK_REQUIRED**.
+
+**Baseline update (2026-10-06).** `main` now integrates the parallel branches on top of POWER-FINAL-03 (03 wins on every collision). The flashable base is
+**POWER-FINAL-04**, behaviourally identical to 03: Linux `5aeba05`, Reborn `8cd365d`, BOOTIMG SHA256 `be0f4379531be4b8f94fd927adda18106fbad1a567665cb63d5807908095aea4`,
+Y2ROOT SHA256 `4fc765b931f85e0fee96c0b80c92592eca3a4f3f2a4e379d18abd71bc3978e64`, rollback = the installed POWER-FINAL-02 pair. The verdict is unchanged:
+**MORE_WORK_REQUIRED** (full suspend stalls after `TASKS_THAWED`; 04 carries the stall sampler, oops/panic notes and ramoops to locate it).
