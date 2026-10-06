@@ -1,12 +1,22 @@
 # Next-session handoff — 2026-10-06 (delete this file when it has been consumed)
 
-Two jobs, in this order. **Do not start the cleanup before Job 0 is complete.**
+Three jobs. **Do not start the cleanup before Job 0 is complete.**
 
-- **Job 0 — safety (10 minutes, mandatory first):** make sure no source history lives only inside `out/`.
+- **Job 0 — safety:** **DONE on 2026-10-06** (see below). Re-verify the three checks, then move on.
 - **Job 1 — hardware:** owner flashes POWER-FINAL-03, validate it, locate the suspend stall.
 - **Job 2 — cleanup:** `out/` keeps only 03, documentation is consolidated, both repos end clean.
+- **Job 3 — integrate the 11 unmerged parallel handoffs** (new finding, section below). Decide with the owner whether
+  this comes before or after Job 2; the cleanup must not delete those branches either way.
 
-Job 1 and Job 2 are independent. If the owner has not flashed yet, start Job 2 (after Job 0).
+Job 1 and Job 2 are independent. If the owner has not flashed yet, start Job 2.
+
+## State of `main` right now (updated)
+
+`main` in **both** repos is fast-forwarded to POWER-FINAL-03: Linux `23ddcff`, Reborn `b2c460e` (Reborn's checked-out branch
+was switched from `cpu-idle-completion` to `main`; `cpu-idle-completion` is an ancestor and still exists). The earlier session's
+uncommitted `main` docs are preserved on branch `wip/main-dirty-docs-2026-10-06` (commit `0f02caf`) **and** as
+`/home/luca/Dokumente/Code/Y2Linux-backups/main-dirty-2026-10-06/` (patch + untracked copies). Decide whether to merge those
+docs into the consolidated documentation (they describe the Baseline02 integration plan) or drop them.
 
 ## Paste-ready prompt
 
@@ -67,7 +77,7 @@ Before deleting anything:
 1. `git -C /home/luca/Dokumente/Code/Y2Linux log --oneline -3 codex/platform-v1-power-final-03` shows the
    docs/harness commit on top of `1ca3673`; same check in `Y2Reborn` (`b2c460e`). If the newest clone
    commit is missing, `git fetch out/power-final-documentation/Y2Linux codex/platform-v1-power-final:refs/heads/codex/platform-v1-power-final-03` again.
-2. **Main working tree is dirty and belongs to an earlier session.** `main` has 7 modified docs
+2. (**done**, preserved as described above) **Main working tree was dirty and belonged to an earlier session.** `main` has 7 modified docs
    (`CURRENT_PLATFORM_STATE.md`, `DOCUMENTATION_CATALOG.md`, `knowledge/candidate-index.md`,
    `planning/platform-v1-roadmap.md`, `planning/roadmap-gap-audit.md`,
    `release/Y2-COMMUNITY-BETA-FEATURE-AUDIT.md`, `…FEATURES.json`) and untracked
@@ -75,7 +85,7 @@ Before deleting anything:
    `docs/validation/Y2-PLATFORM-V1-INTEGRATION.md`, `tools/development/observe-platform-v1.py`.
    Save them first: `git diff > /safe/main-dirty.patch` and copy the untracked files. Then decide
    (owner) whether they are kept (merge into the consolidated docs) or dropped.
-3. `main` is an ancestor of 03 in both repos, so the merge is a fast-forward:
+3. (**done**) `main` was an ancestor of 03 in both repos, so the merge was a fast-forward:
    `git merge --ff-only codex/platform-v1-power-final-03` (Linux: 37 commits; Reborn currently on branch
    `cpu-idle-completion`, 19 commits). Do it only after step 2, on a clean tree.
 4. Verified at handoff: no detached worktree holds a commit that is on no branch. The only dirty one is
@@ -91,6 +101,40 @@ Before deleting anything:
   names it. It is required by `tools/production/build.py --owner-firmware`.
 - Stock firmware lives outside the repo (`/home/luca/Dokumente/Code/Y2Player/…`); do not touch it.
 
+## Job 3 — the 11 unmerged parallel handoffs (found 2026-10-06)
+
+An earlier coordination session (`docs/release/Y2-PLATFORM-V1-INTEGRATION-STATUS.md`, `…-PLAN.md`, `…-MASTER.md`; they are on branch
+`wip/main-dirty-docs-2026-10-06`) records **eleven finished source handoffs**, each a `codex/platform-v1-<name>` branch in Linux and
+Reborn, each rated *ACCEPT_WITH_INTEGRATION_ADJUSTMENT*, none merged. The USB02/POWER line descends from `codex/platform-v1-usb-final`,
+so **03 does not contain them**. Verified by patch content (`git cherry`), not hashes: every commit below is genuinely absent from 03.
+
+| Branch | Linux unique commits | Linux code areas | Linux trial merge into main | Reborn commits / trial merge | Planned order |
+| --- | --- | --- | --- | --- | --- |
+| storage | 2 | `0009-y2-msdc-readonly.patch`, media/bench tools | conflicts: tests.sh + planning docs | 2 / clean | 1→2 |
+| usb | 6 | MTP package, kernel `usb.c`, patch `0065`, config | **conflicts: kernel usb.c, 0065, config, manifest** (overlaps USB02) | 1 / clean | 1→3→4→10 |
+| wifi | 5 | `network.py`, `observe.py`, diagnostics | conflicts: diagnostics, network time test | 1 / clean | 4 |
+| bluetooth | 1 | `reconnect.c`, `bt-observe.c`, `bluetooth.py` | **conflicts: `reconnect.c`** (POWER01 also changed it) | 1 / clean | 5 |
+| highres-audio | 2 (+6 on `highres-audio-completion`, tools/research) | `mt6582-afe.c`, audio precision contract | conflicts: diagnostics fields | 1 (+2) / clean | 6 |
+| ffmpeg-metadata | 2 | docs only | docs conflicts only | 4 / clean | 6→7→8 |
+| library-db | 1 | docs only | docs conflicts only | 7 / clean | 7 |
+| graphics | 1 | docs only | docs conflicts only | 1 / clean | 8 |
+| reborn-performance | 2 | docs only | docs conflicts only | 3 / clean | 8→10 |
+| input | 4 | capture tools (no runtime code) | docs conflicts only | 2 / clean | 9→10 |
+| suspend | 10 | `y2-suspend`, `pm-journal.c`, `spm.c`, patch `0030`, qualify script | **conflicts: 0030, manifest, test_suspend_audio, qualify script** (overlaps POWER work) | 3 / clean | 1→10 |
+
+Every Linux branch also conflicts on `docs/planning/platform-v1-roadmap.md` and `roadmap-gap-audit.md` (both append at the top):
+mechanical. The earlier plan lists known semantic couplings (C13 `spm.c` vs idle, C17 USB auto-refresh vs suspend prepare, C18 diagnostic
+fields, C21 performance vs graphics renderer); read its dependency table before merging.
+
+How to integrate (do not blindly merge): branch `integrate/platform-v1-into-03` from `main`; merge in the planned order, one branch at a time,
+resolving by intent. For the overlapping ones (usb, suspend, bluetooth) compare against what 03 already does (USB02 transport, POWER01
+BT reconnect watch, POWER-FINAL kernel breadcrumbs) and keep the newer behaviour; some of their commits are superseded. Run the production
+profile in the container after **each** merge (expect today's 511 cases, 10 skips). Then Reborn (all 12 branches merge cleanly one at a
+time; check them together). Hardware qualification is separate; integration is not authorization to flash. Nothing here changes the verdict.
+
+**Until this is decided: do not delete these branches, their worktrees under `/home/luca/Dokumente/Code/worktrees/`, or the `out/` copies.**
+If the owner declines to integrate, archive each with `git tag archive/<branch> <branch>` first.
+
 ## Job 2 — cleanup
 
 State measured at handoff: `out/` is **325 GB in 303 entries**. Linux has 49 registered worktrees: the main tree, 19 under
@@ -101,7 +145,7 @@ locations). `Y2Reborn/target` is 4.1 GB; `Y2Linux/.cache` is 4.1 GB (**keep**, b
 ### A. `out/` keeps only 03
 
 Keep exactly: the 03 package, the 03 symbols directory, `platform-v1-power-final/private/` (owner decision).
-Everything else goes, in this order:
+Everything else goes, in this order (the 11 parallel branches live in the repo and in `/home/luca/Dokumente/Code/worktrees/`, not only in `out/`):
 
 1. `git worktree list` — for each worktree under `out/`: `git worktree remove --force <path>`, then `git worktree prune`.
    Never `rm -rf` a registered worktree first; that leaves dangling registrations.
@@ -117,8 +161,8 @@ Everything else goes, in this order:
 
 - `/home/luca/Dokumente/Code/worktrees/*` (16 worktrees, 85 GB): same removal procedure per worktree. Skip `platform-v1-usb-final` until
   the owner decides about its 4 dirty files.
-- After the fast-forward: `git branch --merged main` lists branches safe to delete. For any branch **not** merged, create
-  `git tag archive/<branch> <branch>` first, then delete the branch. Tags keep the history without worktrees.
+- `git branch --merged main` lists branches safe to delete. For any branch **not** merged (including the 11 in Job 3 and
+  `wip/main-dirty-docs-2026-10-06`), create `git tag archive/<branch> <branch>` first, then delete the branch only if the owner agrees.
 - Reborn: delete `target/` (rebuilds in minutes), keep `vendor/`; remove stale `out/` (27 MB).
 
 ### C. Documentation consolidation (882 files)
