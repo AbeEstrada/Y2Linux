@@ -369,6 +369,7 @@ Platform 1.0 parallel integration observation (2026-10-04):
 | [Y2 + Reborn Bluetooth Platform 1.0 optimization](validation/Y2-PLATFORM-V1-BLUETOOTH-OPTIMIZATION.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
 | [Y2 Platform 1.0 GPU, display and graphics power pass](validation/Y2-PLATFORM-V1-GRAPHICS.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
 | [Y2 Platform 1.0 wired PCM precision completion pass](validation/Y2-PLATFORM-V1-HIGHRES-AUDIO.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
+| [Y2 wired high-resolution PCM completion (route study and serializer-pad measurement)](validation/Y2-HIGHRES-AUDIO-COMPLETION.md) | Current evidence record; MT6582 wired playback measured at 16 meaningful bits maximum |
 | [Y2 Platform 1.0 input validation](validation/Y2-PLATFORM-V1-INPUT.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
 | [Y2 Platform 1.0 storage and filesystem pass](validation/Y2-PLATFORM-V1-STORAGE.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
 | [Y2 Platform 1.0 full system suspend / resume](validation/Y2-PLATFORM-V1-SUSPEND.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |

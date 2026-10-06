@@ -6491,12 +6491,16 @@
       "implementation_state": "NOT_IMPLEMENTED",
       "enabled_by_default": "No; AFE format mask S16 only",
       "actually_used": "No",
-      "evidence": "UNTESTED",
-      "physical_evidence": "No established MT6582 DL1 wider fetch/interconnect contract",
-      "automated_tests": [],
-      "automated_test_result": "Fresh integration software checks pass; see implementation-pass receipt. This does not promote physical evidence or unresolved native wired hardware support.",
-      "diagnostics": "Not applicable; no implemented capability",
-      "known_limitation": "Exact MT6582 known fetch path remains S16; no proven compatible wide-fetch register path. Reborn S32 ALSA support is not evidence of meaningful wired24.",
+      "evidence": "PHYSICALLY_OBSERVED",
+      "physical_evidence": "PHYSICALLY_OBSERVED Baseline01: six S16 playback/DMA comparisons, DL1_MON0 and AFE/I2S/CS43131 readback; no external serial/analog capture and no native 24/32 physical PASS.",
+      "automated_tests": [
+        "tests/test_highres_observations.py",
+        "tests/test_audio_precision_contract.py",
+        "Reborn workspace packing/sign/clipping/negotiation/fallback/precision tests"
+      ],
+      "automated_test_result": "Four new fixture/DMA observations tests, six audio/clock/ALSA contract tests, 324 Reborn tests and matching ARM/kernel/DT/ABI checks PASS; hardware-wide playback remains unsupported.",
+      "diagnostics": "Read-only matching audio observer plus native conversion probe; actual playback/DMA evidence retained",
+      "known_limitation": "Measured Session 3: wired playback carries 16 meaningful bits maximum. Memory interfaces DL1/DL2 are fixed 16 bits per channel, no later-SoC wide-format register exists, interconnect outputs round/clamp to 16 bits, and the I2S serializer pad was captured at 8/11.025/12 kHz with low 16 bits of every 32-bit slot zero in every fixture. See docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md.",
       "failure_mode": "False high-resolution claim or distorted samples if forced",
       "safe_fallback": "Float processing converted to S16",
       "source_paths": [
@@ -6510,21 +6514,22 @@
         "docs/validation/Y2-HARDWARE-FINAL-RADIO-AUDIO.md",
         "docs/validation/PLATFORM-V1-PHYSICAL-BRINGUP.md",
         "docs/validation/Y2-CPU-FINAL-FIX02-PHYSICAL-QUALIFICATION.md",
-        "docs/release/Y2-COMMUNITY-BETA-IMPLEMENTATION-PASS.md"
+        "docs/release/Y2-COMMUNITY-BETA-IMPLEMENTATION-PASS.md",
+        "docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md"
       ],
       "current_candidate_physically_qualified": false,
       "legacy_release_classification": {
         "beta_state": "OPTIONAL_POST_BETA",
         "beta_priority": "D",
-        "recommended_next_action": "Do not add masks or native-HD claims"
+        "recommended_next_action": "Closed as hardware-limited (16 meaningful bits measured); do not add masks or native-HD claims"
       },
       "product_target": "FEATURE_COMPLETE_TARGET",
       "hardware_conditional": true,
       "release_required": "REQUIRED_IF_HARDWARE_SUPPORTED",
       "release_requirement": "REQUIRED_IF_HARDWARE_SUPPORTS_IT",
       "public_distribution_state": "NOT_SEPARATELY_ASSESSED",
-      "current_limitation": "Exact MT6582 known fetch path remains S16; no proven compatible wide-fetch register path. Reborn S32 ALSA support is not evidence of meaningful wired24.",
-      "next_action": "Resolve exact MT6582 wide-fetch/interconnect representation, then use low-bit-preservation fixtures and physical I2S capture; do not infer silicon impossibility.",
+      "current_limitation": "Measured Session 3: wired playback carries 16 meaningful bits maximum. Memory interfaces DL1/DL2 are fixed 16 bits per channel, no later-SoC wide-format register exists, interconnect outputs round/clamp to 16 bits, and the I2S serializer pad was captured at 8/11.025/12 kHz with low 16 bits of every 32-bit slot zero in every fixture. See docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md.",
+      "next_action": "Continue exact fetch/interconnect research; require explicit representation or exclusion evidence, not monitor width alone.",
       "release_completion_groups": [
         "C",
         "A",
@@ -6533,7 +6538,7 @@
       "priority_changed": true,
       "priority_change_reason": "Former limitation/post-beta priority now required or hardware-conditional under owner feature-complete target",
       "ownership_note": "Kernel AFE/I2S/clock completion with Reborn sink/conversion and external CS43131 driver integration",
-      "hardware_question": "Does MT6582 DL1 support wider memory fetch and I05/I06-to-O00/O01 transport preserving24 meaningful bits, and what exact alignment/sign/packing fields select it?",
+      "hardware_question": "OPEN: can exact MT6582 memory/AFE output transport meaningful24 bits? A16-bit monitor plus absent documented width selector does not conclusively prove impossibility.",
       "proof_required": "Exact MT6582 register or proven stock programming, low-bit DMA fixtures, I2S word capture demonstrating bits beyond16, correct ALSA layout and DAC reception;32-bit slots alone insufficient.",
       "investigation_source_paths": [
         "kernel/audio/mt6582-afe.c",
@@ -6543,7 +6548,7 @@
         "Y2Reborn:app/reborn/src/playback.rs"
       ],
       "fallback_is_release_waiver": false,
-      "completion_status": "PENDING_RELEASE_ACCEPTANCE",
+      "completion_status": "PENDING_HARDWARE_DECISION",
       "implementation_pass": "2026-10-02-feature-completion",
       "platform_v1_integration": {
         "implementation_state": "NOT_IMPLEMENTED",
@@ -6566,12 +6571,28 @@
         },
         "implementation_state": "NOT_IMPLEMENTED",
         "software_evidence": "Fresh candidate source/config/contract, kernel/ARM/QEMU/package validation PASS; feature-specific implementation/runtime limits are retained, not individually promoted by global tests",
-        "physical_evidence": "INTEGRATED_PHYSICAL_NOT_RUN. Inherited source/image-scoped evidence remains in the original physical_evidence and platform_v1_integration records.",
-        "hardware_condition": "Exact MT6582 known fetch path remains S16; no proven compatible wide-fetch register path. Reborn S32 ALSA support is not evidence of meaningful wired24.",
+        "physical_evidence": "PHYSICALLY_OBSERVED Baseline01: six S16 playback/DMA comparisons, DL1_MON0 and AFE/I2S/CS43131 readback; no external serial/analog capture and no native 24/32 physical PASS.",
+        "hardware_condition": "Measured Session 3: wired playback carries 16 meaningful bits maximum. Memory interfaces DL1/DL2 are fixed 16 bits per channel, no later-SoC wide-format register exists, interconnect outputs round/clamp to 16 bits, and the I2S serializer pad was captured at 8/11.025/12 kHz with low 16 bits of every 32-bit slot zero in every fixture. See docs/validation/Y2-HIGHRES-AUDIO-COMPLETION.md.",
         "distribution_condition": "NOT_SEPARATELY_ASSESSED",
-        "release_status": "PENDING_RELEASE_ACCEPTANCE",
+        "release_status": "PENDING_HARDWARE_DECISION",
         "current_candidate_physically_qualified": false,
         "endurance_qualified": false
+      },
+      "hardware_admission_decision": "PENDING_HARDWARE_DECISION",
+      "wired_precision_completion": {
+        "decision": "PENDING_HARDWARE_DECISION",
+        "evidence_levels": [
+          "PROVEN_SOURCE",
+          "SOFTWARE_VALIDATED",
+          "PHYSICALLY_OBSERVED"
+        ],
+        "external_capture_performed": false,
+        "native_highres_physically_qualified": false,
+        "source_record": "docs/validation/evidence/highres-audio-completion/sources.json",
+        "physical_record": "docs/validation/evidence/highres-audio-completion/physical.json",
+        "source_evidence": "PROVEN_SOURCE",
+        "withdrawn_decision": "HARDWARE_PROVEN_UNSUPPORTED_ON_DL1_PATH",
+        "interpretation_correction": "Monitor width is not an all-mode internal data-path width proof; actual S16 register/DMA observations remain valid."
       }
     },
     {

@@ -8,6 +8,11 @@ and DATA/SD successes, no qualified C3 entry, owner-reported USB reconnect troub
 and recovered-boot DRM WARNING / C3 safely Skipped. Firmware/software seal below
 is unchanged; it is not full hardware acceptance. Owner-prioritized audio testing
 finishes before exclusive USB diagnosis. No main/public promotion.
+Wired-precision result: [the evidence record](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
+replaces the withdrawn DL1-monitor argument with direct measurements (register
+probing, DL2 loopback, interconnect arithmetic and an on-device I2S serializer-pad
+capture). The MT6582 wired path carries at most 16 meaningful bits; S16 44.1/48 is
+the platform maximum and no native 24/32 qualification is claimed or possible.
 
 ## Independent final baseline — 2026-10-04
 
@@ -178,9 +183,10 @@ Preserve good unchanged behavior: GPU/Lima/DRM runtime-PM and scanout architectu
 Bluetooth controller/CONSYS ownership and conservative reconnect budget;
 Wi-Fi fullmac/supplicant/DHCP ownership and disabled broken checksum offload;
 native S16/44.1/48 fallback; battery/charging/thermal policy; immutable fallback,
-Y2DATA/protected partitions and recovery. Highres owner has not established an
-exact wider MT6582 fetch/interconnect contract, so native highres remains an open
-requirement rather than a guessed enablement or an invented silicon ceiling.
+Y2DATA/protected partitions and recovery. The wired path is
+measured at 16 meaningful bits maximum (no wide memif, 16-bit interconnect outputs,
+serializer pad low 16 bits zero), so native highres is closed as hardware-limited
+rather than a pending requirement; S16 stays the maximum.
 These are current preservation decisions, not final no-change acceptances of
 all active sessions.
 

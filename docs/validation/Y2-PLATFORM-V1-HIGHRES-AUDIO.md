@@ -1,5 +1,11 @@
 # Y2 Platform 1.0 wired PCM precision completion pass
 
+Wired-precision correction: [the current evidence record](Y2-HIGHRES-AUDIO-COMPLETION.md)
+withdraws the HARDWARE_PROVEN_UNSUPPORTED conclusion. MON0 defines16-bit
+monitor fields; an absolute silicon transport ceiling does not follow from
+that alone. Installed S16 and software24 preservation remain validated;
+wider hardware feasibility is open. No native24/32 qualification is claimed.
+
 2026-10-04. Verdict: **MORE_HARDWARE_EVIDENCE_REQUIRED**.
 Highest admitted complete native path: **S16_LE, 16 meaningful bits, stereo,
 44.1/48 kHz**. This is not a proved MT6582 silicon ceiling. No native S24/S32

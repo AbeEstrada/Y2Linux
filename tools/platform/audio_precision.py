@@ -22,6 +22,42 @@ PATTERN32 = (0x23450001,0x23450002,0x2345007f,0x23450080,0x234500ff,
              -0x23450100,-0x234500ff,-0x23450081,-0x23450080,-0x23450001)
 
 
+def generate_live(directory, seconds=8):
+    """Conservative repeating fixtures for native/plug/DMA comparisons.
+
+    Generate files only. All peaks are below -60 dBFS. The first four wide
+    samples have identical upper 16/24 bits and distinct lower eight bits.
+    Right is offset four frames, allowing sign/channel ordering checks.
+    """
+    if not isinstance(seconds, int) or not 1 <= seconds <= 10:
+        raise ValueError('live_fixture_duration_must_be_1_to_10_seconds')
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=False)
+    patterns = {
+        16: (18, 19, 20, 21, -18, -19, -20, -21),
+        24: (0x1200, 0x1201, 0x127f, 0x12ff,
+             -0x1300, -0x12ff, -0x1281, -0x1201),
+        32: (0x120000, 0x120001, 0x12007f, 0x1200ff,
+             -0x120100, -0x1200ff, -0x120081, -0x120001),
+    }
+    files = []
+    for rate in (44100, 48000):
+        for bits, pattern in patterns.items():
+            width = bits // 8
+            data = b''.join(value.to_bytes(width, 'little', signed=True)
+                            for index in range(rate * seconds)
+                            for value in (pattern[index % 8], pattern[(index + 4) % 8]))
+            file = directory / f'lowbits-{bits}-{rate}.wav'
+            with wave.open(str(file), 'wb') as stream:
+                stream.setparams((2, width, rate, rate * seconds, 'NONE', 'not compressed'))
+                stream.writeframes(data)
+            files.append({'file': file.name, 'sha256': hashlib.sha256(file.read_bytes()).hexdigest(),
+                          'bits': bits, 'rate': rate, 'pattern': list(pattern),
+                          'max_normalized_amplitude': max(abs(value) for value in pattern) / 2**(bits - 1)})
+    (directory / 'manifest.json').write_text(json.dumps(files, indent=2) + '\n')
+    return files
+
+
 def generate(directory, frames=4096):
     directory=Path(directory)
     directory.mkdir(parents=True,exist_ok=False)
@@ -105,11 +141,19 @@ if __name__=='__main__':
     parser.add_argument('--verify-capture',type=Path)
     parser.add_argument('--rate',type=int)
     parser.add_argument('--first-frame',type=int,default=0)
+    parser.add_argument('--live-safe', action='store_true')
+    parser.add_argument('--duration-seconds', type=int, default=8)
     args=parser.parse_args()
     if args.verify_capture:
         result=verify_capture(args.verify_capture,args.rate,args.first_frame)
         print(json.dumps(result,indent=2))
         raise SystemExit(0 if result['state']=='MATCH' else 1)
+    elif args.live_safe:
+        if not args.output:
+            parser.error('output directory required')
+        result=generate_live(args.output,args.duration_seconds)
+        print(json.dumps(result,indent=2))
+        raise SystemExit(0)
     if not args.output:
         parser.error('output directory or --verify-capture required')
     print(json.dumps(generate(args.output),indent=2))

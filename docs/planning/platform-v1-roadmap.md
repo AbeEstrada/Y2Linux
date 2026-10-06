@@ -263,6 +263,15 @@ endurance/electrical, peers/audio/desktop matrices and distribution remain open.
 Readiness is PARTIAL_INTERRUPTED; no feature, issue or milestone is promoted.
 Images/233 IDs/OPPs/memory/partitions/fallback remain unchanged; no build/flash/
 push/main merge follows from this host-only correction and evidence update.
+Wired precision is now measured: the MT6582 wired playback path carries at most
+16 meaningful bits to the CS43131. The earlier DL1-monitor argument was withdrawn
+and replaced by direct evidence: absent later-SoC wide-format registers, fixed
+16-bit DL1/DL2 memifs, 16-bit interconnect outputs and an on-device capture of the
+I2S serializer pad (low 16 bits of every 32-bit slot zero in every fixture). Wide
+S24/S32 hardware output is not available; S16 (44.1/48) is the platform maximum.
+See [the evidence record](../validation/Y2-HIGHRES-AUDIO-COMPLETION.md)
+and [the scoped boundary correction](roadmap-gap-audit.md#wired-precision-evidence-correction).
+No unsupported format, candidate, flash or other subsystem promotion is admitted.
 
 ## Baseline01 installed physical admission — 2026-10-04
 
