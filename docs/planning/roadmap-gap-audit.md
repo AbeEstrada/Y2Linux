@@ -853,6 +853,58 @@ SQLite optimization. Proceed with the smallest justified source fixes, targeted
 regressions and safe scratch measurement; owner is available for SD interaction.
 Final decisions and unobserved gates belong in
 [the storage report](../validation/Y2-PLATFORM-V1-STORAGE.md).
+## Wi-Fi optimization source closing audit — 2026-10-04
+
+Scoped source pass closes on Linux `7056977` / Reborn `2cdb9cc`; physical
+acceptance remains **PARTIAL**, with no phase/milestone promotion. Latest
+Wi-Fi-owned device receipt is Baseline02 boot `27e6d684…`, taint 0 before/after
+baseline. GitHub #28/#31/#34 refreshed read-only at closing, all OPEN. Exact
+results and sanitized receipt: [Wi-Fi optimization](../validation/Y2-PLATFORM-V1-WIFI-OPTIMIZATION.md).
+
+| Coverage | Classification | Evidence / next boundary |
+| --- | --- | --- |
+| WPA2, lease, route, DNS and local TCP/file integrity, #31 | CONFIRMED, bounded baseline | Association 0.829–2.545 s, IP 2.676–5.877 s; platform-ready 27.987–32.241 s. HTTP RX 43.941–44.922 / TX 46.376–46.942 Mb/s, four 8 MiB hashes pass. One iperf TX control reset retained. |
+| Readiness and truthful telemetry, #31 | Source regressions CONFIRMED; physical after PARTIAL | New-lease DNS scheduling, event wake, measured observation deadlines, redundant RSSI/list/policy reduction, current-peer Online proof and reviewed diagnostics fixed. 94 Linux + 6 diagnostic + 5 layout checks; 74 Reborn platform tests and native/ARM builds pass. |
+| Idle power, C1/C2/C3, #28/#31 | PARTIAL, current comparison; retained CPU scope unchanged | Screen-off associated/off CPU 11.222/9.905% of one core, IRQ 289.23/277.98 per second; four cores/1300 MHz/USB confound admission. C2/C3 zero in both windows. Exact wakeups/electrical power not measured; no guards or clock/frequency policy changed. |
+| Scanning, power save and playback/coexistence, #31 | PARTIAL / NOT_TESTED | Explicit scan source tests pass; physical scan absent. Temporary PSP sample changed back to CAM and is invalid. Owner's headset unavailable; connected/SBC and local-playback combinations untested. Conservative automatic CAM retained. |
+| Integrated Platform 1.0 acceptance | PARTIAL | Two 15-minute after retry windows could not acquire the shared device lock; no RAM after-service ran. Shared USB/Wi-Fi service wait needs C01 reconciliation. No driver/checksum changes, flash, push, merge, main-worktree edits or release qualification. |
+
+Next smallest boundary is an available lock for the exact integrated readiness,
+DHCP action and Reborn after sweep, preserving USB control wake and supplicant
+socket wake. Isolate the iperf reset, then AP-loss/cold-boot/power/coexistence
+coverage. No source-test result substitutes for those physical gates. Retained
+recovery, memory, packaging, calibration and distribution boundaries stand.
+
+## Wi-Fi Platform 1.0 optimization admission — 2026-10-04
+
+Owner authorizes isolated `codex/platform-v1-wifi` worktrees, bounded shared-lock
+Wi-Fi tests, localized fixes and regression checks; no flash, push, parallel
+branch merge, memory/partition change or Bluetooth redesign. Starting source:
+Linux `b5aea93`, Reborn `b71b468`. Read-only USB SSH under nonblocking
+`/tmp/y2-platform-v1-device.lock` observes installed **Baseline02**, kernel
+`6.18.0-y2linux-baseline-02`, compiled Linux `8584ccd`, Reborn `b71b468`,
+root v1.21, boot `27e6d684-3794-4490-95db-a489027cd4f4`, taint 0.
+This supersedes the earlier awaiting-installation statement for identity only;
+this read does not qualify all Baseline02 cold-boot or CPU gates. Current lease,
+route and DNS are ready, automatic policy requests CAM/off, screen is blank.
+Release inventory agrees with compiled source. GitHub #28/#31/#34 refreshed
+read-only, all OPEN; no remote status mutation or milestone closure.
+
+| Coverage | Classification | Evidence / remaining boundary |
+| --- | --- | --- |
+| Wi-Fi/WPA2/IP/DNS/TCP, #31 | CONFIRMED, bounded retained transfers; PARTIAL, optimization | Retained receive 45.15–45.60 / transmit 46.35–46.56 Mb/s; disabled checksum offload preserved. Measure current idle/readiness/transfer behavior before selecting fixes. |
+| CPU C1/C2/C3, #28 | CONFIRMED, retained UART01 scope; PARTIAL, current-image admission | Existing checked returns carry forward; inspect current radio blockers without relaxing guards or initiating dormant trials. |
+| Screen off and coexistence, #31/#34 | PARTIAL | Existing awake/display behavior retained; Wi-Fi idle/power-save and actual peer/SBC coverage require bounded evidence. |
+| Release/endurance/electrical power | PARTIAL | No current optimization acceptance, battery savings or practical hardware ceiling claimed. Full suspend, endurance and distribution retain independent gates. |
+
+Next smallest boundary: capture current baseline and exact power-mode semantics,
+fix only demonstrated polling/readiness deficiencies, then repeat affected tests
+and bounded measurements with reversible RAM-only tools. Association, DHCP,
+route and successful DNS remain separate; unknown status never becomes a real
+disconnect. See [optimization report](../validation/Y2-PLATFORM-V1-WIFI-OPTIMIZATION.md)
+for the eventual closing receipt. Existing recovery, calibration, source and ROM
+provenance is unchanged and is not recaptured.
+
 
 ## Baseline02 source integration into main — 2026-10-03
 

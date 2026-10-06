@@ -2,6 +2,23 @@
 
 <!-- knowledge-base-scope: maintained-summary; baseline02-sync 2026-10-03 -->
 
+## Wi-Fi optimization branch — 2026-10-04
+
+Lock-protected SSH now observes installed Baseline02 (compiled Linux `8584ccd`,
+Reborn `b71b468`, root v1.21, taint 0), superseding awaiting-installation wording
+for identity alone. The isolated Wi-Fi pass fixes measured observer deadlines,
+new-lease DNS scheduling, redundant RSSI/list/policy work and association-bound
+Online proof, plus useful redacted Wi-Fi diagnostic enums/counters. Baseline
+platform readiness took 27.99–32.24 s despite IP in 2.68–5.88 s; four 8 MiB
+HTTP transfers passed hashes at RX 43.94–44.92 / TX 46.38–46.94 Mb/s. Physical
+after measurements could not obtain the shared lock; source checks pass but
+whole-platform acceptance remains PARTIAL. The checksum repair, firmware/register semantics, conservative
+CAM automatic default and Bluetooth implementation remain unchanged. Exact
+results and remaining physical gates belong to the
+[Wi-Fi optimization report](../validation/Y2-PLATFORM-V1-WIFI-OPTIMIZATION.md).
+Source tests do not close cold-boot, coexistence, electrical-power, endurance or
+full-suspend acceptance. Earlier physical failures below retain their scope.
+
 ## Current Baseline02 / UART01 scope
 
 UART01 uses an independent Wi-Fi observer and bounded transport integrity alongside USB checks. Radios are off for guarded C3 entry windows. This does not qualify Bluetooth peer playback, optional Auto/ABR/codecs, radio endurance or full-system-suspend restoration. Baseline02 preserves matched firmware/provisioning and the current private experiment software; qualification and public distribution remain separate.
