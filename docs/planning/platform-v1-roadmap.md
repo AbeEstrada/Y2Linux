@@ -1152,6 +1152,89 @@ counts, latency and owner feel remain separate acceptance gates; the initially
 busy lock does not authorize concurrent access. Build one coherent software
 candidate if needed. No flash, push, main-worktree edits, CPU-policy changes or
 full-suspend implementation. [Input receipt](../validation/Y2-PLATFORM-V1-INPUT.md).
+## Full suspend failed-return boundary and codec correction — 2026-10-04
+
+Verdict **MORE_WORK_REQUIRED**. The installed Baseline02 one-shot 12-second RTC
+trial records SPM EINT `0x20`, full PCM length 596 and reset-vector stamp
+`0x59325253`, but no COMPLETE/EXIT. Previous journal sequence 175 stops at
+DEVICES_RESUMING; phase-7 enter 7407 for CS43131 `1-0030` has no matching leave
+through final sequence 7422. Wheel and both MMC callbacks do leave; their parallel
+progress does not prove codec completion. The inner codec stall is unknown.
+Boot changes from `27e6d684-3794-4490-95db-a489027cd4f4` to
+`88b85fa3-2282-4d93-b0b8-818a105ddd0a`, with a retained 30-second backstop.
+This is failed return/reset recovery, never successful resume; decoded RGU cause
+was not captured. Power and repeated entries are stopped after this first trial.
+
+| Coverage | Current classification / remaining boundary |
+| --- | --- |
+| CPU/idle/timers; #28 | CONFIRMED bounded UART01 runtime; Baseline02 staged PM PASS, full CPU reset return observed, whole-device completion FAIL |
+| Power/suspend; #30 | PARTIAL; charger refusal/awake RTC PASS; same-boot RTC/Power and repetition unqualified. Epic externally CLOSED does not close this evidence gate |
+| Storage/USB/radio; #28/#31 | PARTIAL full resume; stages return, O_DIRECT data+SD preserved across reset/errors 0, USB/Wi-Fi usable after reboot; active BT full restore NOT_RUN |
+| GPU/display/audio; #34/#29 | PARTIAL full resume; CS43131 callback is the present blocker; new boot graphics availability is recovery evidence |
+| Reborn/product | IMPLEMENTED typed prepare/restore and Power behavior; native/QEMU tests PASS, new physical protocol NOT_RUN; ordinary deep-sleep gate retained |
+
+A narrowly scoped codec PM source correction replays cached state/XTAL mask after
+supply-disable refusal without double rail references, and records force/rail/
+delay/cache/XTAL substeps in the existing retained ring. It does not claim to fix
+the unidentified inner stall. Eleven focused fault/PM trace tests and a corrected
+isolated ARM Image/zImage/modules build PASS; audio/policy has 12 pass + one DTB
+skip. Prior 244 Reborn workspace tests/fmt/Clippy/ARM proof remains unchanged.
+No AFE/high-resolution audio, C1/C2/C3, voltage, clock, memory or protected scope
+change. New source is uninstalled; no flash/push/merge/issue update or milestone
+closure. Fixtures/listener cleaned, pm_test none/backstop 0/alarm empty, stock
+software/policies preserved, lease released normally to performance. Next is a
+coherent owner-installed instrumented candidate, then one checked RTC return,
+Power wake and full subsystem/cycle qualification only after success.
+[Exact report](../validation/Y2-PLATFORM-V1-SUSPEND.md) and
+[bounded evidence](../validation/evidence/platform-v1-suspend-2026-10-04.json).
+
+## Full suspend physical entry boundary — 2026-10-04
+
+The retained device lease now admits installed Baseline02 Linux `8584ccd8` /
+Reborn `b71b4688`, boot `27e6d684-3794-4490-95db-a489027cd4f4`, taint 0.
+Freezer on USB and battery devices/platform/processors/core PM tests PASS:
+helper return, kernel COMPLETE/error 0, unchanged boot, zero ext4 errors and
+no SPM entry. Charging devices test intentionally refuses at DPM_PREPARED with
+`-EBUSY` and returns awake; its guard is preserved. One awake RTC alarm delivers
+one child IRQ and clears; it does not prove suspend wake. Wi-Fi observation
+survives radio quiesce/restore. Owner disconnects USB; actual Discharging and
+USB presence 0 are verified before battery tests.
+
+Read-only issue refresh: #28/#31/#34 OPEN; #30 CLOSED since 2026-09-15 despite
+its retained checklist. This pass changes no issue status and cannot infer
+full-suspend acceptance from that administrative closure. Runtime C3 evidence
+remains separate. Full Power/RTC wake, same-boot deep return, actual subsystem
+restoration and repetition are still NOT_RUN. Source kernel guards and the new
+Reborn protocol are built/tested but not installed; installed-image tests cannot
+qualify their execution. No milestone closes, charger bypass, register change,
+flash, push, protected-partition or memory-layout change is admitted. Next is
+one short RTC full trial with existing one-shot backstop and retained journaling;
+any failed checked return stops subsequent entry trials pending diagnosis.
+Raw receipts: `out/platform-v1-suspend/pm-*-battery/`,
+`pm-freezer-charging/`, `pm-devices-charging/`, `rtc-awake.json`.
+[Full implementation and qualification](../validation/Y2-PLATFORM-V1-SUSPEND.md).
+
+## Platform 1.0 full suspend implementation admission — 2026-10-04
+
+Owner explicitly authorizes implementation and bounded whole-device qualification
+on dedicated `codex/platform-v1-suspend` worktrees (Linux base b5aea93, Reborn
+b71b468), with no flash or push. A non-blocking shared device lock governs every
+physical operation. First locked read observes Baseline02 kernel, boot
+`27e6d684-3794-4490-95db-a489027cd4f4`, taint 0, active charging and no current
+retained suspend journal. Installed source identity needs a complete receipt;
+this new image does not inherit blanket physical qualification from UART01.
+
+Retained UART01 evidence proves C1/C2/C3 in its bounded runtime scope. Retained
+Fix02 evidence proves SPM/RTC/reset-vector/CPU/device return followed by a stall
+before kernel EXIT and watchdog recovery, not successful same-boot resume.
+Current staged PM, Power/RTC wake and all full-suspend subsystem restoration
+remain PARTIAL/NOT_RUN. Existing #28/#30/#31/#34 and production gates remain open;
+no external issue change or milestone closure. Preserve C1/C2/C3, exact MT6582
+PCM and register contracts, charger refusal, storage and memory layout. Next:
+trace the installed image, run safe staged PM before one RTC and one Power wake,
+then bounded mixed cycles only after checked same-boot restoration. Source work
+continues while the shared device lock or charging prevents physical entry.
+See [implementation receipt](../validation/Y2-PLATFORM-V1-SUSPEND.md).
 
 ## Baseline02 source integration into main — 2026-10-03
 

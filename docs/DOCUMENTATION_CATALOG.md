@@ -330,6 +330,7 @@ Indexed pages: **307**. Explicit scope notices: **220**.
 | [CPU idle completion physical progression](validation/Y2-CPU-IDLE-COMPLETION-PHYSICAL.md) | Exact-image progression; points to authoritative UART01 C1/C2/C3 result |
 | [C3 MT6582 UART admission and ownership fix](validation/Y2-CPU-C3-UART.md) | Exact MT6582 source/software receipt; current Baseline02 carries qualified implementation |
 | [UART01 C1/C2/C3 physical qualification](validation/Y2-CPU-C3-UART-PHYSICAL.md) | Latest exact CPU-idle hardware proof: C3 21 bounded cycles plus normal runtime; not new-image cold boot |
+| [Platform 1.0 full suspend implementation](validation/Y2-PLATFORM-V1-SUSPEND.md) | Full-system checked unwind, typed Reborn preparation/restoration and separate physical qualification |
 
 ## Tests
 
