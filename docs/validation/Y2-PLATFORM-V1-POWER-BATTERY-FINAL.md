@@ -703,3 +703,58 @@ helper PIDs restored, Wi-Fi saved-on and runtime Online, Bluetooth saved-off and
 runtime Off, USB ECM/MTP Ready/configured with restarts zero, SDP450mA/fault zero.
 PM test none, RTC alarm empty, recovery backstop unarmed/not running/error zero.
 No new source fix is installed and no second power candidate exists.
+
+## 39. POWER-FINAL-02 PHYSICAL QUALIFICATION
+
+Installed and verified on boot `309681c4` (taint zero): release
+`1.0.0-platform-v1-power-final-candidate.2`, Linux `eb824a6`, Reborn `05af011`.
+Machine record: `docs/validation/data/y2-power-final-02-physical.json`. Private raw
+windows stay under `out/platform-v1-power-final/private/post-flash/F02-*`.
+
+**DAC idle bias: PASS.** Idle and 3 s / 18 s after stopping playback: DAC GPIOs 15/18/20
+low, `cs43131-en20/18/15` enable counts 0, DAPM bias Off, PCM closed, audio clocks off,
+AFE runtime suspended. During playback: GPIOs high, counts 1/2/1, bias On, PCM RUNNING,
+517 AFE IRQs. Playback restarts cleanly. POWER01 held five rail references while paused.
+
+**Connectivity supervisor: PASS.** Single thread, below 0.05 context switches/s over a
+120 s window. Associated Wi-Fi idle 1.2-2.6 Wi-Fi IRQ/s. Bluetooth connected idle adds
+nothing measurable (168.8 ctx/s system, 0 reconnect attempts). Missing AP, measured with
+a runtime-only dummy network: wpa_supplicant scanned 11 times per minute with 7.2 Wi-Fi
+IRQ/s, indefinitely. `autoscan exponential:2:120` cut that to 5 scans per 150 s and 1.3
+IRQ/s; the supervisor now applies it when the interface attaches (candidate 3). Missing
+Bluetooth peer was not testable (headphones were in range and connected).
+
+**Power button.** Root cause of "not available": Reborn executed `/usr/bin/y2-platform`,
+which no production image installed (`/usr/sbin/y2-platform`), so every platform call
+failed. Fixed in Reborn source. With a temporary live symlink the fallback blanked the
+screen when sleep was refused as `physical_qualification_required`; it now also covers
+`charger_active`. A `restore_failed` receipt from a previous boot persists until the next
+sleep request.
+
+**CPU idle.** C3 is enabled by normal policy (qualified CPU0 DORMANT, budget -1). Battery,
+dark, paused, radios off: 30 min = 74.4% C3 (65 808 entries), 17.5% C1, 3.8% C2, 71.9
+IRQ/s, 136 ctx/s. 300 s window: 38.4% C3, 55.2% C1. **With Wi-Fi associated (CAM or FAST_PSP)
+C3 and C2 are 0%**: connectivity owns APDMA bit 11 and BTIF bit 20 (documented blockers),
+and 14 499 C3 / 17 796 C2 attempts per 300 s abort. This explains the overnight incident,
+where Wi-Fi was associated. Candidate 3 powers Wi-Fi down at runtime after five dark idle
+minutes on battery (saved preference untouched; wake restores). Wake offenders with radios
+off: polled navigation GPIO kworker 27 ctx/s, rcu_sched 8, mm_percpu_wq 6.6, charger
+worker 4.8, python daemons 2.2 each. Voltage slopes (1.84, 1.01 and 0.19 mV/min for CAM,
+FAST_PSP and radios-off) mix post-charge relaxation with load and are not current.
+FAST_PSP versus CAM cannot be separated electrically while both block C3; CAM stays default.
+
+**Full suspend: still FAIL, now precisely localised.** Staged pm_test stages all pass.
+Real RTC12/backstop30 attempts (and a repeat with the SD host unbound) enter deep sleep,
+wake at the RTC time (SPM wake 0x20, PCM 596, reset-return stamp) and the kernel resumes
+every device and marks `DEVICES_RESUMED`, `CONSOLE_RESUMED`, `PLATFORM_ENDED`,
+`TASKS_THAWED` with `failed_stage` NONE and error 0. It never reaches `FILESYSTEMS_THAWED`;
+the 30 s backstop resets. The earlier codec cache-replay stall is not reproduced because
+the DAC is already down at suspend. The stall is in `suspend_finish()` after tasks thaw:
+a blocked `filesystems_thaw()` (storage I/O or `s_umount`) or a crash there. Candidate 3
+adds a post-thaw sampler (suspender wchan, uninterruptible tasks, MMC IRQ counts at 3 s
+and 15 s), oops/panic notes and a ramoops reservation (DRAM retention across the warm reset
+is unproven). Power wake and repeat cycles wait for a same-boot resume.
+
+**Charging.** PC USB: SDP, 450 mA programmed ceiling, HOLD near 4.175 V, fault 0, MTP and
+SSH configured; that is a configured ceiling, not measured current. Wall charging: not run.
+Verdict stays **MORE_WORK_REQUIRED**.

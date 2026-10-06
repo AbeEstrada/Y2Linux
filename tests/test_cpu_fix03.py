@@ -331,6 +331,8 @@ class ResumeCompletionDiagnostics(unittest.TestCase):
         # Each mark pings the backstop; marks remain the only writer of EXIT.
         mark = function(public((ROOT/'kernel/platform/pm-journal.c').read_text(), 'y2_pm_mark'), 'y2_pm_mark')
         self.assertIn('y2_pm_backstop_ping();', mark)
+        # The post-thaw stall sampler is armed from the same retained stage mark.
+        self.assertIn('thaw_stall_mark(stage);', mark)
 
     def test_stage_entries_are_timed_and_decoded(self):
         run_c(JOURNAL_FIXTURE + DEVICE + self.functions(
