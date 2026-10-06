@@ -1026,6 +1026,86 @@ read-only refresh. The device state is restored and lock released. No flash,
 push, main change, memory expansion or release acceptance. Exact results and
 localized changes are in
 [Y2-PLATFORM-V1-GRAPHICS](../validation/Y2-PLATFORM-V1-GRAPHICS.md).
+## Reborn performance pass closing boundary — 2026-10-04
+
+The scoped Product v2 application performance pass is CONFIRMED on Baseline02
+boot `88b85fa3-2282-4d93-b0b8-818a105ddd0a`, taint0, with preserved baseline and
+exact candidate `069415a` ARM SHA `7871ec67f6678c7f522b1b84da0f1e53ab1646e89bc6abb6b7eafe10c02286c7`.
+See the [closing gap audit](roadmap-gap-audit.md#reborn-performance-pass-closing-boundary--2026-10-04)
+and [Reborn evidence](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md).
+
+Wheel KMS p95 is 59.93→17.52 ms and Now Playing 77.61→17.15 ms; all 1,000
+steps match. Frame CPU p95 falls from 5.09–9.94 to 1.65–2.82 ms. Sampled static
+screens stop redrawing; Home CPU falls 4.96→1.88%, playing 87.95→11.21%.
+Four warm-start interactive p95 improves 779→499 ms. Supplemental repeated
+resume/pause, cover caching, private 10k fixtures, stop/reopen and active shutdown
+pass. Product v2 retains bounded pixel near-equivalence; no photon/analog/power,
+full-suspend, peer-radio or improved cold-boot qualification is promoted.
+
+Installed b71 Reborn/data/paused screen-off state, original C3/governor policy
+and rw storage with zero ext4 errors are restored. Device leases are released;
+no flash, push, main-worktree change, production package or memory/partition
+change belongs to this pass. Read-only issue refresh keeps existing epics OPEN.
+
+Next boundary: cross-owner source integration is PARTIALLY READY. Reconcile
+source epochs/prepare and inflight observations with fresh storage/FD admission;
+compose wired pacing with strict transport/format ownership and use the radio
+owner's event worker in place of the local powered-off timeout. Repeat relevant
+combined qualification after integration. The 10k single-album stress layout
+(34.36 ms), deeper libraries/queues, analog/peer/electrical evidence and the
+independent failed full-resume gate remain scoped gaps, not implementation or
+hardware authorization. This update is documentation-only.
+
+## Reborn performance matched-run readmission — 2026-10-04
+
+The independent suspend owner released its lease after watchdog recovery,
+storage integrity checks and normal restoration. This pass independently
+observes Baseline02 Linux `8584ccd8` / Reborn `b71b4688`, new boot
+`88b85fa3-2282-4d93-b0b8-818a105ddd0a`, taint 0, stock paused/screen-off Reborn,
+three tracks, root/data/SD rw with zero ext4 errors and unchanged automatic
+CPU0 C3/schedutil policy. See the [readmission audit](roadmap-gap-audit.md#reborn-performance-matched-run-readmission--2026-10-04).
+
+Earlier performance receipts remain exact old-boot evidence. The next boundary
+is a fresh preserved baseline followed by candidate `b8c05db` on the same new
+boot, then restoration and a closing audit. Full suspend remains PARTIAL and its
+failed resume is an independent release gate; no additional deep trial or
+production/flash/push/policy change is authorized here. Existing epics stay OPEN.
+
+The subsequent same-native gain/write probe confirms a tiny partial-write spin
+in Reborn audio. Next localized step: bounded PCM-capacity waiting, preserving
+gain, formats, buffers, leases and accepted-frame accounting; validate source
+and rerun the exact candidate before closure. High-resolution/analog and peer
+Bluetooth gates remain separate; see the readmission audit for probe scope.
+
+## Reborn performance pass admission — 2026-10-04
+
+Owner authorizes measurement and localized Reborn responsiveness fixes on branch
+`codex/platform-v1-reborn-performance`, preserving Product v2. Fresh read-only
+USB SSH under `/tmp/y2-platform-v1-device.lock` observes installed
+Y2LINUX-BASELINE-02, Linux `8584ccd8`, Reborn `b71b4688`, kernel
+`6.18.0-y2linux-baseline-02`, boot `27e6d684-3794-4490-95db-a489027cd4f4`,
+taint 0, and automatic qualified CPU0 C3 policy Enabled/budget -1/disable 0.
+This supersedes installation-pending information only for device identity and
+boot-policy observation; it does not substitute for full Baseline02 qualification.
+Retained UART01 C1/C2/C3 evidence remains scoped to its tested image.
+
+| Coverage / existing dependency | Classification | Next boundary |
+| --- | --- | --- |
+| Product v2 UI, GPU #34 | PARTIAL | Measure 480x360 frame submission/presentation, navigation, wheel and artwork on installed hardware; preserve pixels and KMS ownership. |
+| Library/storage #33 | PARTIAL | Disposable 10k-track SQL and UI fixtures; distinguish fixture timings from owner-library/cold-storage results. |
+| CPU idle #28/#34 | CONFIRMED bounded UART01; PARTIAL current-image | Measure Reborn CPU/context switches and redraws under current guards; do not change C1/C2/C3 policy. |
+| Audio/radios #29/#31 | PARTIAL | Bounded playback/control regressions; audible response and external peer behavior require direct observation. |
+| Startup/splash #28/#34 | PARTIAL | Installed first-frame log 446 ms from process entry; boot application-ready 41.343 s. Measure app restart separately from cold boot. |
+
+Read-only GitHub refresh confirms #16/#27/#28/#29/#31/#32/#33/#34 OPEN.
+No remote status mutation, milestone closure, build image, flash, push, memory
+reservation, partition or production package change is authorized by this pass.
+Temporary executable/fixture runs are reversible hardware measurements; retain
+and restore the installed service and owner data. Next smallest boundary is a
+measured baseline before any optimization. Source/ROM/recovery provenance is
+unchanged and is not repeated. Report belongs in Reborn
+`docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md`.
+
 
 ## Baseline02 source integration into main — 2026-10-03
 
