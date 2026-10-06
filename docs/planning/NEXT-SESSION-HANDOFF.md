@@ -5,8 +5,7 @@ Three jobs. **Do not start the cleanup before Job 0 is complete.**
 - **Job 0 — safety:** **DONE on 2026-10-06** (see below). Re-verify the three checks, then move on.
 - **Job 1 — hardware:** owner flashes POWER-FINAL-03, validate it, locate the suspend stall.
 - **Job 2 — cleanup:** `out/` keeps only 03, documentation is consolidated, both repos end clean.
-- **Job 3 — integrate the 11 unmerged parallel handoffs** (new finding, section below). Decide with the owner whether
-  this comes before or after Job 2; the cleanup must not delete those branches either way.
+- **Job 3 — integrate the 11 parallel handoffs:** **DONE** (section below); the cleanup may now delete those merged branches.
 
 Job 1 and Job 2 are independent. If the owner has not flashed yet, start Job 2.
 
@@ -101,39 +100,50 @@ Before deleting anything:
   names it. It is required by `tools/production/build.py --owner-firmware`.
 - Stock firmware lives outside the repo (`/home/luca/Dokumente/Code/Y2Player/…`); do not touch it.
 
-## Job 3 — the 11 unmerged parallel handoffs (found 2026-10-06)
+## Job 3 — the 11 parallel handoffs: INTEGRATED on 2026-10-06 (done)
 
-An earlier coordination session (`docs/release/Y2-PLATFORM-V1-INTEGRATION-STATUS.md`, `…-PLAN.md`, `…-MASTER.md`; they are on branch
-`wip/main-dirty-docs-2026-10-06`) records **eleven finished source handoffs**, each a `codex/platform-v1-<name>` branch in Linux and
-Reborn, each rated *ACCEPT_WITH_INTEGRATION_ADJUSTMENT*, none merged. The USB02/POWER line descends from `codex/platform-v1-usb-final`,
-so **03 does not contain them**. Verified by patch content (`git cherry`), not hashes: every commit below is genuinely absent from 03.
+All eleven `codex/platform-v1-<name>` branches plus `codex/highres-audio-completion` are merged into `main` in **both** repos, with
+POWER-FINAL-03 as the baseline: on every collision 03's version wins, docs are unioned, nothing from 03 was overwritten.
 
-| Branch | Linux unique commits | Linux code areas | Linux trial merge into main | Reborn commits / trial merge | Planned order |
-| --- | --- | --- | --- | --- | --- |
-| storage | 2 | `0009-y2-msdc-readonly.patch`, media/bench tools | conflicts: tests.sh + planning docs | 2 / clean | 1→2 |
-| usb | 6 | MTP package, kernel `usb.c`, patch `0065`, config | **conflicts: kernel usb.c, 0065, config, manifest** (overlaps USB02) | 1 / clean | 1→3→4→10 |
-| wifi | 5 | `network.py`, `observe.py`, diagnostics | conflicts: diagnostics, network time test | 1 / clean | 4 |
-| bluetooth | 1 | `reconnect.c`, `bt-observe.c`, `bluetooth.py` | **conflicts: `reconnect.c`** (POWER01 also changed it) | 1 / clean | 5 |
-| highres-audio | 2 (+6 on `highres-audio-completion`, tools/research) | `mt6582-afe.c`, audio precision contract | conflicts: diagnostics fields | 1 (+2) / clean | 6 |
-| ffmpeg-metadata | 2 | docs only | docs conflicts only | 4 / clean | 6→7→8 |
-| library-db | 1 | docs only | docs conflicts only | 7 / clean | 7 |
-| graphics | 1 | docs only | docs conflicts only | 1 / clean | 8 |
-| reborn-performance | 2 | docs only | docs conflicts only | 3 / clean | 8→10 |
-| input | 4 | capture tools (no runtime code) | docs conflicts only | 2 / clean | 9→10 |
-| suspend | 10 | `y2-suspend`, `pm-journal.c`, `spm.c`, patch `0030`, qualify script | **conflicts: 0030, manifest, test_suspend_audio, qualify script** (overlaps POWER work) | 3 / clean | 1→10 |
+How it was verified (repeat it if in doubt): for each branch, every code line the branch added relative to its fork point was searched
+in the integrated tree (`lost-lines` check). Result: the branches were already integrated into 03's lineage in adapted form by an earlier
+integration pass, so almost all of their code is present. What is genuinely new from the merge is small:
 
-Every Linux branch also conflicts on `docs/planning/platform-v1-roadmap.md` and `roadmap-gap-audit.md` (both append at the top):
-mechanical. The earlier plan lists known semantic couplings (C13 `spm.c` vs idle, C17 USB auto-refresh vs suspend prepare, C18 diagnostic
-fields, C21 performance vs graphics renderer); read its dependency table before merging.
+| Repo | New in main from the merge |
+| --- | --- |
+| Linux | AFE register lab (`tools/development/afe-lab`), audio observer, `generate_live` low-bit fixtures in `tools/platform/audio_precision.py`, `tests/test_highres_observations.py` (now in `tests.sh`), planning/validation docs and evidence |
+| Reborn | `tools/build/precision-probe.c`, docs |
 
-How to integrate (do not blindly merge): branch `integrate/platform-v1-into-03` from `main`; merge in the planned order, one branch at a time,
-resolving by intent. For the overlapping ones (usb, suspend, bluetooth) compare against what 03 already does (USB02 transport, POWER01
-BT reconnect watch, POWER-FINAL kernel breadcrumbs) and keep the newer behaviour; some of their commits are superseded. Run the production
-profile in the container after **each** merge (expect today's 511 cases, 10 skips). Then Reborn (all 12 branches merge cleanly one at a
-time; check them together). Hardware qualification is separate; integration is not authorization to flash. Nothing here changes the verdict.
+Proof that 03 is untouched: Linux `git diff ffddeb8 main -- kernel buildroot tools/production tools/connectivity initramfs tools/build tools/validation`
+is empty; the only image-reachable file that differs is `tools/platform/audio_precision.py` (additive). Reborn code differs from 03 only by the new
+probe file. The sealed 03 images therefore still correspond to `main`.
 
-**Until this is decided: do not delete these branches, their worktrees under `/home/luca/Dokumente/Code/worktrees/`, or the `out/` copies.**
-If the owner declines to integrate, archive each with `git tag archive/<branch> <branch>` first.
+Final gates on the integrated trees: Linux production profile **515 cases** (511 plus 4 new), 10 skips, 0 failures; Reborn fmt, strict clippy and
+all tests pass with the same counts as 03.
+
+Per-branch outcome (Linux code that 03 already had in a newer form was kept; "absent" = branch lines not in the result, all superseded variants):
+
+| Branch | Result |
+| --- | --- |
+| storage, wifi, bluetooth, highres-audio, suspend, input | code already in 03; docs added. Absent lines: 1-15 per branch (old `wait()` signature, `bt-control.ini` location, patch hunk headers) |
+| usb | superseded by USB02: 36 of 2079 lines absent, all config/mechanics 03 changed after hardware validation. Kept 03's `usb.py`, `mtp-safe.*`, patch 0065, config |
+| ffmpeg-metadata, library-db, graphics, reborn-performance | Linux side docs only |
+| highres-audio-completion | **new tools and fixtures added** |
+
+**Correction to an earlier statement in this file's previous version:** it said all 12 Reborn branches "merge cleanly". That was wrong: the Reborn repo has no
+Git identity, so those trial merges aborted and the result was an artefact. The real Reborn merges (with identity from environment variables) had code conflicts
+in `main.rs`, `input.rs`, `storage.rs`, `media.c`, the library and others. They were resolved toward 03 after checking that 03 already contains each feature in adapted
+form (`TransferRefresh`/USB-triggered refresh, `input_resume`/`resumed()`, `pinned_folder_artwork`, `artwork_lowres`, `metadata_revision`, a superset
+`main_loop_interval`). Three merges (ffmpeg-metadata, reborn-performance, input) had auto-merged partial hunks that did not compile against 03 (an `evdev_us` field
+without producers, a duplicate `metadata_tests` module); those files were restored to 03 in a visible commit.
+
+Not taken on purpose, because 03 does it differently and was hardware-validated or is the Product UI v2 policy: the usb branch's thread-based service wake,
+its gadget `MaxPower`/storage-line mechanics, the input branch's Power key mapping to screen-sleep, reborn-performance's `evdev_us` input timestamps and simple loop
+interval. If the owner wants any of them, port that single feature deliberately and re-run the gates. One optional small port: the usb branch's `tools/usb/qualify.py`
+takes `/tmp/y2-platform-v1-device.lock` (03's does not).
+
+**Branches are now merged, so cleanup may delete them:** `git branch --merged main` includes all of these in both repos. Keep the archive tags rule for anything still
+unmerged. The earlier warning about not deleting these branches no longer applies.
 
 ## Job 2 — cleanup
 
@@ -161,7 +171,7 @@ Everything else goes, in this order (the 11 parallel branches live in the repo a
 
 - `/home/luca/Dokumente/Code/worktrees/*` (16 worktrees, 85 GB): same removal procedure per worktree. Skip `platform-v1-usb-final` until
   the owner decides about its 4 dirty files.
-- `git branch --merged main` lists branches safe to delete. For any branch **not** merged (including the 11 in Job 3 and
+- `git branch --merged main` lists branches safe to delete (now including the 11 integrated ones). For any branch **not** merged (for example
   `wip/main-dirty-docs-2026-10-06`), create `git tag archive/<branch> <branch>` first, then delete the branch only if the owner agrees.
 - Reborn: delete `target/` (rebuilds in minutes), keep `vendor/`; remove stale `out/` (27 MB).
 
