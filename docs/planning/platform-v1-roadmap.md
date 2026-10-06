@@ -1106,6 +1106,52 @@ measured baseline before any optimization. Source/ROM/recovery provenance is
 unchanged and is not repeated. Report belongs in Reborn
 `docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md`.
 
+## Platform 1.0 input source handoff — 2026-10-04
+
+Owner ended device waiting. Reborn `e51a335` / Linux `95ed509` source and software
+validation pass; ARM userspace candidate exists, never installed/executed.
+**MORE_WORK_REQUIRED** for physical acceptance:100CW/100CCW,20/button,
+input->frame percentiles, candidate idle/wake/recovery and owner feel. First
+read-only Baseline02 capture had0events; subsequent input IRQ deltas0, while
+current four-core topology rejected C2/C3. Preserve qualified older UART01
+CPU evidence without promoting this candidate. Lock released, helper removed,
+input reservation cancelled; no flash/push/main-worktree changes.
+[End-boundary audit](roadmap-gap-audit.md#platform-10-input-pass-end-boundary--2026-10-04).
+[Full input report](../validation/Y2-PLATFORM-V1-INPUT.md). No milestone closed.
+
+
+## Platform 1.0 input software candidate — 2026-10-04
+
+Reborn `e51a335` / Linux input tooling `99087ba`: source and software checks
+complete (257 workspace tests,37 input/40 UI, fmt/strict Clippy/ARM,5 Linux
+input cases). Userspace candidate `out/platform-v1-input-candidate/` is sealed;
+kernel/DT/images unchanged. [Boundary review](roadmap-gap-audit.md#platform-10-input-software-candidate-boundary--2026-10-04).
+
+Retained218 physical wheel pairs have no same-direction gaps below8ms;
+keep existing wheel filtering and acceleration. Current100CW/100CCW accuracy,
+20/button, input->frame and owner feel remain pending a coordinated window.
+One read-only Baseline02 window (boot27e6d684, taint0) recorded zero events;
+owner replied after it ended. Idle wheel/I2C0/Power/keypad IRQ deltas all0;
+current four-core topology rejected C2/C3. CPU policy and installed binary
+unchanged, temporary helper removed, lock released for storage. No flash,
+push or physical milestone closure; #28/#34 remain OPEN.
+[Full input receipt](../validation/Y2-PLATFORM-V1-INPUT.md).
+
+## Platform 1.0 input pass — 2026-10-04
+
+Input implementation and bounded physical observation are active only in the
+isolated `codex/platform-v1-input` Linux/Reborn worktrees (bases `b5aea93` /
+`b71b468`). [Admission audit](roadmap-gap-audit.md#platform-10-input-pass-admission--2026-10-04)
+preserves Product v2 semantic controls, the IRQ-driven APT32F driver and retained
+UART01 C1/C2/C3 evidence. #28/#34 remain OPEN after read-only refresh.
+
+Next: map timing/recovery ownership, reproduce concrete failures, capture current
+installed events under `/tmp/y2-platform-v1-device.lock`, fix justified bugs and
+run targeted Linux tests plus Reborn fmt/clippy/workspace/ARM checks. Physical
+counts, latency and owner feel remain separate acceptance gates; the initially
+busy lock does not authorize concurrent access. Build one coherent software
+candidate if needed. No flash, push, main-worktree edits, CPU-policy changes or
+full-suspend implementation. [Input receipt](../validation/Y2-PLATFORM-V1-INPUT.md).
 
 ## Baseline02 source integration into main — 2026-10-03
 

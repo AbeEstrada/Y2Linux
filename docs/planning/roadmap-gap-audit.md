@@ -1577,6 +1577,108 @@ measured baseline before any optimization. Source/ROM/recovery provenance is
 unchanged and is not repeated. Report belongs in Reborn
 `docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md`.
 
+## Platform 1.0 input pass end boundary — 2026-10-04
+
+Owner instruction “come to an end” terminates further device waiting after
+source validation and one bounded read-only hardware observation. This boundary
+closes the work session, not input acceptance or a Platform 1.0 milestone.
+Reborn `e51a335`, Linux `95ed509`: fmt/strict Clippy,257 workspace tests
+(37 input/40 UI), ARM build and5 targeted Linux tests pass. Candidate userspace
+is built and hashed, never installed/executed. Kernel/DT/images remain unchanged.
+
+Fresh hardware identity is Baseline02 compiled Linux8584ccd8/Rebornb71b468,
+boot27e6d684-3794-4490-95db-a489027cd4f4,taint0. The120.289s observer recorded
+0events; owner operation was not confirmed before window end. Subsequent
+wheel/I2C0/Power/keypad IRQ deltas0, but four cores remained online and dormant
+entry rejected topology; C2/C3 counts0. Retained UART01 proves bounded older
+C1/C2/C3 behavior, not this unexecuted input candidate. Helper removed, original
+service/binary untouched, lock normally released; input reservation cancelled.
+
+| Coverage / dependency | Final classification | Remaining gate |
+| --- | --- | --- |
+| APT32F/filter/cadence, #28 | CONFIRMED retained218 pulses; PARTIAL physical accuracy |100CW/100CCW counted detents, measured bounce and owner feel |
+| Reborn timing/recovery, #28 | CONFIRMED deterministic software; PARTIAL hardware | All buttons>=20 presses; holds/repeats/reopen/drop acceptance |
+| Action/state/frame, #34 | IMPLEMENTED bounded diagnostics; NOT_MEASURED current latency | Candidate kernel->state/page-flip median/p95/worst; physical origin separate |
+| Input idle/C1/C2/C3, #28 | CONFIRMED zero input IRQ delta in bounded snapshots; PARTIAL candidate compatibility | Qualified topology and per-process wake attribution;50Hz navigation poll retained |
+| Power/full suspend, #28 | CONFIRMED software gesture/reset contract; PARTIAL physical wake | Suspend-owner integration and actual wake suppression |
+| Product v2 physical UX | CONFIRMED host navigation invariants; PARTIAL owner acceptance | Every screen, large lists, audio volume and human feel |
+
+Verdict **MORE_WORK_REQUIRED**. Existing issue/epic states are retained from the
+read-only admission snapshot (#28/#34 OPEN); no remote status write or milestone
+promotion. Source handoff is ready; the next smallest blocker is an owner-counted
+physical window and candidate runtime tracing. No new hardware, memory,
+protected-data or production scope is authorized by this closure. Full fixes,
+exact artifacts and acceptance limits: [input report](../validation/Y2-PLATFORM-V1-INPUT.md).
+
+
+## Platform 1.0 input software candidate boundary — 2026-10-04
+
+The admitted input-only source pass is software complete: Reborn `e51a335`,
+Linux tooling `99087ba` (kernel/DT unchanged), 257 workspace tests including
+37 input and40 UI tests, fmt/strict Clippy, ARM Cortex-A7 release build and
+5 targeted Linux input tests pass. The userspace candidate is sealed under
+`out/platform-v1-input-candidate/`; no BOOTIMG/Y2ROOT image, flash or push.
+After owner-requested waiting, the lock admitted one bounded read-only window.
+Baseline02 boot `27e6d684-3794-4490-95db-a489027cd4f4`, compiled Linux `8584ccd8` /
+Reborn `b71b468`, taint0: 120.289s with zero evdev records (owner replied after
+capture); subsequent wheel/I2C0/Power/keypad IRQ deltas all0. Current four-core
+topology rejected dormant entry; C2/C3 counts0. No policy or installed binary
+changed. Helper removed and lock released for storage. This is not physical
+acceptance or cold-boot/CPU qualification.
+
+Fresh analysis of retained physical DEV02/GPU01 raw records finds218 wheel
+press/release pairs; zero same-direction gaps <8ms; minimum active gap30.957ms.
+No counted hand detents or latency data exist in those captures. Retain the
+8ms filter and acceleration tiers. Existing UART01 C1/C2/C3 receipts remain
+hardware authority; no CPU/radio/poll policy or full-suspend subsystem change.
+
+| Coverage / dependency | Classification | Remaining gate |
+| --- | --- | --- |
+| APT32F/I2C/evdev, #28 | CONFIRMED retained pulse behavior; PARTIAL counted/current behavior |100CW+100CCW counted detents and button counts |
+| Reborn timing/recovery, #28 | CONFIRMED deterministic software; PARTIAL physical | Candidate holds/rebind/drop/wake and human feel |
+| Input->state/frame, #34 | PARTIAL | New bounded microsecond trace on candidate; physical median/p95/worst pending |
+| Input idle/C1/C2/C3, #28 | CONFIRMED retained whole-system scope; PARTIAL new input measurement | Zero idle wheel/I2C0/Power/keypad IRQ delta observed; per-process timers/candidate C2/C3 pending;20ms navigation poll retained |
+| Power/full suspend, #28 | PARTIAL | Typed gesture/reset contract provided; platform-owned full wake qualification |
+| Product v2 controls | CONFIRMED software invariants; PARTIAL physical UX | Screen/list/volume listening and owner acceptance |
+
+Existing epics remain OPEN; no status/milestone promotion or remote write.
+[Input report](../validation/Y2-PLATFORM-V1-INPUT.md) records bugs, exclusions,
+exact candidate identity and physical owner protocol. Next smallest boundary
+is a free device window and installed-identity/capture; no new hardware,
+memory, protected-data or recovery provenance scope is admitted.
+
+## Platform 1.0 input pass admission — 2026-10-04
+
+Owner explicitly authorizes implementation, optimization and bounded physical
+input observation in isolated `codex/platform-v1-input` worktrees, based on Linux
+`b5aea93` and Reborn `b71b468`. No flash, push, main-worktree changes or full
+system-suspend implementation is authorized. The shared nonblocking device lock
+was busy on first attempt; no live access occurred.
+
+Retained UART01 hardware evidence remains authoritative for bounded C1/C2/C3:
+Linux `e9e8d63`, Reborn `b71b468`, boot `fd955840-35d9-47db-83e0-ff47d6bb2d2b`,
+taint 0, 3,647 checked C3 returns. Retained DEV02 and GPU01 evdev captures show
+APT32F press/release wheel records and all eight physical controls; they do not
+prove counted slow-detent accuracy, current-image bounce, presentation latency
+or human feel. Baseline02 new-image qualification remains PHYSICAL_NOT_RUN.
+
+| Coverage / dependency | Classification | Next evidence boundary |
+| --- | --- | --- |
+| APT32F IRQ/I2C/evdev, #28 | PARTIAL | Current installed identity, bounded capture and detent counters; preserve IRQ-only driver unless evidence requires change |
+| Reborn timing/actions/recovery, #28 | PARTIAL | Deterministic failure/timestamp/hold tests, targeted fixes, workspace checks and ARM build |
+| Display/presentation latency, #34 | PARTIAL | Correlated input/state/frame timestamps; physical actuation origin requires owner or external measurement |
+| C1/C2/C3 input compatibility, #28 | CONFIRMED bounded retained CPU scope; PARTIAL input scope | Observe untouched input IRQ/poll activity without changing CPU/radio policy |
+| Power/full suspend, #28 | PARTIAL | Typed Power and screen-state ownership here; full suspend belongs to another session |
+| Product v2 physical UX | PARTIAL | Counted detents/buttons, screen-off/wake and owner feel test on installed candidate |
+
+GitHub #28/#34 refreshed read-only: OPEN. No remote issue mutation or milestone
+closure; parallel sessions retain their ownership. Product v2 global controls,
+fine-control contexts and long-list acceleration remain the authority. Proceed
+with source mapping and deterministic reproduction while retrying the device
+lock. Recovery/protected partitions, memory, ROM provenance and production scope
+are unchanged. Admission is PARTIALLY READY: software work authorized, hardware
+counts and candidate acceptance pending. See
+[the input validation record](../validation/Y2-PLATFORM-V1-INPUT.md).
 
 ## Baseline02 source integration into main — 2026-10-03
 
