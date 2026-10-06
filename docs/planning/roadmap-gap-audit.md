@@ -952,6 +952,84 @@ closure or release promotion; #28/#31/#34 remain OPEN. Hardware/memory/firmware/
 calibration/protected-data/package scope is unchanged; no flash/push or repeat
 of unchanged ROM/recovery provenance.
 
+## Wired precision source boundary — 2026-10-04
+
+Source-only review correction: the complete diagram now includes live VolumeRamp
+after FFmpeg integer packing, with f64 gain and a second nearest/ties-away integer
+quantizer. Unity-volume low-bit fixture proof is not proof for non-unity gain;
+the membrane CPU benchmark excludes that live gain and ALSA pacing. Exact accepted
+frames alone advance ramp/offset, including zero/partial writes. This correction
+uses retained source/tests, does not repeat builds or device access, changes no
+implementation/policy or hardware admission, and keeps all coverage gates below.
+
+The isolated completion pass reaches **MORE_HARDWARE_EVIDENCE_REQUIRED**, not
+a high-resolution milestone closure. Exact MT6582 BSP, retained Y2 HAL/kernel
+and CS43131 receiver research are reconciled in the
+[precision report](../validation/Y2-PLATFORM-V1-HIGHRES-AUDIO.md).
+Latest available locked hardware read identifies installed Baseline02 Linux
+8584ccd8 / Reborn b71b4688, boot27e6d684-3794-4490-95db-a489027cd4f4,
+taint0, direct S16 44100/48000 constraints and suspended idle AFE.
+Later non-blocking device-lock attempts remain unavailable; fresh playback and
+A7 CPU measurements are NOT_RUN. No substitute physical result is inferred.
+
+| Coverage / existing epic | Reconciled evidence | Next boundary |
+| --- | --- | --- |
+| Wired audio; #29 | CONFIRMED admitted S16 scope / PARTIAL wider precision; stock fetch/connection width APIs are ENOSYS, DAC independently accepts32 | Exact MT6582 wide fetch/interconnect programming, then low-bit I2S capture; source and compiled diagnostics are not installed hardware proof. |
+| CPU/timers/idle/storage; #28/#33 | CONFIRMED retained bounded scope / PARTIAL broader qualification | Preserve architecture/memory/storage; collect locked A7 audio CPU costs when available. |
+| Bluetooth/Wi-Fi/USB; #31/#27 | PARTIAL, concurrent isolated owners | No branch integration or radio qualification promotion. |
+| GPU/display; #34 | CONFIRMED awake scope / PARTIAL full suspend | Preserve existing policy; no screen-off audio or full-resume claim from this pass. |
+| Production/release; #16/#32 | PARTIAL | Localized config/DT/module/ABI/package-source checks pass; no new installed/sealed release or milestone closure. |
+
+Software24 WAV/FLAC low bits survive final S24/S32 buffers at44100/48000;
+general full32 input loses bits in FLTP. Saturating ties-even narrowing and
+truthful kernel/platform diagnostics are implemented. Six audio/clock/DT tests,
+19 localized source checks,241 Reborn workspace tests, fmt/clippy, ARM build,
+32 ARM media/ALSA QEMU tests and16 ARM ALSA query intersections pass.
+Issues #16/#27/#28/#29/#31/#32/#33/#34 were refreshed read-only and remain OPEN;
+the evidence warrants no remote status change. Source handoff is ready, native
+wider admission remains blocked by exact silicon evidence. Backup/calibration,
+protected storage, power and release gates retain their existing obligations.
+No flash, push, merge, MMIO write, source/ROM rehash or production-scope expansion.
+
+## Wired precision completion admission — 2026-10-04
+
+Owner explicitly authorizes isolated source implementation, exact MT6582/stock
+research and bounded locked physical audio tests; no flash, push or merge.
+Linux starts at b5aea93, Reborn at b71b468, on dedicated
+`codex/platform-v1-highres-audio` worktrees. Read-only device admission under
+`/tmp/y2-platform-v1-device.lock` observes installed Baseline02 kernel,
+boot 27e6d684-3794-4490-95db-a489027cd4f4, taint 0 and idle Y2Audio.
+Exact direct constraint intersections admit only S16_LE stereo 44100/48000;
+S24_LE/S32_LE and 88200/96000 are rejected. This is driver admission evidence,
+not silicon maximum or low-bit proof. Raw receipt: out/highres-audio/validation/device-admission.txt.
+Retained UART01 and native headphone evidence remains authoritative for its
+bounded tests; new-image general CPU qualification is outside this pass.
+
+| Coverage | Classification | Boundary |
+| --- | --- | --- |
+| Native wired audio; #29 | CONFIRMED S16 narrow scope / PARTIAL wider precision | Exact DL1/interconnect evidence must precede wider register or ALSA enablement. |
+| CPU/timers/idle/storage; #28/#33 | CONFIRMED retained bounded scope / PARTIAL wider qualification | Preserve architecture, memory and partition layout. |
+| Bluetooth/Wi-Fi/USB; #31 | PARTIAL | Concurrent isolated sessions own radio changes; no branch integration. |
+| GPU/display; #34 | CONFIRMED awake scope / PARTIAL full suspend | Preserve existing screen/runtime-PM behavior. |
+| Production/release; #32 | PARTIAL | No release or milestone closure; source/ROM/recovery provenance unchanged. |
+
+Open issues #16/#27/#28/#29/#31/#32/#33/#34 refreshed read-only. No remote
+status change is warranted or authorized. High-resolution implementation is
+ready only after exact fetch/packing/interconnect documentation or stock
+programming establishes every meaningful bit. If unavailable, retain the safe
+S16 contract and publish the unresolved hardware boundary without claiming a
+16-bit silicon ceiling. Next: exact vendor source and targeted stock analysis,
+software low-bit fixtures, truthful diagnostics and locked baseline tests.
+
+Bounded S16 test admission: a second locked read verifies the installed
+Linux 8584ccd85f052f351fe51650b2348c83ca894ed4 / Reborn b71b468,
+same Baseline02 boot/taint 0, suspended AFE, no PCM owner and headphone disabled
+at -60 dB. Exact stock HAL width/fetch functions return -ENOSYS; mixed-tree
+ASoC wide fields are unselected by its MT6582 defconfig and lack compatibility
+proof. No wider mode is admitted. New kernel diagnostics and S24 software
+rounding are host/ARM compiled, not installed. Ready for bounded existing S16
+DMA/rate/runtime-PM observation and offline three-format A7 CPU measurements
+under one non-blocking device lock. No source/memory/production scope expansion.
 
 ## Baseline02 source integration into main — 2026-10-03
 
