@@ -35,6 +35,18 @@ per hypothesis. Full candidate checks and coherent new identity precede another
 owner installation. Preserve Y2DATA, diagnostic export and persistent logs; no
 autonomous flash, fallback reset, raw storage operation or release promotion.
 
+Correction sealing refresh: Linux `5a32683f1ae9493c6a37bd18af3d131afb04d450`
+/ unchanged Reborn `5a9f7586dd8d80ab5afc16c6a9a7e853e7469aeb` now builds
+DEEPSLEEP-FINAL-02/root v1.32. 25 targeted tests pass, including the actual
+CCF/probe regression that fails on 01. Full candidate boundary passes 543 unique
+production cases (533 container + ten host dependency cases), kernel/config/DT/
+modules/QEMU/ARM/ELF and preserving package checks. Every coverage row retains
+the classifications above: new USB/charging fix still PHYSICAL_PENDING, no
+clean sleep acceptance. Admit owner-only corrective installation after the
+saved diagnostic export; retrieve 01's persistent logs/export first on restored
+SSH, then verify 02 USB/charging before PM. Preserve failed 01 and exact 04
+fallback, all data/protected partitions and electrical limits. No issue closure.
+
 ### Successor sealing and owner-installation boundary
 
 Read-only issue refresh at the sealing boundary keeps #16/#27/#28/#29/#31/

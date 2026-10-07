@@ -1,10 +1,28 @@
 # Next-session handoff — current deep-sleep continuation, 2026-10-07
 
+**Newest candidate is DEEPSLEEP-FINAL-02**, Linux
+`5a32683f1ae9493c6a37bd18af3d131afb04d450`, unchanged Reborn `5a9f7586...`,
+root v1.32. It fixes the omitted CCF clock claim that broke 01 USB/charging.
+543 full production cases plus fresh kernel/config/DT/modules/QEMU/ARM/ELF and
+preserving package checks pass; hardware qualification is still pending.
+Owner folder: `out/y2linux-platform-v1-deepsleep-final-candidate-02/`, identical
+canonical copy at `out/y2linux-platform-v1-deepsleep-final-candidate/`.
+BOOTIMG `38d2da2d9f4627d32e93dd87a91dd544e44526bbb6441619c5e4cf95d26fad75`;
+Y2ROOT `da874614b165287a8e22799dce65c75641bd423e0ccd5d18aee99a6ebeb536bc`.
+Owner reserved flashing. First collect 01's persistent logs and saved export
+after access returns; verify 02 USB/charging before staged PM. The new
+`deepsleep-clean-session.py` matches 02, uses an actual maintenance lock,
+BOOTTIME gesture timing and a persistent quarantine until host review. Clear
+that quarantine after a checked clean trial before testing product auto-sleep.
+Failed 01 bytes are retained in `…-candidate-01-usb-regression/`; 04 remains
+the known working fallback. Do not delete either or claim 01 suspend acceptance.
+
 **Current interruption:** owner has now installed DEEPSLEEP-FINAL-01, but it
 boots Reborn with no USB enumeration or charging. No SSH identity or suspend
 trial on that image yet. Diagnostic export was saved on-device; one replug did
 not recover. The childless CCF inherited-clock handoff omission is reproduced
-and corrected in source; DEEPSLEEP-FINAL-02/root v1.32 is under validation.
+and corrected in source; DEEPSLEEP-FINAL-02/root v1.32 is software-validated
+and awaiting owner installation.
 Do not reinstall 01 as a fix. Preserve its package, matching symbols and the
 owner's persistent report. Latest host evidence: `25-successor-usb-enumeration/`.
 The following 04/01 installation state is the previous checkpoint, not current.

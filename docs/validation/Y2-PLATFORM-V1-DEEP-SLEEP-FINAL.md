@@ -3,8 +3,8 @@
 Investigation opened 2026-10-07; **IN PROGRESS, no readiness promotion**.
 Latest boundary: owner-installed DEEPSLEEP-FINAL-01 has a USB enumeration and
 charging regression. No clean successor suspend testing has begun. The defect
-is reproduced in the actual clock/probe functions and corrected in source;
-DEEPSLEEP-FINAL-02 is being validated. Preserve 01 as failed hardware evidence.
+is reproduced in the actual clock/probe functions and corrected in the built,
+software-validated DEEPSLEEP-FINAL-02. Preserve 01 as failed hardware evidence.
 Owner target: real system suspend and approximately <=1 percentage point per
 normal night if the hardware permits. Voltage/current safety policy and SOC
 scaling are unchanged. No autonomous flash. Screen-off, runtime C1/C2/C3 and
@@ -17,6 +17,12 @@ Private raw evidence: `out/deep-sleep-final/evidence/20261007/00-initial/`.
 Archives and SHA256 receipts stay local; no private logs are published.
 
 ## 1. Installed firmware
+
+Current owner report: DEEPSLEEP-FINAL-01 was installed after the measurements
+below. Reborn boots but USB/charging fail; its exact live metadata is pending
+transport recovery. The table is the initial SSH-verified 04 identity, not a
+claim that 04 remains installed after the owner's flash. Corrective 02 is ready
+for owner installation, with no 02 hardware result yet.
 
 Fresh exclusive-lock SSH, initial uptime 638.83 s, kernel taint 0:
 
@@ -276,7 +282,9 @@ recovery and successful PHY mapping, before first worker scheduling. All failed
 or incomplete recovery paths keep inherited protection. There are no new MMIO
 sequences, relaxed safety masks or charger limits. A corrective candidate has
 new DEEPSLEEP-FINAL-02/root v1.32 identity; do not qualify or reinstall failed 01
-as though its software profile established physical USB behavior.
+as though its software profile established physical USB behavior. The new
+cross-owner case and 24 other targeted clock/USB/charger cases pass; the full
+corrective production profile covers 543 cases with no unresolved failure/skip.
 
 Uninstalled source fix adds one verified bus-clock gate/restore owner shared by
 childless lifecycle, BC1.1 and child registration. Existing MUSB DMA/FIFO/session/
@@ -749,11 +757,22 @@ loadable kernel modules are owned by BOOTIMG's rescue archive, not Y2ROOT.
 Reborn embedded source and installed product/power Python bytes match the
 committed inputs. Rootfs/manifest/privacy/preserving-update validation passes.
 
+Corrective **02** re-runs the complete profile: **543 unique production cases**,
+533 container passes and ten dependency-specific host passes, no remaining
+failure/skip. The new actual USB-probe/CCF test fails on 01 before the fix and
+passes afterward; 25 targeted clock/USB/charger checks pass. Kernel/config/DT/
+BOOTIMG/modules/QEMU/shell/ARM build and rootfs/preserving-package checks pass.
+Fresh ELF closure remains 384 files/1411 edges; seven exact 02 modules belong
+to BOOTIMG. Reborn source is unchanged at the previously verified 332 tests,
+fmt and strict Clippy; its ARM binary is freshly built for this package.
+
 ## 37. Commits
 
 Frozen source pair:
 
-- Linux `0c9b78c7903182861b84e7d90a536bd30fca295a` — current build source,
+- Linux **`5a32683f1ae9493c6a37bd18af3d131afb04d450`** — corrective 02 build,
+  verified parent clock handoff before first childless gate.
+- Linux `0c9b78c7903182861b84e7d90a536bd30fca295a` — failed 01 build source,
   including suspend-aware SOC elapsed time; parent
   `cec9cae1b0caf2280b49cd07a655b28c0f5e1897` contains suspend context,
   USB idle, owned product policy and evidence.
@@ -766,20 +785,26 @@ was changed. Isolated detached worktrees are under
 
 ## 38. Candidate / hashes
 
-One full successor is built: **DEEPSLEEP-FINAL-01/root v1.31**, release
-`1.0.0-platform-v1-deepsleep-final-candidate.1`, kernel
-`6.18.0-y2linux-platform-v1-deepsleep-final-01`, compiled source pair in §37.
+Corrective successor is built: **DEEPSLEEP-FINAL-02/root v1.32**, release
+`1.0.0-platform-v1-deepsleep-final-candidate.2`, kernel
+`6.18.0-y2linux-platform-v1-deepsleep-final-02`, compiled source pair in §37.
 Canonical owner package:
 `/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-deepsleep-final-candidate/`.
 
-- BOOTIMG (7,254,016 bytes): `8a354eb0b9a9e65b3213ee83b1db53c9bd1174a52a9ea27233749c7d22c0cc16`
-- Y2ROOT (536,870,912 bytes): `f84d1bc4a819f819f2f9b6f3593be00ba491b0ae17c5b6220f0024aea5b681e0`
+- BOOTIMG (7,254,016 bytes): `38d2da2d9f4627d32e93dd87a91dd544e44526bbb6441619c5e4cf95d26fad75`
+- Y2ROOT (536,870,912 bytes): `da874614b165287a8e22799dce65c75641bd423e0ccd5d18aee99a6ebeb536bc`
 
 Only BOOTIMG/ANDROID are selected by the preserving scatter; Y2DATA and all
 other partitions remain unselected. The package includes manifest, complete
 SHA256 inventory, validation receipts/report and OWNER-HANDOFF.md. Matching
 kernel symbols remain in the adjacent `…-candidate-symbols/` folder.
-No flash has occurred; built-in and product physical qualification remain open.
+The explicit owner-installation folder is `out/y2linux-platform-v1-deepsleep-final-candidate-02/`;
+the canonical folder above has identical content. No agent flash has occurred;
+the owner installed 01, whose USB/charging regression prevents qualification.
+02 has not been installed yet; built-in/product physical gates remain open.
+Failed 01 is preserved at `out/y2linux-platform-v1-deepsleep-final-candidate-01-usb-regression/`:
+BOOTIMG `8a354eb0b9a9e65b3213ee83b1db53c9bd1174a52a9ea27233749c7d22c0cc16`,
+Y2ROOT `f84d1bc4a819f819f2f9b6f3593be00ba491b0ae17c5b6220f0024aea5b681e0`.
 The handoff's old firmware-provisioning directory was absent; all seven existing
 04 target firmware files were instead verified against the pinned inventory and
 04 package receipt before staging. No new firmware/calibration input is used.

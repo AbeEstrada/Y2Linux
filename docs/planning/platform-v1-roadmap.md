@@ -12,6 +12,12 @@ of the corrective image. No charging/current limit or hardware safety bypass.
 This supersedes the prior candidate readiness below; see the refreshed
 [regression admission](roadmap-gap-audit.md#first-successor-usb-regression-and-correction-admission).
 
+Correction 02 is now software-validated: Linux `5a32683` / Reborn `5a9f758`,
+543 production cases, fresh ARM/kernel/config/DT/modules/QEMU/ELF/package.
+Owner-only installation follows the saved diagnostic export. First recover 01
+logs and verify 02 identity, USB and source-backed charging; only then stage PM.
+No clean suspend or electrical readiness claim advances at this boundary.
+
 Latest boundary: the complete repeated diagnostic collection records 1811.835 s
 of full suspend in 1847.315 s, four expected RTC wakes/no unexpected wakes,
 4.050439→4.013964 V and old SOC 86→86. Total 14 same-boot diagnostic returns
