@@ -2,6 +2,39 @@
 
 ## Deep-sleep continuation admission — 2026-10-07
 
+### First successor USB regression and correction admission
+
+Owner installed DEEPSLEEP-FINAL-01 and reports normal Reborn/Wi-Fi operation,
+but no USB enumeration or charging. Host observes only preloader during flash,
+then no normal gadget. USB SSH fails. Exact running metadata cannot yet be read;
+the owner has saved the on-device diagnostic export before a possible reboot.
+Host evidence is `25-successor-usb-enumeration/`. No suspend test is admitted.
+Wi-Fi alone cannot recover SSH because production binds its listener to USB.
+
+Source/native cross-owner reproduction identifies an omitted clock handoff:
+the new childless gate runs before `y2_ccf_usb_claim()`, which previously existed
+only in MUSB initialization. CCF deliberately refuses to disable an inherited
+loader clock; gate readback therefore returns -EIO and terminally stops USB.
+BC1.1 then cannot acquire the PHY, explaining the associated charging symptom.
+The integrated actual-probe/actual-CCF regression fails on sealed 01. Earlier
+tests mocked clock-disable as always gating and missed that ownership state.
+Admit the narrow fix: claim the inherited clock only after the existing verified
+idle-DMA/digital-recovery preflight and successful PHY mapping, before scheduling
+the first worker. Failed/partial recovery must retain loader protection. No
+register sequence, safety mask, charging limit or retry bypass changes.
+
+Every coverage group in the sealing table below retains its classification,
+except successor USB/charging now has an explicit **PHYSICAL FAIL**, and
+successor boot/UI has owner-observed narrow evidence without SSH identity.
+Full PM, clean wake, cold-battery C3, automatic policy, endurance, electrical
+minimum, earlier device-phase wait and poweroff remain open. #16/#27/#28/#29/
+#31/#32/#33/#34 remain open; historical #30 does not qualify this work.
+Preserve the failed 01 image/manifest/symbols as evidence. A tested corrective
+successor is justified by this reproduced regression, not a speculative image
+per hypothesis. Full candidate checks and coherent new identity precede another
+owner installation. Preserve Y2DATA, diagnostic export and persistent logs; no
+autonomous flash, fallback reset, raw storage operation or release promotion.
+
 ### Successor sealing and owner-installation boundary
 
 Read-only issue refresh at the sealing boundary keeps #16/#27/#28/#29/#31/

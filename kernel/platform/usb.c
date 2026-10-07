@@ -1193,6 +1193,7 @@ out:
 }
 static void y2_usb_begin(void)
 {
+    int ret;
     if(y2_usb_started) return;
     y2_usb_started=true;
     y2_usb_phase(Y2_USB_PREFLIGHT);
@@ -1206,6 +1207,12 @@ static void y2_usb_begin(void)
     y2_usb_phy=ioremap(Y2_USB_PHY_BASE,Y2_USB_PHY_BYTES);
     if(!y2_usb_phy) {release_mem_region(Y2_USB_PHY_BASE,Y2_USB_PHY_BYTES);
         y2_usb_fail_at(NULL,Y2_USB_REASON_PHY_REGION,-ENOMEM,false);y2_usb_finish();return;}
+    /* Recovery above proved idle DMA, masked IRQs and disconnected the loader.
+     * Transfer its protected CCF ownership before a childless worker can gate
+     * the clock. Waiting for MUSB init leaves inherited=true, so clk_disable
+     * intentionally does nothing and gate readback terminally fails USB/BC1.1. */
+    ret = y2_ccf_usb_claim();
+    if (ret) {y2_usb_fail_at(NULL,Y2_USB_REASON_PREFLIGHT,ret,false);y2_usb_finish();return;}
     y2_usb_phase(Y2_USB_ATTACH);
     queue_delayed_work(system_freezable_wq,&y2_usb_work,msecs_to_jiffies(250));
 }

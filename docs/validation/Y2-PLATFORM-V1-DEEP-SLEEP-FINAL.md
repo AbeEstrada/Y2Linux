@@ -1,6 +1,10 @@
 # Y2 Platform 1.0 — final deep-sleep investigation
 
 Investigation opened 2026-10-07; **IN PROGRESS, no readiness promotion**.
+Latest boundary: owner-installed DEEPSLEEP-FINAL-01 has a USB enumeration and
+charging regression. No clean successor suspend testing has begun. The defect
+is reproduced in the actual clock/probe functions and corrected in source;
+DEEPSLEEP-FINAL-02 is being validated. Preserve 01 as failed hardware evidence.
 Owner target: real system suspend and approximately <=1 percentage point per
 normal night if the hardware permits. Voltage/current safety policy and SOC
 scaling are unchanged. No autonomous flash. Screen-off, runtime C1/C2/C3 and
@@ -247,6 +251,32 @@ costs requires the longer voltage observations or a real external current
 measurement; software enable counts cannot establish mA or a 1% hardware floor.
 
 ## 16. USB power
+
+**Successor 01 regression:** owner installed the sealed pair, reports Reborn
+running and Wi-Fi connected, but neither USB enumeration nor charging works.
+Host sees preloader at 21:22:01 UTC, disconnect at 21:22:42, then no normal USB
+device/interface. USB SSH times out; production SSH is USB-bound, so Wi-Fi does
+not provide an alternate listener. Owner saved Export Diagnostic Report before
+a single unplug/replug, which did not recover USB. Exact on-device version and
+failure registers await transport recovery; host archive is
+`25-successor-usb-enumeration/`.
+
+The exact source defect is an omitted cross-owner transition. CCF initializes
+USB with `inherited=true`; `y2_disable()` preserves that loader clock until
+`y2_ccf_usb_claim()`. Previously only MUSB initialization claimed it. The new
+childless worker gates before MUSB exists, so `clk_disable()` leaves hardware
+on, gate readback fails -EIO, and `y2_usb_finish()` terminally stops USB. Later
+BC1.1 cannot acquire its PHY; charging stays inhibited without changing limits.
+The earlier tests mocked clock-disable as unconditional and missed the inherited
+state. A new native regression combines the actual USB probe and actual CCF
+callbacks, reproduces the pre-fix failure, and passes with the fix.
+
+The correction claims CCF ownership after existing verified idle-DMA/digital
+recovery and successful PHY mapping, before first worker scheduling. All failed
+or incomplete recovery paths keep inherited protection. There are no new MMIO
+sequences, relaxed safety masks or charger limits. A corrective candidate has
+new DEEPSLEEP-FINAL-02/root v1.32 identity; do not qualify or reinstall failed 01
+as though its software profile established physical USB behavior.
 
 Uninstalled source fix adds one verified bus-clock gate/restore owner shared by
 childless lifecycle, BC1.1 and child registration. Existing MUSB DMA/FIFO/session/

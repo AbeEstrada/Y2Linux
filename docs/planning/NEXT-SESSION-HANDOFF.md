@@ -1,5 +1,14 @@
 # Next-session handoff — current deep-sleep continuation, 2026-10-07
 
+**Current interruption:** owner has now installed DEEPSLEEP-FINAL-01, but it
+boots Reborn with no USB enumeration or charging. No SSH identity or suspend
+trial on that image yet. Diagnostic export was saved on-device; one replug did
+not recover. The childless CCF inherited-clock handoff omission is reproduced
+and corrected in source; DEEPSLEEP-FINAL-02/root v1.32 is under validation.
+Do not reinstall 01 as a fix. Preserve its package, matching symbols and the
+owner's persistent report. Latest host evidence: `25-successor-usb-enumeration/`.
+The following 04/01 installation state is the previous checkpoint, not current.
+
 **This section supersedes the 2026-10-06 installed-image and next-action claims
 below. Preserve this handoff and the evidence. Cleanup is outside the current
 owner request; do not delete the active build, fallback, symbols or raw archives.**
@@ -50,7 +59,9 @@ owner request; do not delete the active build, fallback, symbols or raw archives
   Stage PM and use one bounded real Power/RTC trial before repetition/long tests.
   Use BOOTTIME for gesture scheduling, generous RTC fallback and actual IRQ
   attribution. Prevent automatic policy racing the staged collector using an
-  actually held activity lock; do not use a stale inhibitor file. Never load 04
+  actually held maintenance lock (the owner helper itself needs the activity
+  lock); the clean collector also quarantines product sleep until host review.
+  Do not use a stale inhibitor file. Never load 04
   modules on the successor; current endurance script requires taint4096 and
   must not be reused unchanged. Archive pstore/PM/power before every reboot.
 

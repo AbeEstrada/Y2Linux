@@ -94,8 +94,9 @@ static int y2_uart_sleep_restore(void)
 	uart_sleep_phase = ret ? "restore_failed" : "restored";
 	return ret;
 }
-/* Only the MUSB owner calls this after claiming an idle DMA/controller.
- * Failed probes keep LK's gate protected; successful runtime PM may gate it. */
+/* The USB parent claims this after verified idle-DMA/digital recovery, before
+ * its childless worker or BC1.1 can gate it. MUSB repeats the idempotent claim.
+ * Failed recovery keeps LK's gate protected. */
 int y2_ccf_usb_claim(void)
 {
 	unsigned long flags;

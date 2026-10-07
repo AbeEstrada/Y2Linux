@@ -2,6 +2,16 @@
 
 ## Current deep-sleep investigation — 2026-10-07
 
+Current gate: owner-installed DEEPSLEEP-FINAL-01 boots Reborn, but USB enumeration
+and charging fail. Suspend testing has not begun on it. The owner saved a
+diagnostic export; USB-only SSH prevents live collection until transport returns.
+An actual CCF/probe regression proves the new childless gate omits the inherited
+clock ownership handoff. Correct that after verified idle recovery, retain failed
+01 bytes/evidence, and complete software/package checks before owner installation
+of the corrective image. No charging/current limit or hardware safety bypass.
+This supersedes the prior candidate readiness below; see the refreshed
+[regression admission](roadmap-gap-audit.md#first-successor-usb-regression-and-correction-admission).
+
 Latest boundary: the complete repeated diagnostic collection records 1811.835 s
 of full suspend in 1847.315 s, four expected RTC wakes/no unexpected wakes,
 4.050439→4.013964 V and old SOC 86→86. Total 14 same-boot diagnostic returns

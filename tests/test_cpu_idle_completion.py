@@ -305,6 +305,94 @@ int main(void){
 
 
 class UsbIdleClock(unittest.TestCase):
+    def test_childless_probe_claims_inherited_clock_only_after_verified_recovery(self):
+        usb = (ROOT/'kernel/platform/usb.c').read_text()
+        clocks = (ROOT/'kernel/platform/clocks.c').read_text().replace(
+            'int y2_ccf_usb_claim(', 'static int y2_ccf_usb_claim(')
+        run_c(r'''
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <errno.h>
+#define EPROBE_DEFER 517
+#define BIT(n) (1U<<(n))
+#define container_of(p,t,m) ((t *)((char *)(p)-offsetof(t,m)))
+#define smp_load_acquire(p) (*(p))
+#define spin_lock_irqsave(l,f) ((void)(l),(void)(f))
+#define spin_unlock_irqrestore(l,f) ((void)(l),(void)(f))
+#define Y2_USB_PHY_BASE 0x11210800
+#define Y2_USB_PHY_BYTES 0x100
+#define Y2_USB_PREFLIGHT 1
+#define Y2_USB_ATTACH 2
+#define Y2_USB_REASON_PREFLIGHT 1
+#define Y2_USB_REASON_PHY_REGION 2
+struct clk_hw {int unused;};
+struct y2_clock {struct clk_hw hw; void *gate; unsigned bit; bool inherited;};
+static unsigned registers[8], mask, refs, scheduled, phases, failures, gate_writes;
+static struct y2_clock owner={.gate=registers,.bit=10,.inherited=true}, *y2_usb_clock=&owner;
+static int y2_clk_lock,y2_usb_bus_clock,y2_usb_work;
+static unsigned y2_usb_clock_gates,y2_usb_clock_restores,y2_usb_clock_failures;
+static bool y2_usb_started,y2_usb_finished,y2_usb_clock_enabled;
+static void *y2_usb_phy;
+static struct {struct {int result; unsigned written,after_valid;} wake;} y2_power;
+static bool power_ready=true,region_available=true,mapping_available=true;
+static int last_error;
+static void writel(unsigned value,void *address){
+ if(address==owner.gate){mask|=value;++gate_writes;}
+ else {assert(address==(char *)owner.gate+8);mask&=~value;}
+}
+static void clk_disable(int clock);
+static int clk_enable(int clock);
+static int y2_ccf_usb_read(unsigned address,unsigned *value){assert(address==0x10003018);*value=mask;return 0;}
+static bool y2_usb_state_ready(void *s){return power_ready;}
+static void y2_usb_phase(unsigned stage){++phases;}
+static void y2_usb_fail_at(void *m,unsigned reason,int rc,bool registers){++failures;last_error=rc;}
+static void y2_usb_finish(void){y2_usb_finished=true;}
+static void *request_mem_region(unsigned a,unsigned n,const char *name){return region_available ? &owner : NULL;}
+static void release_mem_region(unsigned a,unsigned n){}
+static void *ioremap(unsigned a,unsigned n){return mapping_available ? &owner : NULL;}
+static unsigned msecs_to_jiffies(unsigned ms){return ms;}
+#define system_freezable_wq 1
+static void queue_delayed_work(int queue,int *work,unsigned delay){assert(delay==250);++scheduled;}
+''' + ''.join(function(clocks, n) for n in ('y2_disable', 'y2_peri_enable', 'y2_ccf_usb_claim')) + r'''
+static void clk_disable(int clock){assert(refs==1);--refs;y2_disable(&owner.hw);}
+static int clk_enable(int clock){assert(!refs);++refs;return y2_peri_enable(&owner.hw);}
+''' + ''.join(function(usb, n) for n in ('y2_usb_bus_gate', 'y2_usb_bus_restore', 'y2_usb_begin')) + r'''
+static void reset(void){
+ owner.inherited=true;y2_usb_clock=&owner;mask=0;refs=1;scheduled=phases=failures=gate_writes=0;
+ y2_usb_started=y2_usb_finished=false;y2_usb_phy=NULL;y2_usb_clock_enabled=true;
+ y2_usb_clock_gates=y2_usb_clock_restores=y2_usb_clock_failures=0;
+ y2_power.wake.result=0;y2_power.wake.written=1;y2_power.wake.after_valid=0xfff;
+ power_ready=region_available=mapping_available=true;last_error=0;
+}
+int main(void){
+ (void)y2_ccf_usb_claim; /* Also compile the pre-fix caller, which omits it. */
+ /* An inherited gate is deliberately protected. The old childless path
+  * necessarily returns -EIO and quarantines USB before first enumeration. */
+ reset();assert(y2_usb_bus_gate()==-EIO && refs==1 && !mask);
+ assert(y2_usb_clock_failures==1 && owner.inherited && !gate_writes);
+ /* Actual probe plus actual CCF disable: claim only after successful recovery,
+  * then gate/restore for later BC1.1 without pretending a MUSB child exists. */
+ reset();y2_usb_begin();assert(scheduled==1 && !failures && !owner.inherited);
+ assert(!y2_usb_bus_gate() && !refs && mask==BIT(10) && gate_writes==1);
+ assert(!y2_usb_bus_restore() && refs==1 && !mask && !y2_usb_clock_failures);
+ /* Failed/incomplete recovery and unavailable resources must preserve LK's
+  * ownership and never queue a worker capable of gating it. */
+ for(unsigned failure=0;failure<6;++failure){
+  reset();
+  if(failure==0)power_ready=false;
+  if(failure==1)y2_power.wake.result=-EBUSY;
+  if(failure==2)y2_power.wake.written=0;
+  if(failure==3)y2_power.wake.after_valid=0;
+  if(failure==4)region_available=false;
+  if(failure==5)mapping_available=false;
+  y2_usb_begin();assert(!scheduled && failures==1 && owner.inherited && !gate_writes);
+ }
+ reset();y2_usb_clock=NULL;y2_usb_begin();
+ assert(!scheduled && failures==1 && last_error==-EPROBE_DEFER && owner.inherited);
+}
+''')
+
     def test_childless_bc11_restores_clock_before_phy_and_retains_ownership(self):
         source = (ROOT/'kernel/platform/usb.c').read_text()
         for name in ('y2_usb_bc11_begin', 'y2_usb_bc11_end'):
