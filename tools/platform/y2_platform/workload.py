@@ -1,6 +1,7 @@
 """Scoped semantic QoS for platform workers; the kernel owns frequency policy."""
 # SPDX-License-Identifier: GPL-2.0-only
 import functools
+import fcntl
 import os
 import threading
 
@@ -11,11 +12,20 @@ def workload(class_name):
     def decorate(function):
         @functools.wraps(function)
         def wrapped(ctx, *args, **kwargs):
+            # Unlike optional frequency hints this is a mandatory operation
+            # exclusion. flock dies with the process; a leftover file is inert.
+            from .boot import private_directory
+            root = private_directory(ctx.path('/run/y2'))
+            lease = os.open(root / 'activity.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
             fd = None
             stopped = threading.Event()
             worker = None
             payload = (class_name + ' 3000\n').encode('ascii')
             try:
+                try:
+                    fcntl.flock(lease, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                except BlockingIOError as error:
+                    raise ValueError('sleep_operation_in_progress') from error
                 try:
                     fd = os.open(ctx.path('/dev/y2-workload'), os.O_WRONLY | os.O_CLOEXEC)
                     def renew():
@@ -41,5 +51,6 @@ def workload(class_name):
                     worker.join()
                 if fd is not None:
                     os.close(fd)  # close/process death releases only this lease
+                os.close(lease)
         return wrapped
     return decorate

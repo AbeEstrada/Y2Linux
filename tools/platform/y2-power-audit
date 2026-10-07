@@ -142,22 +142,37 @@ def delta(a, b, duration):
     irq = []
     def interrupts(sample):
         rows = {}
-        for line in (sample['files'].get('/proc/interrupts') or '').splitlines()[1:]:
+        lines = (sample['files'].get('/proc/interrupts') or '').splitlines()
+        cpus = lines[0].split() if lines else []
+        for line in lines[1:]:
             if ':' not in line:
                 continue
             key, tail = line.split(':', 1)
             parts = tail.split()
-            count = 0
+            counts = []
             while parts and parts[0].isdigit():
-                count += int(parts.pop(0))
-            rows[key.strip()] = (count, ' '.join(parts))
+                counts.append(int(parts.pop(0)))
+            rows[key.strip()] = (dict(zip(cpus, counts)) if len(counts) == len(cpus) else {},
+                                 ' '.join(parts))
         return rows
     ia, ib = interrupts(a), interrupts(b)
-    for key, (count, name) in ib.items():
-        d = count - ia.get(key, (count, ''))[0]
-        irq.append({'irq': key, 'name': name, 'delta': d if d >= 0 else None,
-                    'per_second': d/duration if d >= 0 else None,
-                    'counter_discontinuity': d < 0})
+    for key, (counts, name) in ib.items():
+        old = ia.get(key, ({}, ''))[0]
+        common = {cpu: counts[cpu] - old[cpu] for cpu in old.keys() & counts.keys()}
+        columns_changed = old.keys() != counts.keys()
+        reset = any(value < 0 for value in common.values())
+        valid = bool(common) and not columns_changed and not reset
+        d = sum(common.values()) if valid else None
+        # Offline CPU columns disappear, even though their earlier IRQ totals
+        # remain relevant. Subtracting column sums can silently undercount even
+        # when the apparent delta is positive. Keep common-CPU evidence separate.
+        lower_bound = sum(common.values()) if common and not reset else None
+        irq.append({'irq': key, 'name': name, 'delta': d,
+                    'per_second': d/duration if d is not None else None,
+                    'counter_discontinuity': not valid,
+                    'cpu_columns_changed': columns_changed,
+                    'common_cpu_deltas': common,
+                    'common_cpu_lower_bound_per_second': lower_bound/duration if lower_bound is not None else None})
     idle = []
     for path, val in a['files'].items():
         if '/cpuidle/' in path and path.endswith('/time'):
@@ -170,10 +185,22 @@ def delta(a, b, duration):
             entries = int(b['files'][usage]) - int(a['files'][usage])
             discontinuity = time_us < 0 or entries < 0
             idle.append({'path': parent, 'name': a['files'].get(parent+'/name'),
+                         'raw_time_delta_us': time_us,
                          'time_us': None if discontinuity else time_us,
                          'percent_wall_time': None if discontinuity else time_us/duration/10000,
                          'entries': None if discontinuity else entries,
                          'counter_discontinuity': discontinuity})
+    # An idle interval is charged when that CPU exits it. An untouched secondary
+    # CPU can therefore charge time that began before the first endpoint read.
+    # Reject impossible per-CPU totals instead of publishing/clamping >100%.
+    by_cpu = {}
+    for row in idle:
+        by_cpu.setdefault(row['path'].split('/cpuidle/')[0], []).append(row)
+    for rows in by_cpu.values():
+        if all(row['time_us'] is not None for row in rows) and sum(row['time_us'] for row in rows) > duration * 1e6:
+            for row in rows:
+                row.update(time_us=None, percent_wall_time=None,
+                           residency_invalid_reason='idle_accounting_crosses_counter_window')
     frequency = []
     path = '/sys/devices/system/cpu/cpufreq/policy0/stats/time_in_state'
     def opps(sample):

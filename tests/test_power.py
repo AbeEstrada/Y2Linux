@@ -21,6 +21,61 @@ def run_c(source):
         subprocess.run([str(p/'test')], check=True)
 
 class Power(unittest.TestCase):
+    def test_filesystem_freeze_opt_in_and_always_freeze_filesystems(self):
+        spec = next(s for s in json.loads((ROOT/'kernel/patches/manifest.json').read_text())['overlays']
+                    if s['path'] == 'fs/super.c')
+        source = prepare_overlay(ROOT, spec).read_text()
+        run_c(r'''
+#include <assert.h>
+#include <stdbool.h>
+#define FS_POWER_FREEZE 8
+#define FREEZE_EXCL 1
+#define FREEZE_HOLDER_KERNEL 2
+struct super_block;
+struct super_operations {
+ int (*freeze_fs)(struct super_block *);
+ int (*freeze_super)(struct super_block *, unsigned, const void *);
+};
+struct file_system_type { unsigned fs_flags; };
+struct super_block { struct super_operations *s_op; struct file_system_type *s_type; };
+static const char *filesystems_freeze_ptr = "filesystems_freeze";
+static unsigned calls, references, released;
+static bool active = true;
+static bool get_active_super(struct super_block *sb) { references++; return active; }
+static void deactivate_super(struct super_block *sb) { released++; }
+static int freeze_super(struct super_block *sb, unsigned who, const void *owner) {
+ assert(who == (FREEZE_EXCL | FREEZE_HOLDER_KERNEL));
+ assert(owner == filesystems_freeze_ptr); calls++; return 0;
+}
+static int freeze_fs(struct super_block *sb) { return 0; }
+''' + function(source, 'filesystems_freeze_callback') + r'''
+int main(void) {
+ struct super_operations ops = {.freeze_fs=freeze_fs};
+ struct file_system_type type = {0};
+ struct super_block sb = {&ops, &type};
+ int opt_in = 1;
+ /* Normal ext4-like filesystem is untouched by the default PM policy. */
+ filesystems_freeze_callback(&sb, 0);
+ assert(!calls && !references && !released);
+ filesystems_freeze_callback(&sb, &opt_in);
+ assert(calls == 1 && references == 1 && released == 1);
+ /* Always-freeze filesystems retain protection in both policy settings. */
+ type.fs_flags = FS_POWER_FREEZE;
+ filesystems_freeze_callback(&sb, 0);
+ filesystems_freeze_callback(&sb, &opt_in);
+ assert(calls == 3 && references == 3 && released == 3);
+ ops.freeze_fs = 0; ops.freeze_super = freeze_super;
+ filesystems_freeze_callback(&sb, 0);
+ assert(calls == 4 && references == 4 && released == 4);
+ active = false;
+ filesystems_freeze_callback(&sb, 0);
+ assert(calls == 4 && references == 5 && released == 4);
+ ops.freeze_super = 0;
+ filesystems_freeze_callback(&sb, &opt_in);
+ assert(calls == 4 && references == 5 && released == 4);
+}
+''')
+
     def test_conversion_units_calibration_and_protection(self):
         run_c(r'''
 #include <assert.h>

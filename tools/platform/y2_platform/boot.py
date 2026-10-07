@@ -132,6 +132,11 @@ def capture_previous(ctx):
               'record': ctx.record('previous-boot-evidence'), 'logs': []}
     if ctx.read(RESET_STATUS) is not None:
         result.update(reset_cause(ctx.read(RESET_STATUS)))
+    from .boot_retained import capture
+    try:
+        result['retained'] = capture(ctx, boot, journal.get('boot_id'))
+    except (OSError, ValueError) as error:
+        result['retained'] = {'error': str(error), 'source_entries_deleted': False}
     data = os.open(ctx.path('/data'), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     logs = None
     try:
@@ -175,5 +180,6 @@ def evidence_status(ctx):
             'previous_last_stage', 'previous_orderly_shutdown', 'reset_cause',
             'reset_cause_reason', 'reset_status_raw', 'kernel_panic_retention_guaranteed')} | {
             'private_record': '/data/system/platform/previous-boot-evidence.json',
+            'retained': value.get('retained'),
             'log_tails': [{k: log.get(k) for k in ('name','tail_sha256','source_bytes_at_capture')}
                           for log in value.get('logs',[])]}

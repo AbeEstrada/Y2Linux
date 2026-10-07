@@ -33,15 +33,57 @@ class Audit(unittest.TestCase):
         self.assertEqual(result['top_cpu_threads'], [])
         self.assertIsNone(result['irqs'][0]['per_second'])
         self.assertTrue(result['irqs'][0]['counter_discontinuity'])
+        self.assertTrue(result['irqs'][0]['cpu_columns_changed'])
+        self.assertEqual(result['irqs'][0]['common_cpu_deltas'], {'CPU0': 10})
+        self.assertEqual(result['irqs'][0]['common_cpu_lower_bound_per_second'], 1)
         self.assertEqual(result['frequency_residency'][0]['percent_recorded_residency'], 90)
         self.assertEqual(result['scheduler']['ctxt']['per_second'], 2)
         self.assertIsNone(result['wakeups_per_second'])
+
+    def test_positive_sum_difference_still_invalid_across_cpu_offline(self):
+        a, b = self.samples()
+        b['files']['/proc/interrupts'] = 'CPU0\n12: 200 timer\n'
+        row = audit.delta(a, b, 10)['irqs'][0]
+        self.assertIsNone(row['delta'])
+        self.assertEqual(row['common_cpu_lower_bound_per_second'], 10)
+
+    def test_matching_cpu_columns_and_individual_counter_reset(self):
+        a, b = self.samples()
+        b['files']['/proc/interrupts'] = 'CPU0 CPU1\n12: 120 60 timer\n'
+        row = audit.delta(a, b, 10)['irqs'][0]
+        self.assertEqual(row['delta'], 30)
+        self.assertEqual(row['per_second'], 3)
+        b['files']['/proc/interrupts'] = 'CPU0 CPU1\n12: 200 40 timer\n'
+        row = audit.delta(a, b, 10)['irqs'][0]
+        self.assertIsNone(row['delta'])
+        self.assertIsNone(row['common_cpu_lower_bound_per_second'])
 
     def test_cross_boot_refused(self):
         a, b = self.samples()
         b['boot_id'] = 'two'
         with self.assertRaises(ValueError):
             audit.delta(a, b, 10)
+
+    def test_idle_interval_charged_after_window_does_not_claim_over_100_percent(self):
+        a, b = self.samples()
+        base = '/sys/devices/system/cpu/cpu0/cpuidle/state2'
+        b['files'][base + '/time'] = '14700000'
+        result = audit.delta(a, b, 10)
+        row = result['cpuidle'][0]
+        self.assertIsNone(row['percent_wall_time'])
+        self.assertIsNone(row['time_us'])
+        self.assertEqual(row['raw_time_delta_us'], 13700000)
+        self.assertEqual(row['entries'], 5)
+        self.assertEqual(result['cpu0_idle_exits_per_second'], .5)
+        self.assertEqual(row['residency_invalid_reason'], 'idle_accounting_crosses_counter_window')
+
+    def test_sum_of_states_cannot_exceed_one_cpu_window(self):
+        a, b = self.samples()
+        base = '/sys/devices/system/cpu/cpu0/cpuidle/state1'
+        a['files'].update({base + '/time': '0', base + '/usage': '0', base + '/name': 'WFI'})
+        b['files'].update({base + '/time': '6000000', base + '/usage': '2', base + '/name': 'WFI'})
+        result = audit.delta(a, b, 10)
+        self.assertTrue(all(row['percent_wall_time'] is None for row in result['cpuidle']))
 
     def test_hotplug_idle_reset_invalidates_entries_and_residency_together(self):
         for reset in ('time', 'usage'):

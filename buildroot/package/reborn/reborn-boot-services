@@ -5,6 +5,11 @@
 if mountpoint -q /data && [ ! -L /data/logs ]; then
     mkdir -p /data/logs
 fi
+# The directory can exist while pstore is unmounted. Mount before capturing;
+# otherwise a surviving ramoops panic incorrectly appears to be absent.
+if [ -d /sys/fs/pstore ]; then
+    mountpoint -q /sys/fs/pstore || mount -t pstore -o nosuid,nodev,noexec pstore /sys/fs/pstore || :
+fi
 /usr/sbin/y2-platform boot-evidence >/dev/null 2>&1 || echo "Y2: previous boot evidence unavailable" >/dev/kmsg
 /usr/libexec/reborn-splash --start >/dev/kmsg 2>&1 || :
 /etc/init.d/rcS >/dev/kmsg 2>&1

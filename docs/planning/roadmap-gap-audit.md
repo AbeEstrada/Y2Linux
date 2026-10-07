@@ -1,5 +1,229 @@
 # Roadmap gap audit
 
+## Deep-sleep continuation admission — 2026-10-07
+
+### Coherent successor build admission
+
+Refreshed against current owner scope, newest 04 handoff, source diff and retained
+hardware before the packaging boundary. Identity/boot/data evidence remains
+CONFIRMED narrowly; CPU/C1/C2/C3/timers/PWRAP/clocks/USB are PARTIAL for the new
+image despite native/ARM checks and 56.72% current diagnostic C3. PM/CIRQ/GIC/RTC/
+Power are PARTIAL: seven real same-boot returns on corrected-context 04, one
+attributed Power, five-minute residence, external taint, and an earlier
+intermittent device-phase wait. Display/input/storage/audio have narrow post-
+resume functional proof, not endurance acceptance. Battery/charger/thermal and
+SOC remain PARTIAL: voltage-based estimate, no pack current/capacity/NTC, actual
+runtime loss and a separately reproduced stale post-resume UI observation.
+Radios/calibration, physical UART (UNKNOWN), memory/recovery/update/security/
+services, time/identity/privacy, host/VBUS (PHYSICAL_GATE), and FM exclusion keep
+all previous gates. #16/#27/#28/#29/#31/#32/#33/#34 remain open; closed #30 does
+not qualify this work. No remote closure or external message is warranted.
+
+Admit one source-frozen paired build, identity DEEPSLEEP-FINAL-01/root v1.31,
+with the coherent CPU-context/CIRQ, filesystem-freeze selection, USB idle,
+evidence, product ownership/maintenance and Reborn DB/freshness fixes. The
+software checks precede sealing: full production CPU/PM/peripheral/profile,
+config/DT/modules/ABI/QEMU/package checks and Reborn fmt/strict clippy/workspace/
+ARM. New source currently passes the targeted platform suites and Reborn's
+332 workspace tests; final checks bind the committed source pair. This is
+PARTIALLY READY for building, not physical/release acceptance.
+
+Each product entry also owns the existing bounded one-shot 30-second PM
+backstop, paused during real SPM sleep; resets remain failures and quarantine
+the attempt. Bounded wake-count reads refuse a stuck active wake source instead
+of indefinitely blocking before PM. Protections and electrical limits unchanged.
+
+Use isolated source worktrees so physical evidence and roadmap updates cannot
+change the compiled identity while building. Seal only BOOTIMG/ANDROID (Y2ROOT),
+with the established preserving scatter, manifests/hashes and owner handoff;
+no Y2DATA image or flash. The installed 04 hardware session remains intact.
+Clean built-in Power/RTC/repeated/auto-sleep and longer endurance still require
+owner installation and physical evidence. The ongoing segmented 30-minute
+trial cannot qualify the new image in advance.
+
+### Thirty-minute retained baseline and segmented-suspend admission
+
+`20-idle30-return/` completes 1800.282 s of undisturbed runtime idle on
+`404ef43c...`: CPU0 C3 56.721%, fresh 4.062963→4.030664 V, SOC 91→85,
+77.296 interrupts/s and 136.314 context switches/s. USB/radios absent, screen
+off, paused, no scanner; diagnostic taint explicit. No full suspend requested.
+Every standing coverage row retains the classifications below; this advances
+runtime observation only, not battery capacity/current or deep-sleep endurance.
+
+Admit 1800 s accumulated real suspension using separately bounded <=600-second
+RTC segments, stopping on the first failure. The installed helper restores the
+screen between segments, so all awake gaps and RTC wakes must be reported.
+Pre-cleanup RTC state is captured to separate driver auto-disarm from harness
+cleanup. No protection, voltage, timer horizon, memory, partition or firmware
+change. The 2-hour trial depends on reviewing this result. #28/#29/#31/#32/#33/
+#34 remain open; no release or owner-flash gate is waived.
+
+### Product sleep implementation and longer observation admission
+
+Archive `17-five-minute-return/` adds a seventh same-boot corrected-context
+return: six RTC and one Power, six with normal console PM. The latest actual
+SPM residence is 305.849609375 s, fresh voltage 3.983422→3.950244 V, SOC 76→76,
+RTC +1/Power +0, COMPLETE/error 0, no ext4 errors. External-module taint and
+recent-charge relaxation prevent clean release or overnight-drain claims.
+
+Re-reviewed every standing coverage group below: no broader hardware, battery,
+thermal, charging, RAM, recovery, radio, USB, security or release gate changes.
+Full PM/Power/RTC stay PARTIAL pending clean successor and repeated Power; the
+earlier device-phase wait remains open. Admit the missing 30-minute runtime
+observation with diagnostic taint explicit and no SSH during its counter window.
+
+Admit implementation of the normal delayed product policy with kernel ABI
+capability, process-owned critical-operation locks, explicit Reborn DB barrier,
+wakeup-count handshake, persistent failed-attempt quarantine and evidence.
+Retain the established 600-second PCM wake and 630-second backstop: attributable
+maintenance returns can sample battery and re-enter with the display/radios
+still asleep; Power/RTC/other wake fully restores the application. This does not
+extend blind battery sampling intervals, alter protection or promote the image.
+Long tests must report accumulated suspend duration and every maintenance wake.
+Installed 04 remains guarded; one coherent candidate and owner flash are still
+required for built-in source qualification. No flash or issue closure.
+
+### Admission to bounded suspend-drain measurement
+
+Fresh `15-power-return/` preserves boot `404ef43c...`, six successful actual
+SPM returns, no abort/restore failure, COMPLETE/error 0, Power child IRQ 24→26
+and RTC unchanged at 5. Owner observes normal display return. Five earlier
+complete RTC wakes include four with normal console suspension. The matching
+external diagnostic still causes taint 4096; no clean kernel qualification or
+production readiness is inferred. The immediately preceding early USB reconnect
+was correctly refused at device prepare and is not a suspend/wake result.
+
+Re-reviewed every coverage group in the table below against these new archives:
+boot/identity/evidence and narrow storage/audio restoration remain CONFIRMED;
+CPU/timers/CIRQ/GIC/Power/RTC/full-PM advance to repeatable diagnostic behavior
+but remain PARTIAL for the new kernel and the earlier intermittent device-phase
+wait. Display/input have owner Power-return evidence, repeated functional
+coverage remains PARTIAL. USB cold-boot gating/event changes remain software
+validated only; radios/firmware, thermal/charging/battery, UART, memory/recovery,
+update/security/services, time/privacy, host/VBUS and FM keep their prior gates.
+Existing #28/#29/#31/#32/#33/#34 stay open; historical #30 closure is not a
+qualification claim. No new hardware/memory/partition or voltage/current scope.
+
+Admit source preparation of the product sleep contract: an explicit database
+queue barrier after scanner/background quiescence, followed by process-owned
+operation exclusions. The measured idle database/scanner polling is retained
+as a separate optimization target; active-work watchdog coverage must survive
+any blocking-worker change. This admission does not enable automatic suspend
+on installed 04 or declare an untested successor qualified. Tests must exercise
+real queued work/transaction refusal and operation ownership, not only strings.
+
+Admit one 310-second RTC trial after battery-only settling, with the same
+guarded helper, normal console PM, raw voltage/SOC and unchanged protections.
+Five minutes is a short diagnostic drain observation, not overnight acceptance.
+Longer observation, repeated Power cycles, clean successor and automatic product
+sleep remain separate gates. No flash, issue closure or release promotion.
+
+### Current physical suspend failure and upstream correction
+
+The following RTC-only diagnostic on 04 also resets, but its verbose retained
+console proves duplicate CPU PM entry/exit around SPM. Core syscore PM already
+owns the context; the platform's second save occurs after CIRQ masks device
+SPIs and overwrites GIC's sole saved bitmap. Admit the call-site ownership fix
+and ordered CIRQ replay, with native abort/restore tests and ARM compilation.
+The matching opt-in diagnostic changes only the nested notification delivery;
+it retains the first save/final restore and records external-module taint.
+No hardware register experiment, memory change or new image is involved.
+All coverage groups below retain their current gates, including Power/RTC,
+same-boot restoration, peripherals, endurance and release. Product automatic
+sleep is not enabled on the strength of a source diagnosis.
+
+The first suppressed-nesting comparison reset in the preliminary device phase,
+before reaching CPU PM: DPM_PREPARED, last ring callback I2C returned success,
+boot changed to `404ef43c...`. This leaves the context correction untested on
+hardware. Admit standard console-suspend debugging for the next bounded trial
+to expose the blocked task; its UART/power effect excludes drain qualification.
+
+The next comparison yields the first complete same-boot real RTC return on
+`404ef43c...`: original GIC masks restored, COMPLETE/error 0, RTC child IRQ,
+Reborn return, internal/SD synced readback and PCM playback/stop all observed.
+This is narrow CONFIRMED diagnostic behavior, with taint 4096 and console
+debugging, not clean release qualification. All standing coverage groups
+retain the table's scope and gates; this new evidence advances full PM/RTC from
+failure-only to PARTIAL. The earlier device-phase wait is unresolved. Admit
+bounded repeated RTC/Power and five-minute collection with normal UART PM and
+RAM-only delayed stack retention. Product automatic sleep, clean successor
+qualification and long endurance remain dependent. No issue/milestone closure.
+
+Boundary review after the first current real entry: all five PM stages pass
+on clean 04 boot `dbcb3854...`. Real suspend has reset-resume stamp 0x59325253,
+suspend PCM length 596, devices resumed, then TASKS_THAWED with no following
+filesystem-thaw or deferred sampler mark. Boot changes to `697282e9...`; this
+is a failure, not resume. Early-boot PM/pstore archive now has physical proof.
+The clean five-minute battery window enters C3 55.82% after USB detach, unlike
+the retained cold battery boot with bit-10 USB veto and zero entries.
+
+The exact installed Linux 6.18.0 also contains the upstream filesystem-freeze
+selection inversion: value 0 freezes ordinary filesystems. Admit the narrowly
+scoped, upstream-authored one-line correction (222047f68e / stable b107196729f)
+with executable policy tests and ARM compilation. It changes no voltage,
+storage layout, PM hardware ownership or memory reservation. Its relationship
+to the live stall is still a hypothesis until the bounded stack/timer diagnostic
+and controlled comparison; no auto-suspend admission follows from source alone.
+
+Re-audit of every coverage group in the standing table below: boot/evidence,
+CPU/C1/C2/C3/timers, watchdog/reset, input/display/GPU, storage/filesystems,
+audio/analog, battery/charging/thermal, USB/host, radios/firmware, UART,
+RAM/recovery/update/security/services, RTC/time/identity and FM retain their
+listed classification and individual gates. Updated narrow evidence is clean
+staged PM, post-USB C3 and early retained capture. Full PM, Power/RTC same-boot,
+electrical/endurance and release remain PARTIAL; physical UART remains UNKNOWN,
+host remains PHYSICAL_GATE, FM excluded. No issue closure, source-identity
+reset, candidate build or flash is authorized by this audit itself.
+
+Owner explicitly authorizes retained-evidence recovery, controlled battery-only
+idle, staged PM and bounded full suspend, matching diagnostics and fixes. No
+autonomous flash, protected-partition write, voltage/current limit change or
+protection bypass is authorized. Work starts from integrated POWER-FINAL-04,
+Linux `5aeba051c428451483402e5874dcf8222afca259`, Reborn
+`8cd365da5f3454c8e3189df1434b966edbd06575`; current main documentation HEAD
+`3e562e7` has no subsequent installed implementation. The newest authority is
+[NEXT-SESSION-HANDOFF](NEXT-SESSION-HANDOFF.md), consumed in full; its cleanup
+job is outside this investigation. Earlier release reports retain historical scope.
+
+Fresh locked SSH proves installed 04/root v1.30, boot
+`dbcb3854-d028-4882-94aa-cc86b5af091e`, taint zero. Initial uptime 638.83 s.
+Persistent logs and journals are archived before mutation under ignored
+`out/deep-sleep-final/evidence/20261007/00-initial/`. Pstore was unmounted;
+mounting it recovered two ramoops files, including a partly corrupted prior
+user-poweroff failure/panic. SRAM PM state/ring is absent. The retained long 04
+boot has zero C3 entries despite Enabled/budget -1, substantial C2, real declining
+voltage and a later low-battery shutdown. Exact matching to the owner's six-hour
+88-to-30 observation is still being reconstructed; do not substitute the older
+POWER01 incident. Product requests unconditionally refuse full suspend until
+qualification; no auto-suspend implementation exists.
+
+All standing coverage rows are refreshed below; grouped rows retain their
+individual historical evidence and do not promote broader qualification:
+
+| Coverage | Classification / remaining gate |
+| --- | --- |
+| Boot/PID1/root/data, diagnostics, SMP | CONFIRMED narrow current 04 boot/SSH; PARTIAL repeated cold boot/coherency/release (#28/#33). |
+| CPU/OPP/C1/C2/C3, timers, clocks/PWRAP/pinctrl/I2C | CONFIRMED retained bounded UART01 and 02 tests; PARTIAL current 04 C3 regression: enabled but no entries, PERI blocker 0x400 in retained battery rows (#28). |
+| Watchdog/reset, poweroff, runtime PM/full suspend/wake | PARTIAL; retained 02 stops after TASKS_THAWED before FILESYSTEMS_THAWED. Current 04 sampler not yet exercised; recovered poweroff panic is a separate defect (#28/#30/#34). |
+| Display/GPU/backlight, wheel/navigation/Power | CONFIRMED bounded awake/dark behavior; PARTIAL full-resume/physical Power wake and input polling (#28/#34). |
+| eMMC/SD, filesystems and development/production layout | CONFIRMED retained bounded integrity/PM; PARTIAL full-resume I/O and endurance (#28/#33). No raw write or layout change. |
+| Native AFE/I2S/DMA/CS43131/headphones/analog | CONFIRMED retained 02 idle-rail fix and narrow S16 playback; PARTIAL exact 04 verification/full resume (#29). |
+| Battery/charger/thermal/electrical | PARTIAL; real voltage decline, provisional SOC, no validated pack current/capacity/NTC. Existing safety limits preserved (#28/#30). |
+| USB developer logs/network/MTP, host/VBUS | PARTIAL; current configured ECM/SSH works, battery-side USB clock suspected; host/VBUS remains PHYSICAL_GATE (#27/#28/#31/#33). |
+| Wi-Fi/Bluetooth, firmware/calibration | PARTIAL; current radio core powered off, saved intent preserved; on/peer/coexistence qualification retained separately (#31). |
+| Physical UART/crash capture | UNKNOWN physical UART; PARTIAL ramoops retention with visible bit corruption; SRAM only warm-reset retention (#16/#28). |
+| RAM/reservations, recovery, update/rollback/security, services/non-root | PARTIAL existing gates unchanged; no architecture/memory expansion or backup waiver (#28/#32/#33). |
+| RTC/time, entropy, identity/privacy | PARTIAL: current wall clock is build-floor, RTC 2022; use boot IDs/monotonic intervals. Raw logs stay private (#28/#31/#32). |
+| FM | CONFIRMED existing board scope exclusion. |
+
+GitHub read-only refresh: #16/#27/#28/#29/#31/#32/#33/#34 OPEN, #30 CLOSED.
+Closed #30 does not establish reliable suspend. No remote status mutation or
+release promotion is warranted. Admission is PARTIALLY READY: preserve evidence,
+reproduce 04 clean idle, then stage PM and use its existing sampler for one bounded
+real entry. Same-boot Power and RTC restoration must precede product auto-suspend
+and long suspend-drain qualification. See the
+[deep-sleep investigation](../validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md).
+
 ## POWER-FINAL-04 integrated baseline — 2026-10-06
 
 `main` now contains POWER-FINAL-03 plus the eleven parallel Platform 1.0 handoff branches and the high-resolution research branch, merged one at a time

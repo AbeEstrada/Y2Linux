@@ -305,6 +305,65 @@ int main(void){
 
 
 class UsbIdleClock(unittest.TestCase):
+    def test_childless_bc11_restores_clock_before_phy_and_retains_ownership(self):
+        source = (ROOT/'kernel/platform/usb.c').read_text()
+        for name in ('y2_usb_bc11_begin', 'y2_usb_bc11_end'):
+            source = source.replace('int '+name+'(', 'static int '+name+'(')
+        run_c(r'''
+#include <assert.h>
+#include <stdbool.h>
+#include <errno.h>
+#define READ_ONCE(x) (x)
+#define WRITE_ONCE(x,v) ((x)=(v))
+#define BIT(n) (1U<<(n))
+static unsigned char phy[0x100];
+static void *y2_usb_phy=phy;
+struct platform_device {int dev;};
+static struct platform_device child, *y2_usb_child;
+static void *y2_musb;
+static bool y2_usb_detached,y2_usb_finished,y2_usb_clock_enabled;
+static unsigned y2_usb_clock_failures,y2_usb_clock_restores,y2_usb_clock_gates;
+static struct {int result;} y2_live;
+static int y2_usb_lifecycle,y2_usb_bus_clock;
+static bool y2_bc11_pm_held,y2_usb_data_source;
+static unsigned refs,mask=BIT(10),phy_reads,phy_writes,pm_refs;
+static int clock_error,pm_error;
+static bool bad_phy;
+static void mutex_lock(int *lock){assert(!*lock);*lock=1;}
+static void mutex_unlock(int *lock){assert(*lock);*lock=0;}
+static void clk_disable(int clock){assert(refs==1);--refs;mask|=BIT(10);}
+static int clk_enable(int clock){if(clock_error)return clock_error;assert(!refs);++refs;mask&=~BIT(10);return 0;}
+static int y2_ccf_usb_read(unsigned address,unsigned *value){assert(address==0x10003018);*value=mask;return 0;}
+static unsigned readb(void *address){assert(y2_usb_lifecycle && refs==1);++phy_reads;return *(unsigned char *)address;}
+static void writeb(unsigned value,void *address){assert(y2_usb_lifecycle && refs==1);++phy_writes;if(!bad_phy)*(unsigned char *)address=value;}
+static void udelay(unsigned delay){assert(y2_usb_lifecycle && refs==1);}
+static int pm_runtime_resume_and_get(int *dev){if(pm_error)return pm_error;++pm_refs;return 0;}
+static void pm_runtime_mark_last_busy(int *dev){assert(pm_refs==1);}
+static void pm_runtime_put_autosuspend(int *dev){assert(pm_refs==1);--pm_refs;}
+''' + ''.join(function(source, n) for n in ('y2_usb_bus_gate', 'y2_usb_bus_restore',
+                  'y2_bc11_pm_release', 'y2_usb_bc11_begin', 'y2_usb_bc11_end')) + r'''
+int main(void){
+ /* First cable since a gated cold battery boot: PHY must never be touched
+  * without clock restoration, and classification owns the lifecycle mutex. */
+ assert(!y2_usb_bc11_begin());assert(y2_usb_lifecycle && refs==1 && !pm_refs);
+ assert(phy[0x1a]==0x80 && y2_usb_clock_restores==1);
+ assert(!y2_usb_bc11_end(true));assert(!y2_usb_lifecycle && y2_usb_data_source && !phy[0x1a]);
+ assert(!y2_usb_bus_gate() && !refs);
+ clock_error=-EIO;unsigned reads=phy_reads,writes=phy_writes;
+ assert(y2_usb_bc11_begin()==-EIO && !y2_usb_lifecycle && !refs);
+ assert(phy_reads==reads && phy_writes==writes && y2_usb_clock_failures==1);
+ /* Child PM ownership remains balanced on success and each refusal. */
+ clock_error=0;y2_usb_clock_failures=0;assert(!y2_usb_bus_restore());
+ y2_usb_child=&child;pm_error=-EBUSY;
+ assert(y2_usb_bc11_begin()==-EBUSY && !y2_usb_lifecycle && !pm_refs);
+ assert(phy_reads==reads && phy_writes==writes);
+ pm_error=0;bad_phy=true;
+ assert(y2_usb_bc11_begin()==-EIO && !y2_usb_lifecycle && !pm_refs);
+ bad_phy=false;assert(!y2_usb_bc11_begin() && pm_refs==1);
+ assert(!y2_usb_bc11_end(false) && !pm_refs && !y2_usb_data_source);
+}
+''')
+
     def test_actual_save_gate_restore_owner_refuses_session_dma_fifo_and_irq(self):
         source = (ROOT/'kernel/platform/usb.c').read_text()
         for name in ('y2_musb_runtime_gate', 'y2_musb_runtime_clock'):
@@ -343,7 +402,8 @@ static unsigned readb(void *p){return *(unsigned char *)p;}
 static void clk_disable(int clock){assert(owner.lock && refs==1);refs--;mask|=BIT(10);}
 static int clk_enable(int clock){if(fail_enable)return -EIO;assert(!refs);refs++;mask&=~BIT(10);return 0;}
 static int y2_ccf_usb_read(unsigned address,unsigned *value){assert(address==0x10003018);*value=mask;return 0;}
-''' + function(source, 'y2_musb_runtime_gate') + function(source, 'y2_musb_runtime_clock') + r'''
+''' + ''.join(function(source, n) for n in ('y2_usb_bus_gate', 'y2_usb_bus_restore',
+                                          'y2_musb_runtime_gate', 'y2_musb_runtime_clock')) + r'''
 int main(void){
  assert(!y2_musb_runtime_gate(&other) && refs==1);
  assert(y2_musb_runtime_gate(&owner)==-EBUSY && refs==1);

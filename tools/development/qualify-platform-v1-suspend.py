@@ -67,6 +67,8 @@ def verdict(result):
                       wake_source=result.get('expected_wake') in wakes,
                       alarm_cleared=not result.get('alarm_seconds') or (result.get('alarm_clear', {}).get('code') == 0 and after.get('/sys/class/rtc/rtc0/wakealarm') in {'', '0'}),
                       pcm_clean=spm_after.get('debug') in {'0', '0x0'} and spm_after.get('broken') == '0')
+        if result.get('expected_wake') == 'rtc' and 'alarm_before_cleanup' in result:
+            checks['rtc_auto_disarmed'] = result['alarm_before_cleanup'].get('wakealarm') in {'', '0'}
     else:
         checks['no_deep_entry'] = delta('entries') == 0 and delta('resumes') == 0
     for path, value in before.items():

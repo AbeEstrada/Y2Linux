@@ -10,7 +10,9 @@ from .common import read
 
 PATH = '/data/system/platform/power-journal.jsonl'
 PERIOD = 300
-LIMIT = 262144
+# Two bounded files retain at least a normal night even at the maximum row
+# size (128 five-minute rows per file). No increase in sampling/write rate.
+LIMIT = 2097152
 
 
 def idle_counters(ctx):
@@ -85,8 +87,10 @@ class PowerJournal:
                     mounts[0]['source'] != self.ctx.read('/run/y2-data-device')):
                 return False
             ctx = self.ctx
+            from .sleep import status as sleep_status
             row = {'schema': 1, 'event': event or ('state_change' if safety else 'snapshot'),
                    'wall_time': time.time(), 'monotonic_s': now,
+                   'boottime_s': time.clock_gettime(time.CLOCK_BOOTTIME),
                    'boot_id': ctx.read('/proc/sys/kernel/random/boot_id'),
                    'build': ctx.json('/etc/y2linux/versions.json'), 'state': state,
                    'battery': battery, 'shutdown': shutdown,
@@ -97,7 +101,8 @@ class PowerJournal:
                               for p in ctx.glob('/sys/class/rfkill/*')},
                    'idle_policy': ctx.json('/run/y2/cpu-idle-policy.json'),
                    'idle_counters': idle_counters(ctx),
-                   'sleep': ctx.json('/run/y2/sleep.json')}
+                   'sleep': sleep_status(ctx),
+                   'kernel_pm': ctx.read('/sys/firmware/y2_pm/state', limit=8192)}
             self.append(row, durable=bool(event or safety))
             return True
         except (OSError, ValueError, TypeError):

@@ -71,6 +71,24 @@ class Journal(unittest.TestCase):
         self.assertEqual(self.journal.failures, 1)
         self.assertEqual(len(self.rows()), 1)
 
+    def test_overnight_retention_at_maximum_row_size_and_real_sleep_receipt(self):
+        # An eight-hour night plus eight hours before/after must survive even
+        # with the largest permitted row; rotation must not depend on SOC.
+        for index in range(289):
+            self.journal.append({'sample': index, 'detail': 'x' * 16200})
+        old = self.ctx.path(PATH).with_suffix('.previous.jsonl')
+        retained = [json.loads(line)['sample'] for path in (old, self.ctx.path(PATH))
+                    for line in path.read_text().splitlines()]
+        self.assertTrue(set(range(193, 289)).issubset(retained))
+        self.assertLessEqual(sum(p.stat().st_size for p in (old, self.ctx.path(PATH))), 4194304)
+        receipt = self.ctx.path('/data/system/platform/suspend-last.json')
+        receipt.write_text(json.dumps({'product': {'state': 'sleeping', 'request_boot_id': 'old'}}))
+        self.journal.observe('Normal', {}, now=0)
+        row = self.rows()[-1]
+        self.assertEqual(row['sleep']['state'], 'restore_failed')
+        self.assertEqual(row['sleep']['reason'], 'boot_changed_before_restoration')
+        self.assertIsNotNone(row['boottime_s'])
+
     def test_idle_counters_are_cumulative_and_collected_only_for_due_rows(self):
         for name, value in {
                 '/sys/devices/system/cpu/online': '0',

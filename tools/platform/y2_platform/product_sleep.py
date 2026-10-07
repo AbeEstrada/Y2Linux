@@ -1,0 +1,347 @@
+"""Owned product suspend; no polling while asleep and no editable bypass on 04.
+
+The established PCM wakes every ten minutes for a battery safety check. Only
+an unambiguous timer return can re-enter without restoring the screen/radios.
+All other wakes restore the application. Critical operations use real flock
+ownership and bounded kernel leases, never the mere existence of a PID file.
+"""
+# SPDX-License-Identifier: GPL-2.0-only
+import contextlib
+import errno
+import fcntl
+import os
+from pathlib import Path
+import re
+import signal
+import subprocess
+import sys
+import time
+
+from .boot import private_directory
+from .common import Context, atomic_json
+
+GUARD = '/data/system/platform/product-sleep-guard.json'
+OPERATION_LOCKS = (
+    ('activity_operation', '/run/y2/activity.lock'),
+    ('firmware_update', '/data/updates/.stage.lock'),
+    ('maintenance', '/data/system/platform/.maintenance.lock'),
+)
+
+
+class Refused(ValueError):
+    pass
+
+
+def spm_state(ctx):
+    paths = ctx.glob('/sys/bus/platform/devices/10006000*/state')
+    if len(paths) != 1:
+        return {}
+    return dict(re.findall(r'(\w+)=(\S+)', ctx.read(paths[0].relative_to(ctx.root)) or ''))
+
+
+def identity(ctx):
+    versions = ctx.json('/etc/y2linux/versions.json', {})
+    return {key: versions.get(key) for key in ('build_id', 'build_git_commit', 'reborn_source_commit')} | {
+        'kernel': ctx.read('/proc/sys/kernel/osrelease')}
+
+
+def admission(ctx):
+    if ctx.read('/sys/class/power_supply/BAT0/status') == 'Charging':
+        raise Refused('charger_active')
+    spm = spm_state(ctx)
+    if spm.get('system_sleep_abi') != '1':
+        raise Refused('physical_qualification_required')
+    if ctx.read('/proc/sys/kernel/tainted') != '0' or spm.get('broken') != '0':
+        raise Refused('kernel_sleep_unavailable')
+    if 'mem' not in (ctx.read('/sys/power/state') or '').split():
+        raise Refused('kernel_sleep_unavailable')
+    if '[none]' not in (ctx.read('/sys/power/pm_test') or ''):
+        raise Refused('pm_test_in_progress')
+    backstop = dict(re.findall(r'(\w+)=(\S+)', ctx.read('/sys/firmware/y2_pm/backstop_s') or ''))
+    if backstop.get('provider') != '1':
+        raise Refused('kernel_sleep_unavailable')
+    if backstop.get('armed_s') != '0' or backstop.get('running') != '0':
+        raise Refused('pm_test_in_progress')
+    prior = ctx.json(GUARD, {})
+    if prior.get('identity') == identity(ctx) and prior.get('pending'):
+        # A clean, explicit owner trial on this image can recover a quarantine.
+        receipt = ctx.json('/data/system/platform/suspend-last.json', {})
+        p = receipt.get('product') or {}
+        recovered = (receipt.get('mode') != 'product' and p.get('state') == 'restored'
+                     and p.get('kernel_completed') is True and p.get('same_boot') is True
+                     and receipt.get('current_boot_id') == ctx.read('/proc/sys/kernel/random/boot_id')
+                     and receipt.get('updated', 0) > prior.get('updated', 0))
+        if not recovered:
+            raise Refused('sleep_recovery_required')
+        guard_record(ctx, False)
+
+
+def battery_and_cable(ctx):
+    from .power import load_policy
+    if ctx.read('/sys/class/power_supply/y2-usb-presence/online') != '0':
+        raise Refused('charger_or_usb_active')
+    if ctx.read('/sys/class/power_supply/BAT0/status') != 'Discharging':
+        raise Refused('battery_state_unavailable')
+    policy, error = load_policy(ctx)
+    voltage = ctx.integer('/sys/class/power_supply/BAT0/voltage_now')
+    if error or voltage is None or voltage <= policy['recover_uv']:
+        raise Refused('battery_reserve')
+    state = ctx.json('/run/y2/power.json', {})
+    sampled = state.get('monotonic_ns')
+    age = time.monotonic_ns() - sampled if type(sampled) is int else -1
+    if (state.get('boot_id') != ctx.read('/proc/sys/kernel/random/boot_id') or
+            not 0 <= age <= 10 * 10**9 or state.get('state') != 'Normal'):
+        raise Refused('battery_safety_owner')
+    shutdown = ctx.json('/run/y2/shutdown.json', {})
+    if shutdown.get('state') in ('ShutdownPending', 'Executing', 'Failed'):
+        raise Refused('shutdown_in_progress')
+
+
+def operation_state(ctx, workloads=True):
+    from .update import status, TERMINAL
+    if status(ctx).get('state') not in TERMINAL:
+        raise Refused('firmware_update')
+    if ctx.path('/data/system/platform/maintenance-pending').exists():
+        raise Refused('maintenance_recovery')
+    if not workloads:
+        return
+    leases = ctx.read('/sys/module/workload/parameters/leases')
+    if leases is None:
+        raise Refused('workload_owner_unavailable')
+    for line in leases.splitlines():
+        match = re.fullmatch(r'(\w+) remaining_ms=(\d+) min_khz=-?\d+', line)
+        if not match:
+            raise Refused('workload_owner_unavailable')
+        if match[1] != 'Idle' and int(match[2]) > 0:
+            raise Refused('workload_' + match[1])
+
+
+@contextlib.contextmanager
+def operation_locks(ctx):
+    with contextlib.ExitStack() as stack:
+        for owner, name in OPERATION_LOCKS:
+            path = ctx.path(name)
+            private_directory(path.parent)
+            fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+            stack.callback(os.close, fd)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as error:
+                holders = lock_holders(ctx, os.fstat(fd))
+                raise Refused(owner + (':' + ','.join(holders) if holders else '')) from error
+        yield
+
+
+def lock_holders(ctx, meta):
+    """Name actual live flock holders; never infer ownership from old files."""
+    holders = []
+    for line in (ctx.read('/proc/locks') or '').splitlines():
+        fields = line.split()
+        if len(fields) < 6 or fields[1] != 'FLOCK' or not fields[4].isdecimal():
+            continue
+        try:
+            major, minor, inode = fields[5].split(':')
+            matches = (int(major, 16), int(minor, 16), int(inode)) == (
+                os.major(meta.st_dev), os.minor(meta.st_dev), meta.st_ino)
+        except ValueError:
+            continue
+        if matches:
+            pid = fields[4]
+            name = re.sub(r'[^\w.-]', '_', ctx.read('/proc/' + pid + '/comm') or 'unknown')[:32]
+            holders.append(pid + '/' + name)
+    return holders[:8]
+
+
+def launch(ctx, fd):
+    if ctx.root != Path('/'):
+        raise Refused('fixture_launcher_unavailable')
+    # The inherited open-file description retains the request's flock across
+    # parent exit, so another request cannot pass between acknowledgement/entry.
+    subprocess.Popen(['/usr/bin/python3', '-I', '/usr/lib/y2-platform/product-sleep.py', str(fd)],
+                     pass_fds=(fd,), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, start_new_session=True,
+                     env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'LC_ALL': 'C'})
+
+
+def guard_record(ctx, pending):
+    private_directory(ctx.path(GUARD).parent)
+    atomic_json(ctx.path(GUARD), {'identity': identity(ctx), 'pending': pending,
+                'boot_id': ctx.read('/proc/sys/kernel/random/boot_id'),
+                'updated': time.time()}, durable=True)
+
+
+def command(ctx, argv):
+    result = ctx.command(argv, timeout=20)
+    if not result.get('ok'):
+        raise RuntimeError('sleep_service_failed:' + Path(argv[0]).name)
+
+
+def marker(ctx, stage):
+    ctx.path('/sys/firmware/y2_pm/stage').write_text(stage + '\n')
+
+
+def timer_only(value, spm):
+    p = value.get('product') or {}
+    before, after = value.get('wake_irqs_before', {}), value.get('wake_irqs_after', {})
+    return (p.get('kernel_completed') is True and p.get('same_boot') is True
+            and spm.get('timer_wake') == '1'
+            and all(name in before and after.get(name) == before[name] for name in ('power', 'rtc')))
+
+
+def kernel_sleep(ctx):
+    ctx.path('/sys/power/state').write_text('mem\n')
+
+
+def wakeup_count(ctx, timeout=2):
+    # sysfs wakeup_count_show calls pm_get_wakeup_count(..., true), so even
+    # O_NONBLOCK cannot bound an active wake source. Interrupt that read rather
+    # than leaving the product helper stuck before it reaches kernel PM.
+    if signal.getitimer(signal.ITIMER_REAL)[0]:
+        raise Refused('sleep_deadline_in_progress')
+    def expired(signum, frame):
+        raise Refused('wake_event_in_progress')
+    old = signal.signal(signal.SIGALRM, expired)
+    signal.setitimer(signal.ITIMER_REAL, timeout)
+    try:
+        return ctx.read('/sys/power/wakeup_count')
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, old)
+
+
+def execute(ctx, fd, enter=kernel_sleep):
+    with contextlib.ExitStack() as locks:
+        return execute_owned(ctx, fd, enter, locks)
+
+
+def execute_owned(ctx, fd, enter, locks):
+    from .sleep import prepare, wake_irqs
+    from .suspend_record import record
+    # Require the actual inherited lock, never a user-supplied PID or stale file.
+    if not os.path.samestat(os.fstat(fd), ctx.path('/run/y2/suspend.lock').stat()):
+        raise ValueError('invalid_suspend_lock')
+    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    prepared = False
+    radios_changed = False
+    result = 0
+    pending = False
+    attempted = False
+    restored_kernel = False
+    try:
+        locks.enter_context(operation_locks(ctx))
+        admission(ctx)
+        battery_and_cable(ctx)
+        operation_state(ctx, workloads=False)
+        count = wakeup_count(ctx)
+        previous_irqs = wake_irqs(ctx.read('/proc/interrupts'))
+        guard_record(ctx, True)
+        pending = True
+        marker(ctx, 'HELPER_REQUEST')
+        try:
+            prepare(ctx)
+        except ValueError as error:
+            raise Refused(str(error)) from error
+        except OSError as error:
+            raise Refused('reborn_preparation_unavailable') from error
+        prepared = True
+        record(ctx, 'quiescing_radios', 0)
+        radios_changed = True
+        for radio in ('wifi', 'bluetooth'):
+            command(ctx, ['/usr/sbin/y2-radio', radio, 'off-runtime'])
+        deadline = time.monotonic() + 15
+        while not re.search(r'powered=0 functions=(?:0x0|0) ',
+                            ctx.read('/sys/devices/platform/18070000.connectivity/status') or ''):
+            if time.monotonic() >= deadline:
+                raise Refused('radio_power_down')
+            time.sleep(.1)
+        while True:
+            # Reading can block until an event finishes. The write rejects
+            # any intervening Power/RTC/USB wake before the kernel entry.
+            if count is None:
+                count = wakeup_count(ctx)
+            if previous_irqs is not None:
+                if wake_irqs(ctx.read('/proc/interrupts')) != previous_irqs:
+                    raise Refused('wake_event_in_progress')
+            if count is None or not count.isdecimal():
+                raise Refused('wakeup_count_unavailable')
+            battery_and_cable(ctx)
+            operation_state(ctx)
+            record(ctx, 'syncing', 0)
+            command(ctx, ['/bin/sync'])
+            record(ctx, 'kernel_suspend', 0)
+            guard_record(ctx, True)
+            pending = True
+            try:
+                ctx.path('/sys/power/wakeup_count').write_text(count + '\n')
+            except OSError as error:
+                raise Refused('wake_event_in_progress') from error
+            restored_kernel = False
+            attempted = True
+            try:
+                # The already qualified one-shot RGU backstop pauses during
+                # actual SPM residence and bounds stalls in entry/restoration.
+                # A reset remains a failed sleep, quarantined by durable intent.
+                ctx.path('/sys/firmware/y2_pm/backstop_s').write_text('30\n')
+                try:
+                    enter(ctx)
+                finally:
+                    ctx.path('/sys/firmware/y2_pm/backstop_s').write_text('0\n')
+            except OSError as error:
+                if error.errno in (errno.EBUSY, errno.EAGAIN):
+                    restored_kernel = True
+                    raise Refused('kernel_suspend_refused') from error
+                raise
+            count = wakeup_count(ctx)
+            value = record(ctx, 'kernel_resumed', 0)
+            restored_kernel = value['product'].get('kernel_completed') is True
+            if not restored_kernel:
+                raise RuntimeError('kernel_exit_not_proven')
+            if not timer_only(value, spm_state(ctx)):
+                break
+            # No display, input reactivation, radio restore or library scan
+            # during a maintenance return. Safety daemon gets a normal tick;
+            # the following admission also reads the ADC directly.
+            previous_irqs = value['wake_irqs_after']
+            record(ctx, 'maintenance_wake', 0)
+            time.sleep(2)
+    except Refused as error:
+        result = 2
+        record(ctx, 'product_refused', result, reason=str(error))
+        # No kernel call followed a rejected wake-count handshake.
+        if str(error) == 'wake_event_in_progress':
+            restored_kernel = True
+    except (OSError, ValueError, RuntimeError) as error:
+        result = 1
+        record(ctx, 'product_failure', result, reason=str(error))
+    finally:
+        # Keep every operation lock held until radios and Reborn restore.
+        if prepared:
+            try:
+                record(ctx, 'restoring_radios', result)
+                marker(ctx, 'RADIOS_RESTORING')
+                if radios_changed:
+                    for radio, directory in (('wifi', 'network'), ('bluetooth', 'bluetooth')):
+                        if ctx.read('/data/' + directory + '/enabled') == '1':
+                            command(ctx, ['/usr/sbin/y2-radio', radio, 'on-runtime'])
+            except (OSError, ValueError, RuntimeError):
+                result = 1
+            value = record(ctx, 'complete_result_' + str(result), result)
+            if value.get('result'):
+                result = value['result']
+            if result == 0:
+                marker(ctx, 'COMPLETE')
+        if pending and (restored_kernel or not attempted) and result in (0, 2):
+            guard_record(ctx, False)
+    return result
+
+
+def main():
+    fd = int(sys.argv[1])
+    def stop(signum, frame):
+        raise RuntimeError('sleep_helper_interrupted')
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+    try:
+        raise SystemExit(execute(Context(), fd))
+    finally:
+        os.close(fd)

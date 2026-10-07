@@ -6,6 +6,7 @@ backstop. Never writes MMIO, flashes, reboots, retries entry or changes charging
 """
 import glob
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -35,6 +36,9 @@ def command(argv, timeout=15):
 def snapshot():
     paths = ['/proc/sys/kernel/random/boot_id', '/proc/sys/kernel/tainted', '/proc/interrupts',
              '/proc/mounts', '/sys/power/pm_test', '/sys/firmware/y2_pm/state',
+             '/sys/power/freeze_filesystems', '/sys/kernel/debug/wakeup_sources',
+             '/sys/firmware/y2_pm/previous', '/sys/firmware/y2_pm/devices_previous',
+             '/sys/firmware/y2_pm/reset_status', '/run/y2/power.json',
              '/sys/firmware/y2_pm/devices', '/sys/firmware/y2_pm/backstop_s',
              '/sys/class/rtc/rtc0/wakealarm', '/sys/class/rtc/rtc0/since_epoch',
              '/sys/class/power_supply/BAT0/status', '/sys/class/power_supply/BAT0/voltage_now',
@@ -49,6 +53,18 @@ def snapshot():
         paths.extend(glob.glob(pattern))
     return {'boottime_s': time.clock_gettime(time.CLOCK_BOOTTIME), 'monotonic_s': time.monotonic(),
             'files': {p: read(p) for p in paths}, 'dmesg': command(['dmesg'])}
+
+
+def durable(path, value):
+    with path.open('x') as stream:
+        json.dump(value, stream, sort_keys=True)
+        stream.flush()
+        os.fsync(stream.fileno())
+    fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def main():
@@ -67,7 +83,7 @@ def main():
     if not 0 <= seconds <= 600:
         raise SystemExit('invalid alarm')
     result['reborn_before'] = command(['rebornctl', 'status'])
-    (directory / 'before.json').write_text(json.dumps(result))
+    durable(directory / 'before.json', result)
     subprocess.run(['sync'], check=True)
     try:
         pm_test.write_text(mode + '\n')
@@ -79,6 +95,12 @@ def main():
         # Exactly one launch. Suspend residence does not count against monotonic
         # time, but the independent host bounds recovery and never retries it.
         result['helper'] = command(['/usr/sbin/y2-suspend', '--owner-qualify'], timeout=120)
+        # Preserve the hardware driver's post-wake state before our fallback
+        # cleanup. A successful cleanup does not prove the RTC auto-disarmed.
+        result['alarm_before_cleanup'] = {
+            'wakealarm': read('/sys/class/rtc/rtc0/wakealarm'),
+            'rtc': read('/proc/driver/rtc'),
+        }
     except (OSError, RuntimeError) as error:
         result['error'] = str(error)
     finally:
@@ -93,7 +115,7 @@ def main():
                                - result['after']['monotonic_s'] + result['before']['monotonic_s'])
     result['health'] = command(['y2-platform', 'health'], timeout=30)
     result['reborn'] = command(['rebornctl', 'status'])
-    (directory / 'result.json').write_text(json.dumps(result, sort_keys=True))
+    durable(directory / 'result.json', result)
 
 
 if __name__ == '__main__':

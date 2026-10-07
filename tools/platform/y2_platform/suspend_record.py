@@ -11,7 +11,7 @@ import sys
 import time
 
 
-def record(ctx, stage, result=None, reason=None, reborn_ack=None):
+def record(ctx, stage, result=None, reason=None, reborn_ack=None, mode=None):
     directory = private_directory(ctx.path('/data/system/platform'))
     path = directory / 'suspend-last.json'
     value = ctx.json('/data/system/platform/suspend-last.json', {})
@@ -22,6 +22,10 @@ def record(ctx, stage, result=None, reason=None, reborn_ack=None):
                  'request_boot_id': ctx.read('/proc/sys/kernel/random/boot_id'),
                  'started': time.time(), 'stages': [],
                  'pm_test': next(iter(re.findall(r'\[(\w+)\]', ctx.read('/sys/power/pm_test') or '')), None)}
+    if mode is not None:
+        value['mode'] = mode
+    if stage == 'product_failure':
+        value['error'] = reason
     value.update(stage=stage, result=result, updated=time.time(),
                  current_boot_id=ctx.read('/proc/sys/kernel/random/boot_id'),
                  persistent_kernel=ctx.read('/sys/firmware/y2_pm/state'),
@@ -31,8 +35,26 @@ def record(ctx, stage, result=None, reason=None, reborn_ack=None):
                  radio_restore=ctx.read('/sys/devices/platform/18070000.connectivity/status'))
     if stage == 'kernel_suspend':
         value['wake_irqs_before'] = wake_irqs(ctx.read('/proc/interrupts'))
-    elif stage == 'restoring_radios':
+        value['entry'] = {'boottime_s': time.clock_gettime(time.CLOCK_BOOTTIME),
+                          'monotonic_s': time.monotonic(),
+                          'voltage_uv': ctx.integer('/sys/class/power_supply/BAT0/voltage_now'),
+                          'battery': ctx.json('/run/y2/power.json', {}).get('battery')}
+    elif stage in {'kernel_resumed', 'restoring_radios'}:
         value['wake_irqs_after'] = wake_irqs(ctx.read('/proc/interrupts'))
+    if stage == 'kernel_resumed':
+        from .product_sleep import spm_state
+        spm = spm_state(ctx)
+        value['resume'] = {'boottime_s': time.clock_gettime(time.CLOCK_BOOTTIME),
+                           'monotonic_s': time.monotonic(), 'spm': spm,
+                           'voltage_uv': ctx.integer('/sys/class/power_supply/BAT0/voltage_now'),
+                           'battery': ctx.json('/run/y2/power.json', {}).get('battery')}
+        value['cycles'] = value.get('cycles', 0) + 1
+        # Only returned reset-path PCM596 entry counts, never a PM test/abort.
+        if transition(value, stage, result, value['current_boot_id']).get('kernel_completed'):
+            ticks = int(spm.get('ticks32k', '0'))
+            value['suspended_seconds'] = value.get('suspended_seconds', 0) + ticks / 32768
+    if stage == 'maintenance_wake':
+        value['maintenance_wakes'] = value.get('maintenance_wakes', 0) + 1
     if reborn_ack is not None:
         value['reborn_prepared'] = reborn_ack
     value.setdefault('stages', []).append({'stage': stage, 'time': time.time(), 'result': result})

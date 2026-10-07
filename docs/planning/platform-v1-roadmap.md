@@ -1,5 +1,85 @@
 # Platform v1 roadmap
 
+## Current deep-sleep investigation — 2026-10-07
+
+POWER-FINAL-04 is physically installed (Linux `5aeba051`, Reborn `8cd365da`,
+root v1.30), verified by locked SSH on boot `dbcb3854-d028-4882-94aa-cc86b5af091e`.
+This supersedes older installed-baseline wording below. The
+[boundary audit](roadmap-gap-audit.md#deep-sleep-continuation-admission--2026-10-07)
+retains all hardware/recovery/production gates; the owner's new instruction
+authorizes this investigation, not a milestone promotion or autonomous flash.
+
+1. Archive every surviving incident record, including mounted pstore and both
+   rotated battery journals; distinguish the six-hour owner observation from
+   subsequent shutdowns and unsynchronized wall time.
+2. Reproduce normal 04 idle without manually enabling C3: retained battery rows
+   show zero C3 entries and PERI blocker 0x400. Resolve actual clock ownership.
+3. Qualify staged PM and use the installed post-thaw sampler to localize the
+   known full-suspend failure. Fix and verify same-boot Power/RTC restoration.
+4. Only after reliable full resume, enable owned/inhibited product auto-suspend
+   and measure 5 min, 30 min, 2 h and overnight voltage/SOC without calibration hacks.
+5. If kernel changes require installation, seal one tested BOOTIMG/Y2ROOT
+   successor preserving Y2DATA for owner flash. Software tests cannot satisfy
+   the remaining physical/endurance gates.
+
+Status: IN_PROGRESS / PARTIALLY READY. Tracking #28/#29/#31/#32/#33/#34, historical
+#30 power work retained despite its closed issue state. Current findings and
+evidence limits: [deep-sleep report](../validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md).
+
+Physical update: normal battery idle after USB detach enters C3 (55.82% CPU0
+over 300 s), while the retained cold battery boot had USB bit-10 veto and zero
+C3. Five staged PM tests pass on untainted 04. One real entry returns through
+device resume then stops at TASKS_THAWED and resets; the three-second sampler
+does not run. Early-boot PM/pstore archive now physically verified. Next step
+is to check the bounded context-ownership diagnostic: the recovered RTC-only
+trace shows core and platform both saving CPU/GIC context, with the platform
+save overwriting enabled IRQs after CIRQ masks them. Source removes that second
+owner and defers CIRQ replay until after core restore. Same-boot completion and
+Power/RTC attribution remain physical gates. No flash performed.
+
+Latest narrow progress: the context diagnostic completes real RTC suspend and
+same-boot restoration on `404ef43c...`, with original IRQ masks, filesystem
+progress, Reborn and five-second PCM playback verified. Repeated cycles use
+normal console suspend next; the intermittent device-phase wait and clean
+successor qualification remain open. Runtime USB source now also parks its
+detached monitor on verified absence and wakes on charger cable/source events;
+ARM compilation and native fault/event checks pass, physical reduction pending.
+
+Current physical count is six complete diagnostic resumes on one boot: five
+RTC and one independently attributed Power wake (Power IRQ 24→26, RTC fixed
+at 5). The owner sees normal display return; COMPLETE/error 0 and zero ext4
+errors persist. Four RTC plus the Power cycle use normal console suspension.
+Admit standalone five-minute battery-only suspend measurement under the refreshed
+audit. External-module taint, the earlier intermittent device-phase wait and
+clean-image/endurance/product-policy gates remain explicit; no promotion.
+Product source preparation begins with a database queue barrier after existing
+scanner/background quiescence, ensuring a pending transaction cannot be hidden
+behind a paused UI. Installed 04's automatic-sleep guard remains unchanged.
+
+Latest measurement: **7/7** actual same-boot diagnostic returns, six RTC/one
+Power. Five-minute residence 305.85 s, voltage 3.983422→3.950244 V, SOC 76→76;
+zero unexpected wakes. Recent charge relaxation and taint remain explicit.
+The installed ten-minute PCM timer remains for bounded battery observation;
+product maintenance wake/re-entry must keep display/radios asleep and count
+all awake gaps. Implement delayed product sleep and owned inhibitors on the
+corrected kernel capability; installed 04 cannot be enabled by this userspace.
+Thirty-minute runtime baseline and longer accumulated-suspend tests remain.
+
+The missing 30-minute runtime baseline is now retained: 56.72% C3, 32.30 mV
+voltage loss and provisional SOC 91→85, with no suspend request. Next physical
+boundary is 30 minutes accumulated full suspend under the matching diagnostic,
+with explicit RTC segments/awake gaps; 2-hour progression waits for that result.
+A post-resume Reborn observation-generation defect also leaves its battery view
+stale while the safety daemon remains fresh. Source now cancels that abandoned
+pending request without changing any SOC mapping or sample cadence.
+
+Build admission: freeze the coherent source pair in isolated worktrees for one
+DEEPSLEEP-FINAL-01/root v1.31 successor, then perform full checks before sealing
+BOOTIMG/Y2ROOT only. No flash or readiness promotion. The diagnostic 30-minute
+trial is running independently; source identity must not change with later
+measurement/report updates. Clean built-in and product-policy qualification
+remain dependent on owner installation.
+
 ## USB candidate handoff boundary — 2026-10-04
 
 One preserving USB candidate is sealed at out/y2linux-platform-v1-usb-candidate/.

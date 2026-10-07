@@ -305,6 +305,12 @@
       "base_sha256": "1f5c9b1e6ece8b2719ef44c9fdfd23a3923f8066a04f9cc27fa20a612ae67774",
       "result_sha256": "3c66058dabbff1a684766cf56bdc58209fd9318e0c0c8ac0dca0319930587411",
       "patch": "0062-y2-codec-cache-pm-trace.patch"
+    },
+    {
+      "path": "fs/super.c",
+      "patch": "0066-pm-fix-filesystem-freeze-selection.patch",
+      "base_sha256": "05a0ccc8eb4c8e4191d0e9756f8e1557734ab58425f7cceb8806bd5a4155e7b3",
+      "result_sha256": "c5f3fcab393c7033d51235fc3fa9387431a5da8c03efd5ce6769423fc02d9beb"
     }
   ]
 }

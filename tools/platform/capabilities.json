@@ -171,13 +171,13 @@
     },
     "deep_suspend": {
       "implemented": true,
-      "enabled": false,
+      "enabled": true,
       "qualified": false,
-      "gate": "PHYSICAL_GATE",
-      "reason": "same_boot_resume_unqualified",
+      "gate": "kernel_sleep_abi_and_live_inhibitors",
+      "reason": "built_in_context_fix_and_product_policy; clean_image_endurance_pending",
       "qualification_command": "y2-suspend --owner-qualify",
       "experimental": false,
-      "diagnostics": "retained SRAM PM journal with awake self-test, timed device-callback and stage ring through pm_suspend exit, owner-armed RGU warm-reset backstop and decoded RGU reset cause"
+      "diagnostics": "retained SRAM PM journal, event-based durable receipts, one-shot RGU recovery and failed-attempt quarantine; resets are failures"
     },
     "cpuidle": {
       "implemented": true,
@@ -475,10 +475,10 @@
     },
     "rtc_alarm": {
       "implemented": true,
-      "enabled": false,
+      "enabled": true,
       "qualified": false,
       "experimental": true,
-      "reason": "alarm software implemented; same-boot suspend wake pending",
+      "reason": "same-boot RTC diagnostic returns observed; clean successor qualification pending",
       "interface": "y2-platform rtc-alarm SECONDS"
     },
     "wifi_power_save": {

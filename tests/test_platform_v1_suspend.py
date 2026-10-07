@@ -64,13 +64,13 @@ static void y2_pm_backstop_pause(bool pause){}
 typedef int suspend_state_t;typedef uint64_t u64;
 static unsigned biureg=0x12345678,spmregs[1024];
 static void *spm_base=spmregs,*spm_biu=&biureg;
-static int spm_lock;static bool spm_broken;
-static unsigned entries,resumes,aborts,last_wake,last_ticks,last_debug,last_event,last_r13,suspend_restore_failures;
+static int spm_lock;static bool spm_broken,suspend_cirq_pending;
+static unsigned entries,resumes,aborts,last_wake,last_ticks,last_debug,last_event,last_r13,suspend_restore_failures,last_sleep_isr,last_cpu_wake;
 static int last_result;static u64 resume_restore_ns;
 static unsigned pcm_address=0x81000000,normal_address=0x81001000;
 static struct y2_spm_io spm_io;
-static unsigned cpu_enter,cpu_exit,cluster_enter,cluster_exit,cirq_enter,cirq_exit,normal_restores,sleeps;
-static int fail_cpu,fail_cluster,fail_cirq,fail_arm,fail_sleep,fail_restore;
+static unsigned cirq_enter,cirq_exit,normal_restores,sleeps;
+static int fail_cirq,fail_arm,fail_sleep,fail_restore;
 static bool bad_timer,bad_cirq,bad_biu;
 static unsigned num_online_cpus(void){return 1;}
 static unsigned smp_processor_id(void){return 0;}
@@ -82,10 +82,6 @@ static void y2_cirq_end(void){cirq_exit++;}
 static bool y2_cirq_restore_ok(void){return !bad_cirq;}
 static unsigned readl(void *p){return *(unsigned*)p;}
 static void writel(unsigned v,void *p){if(bad_biu)v^=1;*(unsigned*)p=v;}
-static int cpu_pm_enter(void){cpu_enter++;return fail_cpu;}
-static int cpu_cluster_pm_enter(void){cluster_enter++;return fail_cluster;}
-static void cpu_pm_exit(void){cpu_exit++;}
-static void cpu_cluster_pm_exit(void){cluster_exit++;}
 static int y2_spm_suspend_arm(struct y2_spm_io *io,unsigned addr){return fail_arm;}
 static int y2_spm_finish(unsigned long n){return 0;}
 static int cpu_suspend(unsigned long n,int(*fn)(unsigned long)){assert(n==0);sleeps++;return fail_sleep;}
@@ -95,30 +91,34 @@ static unsigned spm_read(void *p,unsigned reg){return ((unsigned*)p)[reg/4];}
 static void y2_spm_journal_snapshot(void){}
 static u64 ktime_get_mono_fast_ns(void){static u64 n;return ++n;}
 static void reset(void){
+ assert(!suspend_cirq_pending);
  spm_broken=false;entries=resumes=aborts=suspend_restore_failures=0;
- cpu_enter=cpu_exit=cluster_enter=cluster_exit=cirq_enter=cirq_exit=normal_restores=sleeps=0;
- fail_cpu=fail_cluster=fail_cirq=fail_arm=fail_sleep=fail_restore=0;
+ cirq_enter=cirq_exit=normal_restores=sleeps=0;
+ fail_cirq=fail_arm=fail_sleep=fail_restore=last_result=0;
  bad_timer=bad_cirq=bad_biu=false;biureg=0x12345678;
  spmregs[SPM_PCM_REG_DATA_INI/4]=0;
 }
-''' + function(source, 'y2_spm_enter') + r'''
+''' + function(source, 'y2_spm_enter') + function(source, 'y2_spm_resume_syscore') + r'''
 int main(void){
  reset();assert(!y2_spm_enter(PM_SUSPEND_MEM));
+ assert(suspend_cirq_pending && !cirq_exit);
+ y2_spm_resume_syscore();
  assert(entries==1 && resumes==1 && !aborts && !spm_broken && sleeps==1);
- assert(cpu_enter==cpu_exit && cluster_enter==cluster_exit && cirq_enter==cirq_exit);
+ assert(cirq_enter==cirq_exit);
  reset();fail_sleep=-EBUSY;assert(y2_spm_enter(PM_SUSPEND_MEM)==-EBUSY);
+ y2_spm_resume_syscore();assert(cirq_exit==1);
  assert(!resumes && aborts==1 && !spm_broken && normal_restores>=1 && !spm_lock);
- reset();fail_cpu=-EBUSY;assert(y2_spm_enter(PM_SUSPEND_MEM)==-EBUSY);
- assert(cpu_enter==1 && !cpu_exit && !cluster_enter && cirq_exit==1 && normal_restores==1);
- reset();fail_cluster=-EBUSY;assert(y2_spm_enter(PM_SUSPEND_MEM)==-EBUSY);
- assert(cpu_exit==1 && cluster_enter==1 && !cluster_exit && cirq_exit==1);
  reset();fail_arm=-EBUSY;assert(y2_spm_enter(PM_SUSPEND_MEM)==-EBUSY);
- assert(!sleeps && cpu_exit==1 && cluster_exit==1 && cirq_exit==1);
+ y2_spm_resume_syscore();assert(!sleeps && cirq_exit==1);
  for(unsigned fault=0;fault<4;fault++){
   reset();bad_biu=fault==0;bad_timer=fault==1;bad_cirq=fault==2;fail_restore=fault==3?-EIO:0;
-  assert(y2_spm_enter(PM_SUSPEND_MEM)==-EIO);
-  assert(resumes==1 && aborts==1 && spm_broken && suspend_restore_failures && !spm_lock);
-  assert(cpu_exit==1 && cluster_exit==1 && cirq_exit==1);
+  int result=y2_spm_enter(PM_SUSPEND_MEM);
+  /* Timer/CIRQ checks belong after the core GIC restore. Their error is
+   * durable and quarantines SPM even though syscore resume returns void. */
+  assert(result==((bad_timer || bad_cirq)?0:-EIO));
+  y2_spm_resume_syscore();
+  assert(last_result==-EIO && resumes==1 && spm_broken && suspend_restore_failures && !spm_lock);
+  assert(cirq_exit==1 && !suspend_cirq_pending);
   unsigned prior=sleeps;assert(y2_spm_enter(PM_SUSPEND_MEM)==-EBUSY && sleeps==prior);
  }
 }

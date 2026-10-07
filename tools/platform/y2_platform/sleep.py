@@ -68,8 +68,8 @@ def transition(value, stage, result, boot_id, reason=None):
     elif stage == 'kernel_suspend':
         # Durable intent immediately before the blocking kernel write. Actual
         # SPM entry is proven only by the kernel journal after wake/reset.
-        p.update(state='sleeping', reason=None)
-    elif stage == 'restoring_radios':
+        p.update(state='sleeping', reason=None, kernel_completed=False)
+    elif stage in {'kernel_resumed', 'restoring_radios'}:
         kernel = dict(re.findall(r'(\w+)=(\S+)', value.get('persistent_kernel') or ''))
         p['kernel_completed'] = (kernel.get('valid') == '1' and kernel.get('stage') == 'EXIT'
                                  and kernel.get('error') == '0' and p['same_boot'] is True
@@ -86,6 +86,10 @@ def transition(value, stage, result, boot_id, reason=None):
             p.update(state='waking', reason=reason)
         if kernel.get('failed_stage') == 'DPM_PREPARED' and kernel.get('error') == '-16':
             p.update(state='refused', reason='device_prepare_refused')
+    elif stage == 'product_refused':
+        p.update(state='refused', reason=reason)
+    elif stage == 'product_failure':
+        p.update(state='restore_failed', reason=reason)
     elif stage.startswith('complete_result_'):
         if reason or result or value.get('error'):
             if p['state'] != 'refused':
@@ -116,13 +120,12 @@ def prepare(ctx):
 
 
 def request(ctx):
-    """A successful API request may be refused by platform policy.
+    """Acknowledge an owned request; the detached helper owns the blocking PM.
 
-    There is deliberately no editable boolean that turns unqualified full
-    suspend into ordinary product behavior. The owner helper retains the
-    existing explicit qualification argument until same-boot wake is proven.
+    Installed 04 lacks the built-in context-ownership ABI and stays refused.
     """
     from .suspend_record import record
+    from .product_sleep import admission, battery_and_cable, launch, Refused
     root = private_directory(ctx.path('/run/y2'))
     fd = os.open(root / 'suspend.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
@@ -131,9 +134,14 @@ def request(ctx):
         except BlockingIOError:
             current = status(ctx)
             return dict(current, state='refused', reason='sleep_operation_in_progress')
-        reason = ('charger_active' if ctx.read('/sys/class/power_supply/BAT0/status') == 'Charging'
-                  else 'physical_qualification_required')
-        value = record(ctx, 'refused_' + reason, 2)
+        try:
+            admission(ctx)
+            battery_and_cable(ctx)
+            value = record(ctx, 'requested', 0, mode='product')
+            launch(ctx, fd)
+        except (OSError, Refused) as error:
+            reason = str(error) if isinstance(error, Refused) else 'sleep_helper_unavailable'
+            value = record(ctx, 'refused_' + reason, 2)
         return value['product']
     finally:
         os.close(fd)

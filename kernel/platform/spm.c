@@ -11,6 +11,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/interrupt.h>
 #include <linux/suspend.h>
+#include <linux/syscore_ops.h>
 #include <linux/pm_domain.h>
 #include <linux/clk.h>
 #include <asm/cacheflush.h>
@@ -79,7 +80,9 @@ static bool y2_dormant_context_ready(void)
 static u64 resume_restore_ns;
 static dma_addr_t pcm_address, normal_address;
 static unsigned suspend_restore_failures;
+static bool suspend_cirq_pending;
 static unsigned entries, resumes, aborts, last_wake, last_ticks, last_debug, last_event, last_r13;
+static unsigned last_sleep_isr, last_cpu_wake;
 static int last_result;
 static struct generic_pm_domain y2_mfg_domain;
 static bool mfg_broken;
@@ -375,6 +378,34 @@ static int y2_spm_prepare_suspend(void)
 	if (y2_suspend_disabled() || !y2_cirq_ready() || !y2_pm_journal_ready()) return -EOPNOTSUPP;
 	return y2_pmic_spm_prepare();
 }
+/* The core CPU PM syscore owner saves GIC/timer context before ->enter().
+ * Restore/replay CIRQ only after that owner has restored the distributor.
+ * Runtime C3 still owns its separate, non-nested CPU PM notifications. */
+static void y2_spm_resume_syscore(void)
+{
+	int ret = 0;
+	if (!suspend_cirq_pending)
+		return;
+	if (!y2_local_timer_context_ok()) {
+		suspend_restore_failures++;
+		y2_pm_note("suspend_timer", -EIO);
+		ret = -EIO;
+	}
+	y2_pm_mark(Y2_PM_TIMER_RESTORED, ret);
+	y2_cirq_end();
+	suspend_cirq_pending = false;
+	if (!y2_cirq_restore_ok()) {
+		suspend_restore_failures++;
+		y2_pm_note("suspend_cirq", -EIO);
+		ret = -EIO;
+	}
+	y2_pm_mark(Y2_PM_CIRQ_REPLAYED, ret);
+	if (ret) {
+		WRITE_ONCE(spm_broken, true);
+		last_result = ret;
+	}
+}
+static struct syscore_ops y2_spm_syscore = { .resume = y2_spm_resume_syscore };
 static int y2_spm_enter(suspend_state_t state)
 {
 	unsigned long flags;
@@ -391,12 +422,13 @@ static int y2_spm_enter(suspend_state_t state)
 	if (ret) goto unlock;
 	ret = y2_cirq_begin();
 	if (ret) goto unlock;
+	suspend_cirq_pending = true;
 	y2_pm_mark(Y2_PM_CIRQ_CLONED, 0);
 	biu = readl(spm_biu); /* actual Y2 MCU_BIU_CONTROL retention context */
-	ret = cpu_pm_enter();
-	if (ret) goto exit_cirq;
-	ret = cpu_cluster_pm_enter();
-	if (ret) goto exit_cpu;
+	/* Do not call cpu[_cluster]_pm_enter() here. syscore_suspend() already
+	 * saved context; a second save after CIRQ masking overwrites GIC's sole
+	 * saved enable bitmap with only the SPM interrupt enabled. The subsequent
+	 * outer restore then masks storage/GPT IRQs and stalls ext4 thaw I/O. */
 	ret = y2_spm_suspend_arm(&spm_io, pcm_address);
 	y2_spm_journal_snapshot();
 	if (!ret) {
@@ -417,25 +449,20 @@ static int y2_spm_enter(suspend_state_t state)
 		last_debug = spm_read(spm_base, SPM_PCM_REG_DATA_INI);
 		last_event = spm_read(spm_base, SPM_PCM_EVENT_REG_STA);
 		last_r13 = spm_read(spm_base, SPM_PCM_REG13_DATA);
+		last_sleep_isr = spm_read(spm_base, SPM_SLEEP_ISR_STATUS);
+		last_cpu_wake = spm_read(spm_base, SPM_SLEEP_CPU_WAKEUP_EVENT);
 		y2_spm_journal_snapshot();
 		if (last_debug) { WRITE_ONCE(spm_broken, true); ret = -EIO; }
 	}
 	restore = y2_spm_suspend_restore(&spm_io, normal_address);
 	if (restore) { suspend_restore_failures++; ret = restore; }
 	y2_pm_mark(Y2_PM_NORMAL_PCM_RESTORED, ret);
-	cpu_cluster_pm_exit();
-exit_cpu:
-	cpu_pm_exit();
-	if (!y2_local_timer_context_ok()) { suspend_restore_failures++; y2_pm_note("suspend_timer", -EIO); ret = -EIO; }
-	y2_pm_mark(Y2_PM_TIMER_RESTORED, ret);
-exit_cirq:
-	y2_cirq_end();
-	if (!y2_cirq_restore_ok()) { suspend_restore_failures++; y2_pm_note("suspend_cirq", -EIO); ret = -EIO; }
-	y2_pm_mark(Y2_PM_CIRQ_REPLAYED, ret);
+	/* Core CPU PM restoration and then our CIRQ replay run during
+	 * syscore_resume(), including every platform entry abort. */
 unlock:
 	if (ret) {
-		/* Normal firmware is mandatory on every abort, including CPU PM
-		 * notifier refusal before the suspend PCM was installed. */
+		/* Normal firmware is mandatory on every platform-entry abort,
+		 * including refusal before the suspend PCM was installed. */
 		restore = y2_spm_suspend_restore(&spm_io, normal_address);
 		if (restore) { suspend_restore_failures++; ret = restore; }
 		y2_pm_mark(Y2_PM_ABORTED, ret);
@@ -655,6 +682,15 @@ static ssize_t state_show(struct device *dev, struct device_attribute *attr, cha
 		spm_broken, entries, resumes, aborts, last_result, last_wake, last_ticks,
 		last_event, last_debug, last_r13, spm_read(spm_base, 0x60c), spm_read(spm_base, 0x610));
 	ret += sysfs_emit_at(buf, ret, "suspend_restore_failures=%u\n", suspend_restore_failures);
+	/* ABI describes the built-in core-context/CIRQ ownership fix, not a
+	 * physical qualification certificate. No writable enable knob on old ROMs.
+	 * BSP d53dd75c spm_output_wake_reason distinguishes timer from TWAM/CPU
+	 * sharing bit 0. Require the full timer horizon as well before userspace
+	 * may keep the display dark through a battery-maintenance return. */
+	ret += sysfs_emit_at(buf, ret, "system_sleep_abi=1 maintenance_seconds=600 timer_wake=%u sleep_isr=%#x cpu_wake=%#x\n",
+		!last_result && !last_debug && last_wake == 1 &&
+		last_ticks >= Y2_SPM_TIMER && !(last_sleep_isr & ISR_TWAM) && !last_cpu_wake,
+		last_sleep_isr, last_cpu_wake);
 	ret += sysfs_emit_at(buf, ret, "dormant_entries=%u dormant_resumes=%u dormant_aborts=%u dormant_failures=%u dormant_result=%d dormant_broken=%u\n",
 		dormant_entries, dormant_resumes, dormant_aborts, dormant_failures, dormant_result, dormant_broken);
 	ret += sysfs_emit_at(buf, ret, "dormant_stage=%s resume_restore_ns=%llu\n", dormant_stage, resume_restore_ns);
@@ -792,6 +828,9 @@ static int y2_spm_probe(struct platform_device *pdev)
 		WRITE_ONCE(mfg_broken, true);
 		dev_err(&pdev->dev, "MFG domain unavailable: %d\n", ret);
 	}
+	/* Probe follows the core_initcall CPU PM syscore registration. Resume
+	 * callbacks run in registration order with CPU0 alone and IRQs disabled. */
+	register_syscore_ops(&y2_spm_syscore);
 	suspend_set_ops(&y2_suspend_ops);
 	y2_cpu_dvfs_ready();
 	dev_info(&pdev->dev, "CPU1-3 MTCMOS and SPM CPU/cluster shutdown, infrastructure retained; power=%#x/%#x\n",

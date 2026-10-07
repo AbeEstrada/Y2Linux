@@ -4,6 +4,7 @@ The small native core is the shared authentication/policy authority. The rescue
 copy performs offline backup/write/readback; this module never opens a block.
 """
 # SPDX-License-Identifier: GPL-2.0-only
+from .workload import workload
 import contextlib
 import fcntl
 import hashlib
@@ -206,6 +207,7 @@ def stage(ctx, source=None, url=None, check_only=False):
         os.close(fd)
 
 
+@workload("Maintenance")
 def apply(ctx, rollback=False):
     if rollback:
         core(ctx, 'rollback')

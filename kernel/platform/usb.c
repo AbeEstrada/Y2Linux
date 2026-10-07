@@ -58,6 +58,40 @@ extern int y2_ccf_usb_read(unsigned address, unsigned *value);
 extern int y2_pmic_snapshot(struct y2_pwrap_snapshot *snapshot);
 static int y2_clock_read(void *context, unsigned address, unsigned *value)
 { return y2_ccf_usb_read(address, value); }
+/* Callers own either the childless lifecycle mutex or the MUSB lock and have
+ * already quiesced the controller. BC1.1 and first registration must use the
+ * same clock owner even before there is a MUSB runtime-PM device. */
+static int y2_usb_bus_gate(void)
+{
+    unsigned mask;
+    int ret;
+    if (!y2_usb_clock_enabled) return 0;
+    clk_disable(y2_usb_bus_clock);
+    if (y2_ccf_usb_read(0x10003018, &mask) || !(mask & BIT(10))) {
+        ret = clk_enable(y2_usb_bus_clock);
+        y2_usb_clock_enabled = !ret;
+        y2_usb_clock_failures++;
+        return ret ? ret : -EIO;
+    }
+    y2_usb_clock_enabled = false;
+    y2_usb_clock_gates++;
+    return 0;
+}
+static int y2_usb_bus_restore(void)
+{
+    unsigned mask;
+    int ret;
+    if (y2_usb_clock_failures) return -EIO;
+    if (y2_usb_clock_enabled) return 0;
+    ret = clk_enable(y2_usb_bus_clock);
+    if (ret) { y2_usb_clock_failures++; return ret; }
+    y2_usb_clock_enabled = true;
+    if (y2_ccf_usb_read(0x10003018, &mask) || (mask & BIT(10))) {
+        y2_usb_clock_failures++; return -EIO;
+    }
+    y2_usb_clock_restores++;
+    return 0;
+}
 struct y2_usb_mapping { void __iomem *mac, *phy; };
 static int y2_usb_recover_write(void *context, unsigned address, unsigned value)
 {
@@ -399,6 +433,9 @@ int y2_usb_bc11_begin(void)
         ret = pm_runtime_resume_and_get(&y2_usb_child->dev);
         if (ret < 0) { mutex_unlock(&y2_usb_lifecycle); return ret; }
         y2_bc11_pm_held = true;
+    } else {
+        ret = y2_usb_bus_restore();
+        if (ret) { mutex_unlock(&y2_usb_lifecycle); return ret; }
     }
     /* Actual Y2 Charger_Detect_Init: USBPHYACR6 BC1.1 switch, bit 7. */
     value = readb(y2_usb_phy + 0x1a);
@@ -470,6 +507,29 @@ static struct {
 static bool y2_irq_fault_valid;
 static void y2_usb_worker(struct work_struct *work);
 static DECLARE_DELAYED_WORK(y2_usb_work,y2_usb_worker);
+static bool y2_usb_sleeping, y2_usb_monitor_parked;
+
+static void y2_usb_kick(void)
+{
+    if (READ_ONCE(y2_usb_started) && !READ_ONCE(y2_usb_finished) &&
+        !READ_ONCE(y2_usb_sleeping))
+        mod_delayed_work(system_freezable_wq, &y2_usb_work, 0);
+}
+static int y2_usb_presence_changed(struct notifier_block *nb, unsigned long event, void *data)
+{
+    struct power_supply *supply = data;
+    /* The charger owns CHRDET/BC1.1 and publishes only source transitions.
+     * Battery sample and gadget-budget notifications are not cable events. */
+    if (event == PSY_EVENT_PROP_CHANGED &&
+        !strcmp(supply->desc->name, "y2-usb-presence"))
+        y2_usb_kick();
+    return NOTIFY_OK;
+}
+static struct notifier_block y2_usb_presence_notifier = { .notifier_call = y2_usb_presence_changed };
+static void y2_usb_presence_release(void *unused)
+{
+    power_supply_unreg_notifier(&y2_usb_presence_notifier);
+}
 
 static void y2_usb_phase(unsigned stage)
 {
@@ -776,7 +836,7 @@ bool y2_usb_idle_ok(void)
  * owner. Any DMA, FIFO, session or IRQ activity remains a genuine blocker. */
 int y2_musb_runtime_gate(struct musb *musb)
 {
-    unsigned i, mask;
+    unsigned i;
     unsigned long flags;
     int ret = 0;
     if (musb != READ_ONCE(y2_musb)) return 0;
@@ -793,38 +853,15 @@ int y2_musb_runtime_gate(struct musb *musb)
             (musb->context.index_regs[i].rxcsr & (MUSB_RXCSR_RXPKTRDY | MUSB_RXCSR_FIFOFULL))) {
             ret = -EBUSY; goto out;
         }
-    if (y2_usb_clock_enabled) {
-        clk_disable(y2_usb_bus_clock);
-        if (y2_ccf_usb_read(0x10003018, &mask) || !(mask & BIT(10))) {
-            /* Refuse runtime suspend and reacquire on a failed gate. */
-            ret = clk_enable(y2_usb_bus_clock);
-            y2_usb_clock_enabled = !ret;
-            y2_usb_clock_failures++;
-            if (!ret) ret = -EIO;
-            goto out;
-        }
-        y2_usb_clock_enabled = false;
-        y2_usb_clock_gates++;
-    }
+    ret = y2_usb_bus_gate();
 out:
     spin_unlock_irqrestore(&musb->lock, flags);
     return ret;
 }
 int y2_musb_runtime_clock(struct musb *musb)
 {
-    unsigned mask;
-    int ret;
     if (musb != READ_ONCE(y2_musb)) return 0;
-    if (y2_usb_clock_failures) return -EIO;
-    if (y2_usb_clock_enabled) return 0;
-    ret = clk_enable(y2_usb_bus_clock);
-    if (ret) { y2_usb_clock_failures++; return ret; }
-    y2_usb_clock_enabled = true;
-    if (y2_ccf_usb_read(0x10003018, &mask) || (mask & BIT(10))) {
-        y2_usb_clock_failures++; return -EIO;
-    }
-    y2_usb_clock_restores++;
-    return 0;
+    return y2_usb_bus_restore();
 }
 static unsigned y2_pm_suspends, y2_pm_restores, y2_pm_stale;
 static unsigned y2_pm_l1_mask;
@@ -968,12 +1005,14 @@ static int y2_usb_register(void)
         .parent=y2_usb_parent,
         .dma_mask=DMA_BIT_MASK(32),
         .res=resources,.num_res=2,.data=&y2_musb_data,.size_data=sizeof(y2_musb_data)};
-    int irq;
+    int irq, ret;
     if(!np) return -ENODEV;
     irq=of_irq_get(np,0);
     of_node_put(np);
     if(irq<=0) return irq ? irq : -ENODEV;
     resources[1].start=resources[1].end=irq;
+    ret = y2_usb_bus_restore();
+    if (ret) return ret;
     y2_usb_child=platform_device_register_full(&info);
     if(IS_ERR(y2_usb_child)) {int rc=PTR_ERR(y2_usb_child);y2_usb_child=NULL;return rc;}
     if(!y2_usb_child->dev.driver || !y2_musb) return -ENODEV;
@@ -1071,9 +1110,10 @@ static void y2_usb_worker(struct work_struct *work)
 {
     struct y2_pwrap_snapshot power;
     unsigned long flags;
-    bool wrote=false;
+    bool wrote=false, poll=true;
     int rc;
     mutex_lock(&y2_usb_lifecycle);
+    WRITE_ONCE(y2_usb_monitor_parked, false);
     if(y2_usb_finished) goto out;
     if(READ_ONCE(y2_live.result)) goto done;
     y2_pmic_snapshot(&power);
@@ -1097,6 +1137,10 @@ static void y2_usb_worker(struct work_struct *work)
     y2_usb_monitor_terminal(&y2_tolerance,1);
     WRITE_ONCE(y2_live.chrdet,power.chrdet);
     y2_usb_supply=power;
+    /* A verified absent cable needs no private 250 ms timer. CHRDET and
+     * completed BC1.1 classification wake this worker through the charger.
+     * Unknown/fault samples and every attached session keep bounded polling. */
+    poll = !!(power.chrdet & 0x20);
     if (!(power.chrdet & 0x20)) y2_usb_source_invalidate();
     if(!y2_usb_child && y2_requested_role == USB_ROLE_DEVICE && (power.chrdet&0x20) && y2_usb_data_permitted()) {
         y2_usb_phase(Y2_USB_PREFLIGHT);
@@ -1126,7 +1170,21 @@ static void y2_usb_worker(struct work_struct *work)
         if(y2_live.configured && y2_live.stage!=Y2_USB_CONFIGURED) y2_usb_phase(Y2_USB_CONFIGURED);
     }
 again:
-    queue_delayed_work(system_freezable_wq,&y2_usb_work,msecs_to_jiffies(250));
+    /* Recovery at probe checked DMA idle, masked interrupts and disconnected
+     * the inherited session. Until first registration, only BC1.1 can touch
+     * this hardware, under this same mutex. No child exists to autosuspend it.
+     * Gate after observation/classification even on a battery-only cold boot;
+     * BC1.1/registration restore the clock before their first register access. */
+    if (!y2_usb_child && y2_usb_phy && y2_usb_clock_enabled) {
+        rc = y2_usb_bus_gate();
+        if (rc) {
+            y2_usb_fail_at(NULL,Y2_USB_REASON_PREFLIGHT,rc,false);
+            goto done;
+        }
+    }
+    WRITE_ONCE(y2_usb_monitor_parked, !poll);
+    if (poll && !READ_ONCE(y2_usb_sleeping))
+        queue_delayed_work(system_freezable_wq,&y2_usb_work,msecs_to_jiffies(250));
     goto out;
 done:
     y2_usb_finish();
@@ -1171,6 +1229,8 @@ static ssize_t status_show(struct device *dev, struct device_attribute *attr, ch
         READ_ONCE(y2_live.stage), READ_ONCE(y2_live.result), READ_ONCE(y2_live.configured),
         READ_ONCE(y2_live.polls), READ_ONCE(y2_live.chrdet), READ_ONCE(y2_live.irqs), READ_ONCE(y2_live.events));
     n += sysfs_emit_at(buf, n, "pm_suspends=%u pm_restores=%u pm_stale=%u\n", y2_pm_suspends, y2_pm_restores, y2_pm_stale);
+    n += sysfs_emit_at(buf, n, "monitor_parked=%u cable_events=charger_presence\n",
+        READ_ONCE(y2_usb_monitor_parked));
     n += sysfs_emit_at(buf, n, "bus_clock_enabled=%u bus_clock_gates=%u bus_clock_restores=%u bus_clock_failures=%u\n",
         READ_ONCE(y2_usb_clock_enabled), y2_usb_clock_gates, y2_usb_clock_restores, y2_usb_clock_failures);
     n += sysfs_emit_at(buf, n, "recovery=%d writes=%u power=%d clock=%d\n",
@@ -1308,6 +1368,7 @@ static int y2_role_set(struct usb_role_switch *sw, enum usb_role role)
     if (role == USB_ROLE_NONE && y2_musb && !y2_usb_detached)
         y2_usb_detach();
     mutex_unlock(&y2_usb_lifecycle);
+    y2_usb_kick();
     return 0;
 }
 static enum usb_role y2_role_get(struct usb_role_switch *sw)
@@ -1333,6 +1394,10 @@ static int y2_usb_probe(struct platform_device *pdev)
     if (ret) return ret;
     y2_usb_input=devm_power_supply_register(&pdev->dev,&y2_usb_input_desc,&input_cfg);
     if(IS_ERR(y2_usb_input)) {ret=PTR_ERR(y2_usb_input);y2_usb_input=NULL;return ret;}
+    ret = power_supply_reg_notifier(&y2_usb_presence_notifier);
+    if (ret) return ret;
+    ret = devm_add_action_or_reset(&pdev->dev, y2_usb_presence_release, NULL);
+    if (ret) return ret;
     ret=register_chrdev_region(dev,1,"y2diag");
     if(ret) return ret;
     cdev_init(&y2_cdev,&y2_fops);
@@ -1359,14 +1424,24 @@ static const struct of_device_id y2_usb_match[] = {
 };
 static int y2_usb_prepare(struct device *dev)
 {
+    int ret = 0;
     /* Stop PHY/register polling before the MUSB child starts saving state. */
+    WRITE_ONCE(y2_usb_sleeping, true);
     cancel_delayed_work_sync(&y2_usb_work);
-    return 0;
+    mutex_lock(&y2_usb_lifecycle);
+    if (!y2_usb_child && y2_usb_phy && !y2_usb_finished && !y2_live.result)
+        ret = y2_usb_bus_gate();
+    mutex_unlock(&y2_usb_lifecycle);
+    if (ret) {
+        WRITE_ONCE(y2_usb_sleeping, false);
+        y2_usb_kick();
+    }
+    return ret;
 }
 static void y2_usb_complete(struct device *dev)
 {
-    if (y2_usb_started && !y2_usb_finished)
-        queue_delayed_work(system_freezable_wq,&y2_usb_work,msecs_to_jiffies(250));
+    WRITE_ONCE(y2_usb_sleeping, false);
+    y2_usb_kick();
 }
 static const struct dev_pm_ops y2_usb_pm = {
     .prepare = y2_usb_prepare, .complete = y2_usb_complete,
