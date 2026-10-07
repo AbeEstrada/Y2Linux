@@ -265,7 +265,9 @@ def serve(ctx):
         while running[0]:
             if coordinator.clock() >= next_sample:
                 next_sample = coordinator.clock() + 10**9
-                battery_status = sample(ctx, soc, coordinator.clock() / 10**9)
+                # SOC uses physical elapsed time including suspend. Keep the
+                # shutdown grace/sampling scheduler on its existing clock.
+                battery_status = sample(ctx, soc)
                 voltage = battery_status['voltage_uv']
                 state = battery.observe(policy, voltage, ctx.integer('/sys/class/power_supply/BAT0/present'), battery_status)
                 if state == 'ShutdownPending' and not coordinator.intent:

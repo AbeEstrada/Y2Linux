@@ -26,6 +26,13 @@ Status: IN_PROGRESS / PARTIALLY READY. Tracking #28/#29/#31/#32/#33/#34, histori
 #30 power work retained despite its closed issue state. Current findings and
 evidence limits: [deep-sleep report](../validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md).
 
+The first accumulated 30-minute attempt was cut short by USB insertion after
+two verified RTC segments and a third successful USB-triggered return. RTC
+auto-disarm is now observed before cleanup; the full measurement is repeating.
+SOC source review additionally finds suspend time excluded from estimator elapsed
+time. The narrow BOOTTIME correction preserves all calibration and protection
+policy, exposes rather than hides loss, and joins the same unsealed successor.
+
 Physical update: normal battery idle after USB detach enters C3 (55.82% CPU0
 over 300 s), while the retained cold battery boot had USB bit-10 veto and zero
 C3. Five staged PM tests pass on untainted 04. One real entry returns through

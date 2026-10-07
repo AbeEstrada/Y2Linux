@@ -2,6 +2,29 @@
 
 ## Deep-sleep continuation admission — 2026-10-07
 
+### Suspend-aware battery observation correction
+
+Before extending the frozen production source, re-reviewed the standing coverage
+groups against archive `22-endurance30-return/`. Two RTC segments add 595.849
+and 595.286 seconds of same-boot sleep, both with the alarm disabled before
+harness cleanup. USB insertion interrupts the third segment after 487.924 s;
+all ten actual returns on this boot complete, but the 30-minute drain gate is
+still incomplete. The repeat has identical scope and protections. CPU/PM/wake/
+peripheral/endurance classifications remain PARTIAL for the successor; all
+other coverage, owner, issue, recovery and release gates above/below are unchanged.
+
+Fresh voltage falls across the two completed RTC segments while daemon SOC
+stays 86. Source proves SOC receives CLOCK_MONOTONIC, which excludes suspension,
+and additionally caps an observation interval at 60 seconds. Admit the narrow
+reporting correction to elapsed BOOTTIME for the existing voltage filter and
+existing per-minute rate limit, with physical-time regression cases. Do not
+alter the voltage curve, offsets, rate, thresholds, charge/current/voltage limits,
+hardware confidence or shutdown grace clock. This makes actual loss visible;
+it is not electrical improvement and cannot satisfy the overnight target.
+Update the same unsealed candidate source, rebuild affected artifacts and run
+the complete final profile before sealing. No second hypothesis candidate,
+device deployment, flash or readiness promotion is authorized by this audit.
+
 ### Coherent successor build admission
 
 Refreshed against current owner scope, newest 04 handoff, source diff and retained

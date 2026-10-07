@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 from collections import deque
 import math
+import time
 
 PROFILE = '/etc/y2linux/battery-profile.json'
 OVERRIDE = '/data/system/platform/battery-profile.json'
@@ -72,7 +73,10 @@ class Soc:
             self.filtered = self.percent = self.last = None
             self.samples.clear()
             return result
-        dt = max(0., min(60., now - self.last)) if self.last is not None else 0.
+        # Real elapsed time includes suspend. Capping a ten-minute observation
+        # gap to one minute would conceal loss even with a fresh ADC reading.
+        # The configured filter/rate and voltage curve remain unchanged.
+        dt = max(0., now - self.last) if self.last is not None else 0.
         if self.last is not None and now < self.last:
             self.__init__(self.profile)
         self.last = now
@@ -120,7 +124,9 @@ class Soc:
         return result
 
 
-def sample(ctx, engine, now):
+def sample(ctx, engine, now=None):
+    if now is None:
+        now = time.clock_gettime(time.CLOCK_BOOTTIME)
     base = '/sys/class/power_supply/BAT0/'
     # Read BAT0 only: PMIC/CPU temperatures and USB configured limits cannot
     # become pack sensor values. Missing hardware properties stay null.

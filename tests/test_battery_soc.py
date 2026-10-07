@@ -2,7 +2,9 @@ import json
 from pathlib import Path
 import sys
 import tempfile
+import time
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools/platform'))
 from y2_platform.battery import Soc, load_profile, sample
@@ -68,6 +70,34 @@ class BatterySoc(unittest.TestCase):
             value = soc.observe(now, 3800000, 1, 'Discharging', current=-100000)
         self.assertTrue(value['resting'])
         self.assertEqual(value['source'], 'hybrid')
+
+    def test_sleep_gap_exposes_voltage_loss_without_changing_curve_or_rate(self):
+        self.put('/sys/class/power_supply/BAT0/present', '1')
+        self.put('/sys/class/power_supply/BAT0/status', 'Discharging')
+        self.put('/sys/class/power_supply/BAT0/voltage_now', '4000000')
+        soc = Soc(load_profile(self.ctx))
+        physical_time = iter([100., 700., 7900.])
+        def clock(clock_id):
+            return next(physical_time) if clock_id == time.CLOCK_BOOTTIME else 100.
+        with patch('y2_platform.battery.time.clock_gettime', side_effect=clock):
+            self.assertEqual(sample(self.ctx, soc)['percent'], 80)
+            self.put('/sys/class/power_supply/BAT0/voltage_now', '3800000')
+            after_ten_minutes = sample(self.ctx, soc)
+            # The existing one-point-per-minute limit gets ten real minutes,
+            # not zero suspended minutes or an artificial one-minute ceiling.
+            self.assertEqual(after_ten_minutes['percent'], 70)
+            self.assertLess(after_ten_minutes['filtered_voltage_uv'], 3810000)
+            after_two_hours = sample(self.ctx, soc)
+            self.assertEqual(after_two_hours['percent'], 45)
+            self.assertFalse(after_two_hours['resting'])
+            self.assertTrue(after_two_hours['provisional'])
+            self.assertIsNone(after_two_hours['current_ua'])
+
+    def test_sleep_time_alone_never_changes_soc_and_rebound_is_not_charge(self):
+        soc = Soc(load_profile(self.ctx))
+        self.assertEqual(soc.observe(0, 3800000, 1, 'Discharging')['percent'], 45)
+        self.assertEqual(soc.observe(28800, 3800000, 1, 'Discharging')['percent'], 45)
+        self.assertEqual(soc.observe(57600, 4000000, 1, 'Discharging')['percent'], 45)
 
     def test_low_soc_estimate_warns_but_shutdown_requires_trust_or_hard_floor(self):
         self.put('/etc/y2linux/power-policy.json', (ETC / 'power-policy.json').read_text())

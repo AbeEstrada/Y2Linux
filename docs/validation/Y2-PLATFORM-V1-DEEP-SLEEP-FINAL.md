@@ -424,6 +424,13 @@ was not independently sampled. The updated observer captures pre-cleanup RTC
 state for the next endurance trial. Five more RTC returns now repeat
 with normal console suspension, including the 305.85-second measurement. Untainted successor qualification remains.
 
+`22-endurance30-return/` adds two 600-second-alarm RTC cycles. Both show
+`alarm_IRQ: no`, `alrm_pending: no` and empty wakealarm **before cleanup**,
+plus RTC child IRQ delivery and same-boot completion. Thus automatic one-shot
+disarming is now directly observed. A third cycle wakes early on USB insertion
+while its future alarm remains armed; that is not an RTC-wake test or failure
+to disarm a fired alarm. The collector clears that unused fallback and stops.
+
 ## 26. Same-boot resume
 
 Seven complete real-suspend diagnostic successes on boot `404ef43c...`, preserving
@@ -451,6 +458,11 @@ returns** (five RTC, one Power). The separate early-cable refusal never entered
 SPM and is excluded from that denominator. The five-minute RTC trial adds the
 seventh: **7/7 actual returns**, six RTC and one Power, with six using normal
 console PM. Repeated Power and clean-kernel qualification remain.
+
+The first endurance batch adds three actual same-boot returns: two RTC and one
+early USB wake. Current total: **10/10 kernel returns**, eight RTC/one Power/
+one USB. The USB segment fails its intended RTC wake check and is excluded
+from RTC and completed-duration acceptance; all remain diagnostic/tainted.
 
 ## 28. Product auto-suspend policy
 
@@ -517,11 +529,27 @@ the screen/radios must stay asleep through an attributable maintenance wake.
 
 ## 30. 30-min suspend drain
 
-Not yet retrieved: a 1800-second accumulated full-suspend diagnostic is armed
-in `21-endurance30-armed/`. Each <=600-second RTC segment is separately checked;
-normal helper screen restoration creates explicit awake gaps. Do not call this
-continuous suspend or automatic product policy. The preceding 30-minute runtime
-result is documented separately above.
+First attempt is **INCOMPLETE**, archived in `22-endurance30-return/`. USB was
+removed at 20:05:07 UTC and reconnected at 20:35:30, before the requested
+34-minute window ended. After 120 s settling, two RTC segments completed with
+595.848907471 and 595.285644531 s SPM residence. A third resumes on cable
+insertion after 487.923645020 s. Total actual residence 1679.058197022 s is
+below 1800; no complete thirty-minute drain result is claimed.
+
+The two uncontaminated segment endpoint series are 4.055712→4.021435 V and
+4.032861→4.016381 V, daemon SOC 86→86 both. The third endpoint is Charging and
+is excluded from depletion analysis. Its intended-RTC/auto-disarm checks fail
+because the alarm had not fired; every kernel return is same-boot/COMPLETE,
+SPM errors/restore failures zero and all ext4 errors zero. No retry occurs.
+
+Raw archive SHA256: first-return.json `42fc47082649e9c0556bbdade09f65921838ef6b0b87ecc52b5924dd4daeb674`;
+retained-sysfs.tar `3762065ea539e122ea7db493444e45bd9847f6070c093c38d5511376a6eb9fa7`;
+persistent.tar `83aba18df7290b50c83f7c6daf95c134dfc50b32fc8c2f64fbcbc03fec04080d`.
+
+Identical repeat armed in `23-endurance30-repeat-armed/`, unplugged 20:37:43 UTC;
+reconnect prompt due 21:11:43 UTC. Each <=600-second RTC segment is separately
+checked; normal helper screen restoration creates explicit awake gaps. This
+is neither continuous suspend nor the new automatic product policy.
 
 ## 31. 2-hour suspend drain
 
@@ -554,6 +582,17 @@ invalidated. A real quiesce/resume-between-ticks test reproduces and covers this
 No SOC scaling, clamping, delayed updates or historical sample substitution is
 introduced. This defect is proven for the diagnostic resumes; attribution to
 the earlier 88% charging observation is not established.
+
+The estimator also receives CLOCK_MONOTONIC, which excludes time asleep, then
+caps any observation interval at 60 seconds. This explains why the diagnostic
+sleep endpoint SOC can stay fixed despite a fresh lower voltage. New source
+uses CLOCK_BOOTTIME for SOC only and accounts for the actual observation gap
+in the unchanged filter and one-point-per-minute rate. Curve, charging offset,
+rest-confidence requirements and all electrical/protection limits are unchanged;
+the shutdown grace and scheduling clocks are unchanged. Regression tests hold
+monotonic time fixed while physical time advances, verify loss becomes visible,
+and verify elapsed time alone and voltage rebound never invent capacity. This
+corrects reporting, not electrical consumption; it cannot earn a drain pass.
 
 ## 34. Battery health evidence
 
@@ -588,16 +627,29 @@ sleep/update/maintenance/workload targeted suite: **46 PASS**; latest narrower
 34-test sleep/context suite also passes. SPM ARM compile passes. The broader current source power/CPU/USB/battery suite passes 155 cases with
 one pre-artifact DT skip; the added bounded wake-count test also passes. Full
 new-image kernel/config/DT/modules/ABI/QEMU/package checks remain before sealing.
+The added suspend-time SOC correction passes 53 battery/power/sleep/journal
+regressions. Frozen Reborn source is reconfirmed at all 332 workspace tests.
 
 ## 37. Commits
 
-The reviewed pair is being frozen for the isolated successor build. Existing
-Luca author/committer identity is preserved; no identity configuration is changed.
-Exact source IDs will be copied from the build receipt after freezing.
+Frozen source pair:
+
+- Linux `cec9cae1b0caf2280b49cd07a655b28c0f5e1897` — suspend context,
+  USB idle, owned product policy and evidence.
+- Reborn `5a9f7586dd8d80ab5afc16c6a9a7e853e7469aeb` — automatic requests,
+  DB barrier, helper recovery and fresh post-resume observations.
+
+Existing Luca author/committer identity is preserved; no identity configuration
+was changed. Isolated detached worktrees are under
+`/home/luca/Dokumente/Code/worktrees/y2-deepsleep-final/`.
 
 ## 38. Candidate / hashes
 
-No successor built or flashed. Installed candidate 04 reference:
+One full successor build is in progress: DEEPSLEEP-FINAL-01/root v1.31.
+The handoff's old firmware-provisioning directory was absent; all seven existing
+04 target firmware files were instead verified against the pinned inventory and
+04 package receipt before staging. No new firmware/calibration input is used.
+No successor is sealed or flashed yet. Installed candidate 04 reference:
 
 - BOOTIMG: `be0f4379531be4b8f94fd927adda18106fbad1a567665cb63d5807908095aea4`
 - Y2ROOT: `4fc765b931f85e0fee96c0b80c92592eca3a4f3f2a4e379d18abd71bc3978e64`
