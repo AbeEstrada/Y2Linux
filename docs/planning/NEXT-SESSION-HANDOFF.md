@@ -1,4 +1,64 @@
-# Next-session handoff — 2026-10-06 (delete this file when it has been consumed)
+# Next-session handoff — current deep-sleep continuation, 2026-10-07
+
+**This section supersedes the 2026-10-06 installed-image and next-action claims
+below. Preserve this handoff and the evidence. Cleanup is outside the current
+owner request; do not delete the active build, fallback, symbols or raw archives.**
+
+- Actual installed firmware is **POWER-FINAL-04**, verified over SSH, not 02.
+  Linux `5aeba051c428451483402e5874dcf8222afca259`, Reborn
+  `8cd365da5f3454c8e3189df1434b966edbd06575`, root v1.30. Current diagnostic boot
+  `404ef43c-1237-4eed-8c00-56210c9574a8`, taint 4096 from matching PM probes.
+- Both primary repositories use `codex/platform-v1-deep-sleep-final`.
+  Compiled successor source: Linux **`0c9b78c7903182861b84e7d90a536bd30fca295a`**,
+  Reborn **`5a9f7586dd8d80ab5afc16c6a9a7e853e7469aeb`**. Later Linux commits may
+  document results without changing compiled identity. Luca identity preserved.
+- New owner package: `out/y2linux-platform-v1-deepsleep-final-candidate/`,
+  **DEEPSLEEP-FINAL-01**, root v1.31. Read its `OWNER-HANDOFF.md`, manifest and
+  SHA256SUMS. BOOTIMG `8a354eb0b9a9e65b3213ee83b1db53c9bd1174a52a9ea27233749c7d22c0cc16`;
+  Y2ROOT `f84d1bc4a819f819f2f9b6f3593be00ba491b0ae17c5b6220f0024aea5b681e0`.
+  Only BOOTIMG/ANDROID selected; Y2DATA preserved. Exact 04 fallback included.
+  No flash performed. Adjacent `…-candidate-symbols/` retains matching symbols.
+- Build vehicle: `/home/luca/Dokumente/Code/worktrees/y2-deepsleep-final/`
+  with detached paired worktrees; Linux `out/deepsleep-final-build` contains the
+  complete build. Seven existing firmware inputs were verified/recovered from
+  the retained 04 target into `out/deep-sleep-final/owner-firmware/`; the old
+  provisioning path below no longer exists. Do not invent calibration inputs.
+- Software checks pass: 542 unique production cases (532 container + ten host
+  dependency cases, zero remaining failures/skips), Reborn fmt/strict Clippy/
+  332 workspace tests/fresh ARM, kernel/config/DT/module ABI/QEMU/package.
+- Physical work and all 38 requested sections are in
+  [the current report](../validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md).
+  Private archives: `out/deep-sleep-final/evidence/20261007/00-initial/` through
+  `24-endurance30-repeat-return/`. Latest collection is complete and archived.
+  Same-boot diagnostic returns: 14 (12 RTC, one Power, one USB). The 30-minute
+  repeat accumulated 1811.835 s, four expected RTC wakes, no unexpected wakes,
+  4.050439→4.013964 V; old SOC 86→86 is unsuitable for a drain pass. No 2-hour
+  or full-suspend overnight measurement has been run or armed.
+- Root cause of post-thaw hang: duplicate CPU/cluster PM saves overwrite core
+  GIC interrupt enables after CIRQ masking; final core restore disables storage/
+  timer IRQs. A matching diagnostic suppression establishes same-boot returns.
+  Built successor gives core PM sole ownership and orders CIRQ replay after it.
+  It also fixes cold-battery USB clock ownership, adds automatic owned sleep,
+  fixes stale Reborn observations and uses BOOTTIME for unchanged SOC filtering.
+- Open defects/gates: one intermittent DPM_PREPARED wait before CPU PM remains
+  unlocalized; separate user-poweroff panic remains unfixed; built-in clean
+  repetition, automatic sleep/inhibitors, cold-battery C3 and true endurance
+  remain. Infrastructure/DDRPHY retention is not deepest power collapse; no
+  measured mA/capacity or battery-degradation conclusion. No <=1% target pass.
+- Next: owner verifies/install successor via preserving Download Only, then
+  leave USB connected for identity/taint-zero archive. Do not autonomously flash.
+  Stage PM and use one bounded real Power/RTC trial before repetition/long tests.
+  Use BOOTTIME for gesture scheduling, generous RTC fallback and actual IRQ
+  attribution. Prevent automatic policy racing the staged collector using an
+  actually held activity lock; do not use a stale inhibitor file. Never load 04
+  modules on the successor; current endurance script requires taint4096 and
+  must not be reused unchanged. Archive pstore/PM/power before every reboot.
+
+The standing [boundary audit](roadmap-gap-audit.md#successor-sealing-and-owner-installation-boundary)
+and roadmap were refreshed. Issues #16/#27/#28/#29/#31/#32/#33/#34 remain open,
+#30 closed historically; no remote mutation, push or release promotion.
+
+## Historical 2026-10-06 handoff (superseded where noted above)
 
 Three jobs. **Do not start the cleanup before Job 0 is complete.**
 

@@ -82,8 +82,9 @@ RGU raw status zero / `none_reported` is inconclusive, not proof of a power-on r
 
 ## 5. Battery voltage / SOC interpretation
 
-Retained system log has ~692 minute-spaced discharging-voltage samples, from
-3.900146 V at 8,281.84 s (~2.3 h) to ~3.400 V near 49,670 s. Around the observed
+Retained system log has 690 consecutive minute-spaced discharging-voltage samples,
+from 3.900146 V at 8,281.84 s (~2.3 h) to 3.403564 V at 49,621.84 s; the final
+battery journal then reaches ~3.400 V near 49,670 s. Around the observed
 morning wake, voltage is ~3.74–3.76 V. Charger source/current allocation are zero
 and faults zero in these rows. This is actual depletion; SOC imperfections
 cannot explain away the sustained voltage decline. No measured battery mA exists.
@@ -92,6 +93,12 @@ Power JSONL rotation lost the starting 88% row. Surviving long-boot rows cover
 38,899.8–49,674.6 s: 3.576928 V / 9% to 3.399609 V / 0%. Initial 88% voltage,
 charge termination and exact six-hour endpoint cannot be recovered from these
 rows. Voltage under load is not a calibrated capacity measurement.
+
+![Retained runtime-idle voltage decline, with missing early samples marked](data/y2-deep-sleep-retained-voltage.svg)
+
+The [voltage-only CSV](data/y2-deep-sleep-retained-voltage.csv) retains source
+line numbers; [provenance](data/y2-deep-sleep-retained-voltage.json) records the
+private source-log hashes. No missing 88% voltage or local timestamp is invented.
 
 ## 6. Normal product power policy
 
@@ -223,6 +230,22 @@ Retained dark-state runtime records report suspended display/GPU; collector
 records current backlight, runtime PM and process counters. Full-resume display
 and input qualification remains separate.
 
+Both endpoints of the complete 30-minute runtime window have `bl_power=4`,
+Lima `13010000.gpu`, OVL, RDMA and `mediatek-drm` runtime suspended. Brightness
+32 is the saved level, not proof the backlight is on. No screen-off rendering
+loop is present in Reborn's draw admission. Owner-observed Power resume restores
+the display/input; repeated clean-successor coverage remains.
+
+The endpoint clock summary still owns UART (26 MHz), GPT system clock (13 MHz),
+26-MHz parents/keypad/PWRAP/efuse and AXI/thermal/AUXADC. These are awake runtime
+observations, not measurements during SoC sleep. SPM requests and verifies UART
+sleep acknowledgement, but current full suspend deliberately retains
+infrastructure/DDRPHY; it does not claim deepest infrastructure power collapse.
+The autonomous thermal monitor retains its clocks and protection. The VGP2
+audio parent is also always-on in DT. Quantifying these remaining electrical
+costs requires the longer voltage observations or a real external current
+measurement; software enable counts cannot establish mA or a 1% hardware floor.
+
 ## 16. USB power
 
 Uninstalled source fix adds one verified bus-clock gate/restore owner shared by
@@ -258,6 +281,11 @@ restores saved intent afterwards.
 Retained eMMC/SD runtime states suspended. Current audit captures clock/runtime
 and IRQ deltas; full-resume filesystem progress remains an open distinct gate.
 No storage partition/raw write performed.
+The complete runtime window confirms both MSDC hosts suspended at both endpoints.
+After the focused Power return, ordinary filesystem tests sync and read back
+262,144-byte files on internal data and SD with matching hashes; five-second
+PCM playback advances normally before being paused/closed. This is narrow
+functional restoration, not long-term storage endurance or raw-partition writing.
 The SD slot declares `broken-cd`, so `mmc_rescan()` schedules its detection work
 at HZ (once per second). This is an identified periodic source; the complete SD
 IRQ rate cannot be attributed to that timer alone without a dynamic trace.
@@ -293,7 +321,7 @@ backport `b107196729ff6b9d6cde0a71f49c1243def43328` (CVE-2025-71106).
 The exact one-line backport is now included in overlay 0066. Native execution
 of the patched callback proves ordinary filesystems are untouched by default,
 explicit opt-in freezes them, and FS_POWER_FREEZE filesystems remain protected.
-Source: [upstream-authored patch](https://github.com/torvalds/linux/commit/b107196729ff6b9d6cde0a71f49c1243def43328.patch).
+Source: [upstream-authored stable backport](https://github.com/gregkh/linux/commit/b107196729ff6b9d6cde0a71f49c1243def43328.patch).
 This inversion exposes the filesystem-thaw I/O path; it does not by itself
 explain the missing timer interrupts. New boot
 `697282e9-b617-444a-bafd-baa5596f2b70` proves
@@ -382,11 +410,13 @@ USB returned at host 18:48:55 UTC, after this batch had already finished.
 
 ## 23. Fix
 
-USB clock lifecycle fix in progress. Persistent journal now retains two 2 MiB
+USB clock lifecycle fix is built into the successor, not yet installed.
+Persistent journal now retains two 2 MiB
 files at unchanged five-minute/event cadence, reads actual suspend receipt,
 and records monotonic/boottime for residence attribution. Early boot mounts
 pstore and archives bounded raw pstore plus retained PM before services, keeping
-eight private boot archives without clearing pstore. SOC and charging unchanged.
+eight private boot archives without clearing pstore. SOC scaling and charging
+limits are unchanged; the separate elapsed-time reporting correction is in §33.
 The full-suspend source now removes the nested CPU/cluster PM pair. Core PM
 alone owns the full-suspend save/restore. A built-in syscore resume callback,
 registered after core CPU PM, restores/replays CIRQ after the GIC restore;
@@ -431,11 +461,19 @@ disarming is now directly observed. A third cycle wakes early on USB insertion
 while its future alarm remains armed; that is not an RTC-wake test or failure
 to disarm a fired alarm. The collector clears that unused fallback and stops.
 
+The complete repeat in `24-endurance30-repeat-return/` adds four attributed
+RTC returns. Every alarm is disabled before cleanup, each IRQ reaches the
+same-boot resume path, and all kernel/helper/filesystem checks pass except the
+explicit external-module taint exclusion. This is repeatable diagnostic proof;
+the built-in successor remains untested.
+
 ## 26. Same-boot resume
 
-Seven complete real-suspend diagnostic successes on boot `404ef43c...`, preserving
-the original Reborn process/session. It does not convert earlier backstop
-reboots into passes or remove the remaining clean-image qualification gate.
+Fourteen complete real-suspend diagnostic returns on boot `404ef43c...`,
+preserving the original Reborn process/session: twelve RTC, one Power and one
+USB wake. The USB return fails its intended RTC/duration criterion. These
+returns do not convert earlier backstop reboots into passes or remove the
+remaining clean-image qualification gate.
 
 ## 27. Suspend cycle test
 
@@ -463,6 +501,13 @@ The first endurance batch adds three actual same-boot returns: two RTC and one
 early USB wake. Current total: **10/10 kernel returns**, eight RTC/one Power/
 one USB. The USB segment fails its intended RTC wake check and is excluded
 from RTC and completed-duration acceptance; all remain diagnostic/tainted.
+
+The complete repeat adds four RTC returns: **14/14 actual kernel returns**,
+twelve RTC/one Power/one USB, thirteen meeting their intended wake criteria.
+SPM entries=resumes=14, aborts=0, restore failures=0; final PM COMPLETE sequence
+997/error 0, all three ext4 error counters zero. Only one attributed Power
+cycle exists. Clean-image repetition and the earlier device-phase wait remain
+open; a returned kernel alone does not establish an overnight-drain pass.
 
 ## 28. Product auto-suspend policy
 
@@ -546,14 +591,45 @@ Raw archive SHA256: first-return.json `42fc47082649e9c0556bbdade09f65921838ef6b0
 retained-sysfs.tar `3762065ea539e122ea7db493444e45bd9847f6070c093c38d5511376a6eb9fa7`;
 persistent.tar `83aba18df7290b50c83f7c6daf95c134dfc50b32fc8c2f64fbcbc03fec04080d`.
 
-Identical repeat armed in `23-endurance30-repeat-armed/`, unplugged 20:37:43 UTC;
-reconnect prompt due 21:11:43 UTC. Each <=600-second RTC segment is separately
-checked; normal helper screen restoration creates explicit awake gaps. This
-is neither continuous suspend nor the new automatic product policy.
+The identical repeat is **COMPLETE as a diagnostic segmented measurement**,
+archived in `24-endurance30-repeat-return/`. USB unplugged at 20:37:43 UTC,
+reconnected at 21:12:03 UTC, after the collection finished. No SSH traffic
+during collection. Same boot `404ef43c-1237-4eed-8c00-56210c9574a8` throughout.
+
+| Segment | RTC alarm | SPM residence | Fresh voltage before → after |
+| --- | ---: | ---: | --- |
+| 1 | 600 s | 596.103546143 s | 4.046044 → 4.018798 V |
+| 2 | 600 s | 595.226043701 s | 4.028906 → 4.014843 V |
+| 3 | 600 s | 595.277069092 s | 4.021435 → 4.010888 V |
+| 4 | 30 s | 25.228149414 s | 4.017260 → 4.008471 V |
+
+Total **1811.834808350 s suspended / 1847.315205602 s elapsed**: 98.079%
+residence, 35.480 s of awake preparation/restore/check gaps. Four expected RTC
+wakes, zero unexpected wakes, every alarm disarmed before cleanup. Normal
+helper screen restoration occurs between segments. This is neither continuous
+suspend nor the new automatic product policy. Strict qualification remains
+false solely because the matching diagnostic module taints the kernel (4096).
+
+Whole-collection fresh BAT0 endpoints, both Discharging:
+**4.050439 → 4.013964 V (−36.475 mV)**; daemon SOC **86 → 86%**. The unchanged
+SOC is not a zero-drain result: installed 04 excludes suspension from its
+estimator clock and caps the observation interval (§33). Recent charge
+relaxation, nonuniform awake load and the provisional voltage curve also
+prevent extrapolating this short measurement to an overnight capacity loss.
+The separate daemon voltage samples, 4.050659→3.997045 V, are not substituted
+for the endpoint ADC series. No pack-current measurement is available.
+
+Raw archive SHA256: first-return.json `cdcb8fc1ee312872dcfe2a233b4a71790f30f4961c7efc8053ec53b04facd6f9`;
+retained-sysfs.tar `917edf0567178f66b1bd8ff0e99bceb7eb64b3a1c43434bbb427dfc094f6a020`;
+persistent.tar `652877a651325200badfc1baa3cbc4fbb0509e316699196c34cfb3d4f68af264`.
 
 ## 31. 2-hour suspend drain
 
-NOT RUN; depends on reliable complete suspend/resume.
+NOT RUN or armed. The completed diagnostic 30-minute observation permits the
+next duration, but the built successor should first receive owner installation
+and clean staged/Power/RTC/automatic-policy checks. This measures the actual
+built-in context fix and corrected SOC clock instead of extending old 04's
+tainted, screen-restoring segmented harness. No two-hour result is inferred.
 
 ## 32. Overnight result when available
 
@@ -612,8 +688,9 @@ provide the exact file list; private physical evidence remains under ignored out
 
 ## 36. Tests
 
-USB/C3/reconnect/charger targeted suite: 42 PASS, 1 SKIP (integrated emitted DT
-not yet built). 23 boot evidence/power journal/boot-order tests PASS (existing
+Earlier targeted USB/C3/reconnect/charger suite: 42 PASS, 1 pre-build DT SKIP
+(superseded by the complete artifact checks below). 23 boot evidence/power
+journal/boot-order tests PASS (existing
 boot-order ResourceWarnings recorded). Production ARM `drivers/y2/usb.o`
 compile PASS. Matching 04 diagnostic module ARM compile PASS; loaded only for
 the separately labelled follow-up diagnostic, not the five clean stage passes.
@@ -625,16 +702,30 @@ live helper lock ownership are included. ARM release build with the matching
 04 SDK passes; the final source revision is rebuilt in the candidate. Platform
 sleep/update/maintenance/workload targeted suite: **46 PASS**; latest narrower
 34-test sleep/context suite also passes. SPM ARM compile passes. The broader current source power/CPU/USB/battery suite passes 155 cases with
-one pre-artifact DT skip; the added bounded wake-count test also passes. Full
-new-image kernel/config/DT/modules/ABI/QEMU/package checks remain before sealing.
+one pre-artifact DT skip; the added bounded wake-count test also passes. These
+targeted checks are supplemented by the completed frozen-source build below.
 The added suspend-time SOC correction passes 53 battery/power/sleep/journal
 regressions. Frozen Reborn source is reconfirmed at all 332 workspace tests.
+
+The complete frozen-source build now passes kernel/config/DT/layout/BOOTIMG,
+exact module ABI and the ARM application build. Production profile: **542 unique
+cases covered**, 532 passed in the locked container plus ten dependency-specific
+cases that all pass on the packaging host; zero remaining skips/failures.
+The initial isolated profile stopped on an inaccessible shared-source symlink;
+a private copy of the same pinned source resolves that environment problem,
+and the complete profile passes. ARM ABI and shell syntax checks pass in QEMU.
+ARM ELF closure: **384 files / 1,411 dependencies**, no build RPATHs. Seven exact
+loadable kernel modules are owned by BOOTIMG's rescue archive, not Y2ROOT.
+Reborn embedded source and installed product/power Python bytes match the
+committed inputs. Rootfs/manifest/privacy/preserving-update validation passes.
 
 ## 37. Commits
 
 Frozen source pair:
 
-- Linux `cec9cae1b0caf2280b49cd07a655b28c0f5e1897` — suspend context,
+- Linux `0c9b78c7903182861b84e7d90a536bd30fca295a` — current build source,
+  including suspend-aware SOC elapsed time; parent
+  `cec9cae1b0caf2280b49cd07a655b28c0f5e1897` contains suspend context,
   USB idle, owned product policy and evidence.
 - Reborn `5a9f7586dd8d80ab5afc16c6a9a7e853e7469aeb` — automatic requests,
   DB barrier, helper recovery and fresh post-resume observations.
@@ -645,14 +736,31 @@ was changed. Isolated detached worktrees are under
 
 ## 38. Candidate / hashes
 
-One full successor build is in progress: DEEPSLEEP-FINAL-01/root v1.31.
+One full successor is built: **DEEPSLEEP-FINAL-01/root v1.31**, release
+`1.0.0-platform-v1-deepsleep-final-candidate.1`, kernel
+`6.18.0-y2linux-platform-v1-deepsleep-final-01`, compiled source pair in §37.
+Canonical owner package:
+`/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-deepsleep-final-candidate/`.
+
+- BOOTIMG (7,254,016 bytes): `8a354eb0b9a9e65b3213ee83b1db53c9bd1174a52a9ea27233749c7d22c0cc16`
+- Y2ROOT (536,870,912 bytes): `f84d1bc4a819f819f2f9b6f3593be00ba491b0ae17c5b6220f0024aea5b681e0`
+
+Only BOOTIMG/ANDROID are selected by the preserving scatter; Y2DATA and all
+other partitions remain unselected. The package includes manifest, complete
+SHA256 inventory, validation receipts/report and OWNER-HANDOFF.md. Matching
+kernel symbols remain in the adjacent `…-candidate-symbols/` folder.
+No flash has occurred; built-in and product physical qualification remain open.
 The handoff's old firmware-provisioning directory was absent; all seven existing
 04 target firmware files were instead verified against the pinned inventory and
 04 package receipt before staging. No new firmware/calibration input is used.
-No successor is sealed or flashed yet. Installed candidate 04 reference:
+Installed candidate 04 is the exact packaged fallback:
 
 - BOOTIMG: `be0f4379531be4b8f94fd927adda18106fbad1a567665cb63d5807908095aea4`
 - Y2ROOT: `4fc765b931f85e0fee96c0b80c92592eca3a4f3f2a4e379d18abd71bc3978e64`
 
-These are prior sealed candidate hashes, not new readback claims. Any successor
-will contain only BOOTIMG/Y2ROOT, preserve Y2DATA and require owner flashing.
+These fallback hashes are prior sealed image identities, not partition readback
+claims. Owner action: verify SHA256SUMS, use the preserving scatter with Download
+Only for BOOTIMG and ANDROID/Y2ROOT, then boot with USB connected for identity
+collection. The owner explicitly reserved flashing; the agent does not flash.
+The investigation remains **MORE_WORK_REQUIRED** until the clean built-in,
+automatic sleep, longer endurance and unresolved hardware gates are settled.

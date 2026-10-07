@@ -2,6 +2,25 @@
 
 ## Current deep-sleep investigation — 2026-10-07
 
+Latest boundary: the complete repeated diagnostic collection records 1811.835 s
+of full suspend in 1847.315 s, four expected RTC wakes/no unexpected wakes,
+4.050439→4.013964 V and old SOC 86→86. Total 14 same-boot diagnostic returns
+on `404ef43c...`, with module taint explicit. The earlier device-phase wait,
+separate poweroff panic, clean repetition, product use and electrical minimum
+remain open. No two-hour or full-suspend overnight result exists.
+
+One successor is built and software validated from Linux `0c9b78c` / Reborn
+`5a9f758`: DEEPSLEEP-FINAL-01/root v1.31, 542 production cases and 332 Reborn
+workspace cases plus kernel/DT/modules/ABI/QEMU/package checks. Seal BOOTIMG/
+Y2ROOT with exact 04 fallback and request owner installation; preserve Y2DATA.
+This includes context/CIRQ/USB/product fixes and truthful suspend-time SOC/
+post-resume UI reporting. No electrical limit or SOC curve changes. Next physical
+gate is clean installed identity/staged PM/repeated Power/RTC/auto-policy, then
+longer drain tests. All #16/#27/#28/#29/#31/#32/#33/#34 remain open; closed #30
+does not qualify this work. No release promotion or autonomous flash. See the
+[sealing audit](roadmap-gap-audit.md#successor-sealing-and-owner-installation-boundary).
+The earlier progress notes below are retained chronologically.
+
 POWER-FINAL-04 is physically installed (Linux `5aeba051`, Reborn `8cd365da`,
 root v1.30), verified by locked SSH on boot `dbcb3854-d028-4882-94aa-cc86b5af091e`.
 This supersedes older installed-baseline wording below. The

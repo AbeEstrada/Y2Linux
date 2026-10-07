@@ -2,6 +2,52 @@
 
 ## Deep-sleep continuation admission — 2026-10-07
 
+### Successor sealing and owner-installation boundary
+
+Read-only issue refresh at the sealing boundary keeps #16/#27/#28/#29/#31/
+#32/#33/#34 OPEN and #30 CLOSED; no remote write or closure is warranted.
+Owner/blueprint scope remains real same-boot sleep with truthful voltage/SOC,
+preserved Y2DATA/protected partitions and owner-only flashing. Frozen source:
+Linux `0c9b78c7903182861b84e7d90a536bd30fca295a`, Reborn
+`5a9f7586dd8d80ab5afc16c6a9a7e853e7469aeb`. Later documentation is not compiled
+identity. Full build/profile/package checks pass: 542 unique production cases,
+332 Reborn workspace cases, strict formatting/Clippy, ARM/kernel/config/DT/
+modules/ABI/QEMU and preserving package validation. Exact seven existing 04
+firmware inputs were recovered and inventory-verified; no calibration expansion.
+
+Fresh physical archive `24-endurance30-repeat-return/` on installed 04 boot
+`404ef43c...` adds four RTC returns: 1811.835 s suspended in 1847.315 s elapsed,
+four expected wakes/no unexpected wakes, 4.050439→4.013964 V, SOC 86→86 with
+the old elapsed-time defect. Total 14 same-boot diagnostic kernel returns
+(12 RTC/1 Power/1 USB); external-module taint excludes clean qualification.
+Every standing coverage group is refreshed here; historical evidence and
+accepted risks remain separately scoped, with no permanent production waiver:
+
+| Coverage / existing tracking | Current classification and next gate |
+| --- | --- |
+| Boot/PID1/root/data, diagnostics, SMP; #28/#33 | CONFIRMED installed 04 identity, persistent archive and same-boot diagnostic continuity; PARTIAL successor cold boot/clean identity. |
+| CPU/OPP/C1/C2/C3, timers, clocks/PWRAP/pinctrl/I2C; #28 | CONFIRMED narrow retained tests and 56.72% diagnostic C3 after USB detach; PARTIAL successor cold-battery USB veto correction and load/hotplug regression. |
+| Watchdog/reset, poweroff, full PM/CIRQ/GIC/wake; #28/#30/#34 | PARTIAL: duplicate context overwrite localized and bounded diagnostic correction repeats. Earlier device-phase wait remains unlocalized; separate user-poweroff panic remains. Clean built-in Power/RTC/repetition required. |
+| Display/GPU/backlight, input/Power; #28/#34 | CONFIRMED narrow paused/dark and owner-observed Power return; PARTIAL repeated clean resume, automatic policy and input polling. |
+| eMMC/SD/filesystems/layout; #28/#33 | CONFIRMED bounded synced readback after resume and zero ext4 errors; PARTIAL clean successor/endurance/card matrix. No storage layout/raw write change. |
+| AFE/I2S/DMA/codec/headphones/analog; #29 | CONFIRMED bounded closed idle PCM/rails and resumed PCM advancement; PARTIAL clean successor/repeated/endurance/precision gates. |
+| Battery/charger/thermal/electrical; #28/#30 | PARTIAL: actual voltage decline, provisional SOC, no pack current/capacity/NTC. Reporting fixes tested; full charge/termination and multi-hour consumption unmeasured. Infrastructure/DDRPHY remain retained. |
+| USB networking/MTP, host/VBUS; #27/#28/#31/#33 | PARTIAL: 04 reconnect works; new cold-battery gating/event monitor software-validated only. Host/VBUS PHYSICAL_GATE unchanged. |
+| Wi-Fi/Bluetooth/firmware/calibration; #31 | PARTIAL: off during trials, firmware provenance preserved; clean resume/on/peer/coexistence gates unchanged. |
+| Physical UART/crash capture; #16/#28 | Physical UART UNKNOWN; retained PM and early pstore capture PARTIAL because SRAM is warm-reset-only and prior ramoops has corruption. |
+| RAM/recovery/update/rollback/security/services/non-root; #28/#32/#33 | PARTIAL existing gates unchanged. No memory/reservation/partition expansion, backup or recovery waiver. Exact 04 fallback preserved. |
+| RTC/time/entropy/identity/privacy; #28/#31/#32 | RTC same-boot delivery/auto-disarm CONFIRMED narrowly on diagnostic 04; PARTIAL clean image/time validity. Use host UTC/BOOTTIME; private logs stay local. |
+| FM | CONFIRMED existing scope exclusion. |
+
+Admit sealing one DEEPSLEEP-FINAL-01/root v1.31 BOOTIMG/Y2ROOT candidate and
+requesting the owner's installation with the preserving scatter. Classification
+**PARTIALLY READY**, not release readiness or a <=1% result. The running collection
+is archived before this boundary. The next smallest gate is clean installed
+identity/taint zero, staged PM, repeated Power/RTC and automatic/inhibitor checks;
+then 5/30-minute, two-hour and overnight voltage/residence. Do not load 04 modules
+on the new kernel or reuse a harness that requires diagnostic taint. No flash,
+issue closure, push, destructive cleanup or broader hardware authorization.
+
 ### Suspend-aware battery observation correction
 
 Before extending the frozen production source, re-reviewed the standing coverage
