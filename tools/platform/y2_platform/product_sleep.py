@@ -177,7 +177,21 @@ def command(ctx, argv):
 
 
 def marker(ctx, stage):
-    ctx.path('/sys/firmware/y2_pm/stage').write_text(stage + '\n')
+    control_write(ctx, '/sys/firmware/y2_pm/stage', stage + '\n')
+
+
+def control_write(ctx, name, value):
+    """Issue one sysfs command; buffered close can replay a rejected write.
+
+    TextIOWrapper/BufferedWriter retry a failed flush during close. For PM
+    that can suspend after EBUSY, yet still report the original refusal to
+    the caller. FileIO has no pending buffer to retry on close. A short write
+    is also a failure, never a reason to issue the remaining command again.
+    """
+    data = value.encode('ascii')
+    with ctx.path(name).open('wb', buffering=0) as stream:
+        if stream.write(data) != len(data):
+            raise OSError(errno.EIO, 'short PM control write: ' + name)
 
 
 def timer_only(value, spm):
@@ -189,7 +203,7 @@ def timer_only(value, spm):
 
 
 def kernel_sleep(ctx):
-    ctx.path('/sys/power/state').write_text('mem\n')
+    control_write(ctx, '/sys/power/state', 'mem\n')
 
 
 def wakeup_count(ctx, timeout=2):
@@ -272,7 +286,7 @@ def execute_owned(ctx, fd, enter, locks):
             guard_record(ctx, True)
             pending = True
             try:
-                ctx.path('/sys/power/wakeup_count').write_text(count + '\n')
+                control_write(ctx, '/sys/power/wakeup_count', count + '\n')
             except OSError as error:
                 raise Refused('wake_event_in_progress') from error
             restored_kernel = False
@@ -281,11 +295,11 @@ def execute_owned(ctx, fd, enter, locks):
                 # The already qualified one-shot RGU backstop pauses during
                 # actual SPM residence and bounds stalls in entry/restoration.
                 # A reset remains a failed sleep, quarantined by durable intent.
-                ctx.path('/sys/firmware/y2_pm/backstop_s').write_text('30\n')
+                control_write(ctx, '/sys/firmware/y2_pm/backstop_s', '30\n')
                 try:
                     enter(ctx)
                 finally:
-                    ctx.path('/sys/firmware/y2_pm/backstop_s').write_text('0\n')
+                    control_write(ctx, '/sys/firmware/y2_pm/backstop_s', '0\n')
             except OSError as error:
                 if error.errno in (errno.EBUSY, errno.EAGAIN):
                     restored_kernel = True

@@ -1,5 +1,6 @@
 """Exercise real lock ownership, policy refusal and complete product PM flows."""
 import fcntl
+import errno
 import json
 import os
 from pathlib import Path
@@ -116,6 +117,20 @@ class ProductAutoSleep(unittest.TestCase):
         receipt = self.ctx.json('/data/system/platform/suspend-last.json')
         self.assertEqual(receipt['cycles'], 1)
         self.assertEqual(receipt['product']['wake_reason'], 'rtc')
+
+    def test_kernel_busy_restores_once_without_claiming_sleep_or_retrying(self):
+        calls = []
+        def busy(ctx):
+            calls.append(1)
+            raise OSError(errno.EBUSY, 'wake event during device suspend')
+        self.assertEqual(self.run_sleep(busy), 2)
+        receipt = self.ctx.json('/data/system/platform/suspend-last.json')
+        self.assertEqual(calls, [1])
+        self.assertEqual(receipt['product']['reason'], 'kernel_suspend_refused')
+        self.assertFalse(receipt['product']['kernel_completed'])
+        self.assertNotIn('cycles', receipt)
+        self.assertEqual(self.rpc, ['sleep_prepare', 'sleep_restore'])
+        self.assertFalse(self.ctx.json(pm.GUARD)['pending'])
 
     def test_power_press_during_preparation_cancels_entry_and_restores(self):
         original = self.application
