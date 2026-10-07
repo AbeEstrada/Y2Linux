@@ -266,7 +266,11 @@ static int show(Display *d) {
 }
 #ifdef RB_SPLASH_TEST
 /* Protocol test builds never open devices; not included in the shipped binary. */
-static int claim(Display *d) { (void)d; event("test_claim",0); return 0; }
+static int claim(Display *d) {
+    (void)d;
+    if (!faccessat(dirfd,"master-busy",F_OK,AT_SYMLINK_NOFOLLOW)) return -EBUSY;
+    event("test_claim",0); return 0;
+}
 static int release(Display *d) { (void)d; event("test_release",0); return 0; }
 #else
 static int claim(Display *d) { return d->fd < 0 ? 0 : drmSetMaster(d->fd); }
@@ -290,7 +294,7 @@ static int serve(int listener, int notify, unsigned timeout, bool test) {
     Display d={.fd=-1};
     Progress progress={0};
     int client=-1;
-    bool released=false, failure=false, painted=false;
+    bool released=false, failure=false, painted=false, client_ready=false;
     size_t used=0; char request[32], reported[48], ignored[48]={0};
     /* The failure timeout is a stall timeout: it counts from the last accepted
      * milestone, so a slow but progressing startup is never called a failure. */
@@ -355,7 +359,7 @@ static int serve(int listener, int notify, unsigned timeout, bool test) {
             struct ucred cred; socklen_t n=sizeof(cred);
             if (fd>=0) {
                 if (client>=0 || getsockopt(fd,SOL_SOCKET,SO_PEERCRED,&cred,&n) || cred.uid!=geteuid()) close(fd);
-                else { client=fd; used=0; deadline=now_ms()+HANDOFF_MS; }
+                else { client=fd; used=0; client_ready=false; deadline=now_ms()+HANDOFF_MS; }
             }
         }
         if (client>=0 && (p[1].revents&(POLLIN|POLLHUP|POLLERR))) {
@@ -363,10 +367,10 @@ static int serve(int listener, int notify, unsigned timeout, bool test) {
             if (n>0) {
                 used+=(size_t)n; request[used]=0;
                 if (strchr(request,'\n')) {
-                    bool ready=!released && !strcmp(request,"READY 1\n");
+                    bool ready=!client_ready && !strcmp(request,"READY 1\n");
                     /* Complete the bar and status, then release: the first
                      * Reborn frame is exactly this screen. No further wait. */
-                    if (ready) {
+                    if (ready && !released) {
                         unsigned before=progress.phase; bool failed=failure;
                         progress_finish(&progress); failure=false; check_phase=false;
                         if (painted && failed) draw(&d,&progress,false);
@@ -375,12 +379,16 @@ static int serve(int listener, int notify, unsigned timeout, bool test) {
                             if (label_changed(before,progress.phase)) status(&d,progress.phase);
                         }
                     }
-                    if (ready && !release(&d)) {
-                        released=true; state("handoff"); event("released",0);
+                    /* A timed-out renderer can still own DRM master. Accept
+                     * its new handshake while keeping the splash FB alive;
+                     * dropping master a second time would fail here. */
+                    if (ready && (released || !release(&d))) {
+                        released=true; client_ready=true;
+                        state("handoff"); event("released",0);
                         if (send(client,"RELEASED 1\n",11,MSG_NOSIGNAL)!=11) deadline=0;
                         else deadline=now_ms()+HANDOFF_MS;
                         used=0;
-                    } else if (released && !strcmp(request,"PRESENTED 1\n")) {
+                    } else if (released && client_ready && !strcmp(request,"PRESENTED 1\n")) {
                         state("presented"); event("presented",0);
                         int done=openat(dirfd,"done",O_WRONLY|O_CREAT|O_CLOEXEC|O_NOFOLLOW,0600);
                         if (done>=0) close(done);

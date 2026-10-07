@@ -103,6 +103,23 @@ int main(int argc,char **argv) {
         self.assertIn('splash_handoff_aborted', self.events())
         self.assertFalse((self.root / 'done').exists())
 
+    def test_retry_while_renderer_still_owns_master_requires_its_own_handshake(self):
+        (self.root / 'master-busy').touch()
+        with self.connect() as s:
+            s.sendall(b'READY 1\n'); self.assertEqual(s.recv(32), b'RELEASED 1\n')
+        self.wait(lambda: 'splash_handoff_aborted' in self.events())
+        self.assertNotIn('splash_test_claim', self.events())
+        with self.connect() as s:
+            s.sendall(b'PRESENTED 1\n'); self.assertEqual(s.recv(32), b'')
+        self.assertFalse((self.root / 'done').exists())
+        with self.connect() as s:
+            s.sendall(b'READY 1\n'); self.assertEqual(s.recv(32), b'RELEASED 1\n')
+            self.assertFalse((self.root / 'done').exists())
+            s.sendall(b'PRESENTED 1\n')
+        self.assertEqual(self.process.wait(timeout=3), 0)
+        self.assertEqual(self.events().count('splash_test_release'), 1)
+        self.assertTrue((self.root / 'done').exists())
+
     def test_malformed_and_oversized_requests_do_not_release_kms(self):
         for message in (b'PRESENTED 1\n', b'exec reboot\n', b'x'*100):
             with self.connect() as s:
