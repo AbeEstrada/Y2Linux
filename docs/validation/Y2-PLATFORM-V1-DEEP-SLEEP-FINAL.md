@@ -1580,3 +1580,18 @@ retained black box and the 30 s suspend backstop; replace the permanent post-fai
 automatic error reporting is a later, consent-gated task (scrubbed, rate-limited, HTTPS, queued until Wi-Fi).
 
 Data: `docs/validation/data/y2-deepsleep04-trial1-20261008.json`, `docs/validation/data/y2-deepsleep04-trial2-1h-20261008.json`.
+
+## 40. POWER-FINAL-05 suspend-power campaign (2026-10-08)
+
+Branch `codex/platform-v1-power-final-05` (Linux `837b614`). Full report: `docs/validation/Y2-PLATFORM-V1-SUSPEND-POWER-OPTIMIZATION.md` on that branch. Summary:
+
+- **Baseline recomputed from raw journals** (archives 72–73): 3805.25 s suspended in 3824.6 s (99.49%); 603.0 s cycle = 600 s SPM timer + ~3.0 s awake (~2.5 s awake after resume).
+- **Measurement:** no on-device battery current sensor (current/charge counter null, ISENSE voltage-only); pack capacity unknown. Allowed average current for 1% in 8 h is 0.5/0.75/1.0/1.25/1.88 mA for
+  400/600/800/1000/1500 mAh. A USB tester cannot see battery-only suspend current; a top-up (recharge) measurement could give a coarse overnight figure.
+- **Vendor comparison** (MediaTek `d53dd75c`, `mt_spm_sleep.c`, `mt_sleep.c`, `pmic_mt6323.c`, `mt_power_gs_*`): vendor suspend = `pcm_suspend` (597 words) with CPU shutdown, INFRA/DDRPHY power-down and 26 MHz
+  off; Y2Linux = `pcm_dpidle` (480 words), INFRA retained. Vendor PMIC init sets LP_SEL on the always-on LDOs, VPROC/VSYS sleep voltages, and removes eMMC/SD/connectivity power in suspend.
+- **Measured PMIC state** (full regmap dump, 2079 registers) and **before/after-sleep probe**: radios off at entry; SD rails off across suspend; eMMC VCC/VUSB/VGP2/VIO28/VA/VM/VIO18 on; LP_SEL only VTCXO on 04.
+- **05 change:** LP_SEL on VA/VIO28/VUSB/VM/VIO18 (see handoff). Validation: container 560 PASS, native 10+27, Reborn 335, QEMU, ELF 384/1411, package/privacy PASS; installed and probed (archives 82–87).
+- **Not implemented and why:** storage-rail LP_SEL switch (blocked by the safety classifier), VUSB disable (vendor leaves it on), VGP2 off in suspend, VPROC/VSYS sleep voltage (conflicts with DVFS),
+  eMMC supply removal, `pcm_suspend` port.
+- **Limits:** no current or drain result yet; overnight, Power/RTC wake and early-boot on 05 outstanding.

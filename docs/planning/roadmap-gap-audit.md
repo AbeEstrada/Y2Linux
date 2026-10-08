@@ -4,6 +4,11 @@
 
 ### Clean corrective-image physical admission
 
+**05 hardware evidence refresh, 2026-10-08:** scope unchanged for memory layout and production scope; one PMIC write-allowlist extension (bit 0 of VA/VIO28/VUSB/VM/VIO18) with explicit owner approval and a runtime
+revert. Owner flashed POWER-FINAL-05 (Linux `837b614`). Archive 82–84: identity, taint 0, `lp_sel applied=1`, Reborn/helper hashes match, ext4 0. Archive 85–87 (before/after-sleep probe): 1573.4 s suspended, 2 maintenance wakes,
+SPM 3/3, aborts 0, golden PMIC differences at suspend entry 22→17, connectivity and SD rails off in suspend, eMMC VCC/VUSB/VGP2 on. #28/#34 suspend: PARTIAL unchanged (reliability), electrical minimum still UNKNOWN (no current
+measurement, capacity unknown). Open: overnight/8 h drain, Power/RTC wake and early-boot on 05, vendor `pcm_suspend`, display/poweroff gaps. No milestone promotion. Linux provenance `837b614`.
+
 **04 hardware evidence refresh, 2026-10-08:** scope unchanged (no memory-layout, hardware or production-scope change; retained SRAM region
 and ring size untouched). Owner flashed DEEPSLEEP-FINAL-04 (diagnostic successor; Linux `5e26757`, Reborn `97ff8c3`). Archive68 verified identity,
 taint 0, helper/Reborn hashes and ext4 counters; the old 03 guard is identity-mismatched. Normal-policy owner trials: archives 70-71 (469.27 s,

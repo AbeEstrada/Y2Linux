@@ -1,5 +1,12 @@
 # Current Y2Linux platform state
 
+## POWER-FINAL-05 installed — 2026-10-08 (latest)
+
+The owner flashed POWER-FINAL-05 (Linux `837b614`, Reborn `97ff8c3`, root v1.35; BOOTIMG `0137a855…44117`, Y2ROOT `9175185f…99a4d`). It is DEEPSLEEP-FINAL-04 plus the vendor MT6323 `LP_SEL` low-power
+select on five always-on LDOs (VA, VIO28, VUSB, VM, VIO18) with a root runtime revert at `/sys/firmware/y2_pmic/lp_sel`. Installed and probed: same boot, taint 0, 1573 s asleep with two maintenance wakes,
+SPM 3/3, vendor golden-table differences at suspend entry 22→17. **No battery or current benefit is claimed** (no current sensor, unknown capacity, voltage-derived SOC). Overnight drain, Power/RTC wake and early-boot
+on 05 are next. Details: [handoff](planning/NEXT-SESSION-HANDOFF.md), [report §40](validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md#40-power-final-05-suspend-power-campaign-2026-10-08). Readiness remains **MORE_WORK_REQUIRED**.
+
 ## DEEPSLEEP-FINAL-04 installed — 2026-10-08 (latest)
 
 The owner flashed the diagnostic successor DEEPSLEEP-FINAL-04 (Linux `5e26757`, Reborn `97ff8c3`, root v1.34, BOOTIMG

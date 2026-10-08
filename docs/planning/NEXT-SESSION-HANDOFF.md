@@ -1,5 +1,27 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-08 local
 
+> **LATEST (end of 2026-10-08): POWER-FINAL-05 is INSTALLED** (owner flashed; archives 82–84 verified). Folder `out/y2linux-platform-v1-power-final-candidate-05/`
+> (own `OWNER-HANDOFF.md`, `SHA256SUMS`), symbols `…-candidate-05-symbols/`, worktrees `/home/luca/Dokumente/Code/worktrees/y2-power-final-05/`, receipts
+> `out/deep-sleep-final/build05-receipts/`. Linux `837b6146ee4d0f551b69cfaddd686a69ce56a060` (branch `codex/platform-v1-power-final-05`, based on 04), Reborn
+> `97ff8c3` unchanged, kernel `6.18.0-y2linux-platform-v1-power-final-05`, root v1.35, release `1.0.0-platform-v1-power-final-candidate.5`. BOOTIMG (7256064 B)
+> `0137a855db96d8f94005333941495c4fdaa2f81c9eb653458b77e9c0fd044117`, Y2ROOT `9175185fd577b759302337cc8d17f678fde3dc621525b90d45cf6cb370e99a4d`; `fallback/` = sealed 04.
+> **Change vs 04 (only):** vendor `PMIC_INIT_SETTING_V1` `LP_SEL` (bit 0) on VA 0x404, VIO28 0x500, VUSB 0x502, VM 0x552, VIO18 0x556, applied ~10 s after boot (E2 only, readback
+> verified), PMIC write whitelist extended by exactly those bits, runtime revert `/sys/firmware/y2_pmic/lp_sel` (root; `echo 0` clears, `echo 1` sets). The bits live in the PMIC and
+> survive reboot: `echo 0` before flashing 04 back. A beyond-vendor storage-rail switch (VMC/VMCH/VEMC3V3) was NOT included (blocked by the safety classifier). No power benefit is
+> claimed: there is no on-device current sensor, capacity is unknown, SOC is voltage-derived.
+> **Evidence on 05:** first check clean (boot `3cae62f2`, taint 0, `lp_sel applied=1`, golden differences 25→20 awake). Suspend probe run (archives 85–87): 1573.4 s suspended, 2 maintenance
+> wakes, SPM 3/3, aborts 0, golden differences at suspend entry 22→17, SD rails off across suspend, connectivity rails off, VEMC3V3/VUSB/VGP2 on. Full analysis, rail map (measured PMIC state),
+> vendor-source comparison and candidate ranking live in `docs/validation/Y2-PLATFORM-V1-SUSPEND-POWER-OPTIMIZATION.md` **on branch `codex/platform-v1-power-final-05`** (worktree
+> `/home/luca/Dokumente/Code/worktrees/platform-v1-power-final-05/Y2Linux`), with data `docs/validation/data/y2-suspend-power-optimization-20261008.json`, `y2-pmic-suspend-golden-vs-awake-20261008.json`,
+> `y2-suspend-probe-analysis-20261008.json`, and tools `tools/development/power-session/{suspend-probe,arm-suspend-probe}.py`, `tools/development/analyze-suspend-probe.py`.
+> **Key findings:** (1) the maintenance wake is the SPM PCM timer, 600 s (vendor `SPM_WAKE_PERIOD`), 603 s cycle with ~3 s awake; (2) Y2Linux runs the vendor deep-idle PCM with INFRA/DDRPHY
+> retained, whereas the vendor's real suspend uses the 597-word `pcm_suspend` with INFRA/DDRPHY and 26 MHz off (highest-risk/highest-payoff lever, separate image); (3) the vendor suspend golden
+> PMIC table differs in 17 entries at suspend entry (VEMC3V3 on, VPROC/VSYS sleep-voltage enables, LP_SEL on VMC/VMCH/VEMC3V3, clock/OSC control); (4) radios and SD card are already off in suspend.
+> **Next (agreed with owner):** overnight unplugged drain test on 05 (paused, screen dark; started from 88%/4.095 V, post-charge, probe stopped), archive with `capture-return.py` under the host lease
+> before anything else; then Power-button and RTC wake and early-boot on 05; overnight A/B with `lp_sel` cleared; optional USB-meter top-up measurement (KWS-2303C class; verify mAh counter,
+> D+/D- pass-through); then decide on `pcm_suspend` (06). Notes: never read `/sys/power/wakeup_count` or `/proc/kmsg` over SSH; the PWRAP write allowlist in `kernel/platform/policy.h` is a
+> guarded safety control (widen only with explicit owner approval).
+>
 > **UPDATE (POWER-FINAL-05 built, awaiting owner flash):** `out/y2linux-platform-v1-power-final-candidate-05/` (Linux `837b614` on branch `codex/platform-v1-power-final-05`,
 > worktrees `y2-power-final-05`). 04 + vendor LP_SEL on five LDOs with runtime revert `/sys/firmware/y2_pmic/lp_sel`; BOOTIMG `0137a855…44117`, Y2ROOT `9175185f…99a4d`.
 > Full validation PASS; physical NOT_RUN; benefit unmeasured. Installed image is still 04 until the owner flashes. Suspend probe tools:

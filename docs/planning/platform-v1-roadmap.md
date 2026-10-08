@@ -2,6 +2,10 @@
 
 ## Current deep-sleep investigation — 2026-10-07
 
+**POWER-FINAL-05 installed (2026-10-08, latest):** 04 + vendor PMIC `LP_SEL` on five always-on LDOs, runtime-revertible. Probed on device: 1573 s suspended, same boot, golden-table gap 22→17; benefit unmeasured
+(no current sensor). Next: overnight drain, Power/RTC wake, early-boot on 05, optional USB-meter top-up measurement; the vendor `pcm_suspend` state (INFRA/DDRPHY and 26 MHz off) is the next large, high-risk lever (image 06).
+**MORE_WORK_REQUIRED**, no milestone promotion.
+
 **04 diagnostic successor installed and trialed (2026-10-08, latest):** DEEPSLEEP-FINAL-04 (Linux `5e26757`) is flashed; owner-driven
 normal-policy trials passed: 469 s first sleep and a one-hour run with six maintenance wakes and 3805 s suspended, same boot, taint 0.
 This is encouraging but not a fix (diagnostic-only change, nine clean entries, stall rate unknown). Next: reboot + early-unplug test, then
