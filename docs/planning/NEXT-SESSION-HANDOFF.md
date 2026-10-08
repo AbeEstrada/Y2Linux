@@ -1,7 +1,8 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-08 local
 
-This is the current state. **Latest request: build DEEPSLEEP-FINAL-03 with all
-completed production fixes before the owner flashes a new baseline.** The owner
+This is the current state. **DEEPSLEEP-FINAL-03 is the new software-validated
+baseline for owner installation; installed hardware is still02 until verified
+otherwise.** The owner
 also intends to leave the player unplugged overnight and inspect it in the
 morning. That observation is not armed: current02 remains guarded, no RTC alarm
 or collector is active. Archive64 preserves the latest same-boot state before
@@ -11,15 +12,55 @@ image after owner installation before enabling the observation. Historical
 Cleanup is outside this task. Preserve all evidence, sealed images, fallback,
 symbols and build inputs.
 
-## Successor03 build in progress
+## New successor03 baseline — owner flash pending
 
-One source-bound BOOTIMG/Y2ROOT package, rootv1.33 and Reborn97ff8c3, will include
-all committed production corrections described below, including locald43b592
-and Linux/Reborn display readiness/retry changes. The source patch is not a
+Owner folder:
+`/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-deepsleep-final-candidate-03/`.
+Use its `OWNER-HANDOFF.md`, `SHA256SUMS`, `manifest.json` and preserving scatter.
+The unsuffixed `…-candidate/` and explicit `…-candidate-02/` still contain02;
+they were not overwritten. Matching03 symbols/build remain separately retained.
+
+- Linux source **`cfb7e098eae60918f47d7b330445bf66e9d61817`**.
+- Reborn source **`97ff8c357bab12319087740d7c97b5051e6588f5`**.
+- Kernel `6.18.0-y2linux-platform-v1-deepsleep-final-03`, rootv1.33,
+  release `1.0.0-platform-v1-deepsleep-final-candidate.3`.
+- BOOTIMG **`00c4399af0985e88e3345b7782bc29f02a73fd57ab39bb64db06e8b1f717fb90`**.
+- Y2ROOT **`569f92e0bdc43be5ef908884e7f171698dfc76025b1ebfb80cc90b4cede5d617`**.
+- **578 platform cases PASS** (541 locked-container, ten native dependency,
+  27 native splash), zero uncovered skips/failures. Reborn fmt/strict Clippy/
+  **335 tests**, fresh ARM, kernel/config/DT/module ABI/QEMU checks PASS.
+  ARM closure384 files/1411 dependencies, no build RPATHs. Preserving package
+  and ext4 checks pass; full receipts are in `out/deep-sleep-final/build03-receipts/`.
+
+The source-bound BOOTIMG/Y2ROOT pair includes all committed production corrections
+described below, includingd43b592 and Linux/Reborn display readiness/retry
+changes. The source patch is not a
 claim that the independent warm-start display root cause is fixed. No failed
-or untracked display reset diagnostic goes into production. Full source/ARM/
-kernel/package validation remains required before publishing the owner folder.
-Y2DATA and every protected partition stay unchanged; the owner alone flashes.
+or untracked display reset diagnostic goes into production. The first test-run
+dependency failure is preserved: native splash needs desktop libdrm/Pillow;
+cfb7e09 routes it to the required packaging-host pass. No test was dropped.
+
+Owner uses **Download Only**, reloads03's `MT6582_preserve_data_scatter.txt`, and
+selects **BOOTIMG + ANDROID/Y2ROOT only**. Y2DATA and every other partition remain
+unselected. Boot USB-connected and verify exact image, charging, display, logs
+and boot ID before unplugging. The owner alone flashes; no agent flash.
+
+**Overnight intent:** the owner wants the player unplugged for the rest of the
+night, with morning inspection. Save its actual start/stop times and fresh
+unplugged battery endpoint. Preserve retained/persistent evidence first on
+morning reconnect, before reboot or changes. Calculate real accumulated suspend,
+maintenance/other wakes, awake gaps, same-boot continuity, voltage and fresh SOC.
+An exploratory night does not retrospectively pass the interrupted30-minute or
+missing two-hour gates. Entry and endurance on03 are **PHYSICAL_NOT_RUN**.
+No overnight collector or alarm has been armed and02's guard remains pending.
+The new03 source identity will make the old02-specific guard inapplicable; normal
+03 auto-sleep must be checked after installation. Historical02 overlay ledgers
+on Y2DATA remain evidence, not a claim that overlays were applied to03.
+
+The existing clean/product collectors pin02 source identities and will refuse03.
+After fresh SSH verification, update their explicit accepted pair for a reviewed
+03 trial; do not bypass boot/taint/source checks or reuse04/02 diagnostic modules.
+`capture-return.py` is read-only and can archive the new boot before that work.
 
 ## Stopped for the day — archives62/63, interrupted endurance
 
@@ -54,12 +95,11 @@ Y2DATA and every protected partition stay unchanged; the owner alone flashes.
   `charger-stop.json` shows Charging, no faults, SDP450000uA programmed ceiling
   (not measured current). No new deployment, reboot, flash or test at closure.
 
-Next session: verify the installed identity, overlays, runtime wake setting and
-boot again before any mutation. Review/deploy the backed-up local maintenance
-correction below, qualify that exact helper with a short normal-policy test,
-then repeat the full thirty-minute test before admitting two hours or overnight.
-Keep quarantine until a bounded reviewed test is armed. Sealed02 is unchanged;
-no candidate03 is built. The original independent reliability gaps remain open.
+If the owner has not installed03, verify02 identity, overlays and runtime wake
+setting before any mutation. Prefer the newly requested coherent03 installation
+over another live overlay. Its short normal-policy and full thirty-minute checks
+must precede acceptance of two hours/overnight. Sealed02 remains unchanged.
+The original independent reliability gaps remain open.
 
 ## Latest physical result — normal automatic sleep PASS
 
@@ -130,11 +170,12 @@ retook both operation locks and restored quarantine before the new trial.
 The optional collector120-minute/8-hour modes require reviewed shorter success.
 Only30 minutes is admitted now. It captures a separate fresh battery-after
 sample; kernel-return receipt SOC may precede the battery daemon's next tick.
-No reboot or image installation is currently pending.
+The new03 image contains these corrections; owner installation is now pending.
 
 ## Local-only maintenance correction prepared during trial61
 
-**`d43b5923803d006122402aba65ee275d7f19ca13`** is committed, **NOT DEPLOYED**.
+**`d43b5923803d006122402aba65ee275d7f19ca13`** is committed and included in03,
+**NOT DEPLOYED to the still-installed02**.
 Production currently reuses the wake-event count read before the2-second battery
 maintenance pause. A normal BAT0 notification in that interval invalidates it
 and unnecessarily restores the screen/radios instead of re-entering sleep.
@@ -208,7 +249,8 @@ identical canonical `…-candidate/`. Matching `…-candidate-symbols/` retained
   and source-matched symbols/build remain. Do not overwrite sealed packages.
 
 No agent flash. Any successor is BOOTIMG/Y2ROOT only; owner installs preserving
-Y2DATA. No new image beyond02 is currently built or requested.
+Y2DATA. The new03 package above supersedes02 for the requested next baseline;
+02 remains the preserved prior package/fallback.
 
 ## Unresolved failures — do not erase after a pass
 

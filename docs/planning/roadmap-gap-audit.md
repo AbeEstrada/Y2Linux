@@ -4,6 +4,26 @@
 
 ### Clean corrective-image physical admission
 
+**Successor03 software closing review:** source
+`cfb7e098eae60918f47d7b330445bf66e9d61817` plus Reborn97ff8c3 builds the coherent
+rootv1.33 pair.578 platform cases pass (541 container + ten native dependency +
+27 native splash),335 Reborn tests plus fmt/strict Clippy, fresh ARM build,
+kernel/config/DT/module ABI/QEMU, installed tools and ELF closure384/1411 pass.
+Both ext4 images and the preserving package validate; no Y2DATA payload.
+The first splash test failed only because native libdrm/Pillow were unavailable
+inside the kernel container; its full27 cases pass on the packaging host, and
+the corrected profile completes. Source and image receipts stay linked.
+
+Coverage becomes SOFTWARE_VALIDATED / PHYSICAL_NOT_RUN for03. All narrow02
+physical results retain their source identity. The unresolved device-stage,
+warm-display, poweroff, cold C3, charging/SOC, electrical floor and long-duration
+gaps remain; no issue/milestone/readiness promotion. Owner alone installs03,
+then exact identity/boot/USB/charging verification precedes sleep observation.
+The planned overnight enablement on02 never occurred; archive64 is the latest
+read-only preservation, not a sleep start. Preserve02 and matching symbols,
+publish only the new03 folder, and record the owner's actual overnight choice
+after installation. Any morning result must prove its sleep time and endpoints.
+
 **Successor03 build boundary, 2026-10-08:** the owner now explicitly requests
 new flashable images containing all completed fixes. This supersedes enabling
 tonight's observation on02: archive64 completed, but the guard was never cleared

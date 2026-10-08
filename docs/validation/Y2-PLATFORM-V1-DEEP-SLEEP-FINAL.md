@@ -1,6 +1,22 @@
 # Y2 Platform 1.0 — final deep-sleep investigation
 
 Investigation opened 2026-10-07; **IN PROGRESS, no readiness promotion**.
+**Latest owner request: successor03 baseline built, owner flash pending.**
+Linux `cfb7e098eae60918f47d7b330445bf66e9d61817`, Reborn
+`97ff8c357bab12319087740d7c97b5051e6588f5`, rootv1.33. All completed production
+corrections are in the new BOOTIMG/Y2ROOT pair, including the previously local
+maintenance and display recovery changes.578 platform cases,335 Reborn tests,
+fmt/strict Clippy, ARM/kernel/config/DT/modules/ABI/QEMU and preserving package
+checks pass. Installed physical evidence remains02 plus its recorded overlays;
+03 physical/endurance status is NOT_RUN. No flash by the agent.
+
+The owner intends to leave the player unplugged for the rest of the night and
+inspect it in the morning. They requested03 before the planned02 guard release;
+therefore no overnight run was armed and02 remains guarded. Archive64 preserves
+that same-boot/taint0 state. Verify exact03 identity and USB/charging after owner
+installation before enabling any observation. Record actual entry and duration,
+not just elapsed cable-free time. The interrupted30-minute/two-hour gates remain.
+
 **Stopped for the day at the owner's request, 2026-10-08.** Archive62 records
 an interrupted thirty-minute trial: 943.163696289 seconds actual full suspend
 across two same-boot returns, including one dark/radio-off maintenance wake
@@ -1048,6 +1064,14 @@ maintenance/source checks. No two-hour result is inferred.
 No new full-suspend overnight result. Owner's 88%→30% runtime result fails the
 product target. <=1% cannot be assessed through SOC rescaling or stale values.
 
+Latest owner intent is an unplugged observation for the remainder of the night,
+with morning retrieval. They then requested the coherent03 images first. As of
+sealing, no03 flash/entry or overnight collector/alarm is recorded, and installed02
+keeps its between-test guard. Preserve morning evidence before reboot or
+mutation, recover pre-cable maintenance voltage/SOC as well as immediate return
+records, and distinguish stale percentage/charging contamination from valid
+endpoints. No overnight result or continued suspension may be assumed.
+
 ## 33. SOC / charging issue
 
 No 88% UI cap found. Installed voltage-based curve reaches 100% at 4.175 V;
@@ -1107,6 +1131,19 @@ separate warm-start OVL hardware state. Diagnostic-only stack/display sources
 remain separate; the unsuccessful reset helper is not production code.
 
 ## 36. Tests
+
+Successor03, sourcecfb7e09/Reborn97ff8c3: **578 unique platform cases PASS**,
+541 in the locked container, ten native dependency cases and27 native splash
+cases on the packaging host; zero remaining failures/skips. The failed first
+splash invocation (missing native libdrm in the kernel container) is retained
+under `out/deep-sleep-final/build03-receipts/first03-pass/`; cfb7e09 corrects the
+required test location, without dropping coverage. Reborn **335 tests**, fmt,
+strict all-target Clippy and fresh ARM release build pass. Kernel/config/DT/
+seven-module ABI, BOOTIMG/layout, ARM Python37 modules, SQLite/OpenSSL, audio
+null constraints, codecs, library, Reborn QEMU and shell checks pass. ELF closure
+has384 files/1411 dependencies and no build RPATHs. Source hashes match the
+installed root files; both ext4 and data-preserving package checks pass.
+Receipts: `out/deep-sleep-final/build03-receipts/`. New-image hardware is NOT_RUN.
 
 Maintenance wake-count regression: old source fails on an ordinary battery
 notification during the safety gap. Correctedd43b592 passes27 affected tests,
@@ -1173,6 +1210,12 @@ fmt and strict Clippy; its ARM binary is freshly built for this package.
 
 ## 37. Commits
 
+03 packaging baseline: **`cfb7e098eae60918f47d7b330445bf66e9d61817`**, following
+`bb0d62f` version/profile admission. Reborn remains
+**`97ff8c357bab12319087740d7c97b5051e6588f5`**. All implementation commits listed
+below throughd43b592 are included. Later documentation commits do not change the
+compiled source identity. Failed untracked reset diagnostics are excluded.
+
 Linux **`d43b5923803d006122402aba65ee275d7f19ca13`** refreshes the wake-count
 handshake after a battery-maintenance pause, preserving hardware wake guards;
 local tests pass, not deployed. **`c73c581`** records the reviewed clean-cycle/
@@ -1210,6 +1253,29 @@ was changed. Isolated detached worktrees are under
 `/home/luca/Dokumente/Code/worktrees/y2-deepsleep-final/`.
 
 ## 38. Candidate / hashes
+
+**Newest: DEEPSLEEP-FINAL-03**, owner install pending; no autonomous flash.
+Folder `out/y2linux-platform-v1-deepsleep-final-candidate-03/`, release
+`1.0.0-platform-v1-deepsleep-final-candidate.3`, rootv1.33, kernel
+`6.18.0-y2linux-platform-v1-deepsleep-final-03`.
+
+| Payload | Bytes | SHA256 |
+| --- | ---: | --- |
+| BOOTIMG.img | 7254016 | `00c4399af0985e88e3345b7782bc29f02a73fd57ab39bb64db06e8b1f717fb90` |
+| Y2ROOT.img | 536870912 | `569f92e0bdc43be5ef908884e7f171698dfc76025b1ebfb80cc90b4cede5d617` |
+
+Includes committed single-write PM, USB-budget wake, maintenance count refresh,
+whole-sleep endpoint/event records, splash and renderer recovery changes, on
+top of02's built-in context/USB clock fixes. Both power and battery policies
+retain their limits and voltage/SOC mapping. No claim that unresolved physical
+failures are fixed. Only BOOTIMG/ANDROID are selected by the preserving scatter;
+Y2DATA remains unchanged. `fallback/` retains the sealed02 pair (without02's
+later live overlays). Existing02/canonical folders and matching symbols remain
+untouched. Matching03 worktrees/build and adjacent03 symbols are retained.
+Read its `OWNER-HANDOFF.md`, verify `SHA256SUMS`, use Download Only, then boot
+USB-connected for exact verification before any owner overnight observation.
+
+The following02 and earlier package entries are historical, not the latest image.
 
 Corrective successor is built: **DEEPSLEEP-FINAL-02/root v1.32**, release
 `1.0.0-platform-v1-deepsleep-final-candidate.2`, kernel
