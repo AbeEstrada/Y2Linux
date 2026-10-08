@@ -1,0 +1,60 @@
+{
+  "schema": "y2-suspend-power-optimization/v1",
+  "phase": "1-research",
+  "branch": "codex/platform-v1-power-final-05",
+  "base": "27148be",
+  "installed": {
+    "image": "DEEPSLEEP-FINAL-04",
+    "linux": "5e267571d584da7fbe356d3161801ba15f87fa57",
+    "spm_mode": "SPM_CPU_SHUTDOWN_INFRA_RETAINED",
+    "pcm_origin": "MT6582_d53dd75c_dpidle",
+    "pcm_words": 480
+  },
+  "baseline_1h": {
+    "elapsed_s": 3824.6,
+    "suspended_s": 3805.25,
+    "residency": 0.9949,
+    "maintenance_cycle_s": 603.0,
+    "timer_s": 600.0,
+    "overhead_s": 3.0,
+    "awake_after_resume_s": 2.5,
+    "entries": 9,
+    "resumes": 9
+  },
+  "current_measurement": {
+    "available": false,
+    "current_ua": null,
+    "charge_counter_uah": null,
+    "isense": "voltage path only; uncalibrated"
+  },
+  "capacity_mah": null,
+  "allowed_avg_current_ma_for_1pct": {
+    "8h": {
+      "400": 0.5,
+      "600": 0.75,
+      "800": 1.0,
+      "1000": 1.25,
+      "1500": 1.875
+    },
+    "12h": {
+      "400": 0.333,
+      "600": 0.5,
+      "800": 0.667,
+      "1000": 0.833,
+      "1500": 1.25
+    },
+    "24h": {
+      "400": 0.167,
+      "600": 0.25,
+      "800": 0.333,
+      "1000": 0.417,
+      "1500": 0.625
+    }
+  },
+  "key_finding": "Y2Linux uses vendor pcm_dpidle with INFRA/DDRPHY retained; vendor real suspend uses separate pcm_suspend (597 words) with cpu_pdn=1, infra_pdn=1, ck26m_off (mt_sleep.c defaults).",
+  "vendor_source": "android.googlesource.com/kernel/mediatek d53dd75c3ff77cac3f5be58fddfe660e94f94d64 arch/arm/mach-mt6582/{mt_spm_sleep.c,mt_sleep.c,include/mach/mt_spm.h}",
+  "maintenance_wake_owner": "SPM PCM timer, Y2_SPM_TIMER=19660800 ticks=600 s; vendor SPM_WAKE_PERIOD=600",
+  "changes_implemented": [],
+  "device_changes": [],
+  "verdict": "MORE_WORK_REQUIRED"
+}

@@ -1,0 +1,187 @@
+# Y2 suspend power optimization (POWER-FINAL-05 campaign)
+
+Status: **MORE_WORK_REQUIRED — phase 1 (research, no device change).** Started 2026-10-08 on branch
+`codex/platform-v1-power-final-05` (from `27148be`). Nothing here has been built, flashed or changed on the device.
+Every statement is tagged **[measured]**, **[source]** (exact-source backed, not yet observed on the Y2),
+**[estimate]** or **[unknown]**. SOC is voltage-derived and is never used as an energy measurement.
+
+Naming note: the images in the request called "POWER-FINAL-04" are the repository's **DEEPSLEEP-FINAL-04** (Linux `5e26757`).
+
+## 1. Exact installed firmware
+
+DEEPSLEEP-FINAL-04: Linux `5e267571d584da7fbe356d3161801ba15f87fa57`, Reborn `97ff8c357bab12319087740d7c97b5051e6588f5`, kernel
+`6.18.0-y2linux-platform-v1-deepsleep-final-04`, root v1.34, taint 0, SPM mode `SPM_CPU_SHUTDOWN_INFRA_RETAINED`,
+PCM origin `MT6582_d53dd75c_dpidle` (480 words), `system_sleep_abi=1`, `maintenance_seconds=600`. Verified read-only in archive 68
+(helpers and Reborn byte-identical to the build). The device was unplugged for the overnight test when this phase started and was
+deliberately not contacted. [measured]
+
+## 2. DEEPSLEEP-FINAL-04 evidence review (archives 72–73, raw journal)
+
+Recomputed from `power-journal.jsonl` and `suspend-last.json` of archive 72: main sleep from BOOTTIME 1364.1 to 5188.7 (3824.6 s elapsed),
+product receipt `suspended_seconds=3805.25` (**99.49%**, confirmed). Six maintenance wakes: resumes at 1965.2, 2568.2, 3171.2, 3774.2,
+4377.2, 4980.2; each followed by `suspend_maintenance_wake` 0.2 s later and re-entry 2.5 s after resume (1967.7 … 4982.7). Resume-to-resume
+spacing is exactly **603.0 s = 600.0 s timer + ~3.0 s overhead** (~2.5 s awake plus entry/restore latency). SPM boot totals 9 entries /
+9 resumes / 0 aborts / 0 restore failures. No unexplained wake: the extra 1.2 s entry at 1358.0 coincides with cable removal. [measured]
+
+## 3. Measurement capabilities
+
+On-device: BAT0 voltage (AUXADC BATSNS, 15-bit) and PMIC die temperature. `current_ua`, `charge_counter_uah`, `temperature_millicelsius`
+are `null` in `/run/y2/power.json`. [measured] The charger driver reads an `ISENSE` ADC channel, but the ADC driver documents it as
+"voltage only"; prior M4 work found ISENSE−BATSNS = −0.08 ± 1.6 mV with no calibrated current meaning. [measured, archive m4-adc]
+No coulomb counter / fuel gauge is exposed by the MT6323 port. **No on-device battery current measurement exists; no mA value may be
+claimed from software.**
+
+## 4. Battery current sensor availability
+
+NO (see §3). Programmed charge limits (450000 µA SDP etc.) are ceilings, not measurements.
+
+## 5. Battery capacity evidence
+
+`nominal_capacity_mAh` is `null` in the repository's power data; the owner does not know the pack label. **[unknown]** Budget below is a
+sensitivity table, not a claim about this pack.
+
+## 6. MT6323 regulator inventory (from DT, kernel/dts/innioasis-y2.dts) [source]
+
+| Rail | Setting | Always-on | Consumers / note | Suspend question |
+| --- | --- | --- | --- | --- |
+| `vproc` | 1.15–1.25 V | yes | CPU DVFS (sole owner) | SPM/PWRAP sleep value not yet audited |
+| `vgp2-audio` | 1.8 V | **yes** ("shared ownership not fully qualified") | feeds fixed GPIO "regulators" `cs43131-en20 → en18 → en15` | stays enabled while DAC enables are low; analog supply never removed |
+| `vcn18`, `vcn28`, `vcn33_bt`, `vcn33_wifi` | 1.8/2.8/3.3/3.3 V | no | connectivity (CONSYS, BT/Wi-Fi) | radios "off": rail state at suspend not yet read |
+| `ldo_vio18` | 1.8 V | yes | eMMC I/O | required |
+| `ldo_vmch` / `ldo_vmc` | 3.3 V / 1.8–3.3 V | no | microSD | card power policy not yet audited |
+| VCORE/VM/VIO28/VIBR/others | not described in DT | boot-inherited | loader state | **inventory incomplete: needs read-only PMIC register dump** |
+
+Only DT-declared rails are listed; rails the loader enables and Linux never claims are **[unknown]** until a read-only snapshot is taken.
+
+## 7. SoC power-domain inventory
+
+Not yet complete. Known from source/docs: SPM mode keeps INFRA/DDRPHY powered; CPU cores shut down; MFG is the only SPM power domain
+Linux models; thermal monitor, UART (26 MHz), GPT (13 MHz), PWRAP, AUXADC clocks are retained in awake runtime summaries. [source]
+
+## 8. SPM suspend configuration — **primary finding**
+
+Y2Linux runs the vendor **deep-idle (`pcm_dpidle`, 480 words)** program with `cpu_pdn=1, infra_pdn=0` (INFRA/DDRPHY power kept).
+The exact vendor kernel (`android.googlesource.com/kernel/mediatek` @ `d53dd75c…`, `arch/arm/mach-mt6582/mt_spm_sleep.c`, `mt_sleep.c`)
+uses a **separate `pcm_suspend` program (597 words)** for real suspend: with its defaults `slp_ck26m_on=0`, `slp_cpu_pdn=1`,
+`slp_infra_pdn=1` it performs `spm_go_to_sleep(cpu_pdn=1, infra_pdn=1)` — **CPU shutdown, INFRA/DDRPHY power down, 26 MHz oscillator off**
+(`spm_go_to_sleep_dpidle`, which uses `pcm_dpidle` and keeps INFRA/DDRPHY, is the vendor's shallower "26M on" variant). [source]
+There are two compile-time variants of each program (`CONFIG_IS_VRF18_USE_6333VRF18`, MT6333 VRF18 over I2C1 `0x11008xxx`); the Y2 has no
+MT6333 per the repository's evidence, so the 597-word non-MT6333 variant (vec1=26, vec2=55, vec3=99) would be the candidate. [source,
+hardware match unverified]
+The vendor wake mask for suspend is `KP|EINT|CONN_WDT|CCIF_MD|CONN|USB_CD|THERM|SYSPWREQ|MD_WDT` (`SPM_BYPASS_SYSPWREQ=0` outside LDVT);
+Y2's entry mask is `0xfedfbfdb` (enabled bits 2, 5, 14, 21, 24 = KP, EINT, USB_CD, THERM, SYSPWREQ). [source + measured]
+Consequence: the largest unexamined electrical lever is whether the Y2 may safely use the vendor `pcm_suspend` state (INFRA/DDRPHY and
+26 MHz off with DRAM self-refresh handled by the program). It is also the highest-risk change (DRAM retention, PWRAP/PMIC hand-off, resume
+vector). Not attempted. See §21–23.
+
+## 9. DRAM retention
+
+Linux relies on the SPM program for self-refresh; with INFRA/DDRPHY retained the DRAM path is the conservative one. Whether the PCM program
+puts DRAM in self-refresh and whether the DDRPHY could safely power down is vendor-program behaviour not yet traced instruction by
+instruction. Data integrity across 10 clean 04 suspends is empirical. [unknown for electrical state]
+
+## 10. Clock / PLL / oscillator state
+
+26 MHz crystal path and APSRC: vendor program toggles them via events (vec0/vec1 "26M wake/sleep", vec2/vec3 "APSRC wake/sleep"). Whether
+the dpidle program actually switches the 26 MHz source off in the Y2's current configuration cannot be read during sleep. Needs the
+SPM wake/`R13` status and a PCM trace, or external measurement. [unknown]
+
+## 11. DAC / audio power
+
+PCM closed, codec/AFE runtime suspended, DAPM biases off, GPIO15/18/20 low (idle-bias fix present). `vgp2-audio` remains enabled
+(always-on, shared). Candidate: allow VGP2 to be disabled in suspend only if every consumer is proven; exact consumer list [unknown].
+[measured for GPIO/DAPM, unknown for rail current]
+
+## 12. Display / GPU power
+
+Backlight `bl_power=4` in every dark sample; display pipeline and Lima idle state not yet audited for electrical shutdown.
+
+## 13. Wi-Fi / Bluetooth power
+
+`18070000.connectivity` is runtime-suspended at each maintenance wake [measured]; whether `vcn*` rails are actually disabled while
+suspended is [unknown] pending a read-only regulator snapshot.
+
+## 14. USB PHY power
+
+04 retains the prior USB clock lifecycle fix (bus clock off when disconnected, `monitor_parked=1`). PHY analog power unverified.
+
+## 15. eMMC / SD power · 16. APT32F input power · 17. RTC / Power wake dependencies
+
+Not yet audited. RTC and Power key are MT6323 children with `wakeup-source`; wake attribution is via PMIC child IRQ counters (archives
+47/50/15). The APT32F wheel (I2C0 0x51, EINT 55) is interrupt-driven; its internal low-power mode is [unknown].
+
+## 18. Ten-minute maintenance wake — root cause
+
+**Owner: the SPM PCM timer.** `Y2_SPM_TIMER = 19660800 ticks = 600.000 s` at 32768 Hz, armed in `spm-suspend-policy.h`
+(`SPM_PCM_TIMER_VAL`), with a 630 s PCM watchdog; exposed as `maintenance_seconds=600`. It mirrors the vendor constant
+`SPM_WAKE_PERIOD 600 /* sec */` in `mt_spm_sleep.c`. The product helper uses that wake for a bounded battery safety check and then
+re-enters. Not the RTC, journal or a userspace timer. [source + measured]
+
+## 19. Maintenance wake energy impact
+
+Awake ~3.0 s per 603 s cycle (0.50% duty) [measured]. Awake current is [unknown]. Average added current = 3.0 s × I_awake / 603 s;
+for illustrative I_awake = 30 / 60 / 100 mA that is 0.15 / 0.30 / 0.50 mA [arithmetic on hypothetical inputs, not a measurement].
+
+## 20. Power-budget breakdown and allowed average current
+
+Average current allowed for ≤1 percentage point over the window, as a function of usable capacity C (1% = C/100):
+
+| Usable capacity | 8 h | 12 h | 24 h |
+| --- | ---: | ---: | ---: |
+| 400 mAh | 0.50 mA | 0.33 mA | 0.17 mA |
+| 600 mAh | 0.75 mA | 0.50 mA | 0.25 mA |
+| 800 mAh | 1.00 mA | 0.67 mA | 0.33 mA |
+| 1000 mAh | 1.25 mA | 0.83 mA | 0.42 mA |
+| 1500 mAh | 1.88 mA | 1.25 mA | 0.63 mA |
+
+Plausibility, not a measurement: with INFRA/DDRPHY, the 26 MHz path and DRAM self-refresh retained, the achievable floor is [unknown];
+reaching ≤1.25 mA average on a 1000 mAh pack would leave only ~0.75 mA for everything except wakes. Whether the target is physically
+reachable cannot be decided without a current measurement. Component breakdown: all rows **[unknown]** except maintenance duty (§19).
+
+## 21. Optimization candidates, ranked (all unimplemented)
+
+1. **Vendor `pcm_suspend` state** (INFRA/DDRPHY power down + 26 MHz off) — largest expected effect, highest risk; requires staged,
+   backstop-protected experiments and exact-source porting of the 597-word program and its resume handling.
+2. **Read-only regulator/clock/SPM snapshot at suspend entry and on resume** — needed first to find any rail left on (`vgp2`, `vcn*`,
+   SD rails). Low risk, informative.
+3. **VGP2 audio rail in suspend** — disable only after a consumer audit; DAC GPIOs are already low.
+4. **Maintenance interval/work** — lengthening 600 s is safe only if the battery-safety check and watchdog assumptions hold; saves at most
+   the §19 cost.
+5. **APT32F / USB PHY / SD power** — need datasheet/firmware evidence before any change.
+
+## 22. Changes implemented
+
+None.
+
+## 23. Changes rejected for safety
+
+Any PMIC register write, rail disable, PCM/SPM change or oscillator change without an exact-source, staged and backstopped test design.
+
+## 24–30. Before/after, same-boot, early-boot, Power, RTC, USB/charger, battery observations
+
+- Early-boot (6 min target): 04 passed an even earlier case (entry at 39.4 s, 551.8 s asleep, archives 74–75). [measured]
+- Power-button and RTC wake on 04: **NOT TESTED** yet (earlier 02 evidence only). USB wake: repeatedly observed (label `unknown`).
+- Battery: 71%→69% / 3.966→3.948 V over the one-hour run is provisional and includes post-charge relaxation. **Not an energy result.**
+- Overnight (≈8 h) unplugged drain test on 04: pending; it is the baseline for any later comparison.
+
+## 31–32. Real current measurements / external measurement requirements
+
+No real current measurement exists. An external measurement is required for any further quantitative optimization. Safe options need
+the owner's decision and must not involve improvised battery wiring or shorting; a USB power meter cannot see battery-only suspend current.
+A suitable method is a bench power supply or high-dynamic-range source-measure unit in place of the battery on a purpose-made, isolated
+connection made by someone qualified, with µA resolution and ≥1 kS/s capture to see the ~3 s wake bursts. Expected ranges are not stated
+because none are source-backed for this unit.
+
+## 33. Regression tests · 34. Commits · 35. Candidate and hashes · 36. Remaining physical limits
+
+No code was changed in this phase, so no new tests, commits (other than this report), candidate or hashes exist. Limits: no battery current
+sensing; unknown capacity; INFRA/DDRPHY retained by design; DRAM/26 MHz electrical state during sleep unobservable without external
+measurement.
+
+## Next steps (proposed)
+
+1. Finish the owner's overnight 04 drain test (baseline) and archive.
+2. Read-only snapshot tool: regulator (`/sys/class/regulator`), clock summary, SPM/wake registers, runtime-PM states, captured just before
+   entry and immediately on resume (no claim about the in-between interval).
+3. Trace the vendor 597-word non-MT6333 `pcm_suspend` against the Y2's PWRAP/PMIC and DRAM wiring and design a staged experiment.
+4. Owner decision on external current measurement.
