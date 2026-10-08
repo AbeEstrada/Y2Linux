@@ -53,6 +53,36 @@ sensitivity table, not a claim about this pack.
 
 Only DT-declared rails are listed; rails the loader enables and Linux never claims are **[unknown]** until a read-only snapshot is taken.
 
+
+## 6a. Measured PMIC state (awake, archive 77–78, 2026-10-08) and vendor suspend golden table [measured + source]
+
+Read-only snapshot on DEEPSLEEP-FINAL-04 (boot `aae0ddb3`, USB connected, screen off, Wi-Fi/BT in use) and a full read-only PMIC register dump
+(`/sys/kernel/debug/regmap/1000d000.pwrap/registers`, 2079 registers, 2 volatile between two dumps), decoded with the upstream MT6323 enable tables.
+This is the **awake** state; it is not the state during suspend.
+
+| Rail | Hardware enable / status (awake) | Linux claims it? | Note |
+| --- | --- | --- | --- |
+| VPROC, VSYS (bucks) | on / on | VPROC always-on | CPU and system supply |
+| VTCXO 2.8 V | on / on | no (loader) | 26 MHz TCXO buffer; LP_SEL bit already set |
+| VA 2.8 V | on / on | no (loader) | analog/AUXADC; LP_SEL **not** set |
+| VIO28 2.8 V | on / on | no (loader) | peripheral I/O; LP_SEL **not** set |
+| VUSB 3.3 V | on / on | no (loader) | USB PHY LDO; on while cable connected; unplugged state **unknown** |
+| VMC / VMCH (SD I/O, SD VCC) | on / on | SD host | SD card powered; no `cap-power-off-card` |
+| VEMC3V3 (eMMC VCC) | on / on | no (loader) | retained in suspend by patch 0029 |
+| VM 1.2 V, VIO18 1.8 V, VRTC | on / on | VIO18 always-on | memory/I-O/RTC; required |
+| VGP2 1.8 V | on / on | always-on | audio analog; DAC enables are low |
+| VCN18, VCN33_WIFI (VCN33_BT hw bit) | on | connectivity driver | **held only while Wi-Fi/BT is active**: `runtime_suspend → power_off()` disables clock, SPM radio power and all four rails (core.c) |
+| VCN28, VGP1/3, VCAM*, VIBR, VRF18, VSIM1/2, VPA | off | no | off |
+
+The vendor kernel validates suspend against golden registers (`mt_power_gs_suspend.c`, `mt_power_gs_array.c`, `mt6323_power_gs_suspend_data`, 44 entries).
+Comparing them with the live awake dump: **25 of 44 differ**. Expected (golden) in vendor suspend, but not so on the Y2 when awake: **VMC, VMCH,
+VEMC3V3 and VCN18 enable bits off** (SD power, eMMC VCC and connectivity rail are removed in vendor suspend); **LP_SEL bit0 set on VA, VIO28, VUSB, VM,
+VIO18** (low-power mode of the always-on LDOs); VPROC/VSYS sleep-voltage enables and control bits (`0x212`, `0x216`, `0x21c`, `0x230`, `0x256`, `0x310`);
+top-clock/OSC control (`0x4e`, `0x102`, `0x108`, `0x10e`, `0x120`). Data: `docs/validation/data/y2-pmic-suspend-golden-vs-awake-20261008.json`.
+The vendor sets these in `PMIC_INIT_SETTING_V1` (`pmic_mt6323.c`, chip ≥ E2, 20130604_0.85v); Y2Linux applies only the **connectivity subset**
+(`kernel/platform/connectivity/core.c: pmic_prepare()`). Whether each golden difference is already corrected by the Y2's own suspend path
+(e.g. regulator framework, SPM program) is **unknown** until the register state is read at suspend entry.
+
 ## 7. SoC power-domain inventory
 
 Not yet complete. Known from source/docs: SPM mode keeps INFRA/DDRPHY powered; CPU cores shut down; MFG is the only SPM power domain
@@ -139,6 +169,18 @@ reaching ≤1.25 mA average on a 1000 mAh pack would leave only ~0.75 mA for eve
 reachable cannot be decided without a current measurement. Component breakdown: all rows **[unknown]** except maintenance duty (§19).
 
 ## 21. Optimization candidates, ranked (all unimplemented)
+
+Revised ranking after the PMIC evidence (still unimplemented; every item needs a staged, backstopped test):
+
+0. **Evidence first:** read the PMIC registers (read-only) at suspend entry and on resume, and compare to the vendor golden table. This tells
+   which of the 25 differences are real in suspend. Low risk.
+1. **SD card power in suspend** (VMC/VMCH): the Y2 keeps a powered SD card (no `cap-power-off-card`); the vendor removes its power. Needs a re-init
+   and mount-safety design; expected saving is card-dependent [unknown, typically a few hundred µA].
+2. **LDO LP_SEL bits** (VA, VIO28, VUSB, VM, VIO18) from `PMIC_INIT_SETTING_V1`: standard MediaTek low-power-mode select, exact-source backed. Effect only
+   if SRCLKEN is deasserted in suspend (26 MHz request released) — not yet shown for the Y2's dpidle-style program.
+3. **eMMC VCC (VEMC3V3) in suspend:** vendor removes it with eMMC sleep; the Y2 deliberately retains it for reliability (patch 0029). High risk (root and data).
+4. **VPROC/VSYS sleep voltage** (`VPROC_VSLEEP_EN`, `VOSEL_SLEEP=0x18`): reduces leakage; conflicts with the Y2's software-controlled DVFS (`VPROC_VOSEL_CTRL`). High risk.
+5. Vendor `pcm_suspend` state (INFRA/DDRPHY and 26 MHz off), see §8: largest, riskiest.
 
 1. **Vendor `pcm_suspend` state** (INFRA/DDRPHY power down + 26 MHz off) — largest expected effect, highest risk; requires staged,
    backstop-protected experiments and exact-source porting of the 597-word program and its resume handling.
