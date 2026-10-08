@@ -1386,7 +1386,15 @@ static void y2_role_release(void *sw) { usb_role_switch_unregister(sw); }
 static int y2_usb_probe(struct platform_device *pdev)
 {
     int ret;
-    struct power_supply_config input_cfg = { .fwnode = dev_fwnode(&pdev->dev) };
+    struct power_supply_config input_cfg = {
+        .fwnode = dev_fwnode(&pdev->dev),
+        /* This is the gadget's software current-budget publisher. MUSB calls
+         * set_power during system suspend, so its notification must not abort
+         * the wakeup_count handshake. Physical cable wake belongs to the
+         * charger CHRDET IRQ and y2-usb-presence, not this synthetic supply.
+         * All budget notifications and charger safety checks remain active. */
+        .no_wakeup_source = true,
+    };
     dev_t dev=MKDEV(Y2_TEXT_MAJOR,0);
     /* Providers may bind later. A missing provider is not a permanent boot failure. */
     y2_pmic_snapshot(&y2_power.power);
