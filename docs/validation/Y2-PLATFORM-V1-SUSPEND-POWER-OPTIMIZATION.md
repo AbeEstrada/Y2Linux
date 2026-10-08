@@ -276,3 +276,22 @@ dmesg: `y2-pmic-lp: LP_SEL set on VA/VIO28/VUSB/VM/VIO18 (CID=0x2023 err=0)` at 
 Full read-only PMIC dump (2079 registers): LP_SEL bit 0 set on VA/VIO28/VUSB/VM/VIO18 (04: only VTCXO); vendor golden differences 25 → 20 awake, the five closed entries being
 0x404/0x500/0x502/0x552/0x556; **no regulator enable bit differs from the 04 baseline**. ext4 errors 0, pstore empty, application healthy; the 04 product guard (`pending:false`) does not match the new identity.
 Charger: Not charging 89% / 4.085 V (provisional). Suspend behaviour on 05 is **not yet tested**; no power benefit is claimed.
+
+## POWER-FINAL-05 suspend probe run (archives 85–87, 2026-10-08) [measured]
+
+Owner unplugged 22:07 CEST, reconnected ~22:34. Same boot `3cae62f2`, taint 0, product receipt **1573.4 s suspended**, 2 maintenance wakes, SPM 3 entries / 3 resumes /
+0 aborts, PM `COMPLETE`, application restored. Probe: 8 captures, none overlapping a suspend, each full PMIC dump 35 ms.
+
+| Check | 04 (archive 81) | 05 (archive 87) |
+| --- | --- | --- |
+| LP_SEL set at every capture | VTCXO only | **VTCXO, VA, VIO28, VUSB, VM, VIO18** |
+| Vendor golden differences at pre-entry | 22 | **17** |
+| Golden differences at post-resume | 20 | 16 / 15 |
+| Radios (VCN18/VCN33) at pre-entry | off | off |
+| SD rails across suspend | on → off at resume | same |
+| eMMC supply (VEMC3V3), VUSB, VGP2 | on | on |
+| PMIC registers changed across a sleep (non-volatile) | 0x504, 0x506, 0x13a, 0x73a | 0x504, 0x13a, 0x52a, 0x73a (SD-rail/ADC state) |
+
+The low-power select bits are unchanged across every sleep (not toggled by the SPM path), suspend/resume behaves exactly as on 04, and no rail enable differs from 04.
+**Not shown:** any current or SOC benefit. Still open: Power-button wake and RTC wake on 05, early-boot on 05, overnight A/B (bits set vs `echo 0 > /sys/firmware/y2_pmic/lp_sel`),
+an external current measurement.
