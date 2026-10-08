@@ -1,10 +1,25 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-08 local
 
-This is the current state. **The owner stopped for the day on 2026-10-08;
-no test remains armed.** Resume the deep-sleep investigation from this checkpoint
-when requested. Historical 2026-10-06 instructions below do not supersede it.
+This is the current state. **Latest request: build DEEPSLEEP-FINAL-03 with all
+completed production fixes before the owner flashes a new baseline.** The owner
+also intends to leave the player unplugged overnight and inspect it in the
+morning. That observation is not armed: current02 remains guarded, no RTC alarm
+or collector is active. Archive64 preserves the latest same-boot state before
+the image request; the proposed guard release never happened. Verify the new
+image after owner installation before enabling the observation. Historical
+2026-10-06 instructions below do not supersede this state.
 Cleanup is outside this task. Preserve all evidence, sealed images, fallback,
 symbols and build inputs.
+
+## Successor03 build in progress
+
+One source-bound BOOTIMG/Y2ROOT package, rootv1.33 and Reborn97ff8c3, will include
+all committed production corrections described below, including locald43b592
+and Linux/Reborn display readiness/retry changes. The source patch is not a
+claim that the independent warm-start display root cause is fixed. No failed
+or untracked display reset diagnostic goes into production. Full source/ARM/
+kernel/package validation remains required before publishing the owner folder.
+Y2DATA and every protected partition stay unchanged; the owner alone flashes.
 
 ## Stopped for the day — archives62/63, interrupted endurance
 

@@ -15,8 +15,8 @@ python3 -m unittest tests.test_integration_qualification tests.test_platform_v1_
 python3 -m unittest tests.test_storage_ceiling tests.test_sd_tuning tests.test_production_storage tests.test_filesystems tests.test_production_handover tests.test_readback_profiles tests.test_owner_data tests.test_reborn_receipts tests.test_mmc_requests tests.test_mmc_context tests.test_emmc_layout tests.test_mmc_transport tests.test_stock_msdos tests.test_usb_recover tests.test_usb_wake tests.test_usb_session tests.test_usb_state tests.test_usb_clock tests.test_usb_reconnect tests.test_usb_failure tests.test_audio tests.test_audio_precision_contract tests.test_audio_capture tests.test_highres_observations tests.test_dev_abi tests.test_dev_foundation tests.test_dev_i2c tests.test_baseline_pwrap tests.test_overlays tests.test_d08 tests.test_bootimg -v
 # Power, radio and GPU subsystem/profile contracts remain separately identifiable.
 PYTHONPATH=/project/tests python3 -m unittest tests.test_power tests.test_charger tests.test_power_policy tests.test_offline_charging tests.test_power03 tests.test_connectivity tests.test_suspend_policy tests.test_suspend_audio tests.test_sleep_product tests.test_gpu -v
-python3 -m unittest tests.test_power_journal tests.test_boot_retained tests.test_power_audit tests.test_display_takeover -v
-python3 -m unittest tests.test_audio_idle tests.test_connectivity_supervisor tests.test_pm_replay_trace tests.test_suspend_cpu_pm tests.test_product_auto_sleep -v
+python3 -m unittest tests.test_power_journal tests.test_boot_retained tests.test_power_audit tests.test_display_takeover tests.test_reborn_splash -v
+python3 -m unittest tests.test_audio_idle tests.test_connectivity_supervisor tests.test_pm_replay_trace tests.test_suspend_cpu_pm tests.test_product_auto_sleep tests.test_pm_control_write -v
 for script in /project/initramfs/production/init /project/initramfs/production/storage.sh /project/buildroot/board/y2/production-overlay/etc/init.d/* /project/buildroot/board/y2/production-overlay/usr/sbin/*; do
     qemu-arm -cpu cortex-a7 -L /build/buildroot/target /build/buildroot/target/bin/busybox sh -n "$script"
 done

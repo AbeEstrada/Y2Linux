@@ -4,6 +4,59 @@
 
 ### Clean corrective-image physical admission
 
+**Successor03 build boundary, 2026-10-08:** the owner now explicitly requests
+new flashable images containing all completed fixes. This supersedes enabling
+tonight's observation on02: archive64 completed, but the guard was never cleared
+and no overnight collector/alarm/entry was armed. Preserve that distinction in
+the handoff. Installed identity and all hardware evidence remain02 plus its
+recorded live corrections, not03.
+
+Admit one coherent BOOTIMG/Y2ROOT candidate03, rootv1.33, paired with Reborn
+`97ff8c357bab12319087740d7c97b5051e6588f5`. Include committed single-write PM,
+synthetic USB wake, maintenance handshake, endpoint/journal and splash/renderer
+recovery changes. Preserve voltage/SOC curves, charger ceilings, protection,
+partition layout and Y2DATA. Failed/untracked reset diagnostics are excluded.
+Use isolated paired worktrees and reusable verified caches; retain immutable02
+images and matching build/symbols. No agent flash or release promotion.
+
+Coverage/gap audit: real PM and Power/RTC same-boot returns, normal inactivity
+and one maintenance re-entry are CONFIRMED only for their recorded sources.
+03 as a combined image is SOFTWARE_PENDING / PHYSICAL_NOT_RUN until its checks.
+The candidate needs the complete production profile including new regression
+modules, Reborn fmt/strict Clippy/workspace tests/ARM, kernel/config/DT/modules/
+ABI/QEMU and package/preservation/privacy checks. Intermittent devices, warm
+display root cause, poweroff, cold C3, endurance, SOC/charging and electrical
+floor remain open; all existing issue mappings and other classifications stay
+unchanged. After owner flash, verify exact identity and USB/charging before any
+physical sleep observation. A new image does not convert old tests into new-image
+qualification or waive longer endurance requirements.
+
+**Owner-requested overnight observation, 2026-10-08:** after the stop checkpoint,
+the owner explicitly chose to leave the Y2 unplugged for the rest of the night
+and inspect it in the morning. This supersedes the parked runtime-idle plan for
+that observation only. Archive64 rechecks the same boot, taint0, COMPLETE667,
+idle backstop and empty RTC alarm before any change. The accepted live source
+remains0ba99f5 plus3929026 and the runtime synthetic USB wake correction; the
+local maintenance correction remains undeployed.
+
+Admit clearing the diagnostic between-test quarantine under both operation
+locks, with durable before/after identity and battery records, so ordinary
+Reborn inactivity can request full suspend after unplugging. Preserve all
+playback/transfer/update/maintenance inhibitors, ten-minute battery checks,
+low-voltage/thermal protection and the existing entry/resume backstop. No
+forced entry, new helper loop, diagnostic module, alarm, source deployment or
+firmware change. Existing event journaling records actual entry/maintenance/
+resume; host SSH stops before unplugging. A failed/reset path remains evidence,
+not success; do not automatically clear a subsequent failure quarantine.
+
+This is an exploratory owner observation, not a waiver or completion of the
+thirty-minute/two-hour qualification sequence. One dark maintenance re-entry is
+physically confirmed; intermittent devices/display/poweroff defects and the
+latent maintenance race remain open. Coverage classifications and issue/release
+status below are unchanged. Morning must preserve evidence before mutations and
+calculate actual suspended residence, all awake gaps and valid battery endpoints;
+an unplugged night alone does not establish that suspend persisted all night.
+
 **Session stop review, 2026-10-08:** the owner requested an early finish and
 reconnected USB. Archive62 retains trial61 on unchanged02 plus the recorded
 overlays/runtime wake correction: 600.004089355 + 343.159606934 seconds of

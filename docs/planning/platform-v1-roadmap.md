@@ -2,6 +2,29 @@
 
 ## Current deep-sleep investigation — 2026-10-07
 
+**Latest owner request, 2026-10-08: build a fresh03 baseline.** Package all
+completed production fixes with Reborn97ff8c3 into one BOOTIMG/Y2ROOT successor,
+rootv1.33, after the full software and package checks. Preserve Y2DATA, sealed02
+and matching symbols. Existing live02 remains guarded: archive64 was read-only,
+and the proposed overnight enablement below did not happen. No agent flash.
+The [build boundary audit](roadmap-gap-audit.md#clean-corrective-image-physical-admission)
+keeps exact-source physical verification and the independent reliability,
+charging/electrical and endurance gaps open. After owner installation, verify03
+identity and USB/charging before deciding the overnight observation.
+
+**Later owner steering, 2026-10-08:** the owner will leave the Y2 unplugged for
+the remainder of the night and return in the morning. Prepare an exploratory
+normal-product observation on the already physically tested live source: save
+the starting state and clear only the between-test diagnostic quarantine under
+operation locks. No new code, alarm or forced suspend; all normal inhibitors,
+battery checks and recovery protections remain. Archive64 rechecks the same
+untainted boot and completed prior return. The refreshed
+[audit](roadmap-gap-audit.md#clean-corrective-image-physical-admission) records
+this later authorization; the previous parked plan below is superseded only for
+tonight's observation. Thirty-minute/two-hour acceptance and all unresolved
+reliability/electrical work remain open. Morning evidence decides actual sleep
+duration and drain; do not infer them merely from cable removal.
+
 **2026-10-08 session stop at the owner's request:** archive62 preserves the
 early USB return from trial61. Normal policy accumulated 943.163696289 seconds
 of full suspend in two same-boot returns, including one 600-second maintenance
