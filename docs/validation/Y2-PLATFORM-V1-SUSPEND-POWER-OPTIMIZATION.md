@@ -268,3 +268,11 @@ Folder `out/y2linux-platform-v1-power-final-candidate-05/` (own `OWNER-HANDOFF.m
 BOOTIMG (7256064 B) `0137a855db96d8f94005333941495c4fdaa2f81c9eb653458b77e9c0fd044117`; Y2ROOT (536870912 B)
 `9175185fd577b759302337cc8d17f678fde3dc621525b90d45cf6cb370e99a4d`. Preserving scatter identical to 04; `fallback/` = sealed 04. Validation: container suite 560 PASS,
 10 native packaging + 27 splash PASS, Reborn fmt/clippy/335 tests, QEMU, ELF 384/1411, package/privacy PASS. Physical: NOT_RUN.
+
+## POWER-FINAL-05 first check (owner flashed; archives 82–84, 2026-10-08) [measured]
+
+Boot `3cae62f2`, taint 0, `versions.json` = POWER-FINAL-05 / Linux `837b614` / root v1.35; installed Reborn `cc305fbf…1ac1` and the three PM helpers match the build byte-for-byte.
+dmesg: `y2-pmic-lp: LP_SEL set on VA/VIO28/VUSB/VM/VIO18 (CID=0x2023 err=0)` at 10.7 s. `/sys/firmware/y2_pmic/lp_sel`: `applied=1 error=0 VA=1 VIO28=1 VUSB=1 VM=1 VIO18=1`.
+Full read-only PMIC dump (2079 registers): LP_SEL bit 0 set on VA/VIO28/VUSB/VM/VIO18 (04: only VTCXO); vendor golden differences 25 → 20 awake, the five closed entries being
+0x404/0x500/0x502/0x552/0x556; **no regulator enable bit differs from the 04 baseline**. ext4 errors 0, pstore empty, application healthy; the 04 product guard (`pending:false`) does not match the new identity.
+Charger: Not charging 89% / 4.085 V (provisional). Suspend behaviour on 05 is **not yet tested**; no power benefit is claimed.
