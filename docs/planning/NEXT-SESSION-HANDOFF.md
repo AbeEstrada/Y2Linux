@@ -1,5 +1,10 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-08 local
 
+> **UPDATE (POWER-FINAL-05 built, awaiting owner flash):** `out/y2linux-platform-v1-power-final-candidate-05/` (Linux `837b614` on branch `codex/platform-v1-power-final-05`,
+> worktrees `y2-power-final-05`). 04 + vendor LP_SEL on five LDOs with runtime revert `/sys/firmware/y2_pmic/lp_sel`; BOOTIMG `0137a855…44117`, Y2ROOT `9175185f…99a4d`.
+> Full validation PASS; physical NOT_RUN; benefit unmeasured. Installed image is still 04 until the owner flashes. Suspend probe tools:
+> `tools/development/power-session/{suspend-probe,arm-suspend-probe}.py` (power branch). Report: `docs/validation/Y2-PLATFORM-V1-SUSPEND-POWER-OPTIMIZATION.md` (power branch).
+>
 > **CURRENT STATE — read this first (updated end of 2026-10-08).** Blocks below are chronological
 > detail; where they conflict with this block, this block wins.
 >
