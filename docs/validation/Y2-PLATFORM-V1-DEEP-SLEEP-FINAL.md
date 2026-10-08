@@ -1,7 +1,27 @@
 # Y2 Platform 1.0 — final deep-sleep investigation
 
 Investigation opened 2026-10-07; **IN PROGRESS, no readiness promotion**.
-**Latest: owner-installed03 passes quick installation verification (archive65).**
+**Latest, morning 2026-10-08: DEEPSLEEP-FINAL-03 failed its automatic suspend
+attempt and rebooted without owner intervention.** Archive66 preserves the
+read-only SSH retrieval. The owner reports approximately six unplugged hours,
+about88% at removal and55% in the morning; retained pre-cable samples confirm
+88% and55%. Boot0132fb21 attempted kernel suspend at BOOTTIME398.407s, then
+ends at retained DPM_PREPARED/sequence8. Boot81dce40c records the prior shutdown
+unclean, no full-system suspend and380 recovery-guard refusals. Exact reset
+cause is unknown. Runtime CPU0 DORMANT worked, but the overnight system-sleep
+objective failed. The pending03 guard remains intact.
+
+Morning health is responsive/paused, PCM closed, no scan, Wi-Fi/BT off, taint0,
+ext4 errors/warnings0 and charging without reported faults. Installed03 sources
+and four file hashes still match archive65. No device mutation or new trial.
+See [§32](#32-overnight-result--2026-10-08) and the
+[machine summary](data/y2-deepsleep03-overnight-20261008.json) for endpoints,
+clock limitations, evidence hashes and the recurring pre-SPM failure. These
+findings supersede the pre-observation NOT_RUN status below; controlled
+30-minute/two-hour/endurance acceptance and independent reliability gaps remain
+open.
+
+**Previous checkpoint:03 passes quick installation verification (archive65).**
 Linux `cfb7e098eae60918f47d7b330445bf66e9d61817`, Reborn
 `97ff8c357bab12319087740d7c97b5051e6588f5`, rootv1.33 and kernel03 are verified
 on boot `0132fb21-8462-4f77-9faf-3a7e7f1b8429`. Reborn and three changed helpers
@@ -53,8 +73,15 @@ Archives and SHA256 receipts stay local; no private logs are published.
 
 ## 1. Installed firmware
 
-**Current: DEEPSLEEP-FINAL-03**, verified by SSH in archive65 on2026-10-08.
-Boot `0132fb21-8462-4f77-9faf-3a7e7f1b8429`, kernel
+**Current: DEEPSLEEP-FINAL-04** (owner flashed 2026-10-08, archive68): Linux `5e267571d584da7fbe356d3161801ba15f87fa57`,
+Reborn `97ff8c357bab12319087740d7c97b5051e6588f5`, kernel `6.18.0-y2linux-platform-v1-deepsleep-final-04`, root v1.34, release
+`1.0.0-platform-v1-deepsleep-final-candidate.4`, taint 0; installed Reborn and the three PM helpers match the build byte-for-byte
+(Reborn `0de80494f27f849471dd230b27fcc853072cc116014e950a881f57889bd84ad4`; its hash differs from 03's `890216e0…` although the Reborn
+source is unchanged, so Reborn builds are not byte-reproducible here). See §39. The 03 text below is retained as history.
+
+**Current: DEEPSLEEP-FINAL-03**, rechecked by SSH in archive66 on2026-10-08.
+Current boot `81dce40c-9bb5-4f14-8465-c7e80ba3c602` follows an unclean end of
+installation-check boot `0132fb21-8462-4f77-9faf-3a7e7f1b8429`; see §32. Kernel
 `6.18.0-y2linux-platform-v1-deepsleep-final-03`, release
 `1.0.0-platform-v1-deepsleep-final-candidate.3`, root2025.02.18-platform-v1.33.
 Linuxcfb7e09 / Reborn97ff8c3; live Reborn SHA
@@ -1071,18 +1098,184 @@ on the reviewed live product source; archive62 is interrupted and does not
 meet that gate. Old04 diagnostic residence does not bypass the current product
 maintenance/source checks. No two-hour result is inferred.
 
-## 32. Overnight result when available
+## 32. Overnight result — 2026-10-08
 
-No new full-suspend overnight result. Owner's 88%→30% runtime result fails the
-product target. <=1% cannot be assessed through SOC rescaling or stale values.
+**Verdict: AUTOMATIC_SUSPEND_FAILED_UNEXPECTED_REBOOT.** The owner reports about
+six hours unplugged, around 88% at removal and 55% in the morning, and confirms:
+“no i just installed the newest firmware we did tonight and went to sleep”.
+There was no owner restart after installation. The approximate displayed drop
+is **33 percentage points**, or about **5.5 points/hour** using the owner's
+rounded six-hour interval. This is a provisional SOC observation, not measured
+charge consumption or a runtime forecast. The earlier 88%→30% incident in §2
+is a separate historical result.
 
-Latest owner intent is an unplugged observation for the remainder of the night,
-with morning retrieval. They then requested the coherent03 images first. As of
-sealing, no03 flash/entry or overnight collector/alarm is recorded, and installed02
-keeps its between-test guard. Preserve morning evidence before reboot or
-mutation, recover pre-cable maintenance voltage/SOC as well as immediate return
-records, and distinguish stale percentage/charging contamination from valid
-endpoints. No overnight result or continued suspension may be assumed.
+Read-only SSH under `/tmp/y2-platform-v1-device.lock` captured the first return
+at **07:44:11 UTC / 09:44:11 CEST** (host file-completion time), before any
+further inspection. Raw archive:
+`out/deep-sleep-final/evidence/20261008/66-image03-morning-return/`.
+It contains `first-return.json`, `retained-sysfs.tar`, `persistent.tar`,
+`diagnostic-exports.tar`, `health.json`, the owner's observation, per-boot power
+events, battery CSV, `analysis.json` and `SHA256SUMS`. The subsequent health
+read ran 07:46:15–07:46:16 UTC. No new collector was deployed, and no reboot,
+service/policy change, guard clear, forced sleep, build or flash occurred.
+The host lease was released after each bounded retrieval.
+
+Installed Linux `cfb7e098eae60918f47d7b330445bf66e9d61817`, Reborn
+`97ff8c357bab12319087740d7c97b5051e6588f5`, kernel03 and rootv1.33 match archive65.
+Running Reborn and the three product/journal/receipt files match its verified
+hashes. The two boots are:
+
+- Installation/check boot: `0132fb21-8462-4f77-9faf-3a7e7f1b8429`.
+- Morning boot: `81dce40c-9bb5-4f14-8465-c7e80ba3c602`, first SSH
+  BOOTTIME **23261.894 seconds** (6h 27m 41.894s), taint0. Its boot ledger
+  names the installation boot as the immediate predecessor, records that
+  shutdown as unclean, and has `consecutive_unclean=1`.
+
+The previous boot's journal preserves cable absence and Discharging at
+BOOTTIME343.760s. Normal automatic policy then requests sleep at396.598s,
+prepares Reborn, quiesces radios, syncs and records `kernel_suspend` at398.407s.
+The separate `first_entry` sample at398.388s reads **4.092187V** and provisional
+SOC88%. The retained kernel record stops at **DPM_PREPARED, sequence8**. Its
+device ring ends after successful codec/MMC/I2C callbacks, the last being
+`11008000.i2c`, leave/result0 at398.638s. No full SPM entry, maintenance wake,
+completed resume or same-boot continuation is recorded.
+
+This repeats the earlier intermittent device-phase failure pattern on the
+exact03 image. It does **not** identify I2C as the failing device: the ring
+contains a successful return, with no outstanding callback identified. RGU
+reports raw0/`none_reported`; no pstore panic survives. The reset mechanism,
+blocked instruction and whether a backstop caused the reboot remain unknown.
+The boot-time retained archive has six verified PM records and no capture
+errors; its per-file hashes also verify against the boot manifest.
+
+After the reboot, the identity-matched03 guard remains `pending:true` from the
+failed0132fb21 request. All **380** retained product attempts on the new boot
+refuse with `sleep_recovery_required`; none starts a new kernel suspend.
+SPM entries/resumes are **0/0**, with no completed intervals or maintenance
+wakes. All459 current-boot power rows advance BOOTTIME and MONOTONIC together
+(their sequential-read difference stays0.0039–0.0221s). This is roughly6.44h
+of runtime since reboot, not six hours of full-system sleep. **The recovery
+guard is preserved.**
+
+| Observation | Boot / BOOTTIME | SOC | Voltage | Conditions |
+| --- | --- | ---: | ---: | --- |
+| First retained unplugged journal row | 0132fb21 /343.760s | 88% | 4.104492V | Discharging, screen off |
+| Pre-kernel `first_entry` ADC | 0132fb21 /398.388s | 88% | 4.092187V | Discharging, immediately before failed attempt |
+| Last dark battery row | 81dce40c /23149.181s | 56% | 3.846972V | Discharging, screen off |
+| Last pre-cable Discharging row | 81dce40c /23179.994s | 55% | 3.821484V | Screen on; filtered voltage3.841652V |
+| First SSH power-daemon sample | 81dce40c /23261.366s | 54% | 3.938598V | Already charging; about0.529s old at capture |
+| Subsequent SSH health sample | 81dce40c /23385.585s | 55% | 3.955517V | Charging; about0.512s old at capture |
+
+The independent first SSH sysfs ADC reads3.922338V; it is a separate sample
+from the daemon's3.938598V and is not substituted into that row. The surviving
+55% Discharging sample supports the owner's endpoint before USB charging.
+The entry-to-end voltage difference is−270.703mV, across a reboot and different
+screen/load conditions. Voltage relaxation, load sag and provisional filtering
+preclude converting it into pack current or battery degradation. Current,
+coulomb count and calibrated capacity remain unavailable.
+
+CPU0 **runtime DORMANT/C3 did operate**: first return shows807610 entries and
+807610 resumes, zero dormant/restore failures and15970.000272s in the hardware
+residency accumulator. A journal window from306.001s to23149.181s records
+15908.566919s of CPU0 cpuidle DORMANT time in22843.179298s elapsed (**69.64%**).
+This window includes brief morning display wakes; it is descriptive evidence
+of CPU idle, not an electrical measurement or whole-system suspend. It does
+not close the full cold-C3/reliability qualification gap.
+
+Morning health: Reborn answers status with a real first-frame record, playback
+paused, PCM closed, no scan, screen off, Wi-Fi disabled and Bluetooth powered
+off. All three mounted ext4 filesystems report zero errors and warnings. USB
+is configured; Charging/CONSTANT_CURRENT has fault/sample/stop/last errors0 and
+the unchanged SDP450000uA programmed ceiling, not measured battery current.
+No active PM collector/helper, RTC alarm or recovery backstop remains.
+
+Device wall time uses `build_floor` with `clock_not_established`; it regresses
+between these boots. Do not infer overnight duration by subtracting their
+device wall timestamps. Per-boot BOOTTIME and the recorded host UTC establish
+the chronology; the owner's six hours remains approximate.
+
+The [machine-readable summary](data/y2-deepsleep03-overnight-20261008.json)
+retains exact source-file/line references, endpoints, raw hashes and limits.
+Verified raw SHA256 values:
+
+- `first-return.json`: `891c3a74ea4452eff03e817f2ce5ac2a4b0c6a4f95ebb2e72e9653f118146619`.
+- `retained-sysfs.tar`: `c757b8cda244b1cfb7ad7d9a28da9bbda72b66888d114018373e687c60721a42`.
+- `persistent.tar`: `afe6ab539d3e859416a2399b25810972fb0d5d93c1dd6f97f1170afbe57d6dfc`.
+
+No overnight target pass or controlled30-minute/two-hour qualification is
+claimed. Next blocker is the recurring pre-SPM device-phase failure, before
+endurance acceptance. Independent display/poweroff/electrical defects remain
+open. The roadmap and audit reflect the result without a milestone promotion.
+
+### Late analysis and prepared diagnostic — 2026-10-08
+
+Local source/evidence analysis only; no device access, build, flash or trial.
+Host-anchored chronology puts the kernel suspend request near 03:15:57 CEST and
+the next boot's BOOTTIME zero near 03:16:29 CEST, so the unplanned reset followed
+the last callback by roughly half a minute (several seconds of host-timestamp
+uncertainty), consistent with the 30 s RGU backstop but not proof of its source.
+The device-callback ring is written only from `dpm_run_callback()`; every logged
+callback has a leave, so the stall lies in a step the ring cannot see
+(`dpm_wait_for_subordinate`, `pm_runtime_barrier`, `device_lock`, `dpm_list_mtx`,
+post-callback bookkeeping, or `async_synchronize_full()`). All three recorded
+device-phase failures end at the same successful `11008000.i2c` leave.
+No upstream stable fix after 6.18.0 matches. Prepared (unbuilt) successor source:
+`WAIT`/`LOCK` ring phases 9/10 in overlay 0059 and a built-in 4 s/12 s device-phase
+stall sampler in `pm-journal.c`. Validation: `tests/test_dpm_stall_diagnostics.py`
+and the existing journal/suspend suites pass; the changed objects compile warning
+free under the production config. These make the next failure localizable; they
+do not fix it.
+
+**04 one-hour trial PASSED (archives 72-73):** same boot `836f0b1d`, taint0. Main sleep from BOOTTIME1364.1; six 600 s maintenance wakes
+(1965...4980 s), each dark with connectivity runtime-suspended, each re-entered; final USB wake at 5188.7. Product receipt: 7 cycles, 6 maintenance wakes,
+**3805.25 s suspended** (99.5% of ~3825 s unplugged); SPM boot totals 9/9 entries/resumes, aborts0, restore failures0; ext4 errors0, pstore empty, Reborn restored.
+Provisional pre-cable SOC 71%->69%, 3.966->3.948 V (post-charge relaxation included; no pack current): NOT a drain result. A 1.2 s early entry/return at 1358.0
+preceded the main entry (consistent with the unplug event); it also completed. Data: `docs/validation/data/y2-deepsleep04-trial2-1h-20261008.json`.
+Still open: stall rate unknown (nine clean entries on 04), early-boot hypothesis, Power/RTC wake, formal 30-min/2-h gates, overnight, display/poweroff gaps.
+
+**04 trial 1 PASSED (2026-10-08, archives 68-71):** normal automatic policy, no collector, owner unplug ~16:15:30 UTC and USB re-plug.
+Same boot `836f0b1d`, taint0; journal request BOOTTIME556.0, kernel suspend557.8, resumed1027.8 (USB wake `0x20`, product label `unknown`).
+SPM entries/resumes0→1/1, aborts0, restore failures0, residence15376821 ticks=**469.27 s**, PM COMPLETE seq48/error0, Reborn restored,
+ext4 errors0, 04 guard `pending:false`. This is one passing cycle; it does not resolve the intermittent pre-SPM stall. New WAIT/LOCK records
+are overwritten by the resume tail on a pass and are only informative after a stall. Data: `docs/validation/data/y2-deepsleep04-trial1-20261008.json`.
+Observation to test (not a finding): both 03/02 stalls occurred ~400-460 s after boot; this pass entered at 557 s.
+
+### Evening follow-up — 2026-10-08
+
+Read-only archive67 at
+`out/deep-sleep-final/evidence/20261008/67-image03-evening-return/` preserves
+first-return PM/pstore, persistent journals and a host-lease-protected health
+read ending **15:00:45 UTC / 17:00:45 CEST**. Boot81dce40c ended with an
+orderly user-requested `poweroff` at about **09:55:39 CEST**; the pstore console says
+`Power down`. Bootad0d5416 began about **16 seconds later**, taint0. These
+times use host-anchored BOOTTIME because the device wall clock is unreliable.
+This is not a
+second unexplained reset and does not explain the earlier pre-SPM failure.
+The03 guard still names failed boot0132fb21. On the current boot SPM0/0 and
+421 `sleep_recovery_required` refusals preceded USB return. All508 current-boot
+journal rows show BOOTTIME minus MONOTONIC between0.0039 and0.0219s: no
+full-system sleep occurred during this approximately seven-hour boot.
+
+The current-boot journal begins Discharging **57%/3.862V** at BOOTTIME5s.
+Hourly approximate endpoint estimates then reach57,52,47,42,38,36 and32%; the
+last pre-cable refusal at BOOTTIME25346s is **32%/3.736V**. The first SSH power
+sample is connected and Charging31%/3.820V; the later17:00 health sample is
+Charging31%/3.830V. Percent is a provisional voltage estimate, so the
+connected31% and the old boot's63% versus new boot57% do not quantify charge
+used across reconnection or poweroff. A flat battery level over the owner's
+absence is not supported by this device journal. No pack-current, coulomb or
+calibrated capacity measurement is available.
+
+Installed executable/helper hashes still match archive65. Reborn answers
+status, playback is paused, PCM closed, radios and scan off; ext4 errors and
+warnings are0 on all three mounted volumes. USB is configured. Charger reports
+CONSTANT_CURRENT with fault/sample/stop/last errors0 and a programmed450000uA
+ceiling. No PM helper, RTC alarm or backstop is active. The recovery guard was
+preserved; no device change, forced sleep or test was made. This extends the
+physical observation, **not** the30-minute/two-hour/overnight acceptance. The
+[machine-readable follow-up](data/y2-deepsleep03-evening-20261008.json) includes
+host time anchors, source-file lines and battery endpoints; archive67 has
+SHA256 receipts for the raw files.
 
 ## 33. SOC / charging issue
 
@@ -1141,6 +1334,10 @@ owner permits a new client handshake while the previous failed master is still
 releasing the device. These source fixes are not deployed and do not fix the
 separate warm-start OVL hardware state. Diagnostic-only stack/display sources
 remain separate; the unsuccessful reset helper is not production code.
+
+**04 diagnostic successor (§39):** adds overlay-0059 `WAIT`/`LOCK` ring phases (9/10), legacy-bus logging, and the built-in
+device-phase stall sampler in `pm-journal.c`, with `tests/test_dpm_stall_diagnostics.py` and updated journal test stubs. Release identity
+bumped (`production.config`, `release.json`, `tests.sh`). No locking, wait-order, driver or policy change.
 
 ## 36. Tests
 
@@ -1220,6 +1417,11 @@ Fresh ELF closure remains 384 files/1411 edges; seven exact 02 modules belong
 to BOOTIMG. Reborn source is unchanged at the previously verified 332 tests,
 fmt and strict Clippy; its ARM binary is freshly built for this package.
 
+**04 validation:** locked-container production suite PASS (545 ok; includes 7 new diagnostic cases), 10 native packaging and 27 native
+splash cases PASS, Reborn fmt/strict clippy/335 tests PASS, QEMU PASS, ELF closure 384 files/1411 edges without build RPATHs, preserving
+package/manifest/rootfs/privacy checks PASS; the changed objects also cross-compile warning-free under the production config. Receipts:
+`out/deep-sleep-final/build04-receipts/`.
+
 ## 37. Commits
 
 03 packaging baseline: **`cfb7e098eae60918f47d7b330445bf66e9d61817`**, following
@@ -1264,9 +1466,25 @@ Existing Luca author/committer identity is preserved; no identity configuration
 was changed. Isolated detached worktrees are under
 `/home/luca/Dokumente/Code/worktrees/y2-deepsleep-final/`.
 
+**04 source:** Linux **`5e267571d584da7fbe356d3161801ba15f87fa57`** (`diag: record silent device-suspend steps and sample
+device-phase stalls`, parent `1ddf505`); Reborn unchanged `97ff8c3`. Docs are committed separately and do not change the compiled identity.
+
 ## 38. Candidate / hashes
 
-**Newest: DEEPSLEEP-FINAL-03**, owner install pending; no autonomous flash.
+**Newest: DEEPSLEEP-FINAL-04** (diagnostic successor, owner installed). Folder
+`out/y2linux-platform-v1-deepsleep-final-candidate-04/`, release `1.0.0-platform-v1-deepsleep-final-candidate.4`, root v1.34,
+kernel `6.18.0-y2linux-platform-v1-deepsleep-final-04`.
+
+| Payload | Bytes | SHA256 |
+| --- | ---: | --- |
+| BOOTIMG.img | 7256064 | `4738de48bea8a9970e89cc8d703c824ac3faec103ab2ed6989270816f9ace5f6` |
+| Y2ROOT.img | 536870912 | `b0e667515971da65e1a48afb222248bf68e841bef9d015ad9669944c9bafc041` |
+
+Preserving scatter identical to 03 (BOOTIMG/ANDROID only; Y2DATA untouched); `fallback/` = sealed 03 pair; matching symbols in
+`…-candidate-04-symbols/`.
+
+**Previous (superseded by 04 above): DEEPSLEEP-FINAL-03**, owner installed; archives65/66 verify identity.
+The first automatic overnight suspend attempt failed (§32); no autonomous flash.
 Folder `out/y2linux-platform-v1-deepsleep-final-candidate-03/`, release
 `1.0.0-platform-v1-deepsleep-final-candidate.3`, rootv1.33, kernel
 `6.18.0-y2linux-platform-v1-deepsleep-final-03`.
@@ -1326,3 +1544,38 @@ flash is requested. Any future image installation remains owner-only and uses
 the preserving BOOTIMG/ANDROID selections with Y2DATA untouched.
 The investigation remains **MORE_WORK_REQUIRED** until the clean built-in,
 automatic sleep, longer endurance and unresolved hardware gates are settled.
+
+## 39. Diagnostic successor 04 — analysis, build and physical trials (2026-10-08)
+
+**Analysis (03 stall).** Archives 65/66 against the exact03 source: the retained ring records only devices with PM callbacks; all recorded
+callbacks have their leave; the recurring stop after a returned `11008000.i2c` (clean02 28b, 404ef43c core, 03 boot 0132fb21) is in an
+unrecorded step. Host timestamps place the reset ~30 s after the last callback (RGU backstop-consistent; source unproven; the ring header
+`backstop_s=0` is an artifact of HELPER_REQUEST resetting the ring before the backstop is written). Stable 6.18.y PM-core fixes after
+6.18.0 (`f384497`, `c9670fd`, `bc6fdd4`) do not describe this wait.
+
+**Change.** 04 = 03 + diagnostics only (see §35). Because added records alter timing, a clean 04 is not proof of a fix.
+
+**Build.** Fresh locked build in `worktrees/y2-deepsleep-final-04/`; production container suite, native packaging/splash, Reborn and QEMU
+checks, ELF closure, privacy and package validation PASS (§36). Owner flashed BOOTIMG+Y2ROOT only; archive68 verified identity, taint 0,
+helper/Reborn hashes, ext4 counters 0, retained PM blank after flash, old 03 guard identity-mismatched (automatic sleep admitted).
+
+**Physical trials (owner unplug/replug, normal policy, nothing deployed, host lease held, archive before inspection).**
+
+| Trial | Archives | Result |
+| --- | --- | --- |
+| 1 | 68-71 | request BOOTTIME 556.0, kernel suspend 557.8, resumed 1027.8; SPM 15376821 ticks = **469.27 s**; PM COMPLETE seq48; same boot, taint 0, Reborn restored, ext4 0; guard back to `pending:false` |
+| 1 hour | 72-73 | main sleep from 1364.1 (after a 1.2 s early entry at the unplug); six maintenance wakes (1965...4980 s, dark, connectivity suspended) each re-entered; **3805.25 s suspended / ~3825 s unplugged (99.5%)**; SPM boot totals 9/9, aborts 0, restore failures 0; PM seq 408 COMPLETE |
+
+Provisional pre-cable SOC 71%→69% (3.966→3.948 V) includes post-charge relaxation and 1% steps; no pack current. It is not a drain
+measurement. Wake label for the USB reconnects is `unknown` in the product receipt. No `dpm_stall`/stall notes were produced (none
+expected); the new `WAIT`/`LOCK` records are overwritten by the 24-entry resume tail on a passing cycle and matter only after a stall.
+
+**Limits / open.** Nine clean entries on 04 do not give a stall rate (03 and 02 also passed some cycles). Open: early-boot stall window
+(400-460 s) test, Power/RTC wake on 04, formal 30-min/2-h gates, overnight drain, warm-start display, user poweroff, cold-C3/electrical.
+Plan agreed with the owner: one reboot with an early unplug, then an overnight unplugged drain test with morning archive.
+
+**Release-direction notes.** Strip observer modules, collectors, verbose console and the heavy stall dump from a 1.0 build; keep the
+retained black box and the 30 s suspend backstop; replace the permanent post-failure guard with a bounded cooldown. Optional opt-in
+automatic error reporting is a later, consent-gated task (scrubbed, rate-limited, HTTPS, queued until Wi-Fi).
+
+Data: `docs/validation/data/y2-deepsleep04-trial1-20261008.json`, `docs/validation/data/y2-deepsleep04-trial2-1h-20261008.json`.

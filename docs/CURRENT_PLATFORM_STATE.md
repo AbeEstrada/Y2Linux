@@ -1,5 +1,58 @@
 # Current Y2Linux platform state
 
+## DEEPSLEEP-FINAL-04 installed — 2026-10-08 (latest)
+
+The owner flashed the diagnostic successor DEEPSLEEP-FINAL-04 (Linux `5e26757`, Reborn `97ff8c3`, root v1.34, BOOTIMG
+`4738de48…ace5f6`, Y2ROOT `b0e66751…c041`). It differs from 03 only by retained per-device `WAIT`/`LOCK` records and a built-in
+device-phase stall sampler. Normal automatic suspend then ran cleanly on the first owner trial (469 s) and a one-hour unplugged trial
+(3805 s suspended, six maintenance wakes, SPM 9/9 entries/resumes, taint 0, ext4 errors 0). This does **not** resolve the intermittent
+pre-SPM stall (nine clean entries; timing perturbation possible). Next: owner reboot with an early unplug, then an overnight drain
+test. Readiness remains **MORE_WORK_REQUIRED**. See the [handoff](planning/NEXT-SESSION-HANDOFF.md) and
+[report §39](validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md#39-diagnostic-successor-04--analysis-build-and-physical-trials-2026-10-08).
+
+## DEEPSLEEP-FINAL-03 late analysis — 2026-10-08
+
+Local analysis of archives65/66 against the exact03 suspend code finds the device-phase
+failure stops in a step the retained callback ring cannot record, about half a
+minute before the reset (consistent with the 30 s backstop). A diagnostic
+successor source (per-device `WAIT`/`LOCK` records and a built-in stall sampler)
+is prepared and unit/cross-compile tested but **not built, flashed or run**. The
+installed image, the pending recovery guard and all evidence are unchanged. See the
+[handoff](planning/NEXT-SESSION-HANDOFF.md). Readiness remains **MORE_WORK_REQUIRED**.
+
+## DEEPSLEEP-FINAL-03 evening follow-up — 2026-10-08
+
+Archive67 shows an orderly user-requested poweroff around09:55:39 CEST after
+the morning inspection, then a new03 boot about16 seconds later. Its retained guard still
+prevents full suspend (SPM0/0,421 refusals before USB return). The current
+boot's provisional journal estimate fell57%→32% across roughly seven hours
+unplugged; the 17:00 connected reading is Charging31% with no reported charger
+fault. Exact03 hashes and basic application/filesystem health remain sound.
+The earlier pre-SPM failure is unresolved. See the
+[handoff](planning/NEXT-SESSION-HANDOFF.md) and
+[audit](planning/roadmap-gap-audit.md#clean-corrective-image-physical-admission).
+Readiness remains **MORE_WORK_REQUIRED**.
+
+## DEEPSLEEP-FINAL-03 morning observation — 2026-10-08
+
+Current installed image is DEEPSLEEP-FINAL-03, Linux `cfb7e09` / Reborn `97ff8c3`,
+rootv1.33. The owner reports about88%→55% over approximately six unplugged hours
+and no manual restart. Archived logs confirm a failed automatic suspend attempt
+on boot0132fb21, retained DPM_PREPARED/seq8, and an unclean reboot to81dce40c.
+The new boot records no full-system suspend and380 recovery-guard refusals.
+Runtime CPU0 DORMANT did run; it does not qualify whole-system sleep.
+
+Morning read-only SSH confirms the same03 files, taint0, responsive/paused player,
+closed PCM, no scan, radios off, ext4 errors/warnings0 and fault-free charging.
+Pre-cable55% is preserved separately from connected samples. Exact reset cause
+and battery capacity/current remain unknown. The pending03 guard is preserved;
+no new trial, deployment or flash occurred. **MORE_WORK_REQUIRED**; the recurring
+device-phase suspend failure precedes further endurance acceptance. See the
+[current handoff](planning/NEXT-SESSION-HANDOFF.md),
+[overnight report](validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md#32-overnight-result--2026-10-08)
+and [audit](planning/roadmap-gap-audit.md#clean-corrective-image-physical-admission).
+The dated entries below retain historical states.
+
 ## USB02 power investigation / POWER01 owner installation next — 2026-10-05
 
 The actually installed pair is USB-FINAL-02 Linux `0cb7792` / Reborn `2444e0f`,

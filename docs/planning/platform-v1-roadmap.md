@@ -2,7 +2,57 @@
 
 ## Current deep-sleep investigation — 2026-10-07
 
-**Owner-installed03 passes quick SSH installation verification (archive65).**
+**04 diagnostic successor installed and trialed (2026-10-08, latest):** DEEPSLEEP-FINAL-04 (Linux `5e26757`) is flashed; owner-driven
+normal-policy trials passed: 469 s first sleep and a one-hour run with six maintenance wakes and 3805 s suspended, same boot, taint 0.
+This is encouraging but not a fix (diagnostic-only change, nine clean entries, stall rate unknown). Next: reboot + early-unplug test, then
+overnight drain; Power/RTC wake, formal 30-min/2-h gates and the display/poweroff/electrical gaps stay open. **MORE_WORK_REQUIRED**,
+no milestone promotion.
+
+**Late 2026-10-08 analysis (source only):** the recurring pre-SPM device-phase
+stop is localized to an unrecorded wait after a returned callback; a diagnostic
+successor source with per-device `WAIT`/`LOCK` records and a built-in stall
+sampler is prepared and tested but not built, installed or run. Classification
+remains **MORE_WORK_REQUIRED**; the next step needs the owner's decision to
+build and flash a diagnostic successor.
+
+**Evening 2026-10-08 follow-up:** archive67 records an orderly user-requested
+poweroff of boot81dce40c at about09:55:39 CEST and a new bootad0d5416 about
+16 seconds later, using host-anchored BOOTTIME rather than device wall time.
+This does not change the earlier unclean pre-SPM failure. The03 recovery guard
+still matches failed boot0132fb21. On the new boot, SPM0/0 and421 guard refusals
+confirm no whole-system sleep through the seven-hour unplugged interval;
+BOOTTIME and MONOTONIC advance together. Journaled provisional SOC fell
+57%→32% before cable return, with voltage about3.862→3.736V. Live connected
+reading at17:00 is Charging31%, with no charger faults. The displayed level is
+not established as unchanged by device evidence; no measured current/capacity
+exists. Exact03 software, application, filesystems and USB remain healthy in
+the read-only check. Preserve the guard. Classification stays
+**MORE_WORK_REQUIRED** with pre-SPM diagnosis first and all longer gates open.
+
+**Earlier, morning2026-10-08:03 automatic suspend FAILED, followed by an
+unexpected reboot.** Archive66 preserves the read-only morning SSH evidence.
+The owner reports about88%→55% over approximately six unplugged hours and
+confirms no manual restart. Journal88% and final pre-cable55% agree. Boot0132fb21
+attempted kernel suspend at398.407s, then ends with retained DPM_PREPARED/seq8;
+boot81dce40c reports the preceding shutdown unclean. Exact reset cause remains
+unknown. This new boot spent roughly6.44h running, with SPM0/0 and380 refusals
+from the pending03 recovery guard. The guard remains intact.
+
+CPU0 runtime DORMANT did work (807610 entries/resumes, zero restore failures),
+but it is not whole-system sleep. Pre-attempt ADC4.092187V and last Discharging
+sample3.821484V show depletion across the reboot; provisional SOC and differing
+load prevent capacity/current or battery-health conclusions. Morning taint0,
+application responsive/paused, PCM closed, no scan, radios off, ext4 errors and
+warnings0, USB/charging healthy. No device changes or new test were made.
+
+The [evidence refresh](roadmap-gap-audit.md#clean-corrective-image-physical-admission)
+and [overnight report](../validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md#32-overnight-result--2026-10-08)
+keep readiness **MORE_WORK_REQUIRED**. Next is the recurring pre-SPM device-phase
+failure on03; controlled30-minute/two-hour/endurance and the independent display,
+poweroff, cold-C3 and electrical gates stay open. No milestone promotion.
+The pre-observation plan and installation-only status below are historical.
+
+**Previous checkpoint:03 passes quick SSH installation verification (archive65).**
 Linuxcfb7e09 / Reborn97ff8c3 / rootv1.33 / kernel03 and installed binary/helper
 hashes match the sealed baseline. Boot0132fb21..., taint0, working first frame,
 USB, charging without reported faults, and all three ext4 error counters0.

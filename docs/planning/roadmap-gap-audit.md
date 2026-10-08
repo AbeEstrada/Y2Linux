@@ -4,6 +4,95 @@
 
 ### Clean corrective-image physical admission
 
+**04 hardware evidence refresh, 2026-10-08:** scope unchanged (no memory-layout, hardware or production-scope change; retained SRAM region
+and ring size untouched). Owner flashed DEEPSLEEP-FINAL-04 (diagnostic successor; Linux `5e26757`, Reborn `97ff8c3`). Archive68 verified identity,
+taint 0, helper/Reborn hashes and ext4 counters; the old 03 guard is identity-mismatched. Normal-policy owner trials: archives 70-71 (469.27 s,
+same boot) and 72-73 (one hour: 3805.25 s suspended, six dark maintenance wakes re-entered, SPM 9/9, aborts 0, restore failures 0, taint 0).
+Coverage: #28/#34 suspend PARTIAL improves (clean repeated residence on 04) but the intermittent pre-SPM stall is unresolved (diagnostic change
+may have shifted timing); Power/RTC wake on 04, formal 30-min/2-h gates, overnight drain, warm-start display, user poweroff and cold-C3/electrical
+remain open; SOC is provisional (71%→69% includes post-charge relaxation). No milestone promotion. Next smallest gap: early-boot stall-window
+test after owner reboot, then overnight drain. Reborn source/ROM/recovery provenance is unchanged; Linux provenance is `5e26757`.
+
+**03 late analysis (documentation/source only), 2026-10-08:** no new hardware
+evidence. Re-reading archives65/66 against exact03 `drivers/base/power/main.c` and
+`pm-journal.c` shows the retained ring records only devices that have PM callbacks,
+so the recurring pre-SPM stop (always after a returned `11008000.i2c`) lies in an
+unrecorded wait, and the reset followed about half a minute later. Prepared a
+local diagnostic successor source (per-device `WAIT`/`LOCK` records and a built-in
+device-phase sampler); unit tests, existing journal/suspend suites and a production
+config cross-compile pass. Not built, flashed or deployed: a planning/source row is
+not hardware authorization. Hardware/memory/production scope is unchanged (the
+retained SRAM region and ring size are not modified), no milestone is promoted
+and source/ROM/recovery provenance is not repeated. Next gate: owner decision on
+building and installing the diagnostic successor.
+
+**03 evening evidence refresh, 2026-10-08:** host-lease-protected read-only
+archive67 preserves first return, pstore/PM, persistent journal and health
+after the owner's roughly seven-hour absence. Boot81dce40c ended with an
+orderly `reason:user` poweroff at approximately09:55:39 CEST; the current
+bootad0d5416 began about16 seconds later. Those times use host-anchored
+BOOTTIME because device wall time is unreliable. This is a separate event from
+the earlier unclean reset.
+The03 guard still names failed boot0132fb21 and remains pending. Current SPM
+entries/resumes0/0,421 guard refusals before cable return, and matching
+BOOTTIME/MONOTONIC growth show no whole-system sleep on this boot. CPU0 runtime
+DORMANT continues without recorded restore failure. The device journal's
+provisional battery estimate falls57%→32% in about7.0h unplugged, with ADC
+3.862→3.736V; connected at17:00 it reports Charging31% and no charger errors.
+The previous boot's63% versus new boot57% crosses poweroff and load changes;
+do not treat that difference as measured off-state consumption. No calibrated
+capacity or pack current is available.
+
+Installed03 hashes match archive65; taint0, responsive paused player, PCM
+closed, radios/scan off, ext4 errors/warnings0 and configured USB remain
+confirmed. The first return's pstore contains `Power down`, consistent with
+the orderly ledger. No build, flash, deployment, reboot, guard clear, forced
+sleep or new trial was performed. This adds physical evidence without changing
+hardware/memory/production scope or promoting a milestone. Admission remains
+MORE_WORK_REQUIRED: resolve the recurring pre-SPM failure, then qualify
+controlled30-minute/two-hour/endurance and independent reliability/electrical
+gaps. Source/ROM/recovery provenance is unchanged.
+
+**03 morning evidence refresh, 2026-10-08:** the owner reports approximately
+six hours unplugged, about88% at removal and55% in the morning, and confirms
+no manual restart after installation. Read-only, host-lease-protected archive
+`out/deep-sleep-final/evidence/20261008/66-image03-morning-return/` preserves
+the first SSH state, retained PM/pstore export and persistent logs before any
+further inspection. Exact03 sources/helpers remain unchanged. Boot changed
+from0132fb21 to81dce40c; the boot ledger marks the preceding shutdown unclean.
+
+Coverage changes from03 suspend NOT_RUN to **FAILED automatic suspend attempt**:
+the old boot requested kernel suspend at BOOTTIME398.407s; retained sequence8
+stops at DPM_PREPARED, with successful callback records through11008000.i2c
+at398.638s. No completed SPM interval or return survives. The owner-uninitiated
+reboot has no reported RGU reset cause and no retained panic; neither the exact
+failing callback nor watchdog causation is established. The new boot records
+SPM0/0 and380 `sleep_recovery_required` refusals over roughly6.44h. Its matching
+03 guard remains pending and is preserved. This repeats the known device-phase
+failure pattern on03; earlier02 successful returns remain narrow historical
+evidence, not reliability acceptance.
+
+Battery #16/#27/#28: pre-cable journal confirms88% and55%, with entry ADC
+4.092187V and final Discharging sample3.821484V. The last dark sample was
+56%/3.846972V; the55% endpoint is screen-on. SOC is provisional; the approximate
+33-point drop is not a measured capacity/current or battery-health finding.
+CPU/idle #28/#34: runtime CPU0 DORMANT now has807610 entries/resumes and zero
+restore failures on this03 battery boot, distinct from full-system suspend;
+complete cold-C3/electrical qualification remains PARTIAL. Display/audio/radios/
+storage #29/#31/#32: morning application responds, playback paused, PCM closed,
+scan/radios off, taint0, ext4 errors/warnings0. Existing warm-display and poweroff
+defects, controlled30-minute/two-hour/endurance, charging/electrical and #33
+release gates remain open; historical#30 is unchanged.
+
+This is an evidence refresh within the active investigation, with no milestone
+activation/closure or hardware/memory/production expansion. No build, flash,
+deployment, guard clear, forced sleep or new trial occurred. The roadmap and
+[overnight report](../validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md#32-overnight-result--2026-10-08)
+record the failed observation. Next smallest gap is the recurring pre-SPM
+device-suspend failure, before any repeat endurance acceptance. Device wall time
+was reset to build_floor and is not established; use per-boot counters and host
+capture times. Unchanged source/ROM/recovery provenance was not repeated.
+
 **03 installation evidence refresh, 2026-10-08:** archive65 records the owner
 flash and requested quick SSH check on boot0132fb21..., taint0. Exact paired
 sources, kernel/root identity and installed Reborn/three helper hashes match03.
