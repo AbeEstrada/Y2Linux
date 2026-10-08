@@ -107,10 +107,14 @@ class ProductAutoSleep(unittest.TestCase):
         self.assertEqual(receipt['cycles'], 2)
         self.assertEqual(receipt['maintenance_wakes'], 1)
         self.assertEqual(receipt['suspended_seconds'], 625)
+        self.assertLess(receipt['first_entry']['boottime_s'], receipt['entry']['boottime_s'])
+        self.assertEqual(receipt['first_entry']['voltage_uv'], 3900000)
         self.assertEqual(receipt['product']['wake_reason'], 'power')
         self.assertEqual(receipt['product']['state'], 'restored')
         self.assertEqual(self.rpc, ['sleep_prepare', 'sleep_restore'])
         self.assertFalse(self.ctx.json(pm.GUARD)['pending'])
+        record(self.ctx, 'requested', 0, mode='product')
+        self.assertNotIn('first_entry', self.ctx.json('/data/system/platform/suspend-last.json'))
 
     def test_rtc_restores_without_automatic_reentry(self):
         self.assertEqual(self.run_sleep(lambda ctx: self.returned(rtc=True)), 0)

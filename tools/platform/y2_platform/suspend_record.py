@@ -39,6 +39,9 @@ def record(ctx, stage, result=None, reason=None, reborn_ack=None, mode=None):
                           'monotonic_s': time.monotonic(),
                           'voltage_uv': ctx.integer('/sys/class/power_supply/BAT0/voltage_now'),
                           'battery': ctx.json('/run/y2/power.json', {}).get('battery')}
+        # Maintenance returns update entry for the next segment. Retain the
+        # actual first pre-suspend ADC/timestamp for the whole sleep interval.
+        value.setdefault('first_entry', value['entry'])
     elif stage in {'kernel_resumed', 'restoring_radios'}:
         value['wake_irqs_after'] = wake_irqs(ctx.read('/proc/interrupts'))
     if stage == 'kernel_resumed':

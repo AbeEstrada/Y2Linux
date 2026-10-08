@@ -71,6 +71,20 @@ class Journal(unittest.TestCase):
         self.assertEqual(self.journal.failures, 1)
         self.assertEqual(len(self.rows()), 1)
 
+    def test_completed_sleep_endpoints_survive_a_later_refusal(self):
+        self.journal.observe('Normal', {}, now=0)
+        receipt = self.ctx.path('/data/system/platform/suspend-last.json')
+        completed = {'mode': 'product', 'stage': 'complete_result_0', 'cycles': 4,
+                     'suspended_seconds': 1840.5, 'maintenance_wakes': 3,
+                     'first_entry': {'boottime_s': 100, 'voltage_uv': 4000000},
+                     'resume': {'boottime_s': 1950, 'voltage_uv': 3980000}}
+        receipt.write_text(json.dumps(completed))
+        self.journal.observe('Suspend', {}, event='suspend_complete_result_0', now=1)
+        receipt.write_text(json.dumps({'stage': 'refused_charger_active'}))
+        self.journal.observe('Suspend', {}, event='suspend_refused_charger_active', now=2)
+        self.assertEqual(self.rows()[-2]['suspend'], completed)
+        self.assertIsNone(self.rows()[-1]['suspend']['first_entry'])
+
     def test_overnight_retention_at_maximum_row_size_and_real_sleep_receipt(self):
         # An eight-hour night plus eight hours before/after must survive even
         # with the largest permitted row; rotation must not depend on SOC.

@@ -88,6 +88,9 @@ class PowerJournal:
                 return False
             ctx = self.ctx
             from .sleep import status as sleep_status
+            receipt = ctx.json('/data/system/platform/suspend-last.json', {})
+            if not isinstance(receipt, dict):
+                receipt = {}
             row = {'schema': 1, 'event': event or ('state_change' if safety else 'snapshot'),
                    'wall_time': time.time(), 'monotonic_s': now,
                    'boottime_s': time.clock_gettime(time.CLOCK_BOOTTIME),
@@ -102,6 +105,11 @@ class PowerJournal:
                    'idle_policy': ctx.json('/run/y2/cpu-idle-policy.json'),
                    'idle_counters': idle_counters(ctx),
                    'sleep': sleep_status(ctx),
+                   # Preserve completed intervals when a later refusal replaces
+                   # suspend-last.json. This shares the existing event cadence.
+                   'suspend': {key: receipt.get(key) for key in
+                               ('mode', 'stage', 'first_entry', 'resume', 'cycles',
+                                'suspended_seconds', 'maintenance_wakes')},
                    'kernel_pm': ctx.read('/sys/firmware/y2_pm/state', limit=8192)}
             self.append(row, durable=bool(event or safety))
             return True
