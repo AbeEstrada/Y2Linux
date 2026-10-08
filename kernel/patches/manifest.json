@@ -280,7 +280,7 @@
       "path": "drivers/base/power/main.c",
       "patch": "0059-pm-balance-prepare-refusal.patch",
       "base_sha256": "ab16c504cce725a92d7af7d005e41d44e56ff476aa58faa0a8e412f6a8961a76",
-      "result_sha256": "7a8ac3c10f9e248e06c7b07f549a60edaee53aaa30a5884fcbcb4e2aef2d46a9"
+      "result_sha256": "cf886805f013e77425b0c80203b3949b74a393254027695a799c9dbf5b04f9b0"
     },
     {
       "path": "kernel/power/suspend.c",

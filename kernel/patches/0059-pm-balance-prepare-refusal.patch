@@ -48,7 +48,38 @@
  		trace_device_pm_callback_end(dev, 0);
  
  		put_device(dev);
-@@ -2218,7 +2236,9 @@
+@@ -1857,6 +1875,9 @@
+ 	TRACE_DEVICE(dev);
+ 	TRACE_SUSPEND(0);
+ 
++	/* Retained trail for the silent waits below: child/consumer completion
++	 * and the runtime PM barrier, then the device lock. */
++	y2_pm_device(dev, Y2_PM_PHASE_WAIT, 0, false);
+ 	dpm_wait_for_subordinate(dev, async);
+ 
+ 	if (READ_ONCE(async_error)) {
+@@ -1908,7 +1929,9 @@
+ 	dev->power.must_resume = !dev_pm_test_driver_flags(dev, DPM_FLAG_MAY_SKIP_RESUME);
+ 
+ 	dpm_watchdog_set(&wd, dev);
++	y2_pm_device(dev, Y2_PM_PHASE_LOCK, 0, false);
+ 	device_lock(dev);
++	y2_pm_device(dev, Y2_PM_PHASE_LOCK, 0, true);
+ 
+ 	if (dev->pm_domain) {
+ 		info = "power domain ";
+@@ -1934,8 +1957,10 @@
+ 			callback = pm_op(dev->bus->pm, state);
+ 		} else if (dev->bus->suspend) {
+ 			pm_dev_dbg(dev, state, "legacy bus ");
++			y2_pm_device(dev, Y2_PM_PHASE_SUSPEND, 0, false);
+ 			error = legacy_suspend(dev, state, dev->bus->suspend,
+ 						"legacy bus ");
++			y2_pm_device(dev, Y2_PM_PHASE_SUSPEND, error, true);
+ 			goto End;
+ 		}
+ 	}
+@@ -2218,7 +2243,9 @@
  		mutex_unlock(&dpm_list_mtx);
  
  		trace_device_pm_callback_start(dev, "", state.event);
@@ -58,7 +89,7 @@
  		trace_device_pm_callback_end(dev, error);
  
  		mutex_lock(&dpm_list_mtx);
-@@ -2257,11 +2277,15 @@
+@@ -2257,11 +2284,15 @@
  	ktime_t starttime = ktime_get();
  	int error;
  

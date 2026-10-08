@@ -18,7 +18,7 @@ PYTHONPATH=/project/tests python3 -m unittest tests.test_power tests.test_charge
 # tests.test_reborn_splash additionally requires native libdrm and Pillow;
 # it is a required packaging-host check, listed in tests/README.md.
 python3 -m unittest tests.test_power_journal tests.test_boot_retained tests.test_power_audit tests.test_display_takeover -v
-python3 -m unittest tests.test_audio_idle tests.test_connectivity_supervisor tests.test_pm_replay_trace tests.test_suspend_cpu_pm tests.test_product_auto_sleep tests.test_pm_control_write -v
+python3 -m unittest tests.test_audio_idle tests.test_connectivity_supervisor tests.test_pm_replay_trace tests.test_suspend_cpu_pm tests.test_product_auto_sleep tests.test_pm_control_write tests.test_dpm_stall_diagnostics -v
 for script in /project/initramfs/production/init /project/initramfs/production/storage.sh /project/buildroot/board/y2/production-overlay/etc/init.d/* /project/buildroot/board/y2/production-overlay/usr/sbin/*; do
     qemu-arm -cpu cortex-a7 -L /build/buildroot/target /build/buildroot/target/bin/busybox sh -n "$script"
 done

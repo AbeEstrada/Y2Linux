@@ -26,6 +26,9 @@
 #include <linux/irqnr.h>
 #include <linux/irqdesc.h>
 #include <linux/kernel_stat.h>
+#include <linux/console.h>
+#include <linux/printk.h>
+#include <linux/sched/debug.h>
 #include "pm-journal.h"
 #include "pm-journal-policy.h"
 #define Y2_PM_PHYS 0x0010dc00
@@ -34,7 +37,7 @@ static unsigned journal_record[Y2_PM_WORDS], previous[Y2_PM_WORDS], slot;
 static unsigned previous_reset_entry;
 static DEFINE_RAW_SPINLOCK(journal_lock);
 static bool ready;
-static void thaw_stall_mark(unsigned stage);
+static void thaw_stall_mark(unsigned stage, int error);
 /* Retained device-callback ring and what the previous boot left in SRAM. */
 static unsigned ring_sequence;
 static unsigned previous_ring[Y2_PM_RING_ENTRIES][Y2_PM_RING_WORDS];
@@ -230,7 +233,7 @@ void y2_pm_mark(unsigned stage, int error)
 	/* Timed stage entry interleaved with the callback trail. */
 	ring_put(stage << 16 | Y2_PM_PHASE_MARK << 8 | 1, error, NULL);
 	raw_spin_unlock_irqrestore(&journal_lock, flags);
-	thaw_stall_mark(stage);
+	thaw_stall_mark(stage, error);
 	/* Stage progress extends the backstop; a stall of its full period resets. */
 	y2_pm_backstop_ping();
 }
@@ -666,8 +669,97 @@ static void thaw_stall_sample(struct work_struct *work)
 	if (thaw_stall_round < 2 && atomic_read(&thaw_stall_armed))
 		schedule_delayed_work(&thaw_stall_work, 12 * HZ);
 }
-static void thaw_stall_mark(unsigned stage)
+/* Device-phase stall evidence. A normal device phase lasts tens of
+ * milliseconds, yet the exact03 failures stop after DPM_PREPARED with every
+ * logged callback returned. If DEVICES_SUSPENDED is not reached within 4 s
+ * (then 12 s) of DPM_PREPARED, keep a compact record in the ring (the
+ * suspender's wait symbol and up to three uninterruptible tasks) and write full
+ * stacks of the suspender, blocked tasks and busy workqueues to the
+ * RAM console, whose suspended flag is lifted for the report only. Both rounds
+ * precede the 30 s backstop reset. A hard bus hang that stops this worker is
+ * itself evidence: the ring then ends at the last per-device record. The timer
+ * is cancelled by the next stage mark when the phase completes normally. */
+static struct delayed_work dpm_stall_work;
+static atomic_t dpm_stall_armed = ATOMIC_INIT(0);
+static unsigned dpm_stall_round;
+static pid_t dpm_suspender;
+static int dpm_saved_loglevel;
+static bool dpm_loglevel_saved;
+static void dpm_stall_console(void)
 {
+	struct console *con;
+	if (!dpm_loglevel_saved) {
+		dpm_saved_loglevel = READ_ONCE(console_loglevel);
+		dpm_loglevel_saved = true;
+	}
+	WRITE_ONCE(console_loglevel, CONSOLE_LOGLEVEL_DEBUG);
+	console_list_lock();
+	for_each_console(con)
+		if (!strcmp(con->name, "ramoops") && (con->flags & CON_ENABLED))
+			console_srcu_write_flags(con, con->flags & ~CON_SUSPENDED);
+	console_list_unlock();
+}
+static void dpm_stall_sample(struct work_struct *work)
+{
+	struct task_struct *g, *t, *s;
+	unsigned reported = 0, blocked = 0;
+	char name[Y2_PM_RING_NAME];
+	if (!atomic_read(&dpm_stall_armed))
+		return;
+	y2_pm_note("dpm_stall", ++dpm_stall_round);
+	rcu_read_lock();
+	s = find_task_by_vpid(READ_ONCE(dpm_suspender));
+	if (s) {
+		snprintf(name, sizeof(name), "S:%s", s->comm);
+		y2_pm_note(name, (int)get_wchan(s));
+	}
+	for_each_process_thread(g, t) {
+		if (!(READ_ONCE(t->__state) & TASK_UNINTERRUPTIBLE) ||
+		    (READ_ONCE(t->__state) & TASK_NOLOAD))
+			continue;
+		blocked++;
+		if (t != s && reported < 3) {
+			snprintf(name, sizeof(name), "D:%s", t->comm);
+			y2_pm_note(name, (int)get_wchan(t));
+			reported++;
+		}
+	}
+	rcu_read_unlock();
+	y2_pm_note("dpm_blocked", blocked);
+	dpm_stall_console();
+	pr_err("Y2_DPM_STALL: round=%u blocked=%u\n", dpm_stall_round, blocked);
+	rcu_read_lock();
+	s = find_task_by_vpid(READ_ONCE(dpm_suspender));
+	if (s)
+		sched_show_task(s);
+	rcu_read_unlock();
+	show_state_filter(TASK_UNINTERRUPTIBLE);
+	if (dpm_stall_round < 2 && atomic_read(&dpm_stall_armed)) {
+		schedule_delayed_work(&dpm_stall_work, 8 * HZ);
+	} else if (!atomic_read(&dpm_stall_armed) && dpm_loglevel_saved) {
+		/* The phase ended while this report ran. */
+		WRITE_ONCE(console_loglevel, dpm_saved_loglevel);
+		dpm_loglevel_saved = false;
+	}
+}
+static void dpm_stall_mark(unsigned stage, int error)
+{
+	if (stage == Y2_PM_DPM_PREPARED && !error) {
+		WRITE_ONCE(dpm_suspender, current->pid);
+		dpm_stall_round = 0;
+		atomic_set(&dpm_stall_armed, 1);
+		mod_delayed_work(system_wq, &dpm_stall_work, 4 * HZ);
+	} else if (atomic_xchg(&dpm_stall_armed, 0)) {
+		cancel_delayed_work(&dpm_stall_work);
+		if (dpm_loglevel_saved) {
+			WRITE_ONCE(console_loglevel, dpm_saved_loglevel);
+			dpm_loglevel_saved = false;
+		}
+	}
+}
+static void thaw_stall_mark(unsigned stage, int error)
+{
+	dpm_stall_mark(stage, error);
 	if (stage == Y2_PM_TASKS_THAWED) {
 		WRITE_ONCE(thaw_suspender, current->pid);
 		thaw_stall_round = 0;
@@ -751,6 +843,7 @@ static int __init journal_init(void)
 		release_mem_region(Y2_PM_PHYS, Y2_PM_REGION);
 	} else {
 		INIT_DELAYED_WORK(&thaw_stall_work, thaw_stall_sample);
+		INIT_DELAYED_WORK(&dpm_stall_work, dpm_stall_sample);
 		register_die_notifier(&y2_pm_die_nb);
 		atomic_notifier_chain_register(&panic_notifier_list, &y2_pm_panic_nb);
 		ready = true;

@@ -76,6 +76,9 @@ enum y2_pm_phase {
 	Y2_PM_PHASE_EARLY,
 	Y2_PM_PHASE_RESUME,
 	Y2_PM_PHASE_COMPLETE,
+	/* Fix04: the silent steps of device_suspend() before a callback. */
+	Y2_PM_PHASE_WAIT,
+	Y2_PM_PHASE_LOCK,
 };
 struct device;
 /* Kernel-owned RGU backstop provider (registered by the watchdog driver). */

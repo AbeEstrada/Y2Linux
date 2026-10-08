@@ -604,7 +604,7 @@ static unsigned readl(const void *p) { return *(const unsigned *)p; }
 static int sysfs_emit(char *buf, const char *fmt, ...) { va_list a; va_start(a, fmt); int n = vsnprintf(buf, 4096, fmt, a); va_end(a); return n; }
 static void y2_pm_backstop_ping(void);
 static unsigned thaw_marks, last_thaw_stage;
-static void thaw_stall_mark(unsigned stage) { thaw_marks++; last_thaw_stage = stage; }
+static void thaw_stall_mark(unsigned stage, int error) { (void)error; thaw_marks++; last_thaw_stage = stage; }
 '''
 
 
