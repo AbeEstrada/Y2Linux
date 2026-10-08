@@ -18,8 +18,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SSH = ['ssh', '-T', '-oBatchMode=yes', '-oStrictHostKeyChecking=yes', '-oConnectTimeout=5',
        '-i', str(Path.home() / '.ssh/y2linux_ed25519'), 'root@10.42.0.1']
-ACCEPTED = {'build_git_commit': '5e267571d584da7fbe356d3161801ba15f87fa57',
-            'reborn_source_commit': '97ff8c357bab12319087740d7c97b5051e6588f5'}
+# Reviewed images the read-only probe may be armed on (exact commits, no wildcards).
+ACCEPTED_COMMITS = ('5e267571d584da7fbe356d3161801ba15f87fa57',   # DEEPSLEEP-FINAL-04
+                    '837b6146ee4d0f551b69cfaddd686a69ce56a060')   # POWER-FINAL-05
+ACCEPTED_REBORN = '97ff8c357bab12319087740d7c97b5051e6588f5'
 
 
 def ssh(command, stdin=None, timeout=30):
@@ -41,7 +43,8 @@ def main():
         versions = json.JSONDecoder().raw_decode(text)[0]
         rest = text[json.JSONDecoder().raw_decode(text)[1]:].split()
         boot_id, taint = rest[0], rest[1]
-        if any(versions.get(k) != v for k, v in ACCEPTED.items()) or taint != '0':
+        if (versions.get('build_git_commit') not in ACCEPTED_COMMITS
+                or versions.get('reborn_source_commit') != ACCEPTED_REBORN or taint != '0'):
             raise SystemExit('unexpected image or tainted kernel: refusing')
         if 'suspend-probe.py' in ' '.join(rest[2:]) and 'No such file' not in ' '.join(rest[2:]):
             raise SystemExit('a probe file already exists on the device: refusing')
