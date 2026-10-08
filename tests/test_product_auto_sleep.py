@@ -122,6 +122,71 @@ class ProductAutoSleep(unittest.TestCase):
         self.assertEqual(receipt['cycles'], 1)
         self.assertEqual(receipt['product']['wake_reason'], 'rtc')
 
+    def test_battery_notification_during_maintenance_uses_a_fresh_handshake(self):
+        entries = []
+        writes = []
+        original_write = pm.control_write
+
+        def kernel_control(ctx, name, value):
+            if name == '/sys/power/wakeup_count':
+                writes.append(value.strip())
+                # Model pm_save_wakeup_count: a completed event since the
+                # read invalidates the store even when no IRQ stays active.
+                if value.strip() != ctx.read(name):
+                    raise OSError(errno.EINVAL, 'intervening battery notification')
+            original_write(ctx, name, value)
+
+        def enter(ctx):
+            entries.append(1)
+            self.returned(timer=len(entries) == 1, rtc=len(entries) != 1)
+
+        def safety_tick(seconds):
+            self.assertEqual(seconds, 2)
+            # A routine post-resume BAT0 notification: no cable, Power or
+            # RTC event, and the normal battery safety owner stays healthy.
+            self.write('/sys/power/wakeup_count', '9')
+            self.write('/run/y2/power.json', json.dumps({
+                'boot_id': 'same-boot', 'state': 'Normal',
+                'monotonic_ns': time.monotonic_ns()}))
+
+        with patch.object(pm, 'control_write', side_effect=kernel_control), \
+                patch('y2_platform.product_sleep.time.sleep', side_effect=safety_tick):
+            self.assertEqual(self.run_sleep(enter), 0,
+                             self.ctx.json('/data/system/platform/suspend-last.json').get('product'))
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(writes, ['8', '9'])
+        receipt = self.ctx.json('/data/system/platform/suspend-last.json')
+        self.assertEqual(receipt['maintenance_wakes'], 1)
+        self.assertEqual(receipt['product']['wake_reason'], 'rtc')
+        self.assertEqual(self.rpc, ['sleep_prepare', 'sleep_restore'])
+
+    def test_new_wakeup_after_maintenance_read_still_cancels_entry(self):
+        entries = []
+        stores = []
+        original_write = pm.control_write
+
+        def kernel_control(ctx, name, value):
+            if name == '/sys/power/wakeup_count':
+                stores.append(value.strip())
+                if len(stores) == 2:
+                    self.write(name, '10')  # event after the fresh read
+                if value.strip() != ctx.read(name):
+                    raise OSError(errno.EINVAL, 'new wakeup before entry')
+            original_write(ctx, name, value)
+
+        def enter(ctx):
+            entries.append(1)
+            self.returned(timer=True)
+
+        with patch.object(pm, 'control_write', side_effect=kernel_control), \
+                patch('y2_platform.product_sleep.time.sleep'):
+            self.assertEqual(self.run_sleep(enter), 2)
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(len(stores), 2)
+        receipt = self.ctx.json('/data/system/platform/suspend-last.json')
+        self.assertEqual(receipt['product']['reason'], 'wake_event_in_progress')
+        self.assertEqual(self.rpc, ['sleep_prepare', 'sleep_restore'])
+
     def test_kernel_busy_restores_once_without_claiming_sleep_or_retrying(self):
         calls = []
         def busy(ctx):
@@ -179,6 +244,21 @@ class ProductAutoSleep(unittest.TestCase):
         def gap(seconds):
             self.power += 1
             self.irqs()
+        with patch('y2_platform.product_sleep.time.sleep', side_effect=gap):
+            self.assertEqual(self.run_sleep(enter), 2)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(self.rpc, ['sleep_prepare', 'sleep_restore'])
+        self.assertFalse(self.ctx.json(pm.GUARD)['pending'])
+
+    def test_rtc_during_maintenance_gap_cancels_next_entry(self):
+        calls = []
+        def enter(ctx):
+            calls.append(1)
+            self.returned(timer=True)
+        def gap(seconds):
+            self.rtc += 1
+            self.irqs()
+            self.write('/sys/power/wakeup_count', '9')
         with patch('y2_platform.product_sleep.time.sleep', side_effect=gap):
             self.assertEqual(self.run_sleep(enter), 2)
         self.assertEqual(len(calls), 1)

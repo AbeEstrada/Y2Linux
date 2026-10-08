@@ -318,6 +318,12 @@ def execute_owned(ctx, fd, enter, locks):
             previous_irqs = value['wake_irqs_after']
             record(ctx, 'maintenance_wake', 0)
             time.sleep(2)
+            # The safety tick may publish a normal BAT0 notification. Begin a
+            # new handshake after that pause; reusing the pre-tick count would
+            # reject an otherwise safe next cycle. Preserve previous_irqs so
+            # Power/RTC during the pause still cancel entry, and the atomic
+            # count store still rejects any later event.
+            count = None
     except Refused as error:
         result = 2
         record(ctx, 'product_refused', result, reason=str(error))
