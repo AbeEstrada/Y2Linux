@@ -18,7 +18,14 @@ if before.get('screen_off') is not want_off:
    f.write(struct.pack('llHHi',0,0,1,116,value))
    f.write(struct.pack('llHHi',0,0,0,0,0))
    if value: time.sleep(.025)
- time.sleep(.5)
-after=application_rpc(ctx,'status')
+ # The platform request is asynchronous; do not inject a second gesture just
+ # because its refusal/display fallback takes longer than half a second.
+ deadline=time.monotonic()+5
+ while True:
+  after=application_rpc(ctx,'status')
+  if after.get('screen_off') is want_off or time.monotonic()>=deadline:break
+  time.sleep(.25)
+else:
+ after=before
 print(json.dumps({'before_screen_off':before.get('screen_off'),'after_screen_off':after.get('screen_off'),'playback':after.get('playback',{}).get('state'),'origin':'synthetic balanced brief Power gesture; not mechanical input latency proof'}))
 if after.get('screen_off') is not want_off: raise SystemExit('screen transition failed')

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resident clean-image PM stages and one bounded, source-matched real trial.
+"""Resident clean-image PM stages and bounded, source-matched real trials.
 
 The host owns the device lease and supplies the freshly verified boot ID.
 A live maintenance lock excludes product auto-entry during this diagnostic;
@@ -9,6 +9,7 @@ Use BOOTTIME for the owner gesture schedule; never retry a failed entry.
 """
 import argparse
 import fcntl
+import hashlib
 import importlib.util
 import io
 import json
@@ -44,11 +45,28 @@ def main():
     parser.add_argument('--wake', choices=('power', 'rtc'), required=True)
     parser.add_argument('--alarm', type=int, required=True)
     parser.add_argument('--entry-after', type=int, required=True)
+    parser.add_argument('--cycle-check', action='store_true',
+                        help='after a reviewed clean return: three RTC cycles, scheduled Power, RTC five minutes')
+    parser.add_argument('--stack-observer', action='store_true',
+                        help='explicit diagnostic-only run with the exact matching stack observer')
     args = parser.parse_args()
     require(30 <= args.alarm <= 600, 'existing RTC bound')
     require(15 <= args.entry_after <= 300, 'bounded gesture schedule')
     require(not args.stages or args.entry_after >= 180, 'stage schedule too short')
     require(args.wake != 'power' or args.alarm >= 300, 'Power needs generous RTC fallback')
+    require(not args.cycle_check or (not args.stages and not args.stack_observer
+            and args.wake == 'power' and args.alarm == 300 and args.entry_after >= 180),
+            'cycle check requires clean Power/RTC300 and at least 180 seconds preparation')
+    # label, kernel test mode, RTC fallback, expected wake, scheduled offset,
+    # minimum actual SPM residence. A failed trial is never retried.
+    if args.cycle_check:
+        plan = [(f'rtc-{n}', 'none', 30, 'rtc', 0, 0) for n in range(1, 4)]
+        plan += [('power', 'none', 300, 'power', args.entry_after, 0),
+                 ('rtc-5min', 'none', 310, 'rtc', 0, 300)]
+    else:
+        modes = ['freezer', 'devices', 'platform', 'processors', 'core'] if args.stages else []
+        plan = [(mode, mode, 0, args.wake, 0, 0) for mode in modes]
+        plan += [('none', 'none', args.alarm, args.wake, args.entry_after, 0)]
     os.umask(0o077)
     os.environ['PATH'] = '/usr/sbin:/usr/bin:/sbin:/bin'
     sys.path.insert(0, '/usr/lib/y2-platform')
@@ -59,7 +77,15 @@ def main():
     require(all(versions.get(k) == v for k, v in EXPECTED.items()), 'different installed source')
     require(ctx.read('/proc/sys/kernel/osrelease') == EXPECTED['kernel_version'], 'different kernel')
     require(ctx.read('/proc/sys/kernel/random/boot_id') == args.boot_id, 'different boot')
-    require(ctx.read('/proc/sys/kernel/tainted') == '0', 'diagnostic taint is not admitted')
+    expected_taint = '4096' if args.stack_observer else '0'
+    require(ctx.read('/proc/sys/kernel/tainted') == expected_taint, 'unexpected kernel taint')
+    if args.stack_observer:
+        require(Path('/sys/module/y2_pm_device_stack').is_dir(), 'stack observer absent')
+        require(hashlib.sha256(Path('/run/y2/y2-pm-device-stack.ko').read_bytes()).hexdigest() ==
+                '97371e07df3c24e31b0a2cf4b4b999e0cca12ffa658393020ae9e8b0f1e5c0bd',
+                'different diagnostic observer')
+        require({line.split()[0] for line in Path('/proc/modules').read_text().splitlines()} ==
+                {'y2_pm_device_stack', 'mediatek_drm'}, 'unexpected diagnostic module')
     require(spm_state(ctx).get('system_sleep_abi') == '1', 'built-in context fix absent')
     require(ctx.read('/sys/module/printk/parameters/console_suspend') == 'Y', 'normal console PM required')
     require(ctx.read('/sys/class/rtc/rtc0/wakealarm') in ('', '0'), 'existing RTC alarm')
@@ -67,7 +93,8 @@ def main():
     maintenance = os.open('/data/system/platform/.maintenance.lock',
                           os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
     fcntl.flock(maintenance, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    root = Path('/data/logs/deepsleep-clean-' + args.boot_id[:8] + '-' + str(int(time.monotonic())))
+    kind = 'observed' if args.stack_observer else 'clean'
+    root = Path('/data/logs/deepsleep-' + kind + '-' + args.boot_id[:8] + '-' + str(int(time.monotonic())))
     root.mkdir(mode=0o700)
     spec = importlib.util.spec_from_file_location('q', '/run/y2/qualify-platform-v1-suspend.py')
     q = importlib.util.module_from_spec(spec)
@@ -89,7 +116,7 @@ def main():
 
     def guard():
         require(ctx.read('/proc/sys/kernel/random/boot_id') == args.boot_id, 'boot changed')
-        require(ctx.read('/proc/sys/kernel/tainted') == '0', 'kernel tainted')
+        require(ctx.read('/proc/sys/kernel/tainted') == expected_taint, 'kernel taint changed')
         require(ctx.read('/sys/class/power_supply/y2-usb-presence/online') == '0', 'USB present')
         require(ctx.read('/sys/class/power_supply/BAT0/status') == 'Discharging', 'not discharging')
         require((ctx.integer('/sys/class/power_supply/BAT0/voltage_now') or 0) >= 3800000,
@@ -125,7 +152,9 @@ def main():
         os.sync()
 
     record('armed.json', {'boot_id': args.boot_id, 'identity': EXPECTED, 'stages': args.stages,
+                         'diagnostic_only': args.stack_observer, 'expected_taint': int(expected_taint),
                          'wake': args.wake, 'alarm': args.alarm, 'entry_after': args.entry_after,
+                         'cycle_check': args.cycle_check, 'plan': plan,
                          'schedule_clock': 'CLOCK_BOOTTIME', 'automatic_retry': False,
                          'product_quarantine_until_host_review': True,
                          'maintenance_lock_pid': os.getpid()})
@@ -141,31 +170,43 @@ def main():
         time.sleep(8)
         guard()
         preserve('before-stages')
-        modes = ['freezer', 'devices', 'platform', 'processors', 'core'] if args.stages else []
-        for mode in modes + ['none']:
+        for label, mode, alarm, wake, scheduled, minimum_residence in plan:
             guard()
             # A reset during this exact attempt must not start an automatic loop.
             guard_record(ctx, True)
             if mode == 'none':
-                require(boottime() < unplugged + args.entry_after - 10, 'missed real-entry schedule')
-                preserve('before-real')
-                require(boottime() < unplugged + args.entry_after - 2, 'archive exceeded schedule')
-                time.sleep(max(0, unplugged + args.entry_after - boottime()))
+                if scheduled:
+                    require(boottime() < unplugged + scheduled - 10, 'missed real-entry schedule')
+                preserve('before-' + label)
+                if scheduled:
+                    require(boottime() < unplugged + scheduled - 2, 'archive exceeded schedule')
+                    time.sleep(max(0, unplugged + scheduled - boottime()))
                 guard()
-            directory = root / mode
+            directory = root / label
             directory.mkdir(mode=0o700)
-            record(mode + '-start.json', {'boottime': boottime(), 'monotonic': time.monotonic()})
+            record(label + '-start.json', {'boottime': boottime(), 'monotonic': time.monotonic()})
             with (directory / 'log').open('x') as stream:
                 result = subprocess.run(['python3', '-I', '/run/y2/suspend_platform_device.py',
-                                         str(directory), mode, str(args.alarm if mode == 'none' else 0),
-                                         args.wake], stdout=stream, stderr=stream)
+                                         str(directory), mode, str(alarm), wake], stdout=stream, stderr=stream)
             require(result.returncode == 0 and (directory / 'result.json').is_file(), 'missing return receipt')
             value = json.loads((directory / 'result.json').read_text())
             verdict = q.verdict(value)
-            record(mode + '-verdict.json', verdict)
-            require(verdict['pass'], 'failed ' + mode + ' verdict; no retry')
+            if minimum_residence:
+                state = q.fields(value['after']['files'].get(
+                    '/sys/devices/platform/10006000.power-controller/state'))
+                ticks = int(state.get('ticks32k', '0'), 0)
+                verdict['checks']['minimum_spm_residence'] = ticks >= minimum_residence * 32768
+                verdict['pass'] = all(verdict['checks'].values())
+                verdict['deep_resume'] = verdict['pass']
+            if args.stack_observer:
+                verdict['diagnostic_checks_pass'] = all(
+                    passed for check, passed in verdict['checks'].items() if check != 'untainted')
+            record(label + '-verdict.json', verdict)
+            require(verdict.get('diagnostic_checks_pass', verdict['pass']),
+                    'failed ' + label + ' verdict; no retry')
             time.sleep(2)
         record('complete.json', {'same_boot': ctx.read('/proc/sys/kernel/random/boot_id') == args.boot_id,
+                                'diagnostic_only': args.stack_observer,
                                 'boottime': boottime(), 'review_required': True})
     except Exception as error:
         record('error.json', {'type': type(error).__name__, 'error': str(error), 'boottime': boottime()})
