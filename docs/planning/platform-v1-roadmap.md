@@ -2,6 +2,145 @@
 
 ## Current deep-sleep investigation — 2026-10-07
 
+**2026-10-08 session stop at the owner's request:** archive62 preserves the
+early USB return from trial61. Normal policy accumulated 943.163696289 seconds
+of full suspend in two same-boot returns, including one 600-second maintenance
+wake with the screen and radios still asleep followed by automatic re-entry.
+SPM8→10, taint0, COMPLETE667, Reborn restored, ext4 errors0. USB insertion ends
+the second interval; the helper labels that wake unknown. This is interrupted,
+not a thirty-minute drain pass. Archive63 verifies no test/helper, alarm or
+backstop remains active and product quarantine is restored. USB/charging work.
+No further deployment, test, reboot or image work is scheduled tonight.
+
+At the next session, verify identity and live overlays again, qualify the local
+maintenance correction with a bounded short normal-policy test, then repeat
+thirty minutes before two hours/overnight. No milestone is closed. The audit
+below retains all independent reliability and electrical gaps.
+
+During61, a local regression exposes a second maintenance issue:
+ordinary battery notifications can stale the pre-pause wake count and cancel
+re-entry. Local-onlyd43b592 refreshes the count after the safety interval without
+losing Power/RTC or the atomic late-event guard;27 tests pass. It is not deployed.
+The physical interruption did not reproduce this race: the first maintenance
+re-entry succeeded. Qualify the corrected source before longer endurance.
+
+Archive59 passes normal automatic sleep with the recorded Python overlay and
+USB software-budget wake permission disabled: one203.051331-second interval,
+RTC IRQ+1/Power+0, COMPLETE573, same boot/taint0, Reborn restored, no filesystem
+errors. Named maintenance and connected-USB refusal also pass. USB reconnect
+and charging remain functional with physical wake owners enabled. This proves
+the narrow cause/correction; sealed02 does not contain either fix.
+
+Archive60 deployed the tested endpoint/journal preservation change under both
+operation locks; first_entry survives the maintenance return in62. The next
+endurance gate remains at least1800 actual SPM seconds through normal automatic
+sleep and600-second dark maintenance returns. Preserve fresh post-wake SOC
+separately from the immediate, possibly stale receipt. Longer endurance, cold
+C3, electrical minimum and the original reliability defects remain open under
+the refreshed [audit](roadmap-gap-audit.md#clean-corrective-image-physical-admission).
+No release promotion, image rebuild or flash at this boundary.
+
+Archive56 confirms the single-write correction, but automatic requests still
+abort before SPM: three EBUSY returns and no new sleep. Only `y2-usb-input` wake
+counts increase2→8. Its software budget callback raises a wake event during
+MUSB suspend. Next admitted test removes wake capability from that synthetic
+supply only, preserving physical charger/RTC/Power wake and all charging limits.
+The matching kernel source uses `no_wakeup_source`; the installed runtime policy
+will be recorded separately. Longer endurance remains unadmitted until normal
+product completion passes. Existing independent reliability gaps stay open.
+
+Archive53 proves the normal inactivity path requests suspend after a named
+maintenance owner releases its flock, but product completion FAILS. Buffered
+Python sysfs I/O replays an initially refused suspend during close, then reports
+the original EBUSY despite a198.585602-second same-boot RTC return. SPM7/7 and
+taint0 are preserved. Host and installed-Python fixtures reproduce two stores
+and the stale error. Next: a single unbuffered control-write fix, targeted error
+regressions, archived userspace overlay and the same bounded product test.
+Quarantine remains until that review. Existing intermittent devices and warm
+display failures, clean C3, electrical and long-endurance gaps remain open;
+no image/release promotion or electrical-policy change.
+
+Archive50 adds five clean full returns, including305.200562 s RTC residence:
+total Power2/2, RTC4/4, same boot/taint0, SPM6/6 with no restore failure.
+Five-minute ADC4.057031→4.052416 V, SOC89→89, no unexpected wake. Next admitted
+gate is a bounded test of normal automatic sleep with live maintenance ownership
+and RTC wake. Quarantine is released only for that reviewed test, then restored.
+Longer drain and the two unresolved reliability defects remain open.
+
+Clean02 Power wake now passes in archive47: five stages, same boot `f567b2c3...`,
+taint0, 37.950378 s SPM residence, Power IRQ +2/RTC +0, COMPLETE163. Archive48
+adds successful PCM playback/pause and internal/SD fsync/hash checks. Next is
+the admitted bounded RTC/Power repeat plus five-minute measurement; quarantine
+remains. One pass does not close the earlier intermittent devices reset or
+warm-start display fault. No product/endurance or release promotion.
+
+Hardware restart has restored clean boot `f567b2c3...` on exact 02, taint zero,
+normal frame IRQs and owner-confirmed player screen; archive45b is complete.
+Proceed with the admitted clean PM stages and one Power wake, RTC300 fallback,
+without diagnostic modules. Original intermittent devices and warm-start display
+defects remain open; product auto-sleep is still quarantined.
+
+Service reboot after archive42 reproduces warm-display startup failure on
+boot7c416e45 (taint512 before any probe). Archive44 preserves it and the previous
+RTC COMPLETE seq197. Owner hardware restart is requested; obtain an untainted
+boot for staged Power wake. No PM trial is armed. Warm-start display and the
+original intermittent device wait remain open reliability defects.
+
+Archive42 now proves installed 02's built-in suspend path returns from RTC on
+the same boot: five stages pass diagnostically, 24.529053 s actual SPM sleep,
+COMPLETE seq197, no restore/filesystem failures and Reborn restored. Observer
+taint4096 remains. Next remove that observer by archived service reboot and
+verify the clean, normal path; original intermittent device/warm-display
+failures and product/endurance gates stay open.
+
+Latest return `40-device-wait-clean-display-return/`: freezer and devices
+complete on boot `22bd28fa...`, with no new warning or filesystem errors and
+working display restoration. Matching stack observer is diagnostic taint4096;
+the original intermittent devices failure remains open. Next is five staged
+checks followed by exactly one bounded RTC full-suspend trial, conditional on
+all non-taint checks, to verify the installed built-in context correction.
+Product auto-sleep stays quarantined until clean reliability is established.
+
+Current checkpoint (2026-10-08 local): archive `34-device-wait-normal-return/`
+shows freezer returns but Reborn display restoration fails on warned boot
+`e6b85337...`; devices is never reached. No trial remains armed. Restore the
+display through its normal owner and fix the observed renderer retry failure
+before continuing original DPM_PREPARED localization. Product sleep remains
+quarantined. This supersedes the earlier next-action checkpoints below without
+changing any release, electrical, memory, partition or flashing gate.
+
+Read-only active-display capture now identifies OVL FSM 0x100 (`h_wait_w_rst`)
+with no progress across 35 samples. The subsequent stopped-pipeline recovery
+diagnostic loses transport; normal KMS disable precedes module loading, so the
+stopping point and whether any reset occurred remain UNKNOWN. Recover its
+durable checkpoints after the requested owner restart before another test.
+The pre-test archive is complete; no backstop was armed for this diagnostic,
+an omission that must not recur. Success must restore actual frame IRQs,
+not just a modeset return value. This stays a
+diagnostic gate under the [current audit](roadmap-gap-audit.md#clean-corrective-image-physical-admission).
+
+Latest physical gate: owner installed corrective DEEPSLEEP-FINAL-02. USB SSH
+verifies exact Linux `5a32683` / Reborn `5a9f758`, root v1.32, boot `f350d9dd...`,
+taint zero. USB configuration and charging return, with zero bus-clock failures.
+Archive `26-successor02-initial/` recovers 01's exact identity and stage-2/-EIO
+failure evidence. Next: five staged PM checks and one bounded clean Power trial;
+then RTC/repetition/product policy/endurance if the return passes. The
+[clean-image audit](roadmap-gap-audit.md#clean-corrective-image-physical-admission)
+retains all unresolved coverage and release gates. Earlier checkpoints follow.
+
+Clean trial result: freezer passes; the devices stage resets before any real
+entry. Retained DPM_PREPARED and successful codec/storage/I2C callbacks reproduce
+the earlier device-phase stall. Archive `28b-clean-power-recovered/`, new boot
+`e1df409f...`. Next smallest gate is a bounded matching-kernel blocked-task
+capture during devices-only testing. No Power/RTC pass or endurance admission.
+
+The first verbose-entry device diagnostic returns without reproducing the hang.
+A refined capture preserves production verbosity through entry. Its replacement
+requires a service reboot after archive; this also exposes an intermittent DRM
+startup vblank fault (boot `e6b85337...`, warning taint 512), retained as an open
+display/warm-boot defect. Further bounded PM observation is explicitly diagnostic
+on that warned boot; it cannot qualify production sleep or erase the clean fail.
+
 Current gate: owner-installed DEEPSLEEP-FINAL-01 boots Reborn, but USB enumeration
 and charging fail. Suspend testing has not begun on it. The owner saved a
 diagnostic export; USB-only SSH prevents live collection until transport returns.

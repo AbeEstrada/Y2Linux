@@ -1,91 +1,268 @@
-# Next-session handoff — current deep-sleep continuation, 2026-10-07
+# Next-session handoff — deep-sleep continuation, 2026-10-08 local
 
-**Newest candidate is DEEPSLEEP-FINAL-02**, Linux
-`5a32683f1ae9493c6a37bd18af3d131afb04d450`, unchanged Reborn `5a9f7586...`,
-root v1.32. It fixes the omitted CCF clock claim that broke 01 USB/charging.
-543 full production cases plus fresh kernel/config/DT/modules/QEMU/ARM/ELF and
-preserving package checks pass; hardware qualification is still pending.
-Owner folder: `out/y2linux-platform-v1-deepsleep-final-candidate-02/`, identical
-canonical copy at `out/y2linux-platform-v1-deepsleep-final-candidate/`.
-BOOTIMG `38d2da2d9f4627d32e93dd87a91dd544e44526bbb6441619c5e4cf95d26fad75`;
-Y2ROOT `da874614b165287a8e22799dce65c75641bd423e0ccd5d18aee99a6ebeb536bc`.
-Owner reserved flashing. First collect 01's persistent logs and saved export
-after access returns; verify 02 USB/charging before staged PM. The new
-`deepsleep-clean-session.py` matches 02, uses an actual maintenance lock,
-BOOTTIME gesture timing and a persistent quarantine until host review. Clear
-that quarantine after a checked clean trial before testing product auto-sleep.
-Failed 01 bytes are retained in `…-candidate-01-usb-regression/`; 04 remains
-the known working fallback. Do not delete either or claim 01 suspend acceptance.
+This is the current state. **The owner stopped for the day on 2026-10-08;
+no test remains armed.** Resume the deep-sleep investigation from this checkpoint
+when requested. Historical 2026-10-06 instructions below do not supersede it.
+Cleanup is outside this task. Preserve all evidence, sealed images, fallback,
+symbols and build inputs.
 
-**Current interruption:** owner has now installed DEEPSLEEP-FINAL-01, but it
-boots Reborn with no USB enumeration or charging. No SSH identity or suspend
-trial on that image yet. Diagnostic export was saved on-device; one replug did
-not recover. The childless CCF inherited-clock handoff omission is reproduced
-and corrected in source; DEEPSLEEP-FINAL-02/root v1.32 is software-validated
-and awaiting owner installation.
-Do not reinstall 01 as a fix. Preserve its package, matching symbols and the
-owner's persistent report. Latest host evidence: `25-successor-usb-enumeration/`.
-The following 04/01 installation state is the previous checkpoint, not current.
+## Stopped for the day — archives62/63, interrupted endurance
 
-**This section supersedes the 2026-10-06 installed-image and next-action claims
-below. Preserve this handoff and the evidence. Cleanup is outside the current
-owner request; do not delete the active build, fallback, symbols or raw archives.**
+- Base image02, boot **`f567b2c3-97eb-42e2-8c24-ffca801be25c`**, taint **0**,
+  only normal DRM module. SSH `root@10.42.0.1`, pinned key
+  `/home/luca/.ssh/y2linux_ed25519`. Acquire the shared host device lease again
+  before resuming physical work; the previous session's lease was released.
+- Collector **`/data/logs/deepsleep-product-f567b2c3-4893`**, former PID8254,
+  has exited. Archive61 retains its arming; archive
+  **`out/deep-sleep-final/evidence/20261007/62-product-30min-interrupted-return/`**
+  contains the complete first-return, retained SRAM/pstore and persistent archive.
+  `analysis.json` and `power-events.json` record the review.
+- Owner requested an early stop and was told to reconnect. The former 01:00 UTC
+  reconnect deadline is cancelled. This is **OWNER_INTERRUPTED, not a thirty-minute
+  pass**: two actual SPM intervals of **600.004089355 + 343.159606934 seconds**,
+  total **943.163696289 seconds** (15 minutes 43 seconds).
+- The first interval ended on the 600-second SPM maintenance timer. Screen stayed
+  off (`bl_power=4`), connectivity remained runtime suspended, and the normal
+  product helper re-entered suspend. The second ended with USB insertion: PMIC
+  wake `0x20`, cable presence/CHRDET activity, unchanged Power12 and RTC8 counts.
+  The product receipt labels that terminal wake `unknown`; do not call it RTC.
+- Same boot, taint0, SPM8→10 entries and resumes, no abort/restore failure,
+  COMPLETE667/error0, Reborn restored, three ext4 error counters0. The observer
+  correctly stops with `USB returned`, restores quarantine and clears its alarm.
+  The local wake-count race below **did not occur in this physical trial**.
+  USB contaminates the endpoint, and immediate receipt SOC is stale; no drain
+  percentage or thirty-minute acceptance can be derived from this interrupted run.
+- **`63-session-stop/parked.json`** verifies both operation locks are available,
+  no collector/helper remains, RTC alarm empty, backstop idle, pm_test `none`,
+  and the persistent product guard has `pending:true`. All 12 stop checks pass.
+  Reborn answers status and playback is paused. USB is configured; the final
+  `charger-stop.json` shows Charging, no faults, SDP450000uA programmed ceiling
+  (not measured current). No new deployment, reboot, flash or test at closure.
 
-- Actual installed firmware is **POWER-FINAL-04**, verified over SSH, not 02.
-  Linux `5aeba051c428451483402e5874dcf8222afca259`, Reborn
-  `8cd365da5f3454c8e3189df1434b966edbd06575`, root v1.30. Current diagnostic boot
-  `404ef43c-1237-4eed-8c00-56210c9574a8`, taint 4096 from matching PM probes.
-- Both primary repositories use `codex/platform-v1-deep-sleep-final`.
-  Compiled successor source: Linux **`0c9b78c7903182861b84e7d90a536bd30fca295a`**,
-  Reborn **`5a9f7586dd8d80ab5afc16c6a9a7e853e7469aeb`**. Later Linux commits may
-  document results without changing compiled identity. Luca identity preserved.
-- New owner package: `out/y2linux-platform-v1-deepsleep-final-candidate/`,
-  **DEEPSLEEP-FINAL-01**, root v1.31. Read its `OWNER-HANDOFF.md`, manifest and
-  SHA256SUMS. BOOTIMG `8a354eb0b9a9e65b3213ee83b1db53c9bd1174a52a9ea27233749c7d22c0cc16`;
-  Y2ROOT `f84d1bc4a819f819f2f9b6f3593be00ba491b0ae17c5b6220f0024aea5b681e0`.
-  Only BOOTIMG/ANDROID selected; Y2DATA preserved. Exact 04 fallback included.
-  No flash performed. Adjacent `…-candidate-symbols/` retains matching symbols.
-- Build vehicle: `/home/luca/Dokumente/Code/worktrees/y2-deepsleep-final/`
-  with detached paired worktrees; Linux `out/deepsleep-final-build` contains the
-  complete build. Seven existing firmware inputs were verified/recovered from
-  the retained 04 target into `out/deep-sleep-final/owner-firmware/`; the old
-  provisioning path below no longer exists. Do not invent calibration inputs.
-- Software checks pass: 542 unique production cases (532 container + ten host
-  dependency cases, zero remaining failures/skips), Reborn fmt/strict Clippy/
-  332 workspace tests/fresh ARM, kernel/config/DT/module ABI/QEMU/package.
-- Physical work and all 38 requested sections are in
-  [the current report](../validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md).
-  Private archives: `out/deep-sleep-final/evidence/20261007/00-initial/` through
-  `24-endurance30-repeat-return/`. Latest collection is complete and archived.
-  Same-boot diagnostic returns: 14 (12 RTC, one Power, one USB). The 30-minute
-  repeat accumulated 1811.835 s, four expected RTC wakes, no unexpected wakes,
-  4.050439→4.013964 V; old SOC 86→86 is unsuitable for a drain pass. No 2-hour
-  or full-suspend overnight measurement has been run or armed.
-- Root cause of post-thaw hang: duplicate CPU/cluster PM saves overwrite core
-  GIC interrupt enables after CIRQ masking; final core restore disables storage/
-  timer IRQs. A matching diagnostic suppression establishes same-boot returns.
-  Built successor gives core PM sole ownership and orders CIRQ replay after it.
-  It also fixes cold-battery USB clock ownership, adds automatic owned sleep,
-  fixes stale Reborn observations and uses BOOTTIME for unchanged SOC filtering.
-- Open defects/gates: one intermittent DPM_PREPARED wait before CPU PM remains
-  unlocalized; separate user-poweroff panic remains unfixed; built-in clean
-  repetition, automatic sleep/inhibitors, cold-battery C3 and true endurance
-  remain. Infrastructure/DDRPHY retention is not deepest power collapse; no
-  measured mA/capacity or battery-degradation conclusion. No <=1% target pass.
-- Next: owner verifies/install successor via preserving Download Only, then
-  leave USB connected for identity/taint-zero archive. Do not autonomously flash.
-  Stage PM and use one bounded real Power/RTC trial before repetition/long tests.
-  Use BOOTTIME for gesture scheduling, generous RTC fallback and actual IRQ
-  attribution. Prevent automatic policy racing the staged collector using an
-  actually held maintenance lock (the owner helper itself needs the activity
-  lock); the clean collector also quarantines product sleep until host review.
-  Do not use a stale inhibitor file. Never load 04
-  modules on the successor; current endurance script requires taint4096 and
-  must not be reused unchanged. Archive pstore/PM/power before every reboot.
+Next session: verify the installed identity, overlays, runtime wake setting and
+boot again before any mutation. Review/deploy the backed-up local maintenance
+correction below, qualify that exact helper with a short normal-policy test,
+then repeat the full thirty-minute test before admitting two hours or overnight.
+Keep quarantine until a bounded reviewed test is armed. Sealed02 is unchanged;
+no candidate03 is built. The original independent reliability gaps remain open.
 
-The standing [boundary audit](roadmap-gap-audit.md#successor-sealing-and-owner-installation-boundary)
-and roadmap were refreshed. Issues #16/#27/#28/#29/#31/#32/#33/#34 remain open,
-#30 closed historically; no remote mutation, push or release promotion.
+## Latest physical result — normal automatic sleep PASS
+
+Archive **59-product-usb-wake-return/**, root3787, proves the narrow USB wake
+correction: named maintenance7356 refusal, releaseBOOTTIME3895.063, automatic
+kernel entry3916.070, one **203.051330566-second** SPM return. RTC7→8, Power12→12,
+COMPLETE573, boot unchanged, taint0, Reborn restored, ext4 errors0. SPM totals8/8
+with zero restore failures; total includes the earlier falsely reported53 return.
+No hidden retry/direct collector suspend call. USB reconnect transfers302MB and
+Charging works; all six physical wake owners remain enabled. This is qualified
+live-overlay/runtime-policy behavior, **not unchanged sealed02 acceptance**.
+
+Immediate ADC4.086035→4.092187V includes recovery. Immediate resume SOC90 is
+still a pre-wake daemon sample; after-snapshot8.63s later has a fresh0.397s-old
+sample90%, ADC4.060327V with application awake. No short-test drain/target claim.
+Archive59 hashes: firstff64b9b0573ba305e252e4ecbdcb785f91b0d69b4a2019643a2536a4e1f4924b,
+retained5138336dda0076704d8f9db7bddcac4a5d7fa5f6ae2ae4c7448c655651ecb843,
+persistentada2ffd65ec837c9a7987ed5e2ee1fe1a10e8d41dd435c72be7b9b5ae842d736.
+The roadmap/gap audit retains the short-policy and thirty-minute gates; owner
+stopping for the day suspends further physical work until the next session.
+
+## Current live corrections — keep separate from sealed02
+
+1. Linux **`0ba99f5ffbdc6af2dac6320d0b3256121642fb0c`** fixes buffered
+   PM-command replay. `/usr/lib/y2-platform/y2_platform/product_sleep.py` SHA
+   **`72651d6f6366b7d58a8e80cac9e5681acb00ab4e7eb0315016ac4cc1789d72da`**.
+   Archive54 and `/data/logs/deepsleep-live-overlay-f567b2c3-2987/` retain original
+   bytes and deployment receipt; `/data/system/platform/deepsleep-live-overlay.json`
+   records it. Kernel/Reborn/image metadata unchanged. Real Python-I/O regressions
+   pass on host and installed Python3.12.14; old code fails all3 error cases.
+2. Archive57 changes only `/sys/class/power_supply/y2-usb-input/power/wakeup`
+   from enabled to **disabled**. This is the software gadget current-budget
+   publisher. All six other PMIC/charger/Power/RTC/battery wake settings remain
+   enabled. No current/voltage/protection/notification change. Persistent ledger
+   `/data/system/platform/deepsleep-runtime-policy.json`; device evidence
+   `/data/logs/deepsleep-usb-budget-wake-f567b2c3-3773/`. Runtime only; kernel source
+   commit **`9066f73`** sets `power_supply_config.no_wakeup_source=true`, ARM USB
+   compile PASS; archive59 physically confirms the causal correction. Do not claim that sealed02 contains it.
+
+Archive53 FAILED product completion: named maintenance refusal and later auto
+request worked; buffered Python close replayed an EBUSY suspend, then reported
+that stale error after198.585602 seconds of same-boot RTC sleep. SPM7/7,
+RADIOS_RESTORING470, taint0; actual application restoration occurred but no
+successful product receipt. The local and installed-Python fixtures reproduce
+exactly two stores and the stale exception. Commit0ba99f5 fixes that bug.
+
+Archive56 then exposes the underlying refusal without replay: three normal
+requests abort in device suspend with EBUSY, no new SPM entry (still7/7), same
+boot/taint0, final RADIOS_RESTORING524/DEVICES_RESUMING error−16. Only synthetic
+`y2-usb-input` suspend-check wake count increases2→8. `pm_wakeup_irq` is absent.
+MUSB PM calls set_power→power_supply_changed→pm_stay_awake on this synthetic
+supply. The explicit owner helper did not arm wakeup_count, so its passes did
+not cover this path. Archive57's narrow runtime change tests that cause.
+The old collector cleanup raced a final automatic refusal's guard clear; host
+retook both operation locks and restored quarantine before the new trial.
+
+3. **`39290266a020782b7cb543048aefb33c3da68570`** receipt/journal changes are
+   now **DEPLOYED**, archive60, backup
+   `/data/logs/deepsleep-endurance-journal-f567b2c3-4870/`.36 affected tests pass.
+   `suspend_record.py` SHA97c8a6804c4dcacfddd0dbba4cca75780a0b8061c86123fa32fba7f56a47aa73;
+   `power_journal.py` SHA57add62a7b97c9ef3055abfc94e2a24d8e8bdd2075f03b6bff9800a8c6d3e1b9.
+   Keeps first entry ADC/timestamp across maintenance returns and completed
+   endpoints at the existing event cadence. Both locks held, backups/ledger
+   durable, no service restart, kernel/Reborn/firmware metadata unchanged.
+   Existing power-daemon periodic rows still use its old imported logger;
+   new product helpers use the updated event logger. No new polling timer.
+
+The optional collector120-minute/8-hour modes require reviewed shorter success.
+Only30 minutes is admitted now. It captures a separate fresh battery-after
+sample; kernel-return receipt SOC may precede the battery daemon's next tick.
+No reboot or image installation is currently pending.
+
+## Local-only maintenance correction prepared during trial61
+
+**`d43b5923803d006122402aba65ee275d7f19ca13`** is committed, **NOT DEPLOYED**.
+Production currently reuses the wake-event count read before the2-second battery
+maintenance pause. A normal BAT0 notification in that interval invalidates it
+and unnecessarily restores the screen/radios instead of re-entering sleep.
+A real product-flow fixture with kernel wake-count comparison reproduces
+`wake_event_in_progress` on old code. Set the count toNone after maintenance so
+the next loop takes a fresh bounded read; preserve prior Power/RTC IRQ comparison
+and the atomic count-store guard. All27 affected tests pass, including Power/RTC
+during the gap and another event after the fresh read. Source SHA
+`d83f140fb9b3670ae778864c39f61cfb64f5a1aa2279022eefec8e1f8c149dba`.
+Receipt `out/deep-sleep-final/maintenance-count-source-validation.json`.
+
+Trial61 remained on SHA72651d6f… and archive62 proves its first maintenance
+re-entry succeeded. It ended on the owner's USB reconnection, not this race.
+The old-source negative fixture still establishes the latent bug. Before any
+longer trial, record the backed-up overlay when deployed and qualify the
+corrected source; nothing was deployed after the owner's stop request.
+Do not weaken the collector's shorter/same-source evidence checks. No new
+candidate, raw hardware write or charging-policy change was made.
+
+Read-only vendor comparison is saved at `out/deep-sleep-final/vendor-suspend-source/`.
+It confirms stock INFRA/DDRPHY collapse requires its additional UART restore
+path, whereas installed mode retains it. Existing stock poweroff extracts also
+show write-interface unlock, BBPU4309 and GPIO37 handling; installed callback
+uses4300. This is a sequence mismatch, not proof that changing one literal fixes
+poweroff. No pin/register experiment or source implementation was performed.
+
+## Confirmed clean progress
+
+Archive **50-clean-cycles-return/** passes all five new real cycles on the same
+untainted boot: three short RTC, Power89.802795s, RTC305.200562s. Combined with47,
+**6/6 clean returns: Power2/2, RTC4/4**, SPM6 entries/6 resumes, aborts and restore
+failures0, COMPLETE408. All RTC alarms auto-disarmed, no unexpected wake.
+Five-minute ADC4.057031→4.052416V (−4.615mV), provisionalSOC89→89; no claim of
+zero current or overnight target pass. Archive51 also proves live application
+sleep preparation refuses `playback_active` while playback continues, then PCM
+closes after pause. Volume and position restored.
+
+Archive **47-clean-power-return/**: installed02 passes all five PM stages,
+then a genuine same-boot Power return. SPM entries/resumes1/1, aborts/restore
+failures0, 1243558 ticks = **37.950378418 seconds**, Power IRQ6→8 and RTC0→0,
+COMPLETE seq163, taint0. RTC fallback was still pending and explicitly cleared.
+Owner saw the normal player. Strict clean verdict passes.
+
+Archive **48-clean-resume-health/**: five-second playback advances to4969 ms,
+PCM hw_ptr216584, then PCM closes on pause. Volume/position restored. Both
+internal and SD storage pass262144-byte write/fsync/readback/hash, ext4 errors0.
+Wi-Fi is Online/COMPLETED by this check; the immediately returning health sample
+in47 caught it reconnecting. Do not mislabel that earlier sample all-servicesOK.
+
+Archive42 previously proved the same built-in02 context path through all five
+stages plus RTC wake (24.529053 s) with a read-only stack observer/taint4096.
+This is diagnostic evidence, separate from clean47.
+
+## Installed image and sealed package
+
+**DEEPSLEEP-FINAL-02**, release1.0.0-platform-v1-deepsleep-final-candidate.2,
+root2025.02.18-platform-v1.32, kernel6.18.0-y2linux-platform-v1-deepsleep-final-02.
+Linux **`5a32683f1ae9493c6a37bd18af3d131afb04d450`**;
+Reborn **`5a9f7586dd8d80ab5afc16c6a9a7e853e7469aeb`**. Owner installed it.
+It corrects01's missing inherited USB CCF clock claim. USB and charging work;
+450000uA SDP ceiling is programmed policy, not measured battery current.
+Archive26 recovers01's saved diagnostic export and exact stage2/-EIO failure.
+
+Sealed immutable owner folder `out/y2linux-platform-v1-deepsleep-final-candidate-02/`,
+identical canonical `…-candidate/`. Matching `…-candidate-symbols/` retained.
+
+- BOOTIMG `38d2da2d9f4627d32e93dd87a91dd544e44526bbb6441619c5e4cf95d26fad75`
+- Y2ROOT `da874614b165287a8e22799dce65c75641bd423e0ccd5d18aee99a6ebeb536bc`
+- 543 unique production checks plus kernel/config/DT/module ABI/QEMU/ARM/ELF/
+  preserving package checks pass. Failed01 is retained separately;04 fallback
+  and source-matched symbols/build remain. Do not overwrite sealed packages.
+
+No agent flash. Any successor is BOOTIMG/Y2ROOT only; owner installs preserving
+Y2DATA. No new image beyond02 is currently built or requested.
+
+## Unresolved failures — do not erase after a pass
+
+1. **Intermittent device-phase wait:** clean02 archive28b resets during devices,
+   last retained DPM_PREPARED seq21, ring ends with successful I2C after codec/MMC.
+   No outstanding callback/wait is identified. Passing observer captures show
+   a transient UART/SRCU wait but do not establish the root cause. Clean47 now
+   passes the same staged sequence; repeated reliability remains open.
+2. **Warm-start display:** service reboots after diagnostic boots reproduce
+   vblank1/no progress and taint512 at~1.026s before modules (archives32/44).
+   Owner hardware restart restores clean startup (38/45b). Active read-only
+   archive36 shows OVL FSM0x100 (`h_wait_w_rst`), unchanged35 samples. Source
+   display-readiness/retry fixes below do not fix that driver cause.
+3. **Failed display recovery diagnostic:** archive38 recovers successful KMS
+   disable after31.015s and inactive snapshot, then no return from module call.
+   First completed hardware operation is unknown. **Do not repeat
+   `y2-display-recover.ko`**. No backstop was armed in that trial; that omission
+   must not recur. `kernel/platform/ovl-reset.h` is not production-integrated.
+4. Original user-poweroff BBPU/panic defect remains separate and unresolved.
+5. Clean short RTC/Power and five-minute residence now pass narrowly. Product
+   auto-sleep/inhibitors now pass narrowly with the recorded overlays; cold-battery
+   C3,30/120-minute and overnight drain remain incomplete. SPM shuts CPUs down
+   with infrastructure/DDRPHY retained; deepest electrical minimum is unknown.
+   No measured current, battery-degradation finding or <=1% target pass exists.
+
+## Source branches and undeployed work
+
+Both primary repositories: `codex/platform-v1-deep-sleep-final`.
+Frozen paired worktrees: `/home/luca/Dokumente/Code/worktrees/y2-deepsleep-final/`.
+Do not edit frozen production sources or upstream source cache.
+
+Reborn **`97ff8c357bab12319087740d7c97b5051e6588f5`** is committed but **not
+deployed**: require first page-flip event before presentation, preserve failed
+buffers safely, one automatic context recreation per incident, wake retry.
+335 workspace tests/fmt/strictClippy/ARM PASS, actual native regression fails
+on old source. Linux splash retry-handshake fix has27 native tests/ARM PASS,
+committed as **`f4d2774`** but not deployed. Receipt `out/deep-sleep-final/display-recovery-source-validation.json`.
+No installed source metadata may be changed to imply these fixes are running.
+
+Linux commits `9066f73`, `c73c581` and `d43b592` record the USB wake correction,
+reviewed collectors and maintenance fix. The working tree also holds preserved
+untracked diagnostic sources; do not include the failed reset diagnostic in
+production. Existing Luca identity stays unchanged.
+No push, release promotion, remote issue closure or external messages.
+
+## Original overnight evidence and root correction
+
+The initial image was POWER-FINAL-04, Linux5aeba051/Reborn8cd365d/rootv1.30,
+verified against newest04 handoff and manifests. Retained long boot74a4645d
+shows~6.72h screen-off, paused/radiosoff, **no product auto-suspend policy**.
+Cold-battery C3 was enabled but blocked by USB PERI bit10; observed C3 zero.
+Later voltage3.900146→3.403564V proves real depletion. Exact88% starting voltage
+and charge termination did not survive rotation; no88% UI cap exists. Owner
+later charged briefly and turned off; separate shutdown/panic logs are not
+proof of an overnight suspend attempt.
+
+Original full-suspend post-thaw hang was localized to nested CPU/cluster PM
+saving masked GIC enables over core's original save. Removing that duplicate
+owner and replaying CIRQ after core restore is built into01/02. Matching04
+context-suppression diagnostic proved14 same-boot returns. Its30-minute repeat
+accumulated1811.835s, four expected RTC wakes,4.050439→4.013964V; old SOC86→86
+was invalid as drain evidence.02 fixes elapsed-time filtering usingBOOTTIME
+without changing the curve, limits or reported values to hide loss.
+
+The full38-section [validation report](../validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md)
+and [standing audit](roadmap-gap-audit.md#clean-corrective-image-physical-admission)
+contain detailed receipts/limitations. Raw archives/hashes stay under ignored
+`out/deep-sleep-final/evidence/20261007/`. All previous failed trials remain
+failures; #16/#27/#28/#29/#31/#32/#33/#34 remain open, historical#30 unchanged.
 
 ## Historical 2026-10-06 handoff (superseded where noted above)
 

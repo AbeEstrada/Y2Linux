@@ -2,6 +2,338 @@
 
 ## Deep-sleep continuation admission — 2026-10-07
 
+### Clean corrective-image physical admission
+
+**Session stop review, 2026-10-08:** the owner requested an early finish and
+reconnected USB. Archive62 retains trial61 on unchanged02 plus the recorded
+overlays/runtime wake correction: 600.004089355 + 343.159606934 seconds of
+actual suspend, same boot `f567b2c3...`, taint0, SPM8→10, COMPLETE667/error0,
+application restored and ext4 errors0. One automatic maintenance return kept
+the display dark and connectivity suspended and then re-entered successfully.
+USB insertion ended the second interval; the helper's wake label is unknown,
+while cable/CHRDET evidence and unchanged Power/RTC counts identify the owner
+interruption. It is not a thirty-minute pass or usable terminal drain endpoint.
+
+Coverage refresh: maintenance with dark/radio-off re-entry becomes CONFIRMED
+narrowly for this live configuration. Thirty-minute/120-minute/overnight
+acceptance, SOC/charging, electrical minimum and cold-battery C3 remain PARTIAL.
+The latent host-reproduced wake-count race was not observed in this trial.
+Original intermittent device-stage reset, warm-start display and poweroff
+defects remain open. All other coverage rows and existing issue mappings below
+are unchanged; no milestone, issue or release is closed.
+
+Archive63 verifies no collector/helper remains, both operation locks are free,
+RTC alarm empty, recovery backstop idle, pm_test none and persistent quarantine
+restored. Reborn answers, USB is configured and charging has no reported fault.
+The host device lease is released. The owner's stop request supersedes all
+earlier instructions to continue the current trial tonight. On resumption,
+recheck live identity/state, deploy the reviewed maintenance fix with backups,
+qualify the exact corrected source in a short product trial, then repeat30
+minutes before admitting longer endurance. No additional test, source deployment,
+reboot, candidate build, flash or charging-policy change at this closing boundary.
+
+During unchanged trial61, a host regression reproduces an independent
+maintenance race: a normal BAT0 event during the2-second safety interval makes
+the reused count stale, so the next atomic store refuses re-entry. Local-only
+d43b592 refreshes that count afterward while retaining Power/RTC IRQ comparison,
+all safety admission and the late-event store guard;27 affected tests pass.
+This is a localized source correction within existing product policy, not a
+hardware/memory expansion. It is not deployed and must not be attributed to61.
+Archive62 now confirms the first maintenance re-entry succeeded; its later
+owner interruption is independent of this race. Qualify the corrected source
+before extending endurance. Release gates below stay unchanged.
+
+Archive59, 2026-10-08: the narrow USB wake correction passes the actual normal
+product path on boot `f567b2c3...`, taint0. Live maintenance owner7356 refuses
+entry, then its release atBOOTTIME3895.063 is followed by automatic kernel
+entry3916.070. One203.051331-second SPM interval returns through RTC IRQ7→8,
+Power12→12, COMPLETE573, Reborn restored, all three ext4 error counters0.
+SPM entries/resumes7→8, restore failures0. No hidden retry or direct test-helper
+suspend call. USB reconnect and Charging work afterward; the six physical wake
+owners remain enabled. Base02 plus recorded0ba99f5 userspace and runtime-only
+USB wake changes must remain distinct from a clean successor image.
+
+Coverage refresh: ordinary inactivity, owned maintenance/USB inhibition and
+complete product restoration become CONFIRMED narrowly for that overlay/policy.
+Power/RTC and earlier staged/kernel/storage/audio results retain their scope.
+Cold-battery C3,600-second maintenance returns,30/120-minute/overnight drain,
+SOC/charging and electrical minimum remain PARTIAL. Original intermittent
+device-stage reset, warm-start display and poweroff defects remain open; all
+other CPU/peripheral, memory/recovery/calibration/security/time/host rows and
+existing #16/#27–#34 issue mappings retain their prior classifications. No
+milestone, release or remote issue closure.
+
+The earlier30-minute admission deployed tested3929026 receipt/journal changes
+in archive60 under operation locks with old-byte backup and overlay ledger;
+archive62 preserves first entry ADC across maintenance cycles and completed
+results at the existing journal cadence. The next observer must separately
+retain a fresh post-resume battery-owner sample: the immediate kernel-return
+receipt can still contain the pre-sleep SOC sample. Require at least1800 actual
+SPM seconds, dark/radio-off600-second maintenance returns, one terminal RTC wake,
+same boot, normal application restoration and no new integrity errors. Stop on
+first failure and re-establish quarantine. No SSH in the battery window. The
+existing backstop, PCM watchdog, battery reserve and charger limits stay intact.
+Two-hour admission depends on this result; no new image or flash is authorized
+by this audit.
+
+Archive56 narrows the next product failure: unbuffered source0ba99f5 removes
+the close-time replay, but each of three normal automatic requests returns
+EBUSY during device suspend; SPM stays7/7 and taint0. The only wake-source
+`wakeup_count` increasing is synthetic `y2-usb-input`,2→8; hardware PM wake IRQ
+is absent for these refusals. Driver `y2_usb_set_power()` unconditionally calls
+`power_supply_changed()` during MUSB PM, which activates the default wake source.
+The explicit owner helper never armed wakeup_count, explaining that path's
+passes without proving this product handshake. No Power/RTC failure or reset
+is inferred from these pre-SPM refusals.
+
+Admit a narrow causal runtime test: disable wake capability only on the software
+`y2-usb-input` power-supply child. Verify the physical charger/CHRDET, RTC and
+Power wake owners remain enabled; preserve notifications/current allocation and
+all charging/voltage protections. Corresponding source uses the standard
+`power_supply_config.no_wakeup_source` flag. No diagnostic module or raw MMIO.
+Repeat the bounded automatic-policy test before any longer interval. Keep a
+runtime-policy ledger separate from base02 and the Python overlay. Original
+intermittent devices and warm-display failures remain unresolved; all other
+coverage/issue states above retain their classification. The collector's error
+cleanup also raced a later normal helper's guard clear; both live locks now
+protect restored quarantine. Fix collector cleanup ownership before repeating.
+
+Product boundary, archive53, 2026-10-08 local: clean02 boot `f567b2c3...`
+refuses automatic entry for live owner `maintenance:4694/python3`. After lock
+release it requests full PM normally. Kernel logs show an early-wake refusal,
+then an immediate second entry and RTC return: 6507253 ticks (198.585602 s),
+SPM7/7, taint0, no reset. The helper nevertheless records
+`kernel_suspend_refused`, result2 and RADIOS_RESTORING470; its application
+restoration runs, but no successful product completion is recorded. The
+observer fails and re-establishes quarantine. This is not a product-policy pass.
+
+Installed Python3.12.14 and host fixtures reproduce the exact mechanism:
+`Path.write_text('mem\n')` buffers a sysfs command, retries the failed flush on
+close, and propagates the original EBUSY after the repeated write succeeds.
+Admit a localized unbuffered, single-write correction to product PM controls,
+real Python-I/O error/short-write regressions, then a backed-up userspace-only
+deployment and bounded repeat of the same automatic-policy test. Preserve the
+sealed02 image/source identity and explicitly record the live overlay. No
+kernel/module/voltage/partition changes or new candidate per hypothesis.
+
+Coverage refresh: named maintenance/USB refusal and automatic request are
+CONFIRMED narrowly; complete product restoration remains PHYSICAL_FAIL pending
+this correction. Clean Power/RTC kernel returns remain CONFIRMED narrowly,
+original intermittent device-stage reset and warm-start display remain PARTIAL/
+PHYSICAL_FAIL. Runtime C3, charging/SOC, electrical minimum and longer endurance
+remain PARTIAL. All other CPU/peripheral, memory, recovery, calibration,
+security/time/host coverage and existing #16/#27–#34 mappings are unchanged;
+no milestone or remote issue is closed. Next gate is corrected automatic PM,
+before longer endurance.
+
+Clean repetition boundary, archive50: on the same untainted `f567b2c3...` boot,
+three RTC30 trials, a second Power trial and RTC310 all pass. SPM totals6 entries/
+6 resumes, aborts/restore failures0, COMPLETE408. Clean wake coverage is now
+Power2/2 and RTC4/4. Final305.200562 s residence has one expected RTC wake,
+automatic alarm disarm and no unexpected wake; ADC4.057031→4.052416 V, SOC89→89.
+The unchanged voltage-derived percentage is not an overnight drain pass. The
+existing infrastructure-retention/electrical and longer-endurance limits stay.
+
+Admit one bounded normal-product automatic-policy test after preserving50.
+Use the installed helper and normal Reborn inactivity path, a real maintenance
+flock held beyond the60-second timeout, then release it; RTC300 bounds wake.
+Clearing the diagnostic quarantine is authorized only for this reviewed clean
+boot/test, with renewed quarantine after return. The observer must not directly
+write /sys/power/state or invoke owner-qualified suspend. Verify USB and named
+maintenance refusal, no SPM entry while inhibited, normal automatic entry after
+release, RTC/same-boot/taint-zero restoration. This advances the next product
+gate; it does not waive the original intermittent device/reset or warm-display
+failures. Other coverage rows and existing issue status remain unchanged; no
+new image, voltage/current, memory or storage scope is added.
+
+Clean Power boundary, 2026-10-08 local: archive47 on exact02 boot `f567b2c3...`
+passes all five PM stages and one real Power return with taint zero, no modules,
+SPM entries/resumes 1/1, aborts/restore failures zero and COMPLETE seq163.
+Hardware residence is 1243558 ticks = 37.950378418 s; Power IRQ 6→8, RTC 0→0,
+fallback alarm cleared. Archive48 verifies five seconds of advancing PCM,
+closed PCM after pause, unchanged zero ext4 errors, and 262144-byte fsync/hash
+checks on internal and SD storage. The quick health read immediately after
+resume reports Wi-Fi not authenticated during reconnect; do not label that
+snapshot an all-services pass. Owner confirms the normal player screen.
+
+Coverage refresh: clean staged PM and one Power/CPU-context/storage/audio/display
+return become CONFIRMED narrowly on02; repeated Power, clean RTC, automatic
+policy/inhibitors, cold-battery C3, long endurance and electrical minimum remain
+PARTIAL. Original intermittent device-stage reset and warm-start display fault
+remain PHYSICAL_FAIL/PARTIAL; no assumed causal correction or issue closure.
+Other CPU/peripheral, memory/recovery/calibration/security/time/host coverage and
+existing issue mapping retain their prior status. Admit three RTC30 trials,
+one scheduled Power/RTC300 trial and one RTC310 measurement requiring at least
+300 actual SPM seconds, stopping at the first failure. Keep quarantine and the
+30-second PM backstop; no module, electrical, image or partition change.
+
+Owner hardware restart restores exact 02 on boot
+`f567b2c3-97eb-42e2-8c24-ffca801be25c`, taint zero, only the normal DRM module,
+and advancing startup vblank 17/87/154/222. Archive
+`45b-clean-hardware-return/` preserves identity, power, retained state and logs;
+the owner confirms the normal player screen. This permits the previously
+admitted clean five-stage sequence and one bounded Power-wake trial, with a
+300-second RTC fallback and existing 30-second PM backstop. No observer or
+display recovery module is loaded. All coverage rows retain their prior status:
+diagnostic RTC progress does not close the intermittent devices failure,
+warm-start display fault, clean wake, product policy or endurance gates.
+Product sleep remains quarantined pending the actual clean return.
+
+Latest diagnostic `34-device-wait-normal-return/` returns from freezer on
+`e6b85337...` but application restoration fails with graphics presentation
+-EPROTO. Devices is never reached; no outstanding kernel task is sampled.
+Initial display vblank timeout precedes the probe, and the splash handoff then
+retries after losing ownership. Source also shows the purported one-time
+renderer recreation repeating on each failed frame. Admit ordinary display
+service recovery and targeted source fixes for this observed failure path;
+no raw register writes, protection changes, production PM acceptance or new
+candidate per hypothesis. Display/app recovery stays PHYSICAL_FAIL/PARTIAL;
+all other coverage and existing issue mappings above/below are unchanged.
+The original DPM_PREPARED wait remains open, not attributed to a transient
+UART/SRCU stack captured during a passing diagnostic. Next gate is a working
+display followed by bounded localization of that wait.
+
+Normal owner off/on after terminating the failed splash does not recover frame
+IRQs (`35-display-recovery.json`); Reborn has been stopped to end its retry loop.
+Admit a matching active-display observer using pinned MT6582 register offsets,
+read-only MMIO and balanced references to already enabled clocks/domain. It
+refuses inactive/off states and has no background worker, reset, DMA or raw
+register write. This is diagnostic localization, not a power-domain scope
+expansion or proof of the hardware cause. Preserve all same-boot evidence.
+
+Archive `36-display-observer-complete/` localizes the no-vblank endpoint:
+OVL flow 0x280f8d00, FSM 0x100 (`h_wait_w_rst` in pinned vendor ddp_debug.c),
+unchanged across 35 samples; SMI GREQ zero. Re-review all coverage groups:
+display/reset stays PARTIAL/PHYSICAL_FAIL; current PM is diagnostic only and
+the original device wait remains unresolved. CPU, peripherals, battery,
+memory/recovery/calibration/security/time/host gates and issue mappings remain
+unchanged. Admit one source-matched, bounded OVL-only recovery diagnostic after
+normal DRM master disables scanout. Require OVL/RDMA/DSI/mutex stopped and exact
+vendor SMI idle operands before any reset; preserve every unrelated reset bit.
+The pinned BSP uses MMSYS 0x138 bit 8 after failed OVL soft reset; LCM reset
+0x13c is distinct and must not change. Compile and exercise refusal/timeout/
+preservation paths before loading. No live DMA reset, domain collapse, voltage,
+protected storage or firmware write is authorized. Recover frame IRQs and
+working UI on the same boot before accepting this narrow causal correction.
+
+That recovery diagnostic loses USB/Wi-Fi before returning. The last host output
+is the durable evidence directory, not a reset result. Normal KMS disable and
+an additional read-only capture precede module loading; all remain possible
+stopping points until recovered checkpoints localize the failure. USB replug
+does not recover transport. Admit the necessary owner hardware restart after
+complete pre-test archive `36-display-observer-complete/`; recover pstore and
+the diagnostic directory first. No recovery backstop was armed for this test;
+require one before any subsequent potentially blocking hardware diagnostic.
+No gate advances; no production reset code or new image is admitted by this
+failed trial. The separately observed application readiness/retry bugs remain
+eligible for targeted fixes and native regression checks.
+
+Owner restart returns exact 02 on boot `22bd28fa-62ed-4e1e-afe4-0e6c6e209ac7`,
+uptime 46.41 s, taint zero, normal frame IRQs and Charging at 4.131518 V.
+Archive `38-display-hang-reboot-return/` recovers `kms-blank.json` (success
+after 31.015 s) and `parked.json` (DRM runtime inactive); no module-return
+checkpoint exists. Thus KMS disable completed and the failure is later, during
+the recovery-module call, but its first completed hardware operation remains
+unknown. Pstore contains only the old freezer sample; SRAM is invalid after
+the owner reset. Do not repeat the recovery module. With display restored,
+return to the already admitted bounded freezer→devices stack diagnostic on
+this initially clean boot; existing 30-second PM backstop is required. This
+diagnostic taint cannot establish clean-image qualification. Other coverage
+rows, issue mapping and original clean DPM_PREPARED failure remain unchanged.
+
+Archive `40-device-wait-clean-display-return/` returns freezer and devices on
+that same boot with COMPLETE seq34, no new warning taint or filesystem errors,
+and working frame completion after both stages. The observer samples no blocked
+tasks; this does not explain or erase the earlier intermittent hang. Two
+devices-only diagnostic runs have now returned. Admit all five staged checks
+and, only if every non-taint check passes, one real 30-second RTC trial with
+the same exact stack observer and existing backstop. This tests the installed
+built-in context fix and retains the original failure as an open reliability
+gate. Explicit diagnostic metadata and unchanged failing clean verdict prevent
+confusing observer results with production qualification. No PM callback,
+hardware policy, electrical or firmware mutation is involved. Product sleep
+remains quarantined; no endurance or release promotion is admitted yet.
+
+Archive `42-observed-stages-rtc-return/`: all five stages and real RTC wake
+return on boot `22bd28fa...`, observer taint4096 unchanged, COMPLETE seq197.
+Built-in SPM entries/resumes 1/1, aborts/restore failures zero, wake0x20 with
+RTC IRQ attribution, 803768 ticks (24.529052734 s), alarm auto-cleared, ext4
+errors zero and application restored. Unlike the earlier 04 context-suppression
+module, this observer only captures task stacks; the installed built-in context
+path is exercised. This advances only the narrow diagnostic PM/RTC evidence.
+The original intermittent device failure and warm-display fault remain open;
+every other coverage row and issue status is unchanged. Archive precedes a
+normal service reboot specifically to remove the non-unloadable observer.
+Admit clean identity/taint/display verification, then staged PM and one RTC
+trial without modules. No endurance or product-quarantine release yet.
+
+The service reboot itself reproduces the earlier warm-start display failure:
+archive `44-clean-reboot-display-fault/`, boot `7c416e45...`, vblank timeout
+at 1.026018 s with no diagnostic modules and taint512. The retained journal
+correctly preserves the previous successful RTC COMPLETE seq197. Do not run
+qualification on that warned boot or clear taint. Owner hardware restart is
+requested after archive; next verify clean startup then staged Power wake.
+Warm-display reliability stays PHYSICAL_FAIL; the source-tested application
+recovery changes do not fix that driver cause. No release/coverage gate closes.
+
+Physical result: freezer PASS, then **devices FAIL by reset**. Boot `f350d9dd...`
+changes to `e1df409f-ab3c-4f0c-b094-7a81d1b142bf`; real suspend/Power trial was
+never reached. Archive `28b-clean-power-recovered/` preserves retained stage
+DPM_PREPARED, callback ring ending in successful `11008000.i2c` at 463.348 s,
+after codec/storage completion. The ring alone does not identify the outstanding
+task. Backstop was 30 s; RGU raw zero cannot independently attribute reset cause.
+No current pstore entries survived. Owner's normal screen observation was on
+the new boot and is not wake proof. This reproduces the earlier unlocalized
+device-phase problem on clean 02; USB/charging recover after reboot.
+
+Coverage refresh: full PM and clean wake remain PHYSICAL_FAIL/PARTIAL, with
+all other rows and existing issue mappings unchanged. Admit one diagnostic
+`pm_test=devices` repeat with a source-matched, read-only blocked-task module,
+normal UART/display console PM, the existing RAM console and recovery backstop.
+It changes no MMIO, context ownership, freezer, reservation or protection.
+Archive before loading; external-module taint is diagnostic only. No real entry
+or next candidate is admitted until the outstanding wait is identified.
+
+The verbose-entry diagnostic returns on `e1df409f...` (`30-device-wait-return/`),
+but only captures a transient UART resume/SRCU wait, not the earlier hang.
+Refine the observer to retain normal entry loglevel and raise verbosity only
+when the four-second capture fires; exclude idle workers from its bounded task
+list. Archive `31-before-probe-reboot/` precedes the service reboot needed to
+replace a non-unloadable module. New boot `e6b85337...` has preexisting WARN
+taint 512 from DRM startup vblank timeouts (1.026 s and 31.954 s), with subsequent
+Reborn readiness and screen-off; archive `32-probe-reboot-return/`.
+Display warm-boot qualification is now explicitly PHYSICAL_FAIL/PARTIAL; retain
+this separate defect. No clean claim or production admission is possible.
+Admit the same bounded freezer→devices diagnostic on this explicitly warned
+boot with expected combined taint 4608, captured before module loading, to
+localize the outstanding PM wait. No warning/taint is cleared or hidden and
+the product's refusal guard remains intact. All other coverage gates unchanged.
+
+Owner-installed DEEPSLEEP-FINAL-02 is verified over USB SSH: Linux `5a32683`,
+Reborn `5a9f758`, root v1.32, boot `f350d9dd-5126-4d89-b8f0-9f09cb1603f7`,
+initial uptime 46.24 s and taint zero. Archive `26-successor02-initial/` includes
+the saved 01 export (boot `44c73d7b...`, exact Linux `0c9b78c`) and persistent
+stage-2/-EIO USB failure logs. On 02 USB is configured, clock gates/restores 1/1,
+failures zero; charger recognizes SDP and BAT0 is Charging with the unchanged
+450000 uA programmed ceiling. This confirms the narrow USB/charging correction,
+not charge termination, capacity or measured current.
+
+Refresh every sealing-table coverage row: boot/identity/diagnostic retention and
+USB enumeration/charging advance to CONFIRMED narrowly on 02; CPU/C3 cold-battery,
+PM/CIRQ/Power/RTC, display/input/audio/storage restoration, radios, product
+inhibitors, battery/endurance and electrical minimum remain PARTIAL. Physical
+UART remains UNKNOWN, host/VBUS PHYSICAL_GATE, memory/recovery/security/time/
+calibration gates and FM exclusion unchanged. Earlier device-phase wait and
+poweroff defect stay open. Existing issue mapping/status is unchanged; no
+closure or milestone promotion is justified by restored transport.
+
+Admit five staged PM checks followed by one bounded Power-wake attempt, with
+RTC fallback and the existing 30-second recovery backstop. Use normal console
+PM, no modules, exact source/boot guards, a live maintenance lock and durable
+product quarantine. Archive before entry, stop on any failure and require a
+same-boot, taint-zero return; only then admit repetition/RTC/product/endurance.
+No electrical, memory, partition or firmware change is made at this boundary.
+
 ### First successor USB regression and correction admission
 
 Owner installed DEEPSLEEP-FINAL-01 and reports normal Reborn/Wi-Fi operation,
