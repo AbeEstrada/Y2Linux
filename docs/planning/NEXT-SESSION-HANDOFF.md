@@ -1,18 +1,38 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-08 local
 
-This is the current state. **DEEPSLEEP-FINAL-03 is the new software-validated
-baseline for owner installation; installed hardware is still02 until verified
-otherwise.** The owner
-also intends to leave the player unplugged overnight and inspect it in the
-morning. That observation is not armed: current02 remains guarded, no RTC alarm
-or collector is active. Archive64 preserves the latest same-boot state before
-the image request; the proposed guard release never happened. Verify the new
-image after owner installation before enabling the observation. Historical
-2026-10-06 instructions below do not supersede this state.
-Cleanup is outside this task. Preserve all evidence, sealed images, fallback,
-symbols and build inputs.
+**Latest: owner-installed DEEPSLEEP-FINAL-03 passes the requested quick SSH
+installation check.** Archive
+`out/deep-sleep-final/evidence/20261008/65-image03-first-check/` preserves the
+first-return, retained/persistent evidence, exact installed hashes and
+`verification.json` (18/18 checks). Boot
+`0132fb21-8462-4f77-9faf-3a7e7f1b8429`, taint0, uptime182–278 seconds.
+Linuxcfb7e09 / Reborn97ff8c3 / rootv1.33 / kernel03 match the sealed package;
+running Reborn and all three changed Python helpers match the build byte-for-byte.
+Reborn presents a real first frame and responds to status. USB is configured;
+Charging/CONSTANT_CURRENT is observed with fault/sample/stop/last errors0 and
+SDP450000uA programmed ceiling. Subsequent HOLD/recharge samples are retained;
+no actual battery-current or full-charge measurement is claimed. All three
+ext4 error counters are0, playback paused, PCM closed, no scan, Wi-Fi/BT off.
 
-## New successor03 baseline — owner flash pending
+Normal automatic sleep is built in. The synthetic USB budget supply has no
+wakeup source; physical cable and battery wake remain enabled. Operation locks
+are free, only Idle workload is leased, and old02's pending guard does not match
+03's identity. No test/helper, RTC alarm or recovery backstop is armed. No device
+policy, service, firmware or guard was changed by this check. The host lease is
+released at the end of the check.
+
+**03 full suspend/endurance remain NOT_RUN:** entries/resumes0 while USB is
+attached; admission correctly refuses active charging. A successful boot is not
+a suspend/resume qualification. The owner still intends an exploratory unplugged
+night. Leave playback paused and screen off; record actual unplug/entry time from
+owner/journal. No overnight start is yet recorded and no collector is armed.
+On morning reconnect, archive first before reboot or changes; compare boot ID,
+actual accumulated sleep, maintenance/other wakes and fresh voltage/SOC.
+Connected88% is provisional and is not an unplugged test endpoint. The missing
+controlled30-minute/two-hour gates and independent reliability defects remain.
+Cleanup is outside this task; preserve all evidence, sealed images and symbols.
+
+## Successor03 baseline — installed, quick check passed
 
 Owner folder:
 `/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-deepsleep-final-candidate-03/`.
@@ -51,11 +71,11 @@ unplugged battery endpoint. Preserve retained/persistent evidence first on
 morning reconnect, before reboot or changes. Calculate real accumulated suspend,
 maintenance/other wakes, awake gaps, same-boot continuity, voltage and fresh SOC.
 An exploratory night does not retrospectively pass the interrupted30-minute or
-missing two-hour gates. Entry and endurance on03 are **PHYSICAL_NOT_RUN**.
-No overnight collector or alarm has been armed and02's guard remains pending.
-The new03 source identity will make the old02-specific guard inapplicable; normal
-03 auto-sleep must be checked after installation. Historical02 overlay ledgers
-on Y2DATA remain evidence, not a claim that overlays were applied to03.
+missing two-hour gates. Entry and endurance on03 are **PHYSICAL_NOT_RUN** despite
+the successful installation sanity check. No overnight collector/alarm is armed.
+Archive65 verifies that the old02-specific pending guard has a different identity
+and does not quarantine03. Historical02 overlay ledgers on Y2DATA remain evidence,
+not a claim that overlays were applied to03.
 
 The existing clean/product collectors pin02 source identities and will refuse03.
 After fresh SSH verification, update their explicit accepted pair for a reviewed

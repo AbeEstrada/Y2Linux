@@ -4,6 +4,23 @@
 
 ### Clean corrective-image physical admission
 
+**03 installation evidence refresh, 2026-10-08:** archive65 records the owner
+flash and requested quick SSH check on boot0132fb21..., taint0. Exact paired
+sources, kernel/root identity and installed Reborn/three helper hashes match03.
+First display frame, application status, configured USB, active fault-free
+charging and three zero ext4 error counters are CONFIRMED for this boot.
+The production synthetic-USB wake removal is present; physical cable/battery
+wake remains. No blocking operation owner, applicable quarantine, test/alarm or
+backstop is active. No device mutation or agent flash occurred.
+
+Coverage is SOFTWARE_VALIDATED / INSTALLATION_SANITY_PASS, with03 full suspend
+and endurance NOT_RUN (SPM0/0 while cable-attached). The owner's exploratory
+night remains distinct from controlled qualification; preserve entry/endpoints
+and morning evidence before any reboot. This narrow evidence update neither
+activates/closes a milestone nor changes hardware/production scope. Existing
+issue mappings and independent device-stage, warm-display, poweroff, C3,
+SOC/charging/electrical and longer endurance gaps are unchanged.
+
 **Successor03 software closing review:** source
 `cfb7e098eae60918f47d7b330445bf66e9d61817` plus Reborn97ff8c3 builds the coherent
 rootv1.33 pair.578 platform cases pass (541 container + ten native dependency +

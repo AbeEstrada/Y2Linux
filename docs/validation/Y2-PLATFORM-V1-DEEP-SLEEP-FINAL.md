@@ -1,21 +1,24 @@
 # Y2 Platform 1.0 — final deep-sleep investigation
 
 Investigation opened 2026-10-07; **IN PROGRESS, no readiness promotion**.
-**Latest owner request: successor03 baseline built, owner flash pending.**
+**Latest: owner-installed03 passes quick installation verification (archive65).**
 Linux `cfb7e098eae60918f47d7b330445bf66e9d61817`, Reborn
-`97ff8c357bab12319087740d7c97b5051e6588f5`, rootv1.33. All completed production
-corrections are in the new BOOTIMG/Y2ROOT pair, including the previously local
-maintenance and display recovery changes.578 platform cases,335 Reborn tests,
-fmt/strict Clippy, ARM/kernel/config/DT/modules/ABI/QEMU and preserving package
-checks pass. Installed physical evidence remains02 plus its recorded overlays;
-03 physical/endurance status is NOT_RUN. No flash by the agent.
+`97ff8c357bab12319087740d7c97b5051e6588f5`, rootv1.33 and kernel03 are verified
+on boot `0132fb21-8462-4f77-9faf-3a7e7f1b8429`. Reborn and three changed helpers
+match build hashes, taint0, first frame and status healthy, USB configured,
+charging active without reported faults, ext4 errors0. Archive65 preserves
+first-return/pstore/SRAM/persistent logs before further reads;18/18 installation
+checks pass. No device mutation, new test or agent flash.
 
-The owner intends to leave the player unplugged for the rest of the night and
-inspect it in the morning. They requested03 before the planned02 guard release;
-therefore no overnight run was armed and02 remains guarded. Archive64 preserves
-that same-boot/taint0 state. Verify exact03 identity and USB/charging after owner
-installation before enabling any observation. Record actual entry and duration,
-not just elapsed cable-free time. The interrupted30-minute/two-hour gates remain.
+Automatic sleep policy is installed, synthetic USB-budget wake source removed,
+physical cable/battery wake enabled, operation owners clear, old02 guard identity
+inapplicable. No RTC alarm/test/backstop is active. **03 SPM entries/resumes0:**
+USB is connected, so this quick check does not qualify suspend or endurance.
+The owner intends to leave it unplugged overnight; no actual start is recorded.
+Morning reconnect must preserve evidence before reboot. Connected88% provisional
+SOC is not a drain endpoint. Controlled30-minute/two-hour and independent
+reliability/electrical gaps remain open. Software qualification remains578
+platform cases,335 Reborn tests plus fmt/Clippy/ARM/kernel/ABI/QEMU/package PASS.
 
 **Stopped for the day at the owner's request, 2026-10-08.** Archive62 records
 an interrupted thirty-minute trial: 943.163696289 seconds actual full suspend
@@ -50,7 +53,16 @@ Archives and SHA256 receipts stay local; no private logs are published.
 
 ## 1. Installed firmware
 
-Current boot is `f567b2c3-97eb-42e2-8c24-ffca801be25c`, exact02 after owner
+**Current: DEEPSLEEP-FINAL-03**, verified by SSH in archive65 on2026-10-08.
+Boot `0132fb21-8462-4f77-9faf-3a7e7f1b8429`, kernel
+`6.18.0-y2linux-platform-v1-deepsleep-final-03`, release
+`1.0.0-platform-v1-deepsleep-final-candidate.3`, root2025.02.18-platform-v1.33.
+Linuxcfb7e09 / Reborn97ff8c3; live Reborn SHA
+`890216e09b6de5a19796912e11db4ec831183d713c2c4c0a6669fd4ffe785423` matches
+sealed build. The product/journal/receipt helpers also match03; historic02 live
+ledger files remain data evidence only. The paragraphs below retain02 history.
+
+Previous02 boot was `f567b2c3-97eb-42e2-8c24-ffca801be25c`, exact02 after owner
 hardware restart. Archive `45b-clean-hardware-return/` records uptime 397.88 s,
 taint zero, advancing display vblanks 17/87/154/222, no diagnostic module and
 owner-confirmed normal player. Battery ADC 4.095922 V while connected is not
@@ -69,7 +81,7 @@ The preceding service reboot to remove the observer produced boot
 `7c416e45-c90c-4fbc-9715-237792b37105`, with the same early display failure and
 taint512 before any new PM trial. Archive44 retains it. The failed OVL recovery
 module is excluded from further testing.
-The exact installed image remains unchanged 02. The paragraphs below retain
+At that earlier point the installed image remained02. The paragraphs below retain
 the preceding diagnostic boot and original image-verification evidence.
 
 Earlier boot `22bd28fa-62ed-4e1e-afe4-0e6c6e209ac7` followed owner hardware

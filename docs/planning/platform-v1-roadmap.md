@@ -2,15 +2,16 @@
 
 ## Current deep-sleep investigation — 2026-10-07
 
-**Successor03 software baseline complete; owner flash pending.** Linuxcfb7e09,
-Reborn97ff8c3, rootv1.33 include all completed production corrections.578 platform
-cases,335 Reborn tests/fmt/strict Clippy, kernel/DT/modules/ABI/ARM/QEMU and
-preserving package checks pass. No Y2DATA payload or agent flash. The new owner
-folder is `out/y2linux-platform-v1-deepsleep-final-candidate-03/`;02 remains intact.
-Exact03 hardware and endurance are NOT_RUN. Installed02 is still guarded; the
-owner's overnight plan was held when they requested this image. Verify the new
-boot/USB/charging before recording an actual overnight start. The closing audit
-retains every independent reliability/electrical gap and no release is promoted.
+**Owner-installed03 passes quick SSH installation verification (archive65).**
+Linuxcfb7e09 / Reborn97ff8c3 / rootv1.33 / kernel03 and installed binary/helper
+hashes match the sealed baseline. Boot0132fb21..., taint0, working first frame,
+USB, charging without reported faults, and all three ext4 error counters0.
+Automatic policy and synthetic USB wake fix are present; operation owners clear,
+old02 quarantine identity inapplicable, no collector/alarm/backstop armed.
+No runtime changes were made. This is INSTALLATION_SANITY_PASS only: USB remains
+attached and SPM entries/resumes0. Exact03 full sleep and endurance remain NOT_RUN.
+The owner's exploratory overnight plan and morning archive stand; actual start
+is not yet recorded. All reliability/electrical/qualification gaps stay open.
 
 **Latest owner request, 2026-10-08: build a fresh03 baseline.** Package all
 completed production fixes with Reborn97ff8c3 into one BOOTIMG/Y2ROOT successor,
