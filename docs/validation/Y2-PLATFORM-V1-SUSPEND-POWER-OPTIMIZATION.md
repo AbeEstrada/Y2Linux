@@ -83,6 +83,30 @@ The vendor sets these in `PMIC_INIT_SETTING_V1` (`pmic_mt6323.c`, chip ≥ E2, 2
 (`kernel/platform/connectivity/core.c: pmic_prepare()`). Whether each golden difference is already corrected by the Y2's own suspend path
 (e.g. regulator framework, SPM program) is **unknown** until the register state is read at suspend entry.
 
+
+## 6b. Suspend-probe results (archives 79–81, 2026-10-08) [measured]
+
+First real before/after-sleep PMIC capture on DEEPSLEEP-FINAL-04 (boot `aae0ddb3`): owner unplugged ~20:33 CEST, reconnected ~21:04; product receipt 1849.9 s
+suspended, 3 maintenance wakes, SPM 7 entries/7 resumes, aborts 0, taint 0. The probe (read-only) took 11 captures with no capture overlapping a suspend; each full
+PMIC dump takes 38 ms. Captures are the state ≈0.1–0.7 s before the freezer (`pre-entry`), 0.8 s after each maintenance wake, and at the first userspace instant
+after resume. They are **not** readings taken while the SoC sleeps.
+
+| Rail / bit | pre-entry (quiesced, unplugged) | post-resume | Reading |
+| --- | --- | --- | --- |
+| VCN18, VCN33_WIFI, VCN33_BT (radios) | **off** | off | confirms the connectivity driver releases all rails before sleep |
+| VMC, VMCH (SD I/O, SD VCC) | on | **off** (back on ~1 s later) | the SD card **is powered off across suspend** by the MMC core; the earlier static guess that it stays powered was wrong |
+| VEMC3V3 (eMMC VCC) | on | on | retained by design (patch 0029); vendor suspend removes it |
+| VA, VIO28, VUSB, VM, VIO18, VRTC, VTCXO, VGP2, VPROC, VSYS | on | on | **VUSB is enabled with the cable removed**; VUSB/VIO28/VA/VM/VIO18 have `LP_SEL`=0 |
+| LP_SEL (bit 0) | only VTCXO set | same | vendor sets it on VA, VIO28, VUSB, VMC, VMCH, VEMC3V3, VM, VIO18 |
+| VPROC/VSYS sleep-voltage enables (`0x230`, `0x256`, …) | 0 | 0 | vendor golden expects 1 |
+
+Registers that changed between `pre-entry` and `post-resume` (excluding 11 volatile counters/ADC registers): only `0x504`/`0x506` (SD rails) plus `0x13a` and `0x73a`
+(minor). **The SPM sleep path does not visibly switch any PMIC low-power configuration bit**: the vendor's static sleep configuration (LP_SEL, sleep voltages) is
+simply absent. Golden-table differences: 22 at pre-entry (down from 25 awake; the three connectivity rails now match), 20 at post-resume.
+
+Interpretation limits: LP_SEL only lowers LDO quiescent current when the SoC releases its 26 MHz request (SRCLKENA) in sleep; whether the Y2's dpidle-style program does is
+unknown. A different value at the instant of sleep cannot be excluded because the SPM could change and restore state, but the static configuration bits are not expected to be toggled.
+
 ## 7. SoC power-domain inventory
 
 Not yet complete. Known from source/docs: SPM mode keeps INFRA/DDRPHY powered; CPU cores shut down; MFG is the only SPM power domain
@@ -174,8 +198,11 @@ Revised ranking after the PMIC evidence (still unimplemented; every item needs a
 
 0. **Evidence first:** read the PMIC registers (read-only) at suspend entry and on resume, and compare to the vendor golden table. This tells
    which of the 25 differences are real in suspend. Low risk.
-1. **SD card power in suspend** (VMC/VMCH): the Y2 keeps a powered SD card (no `cap-power-off-card`); the vendor removes its power. Needs a re-init
-   and mount-safety design; expected saving is card-dependent [unknown, typically a few hundred µA].
+1. ~~SD card power in suspend~~ **already off in suspend (probe, §6b).**
+1. **PMIC static low-power configuration** from `PMIC_INIT_SETTING_V1` (vendor), applied once at boot/probe: `LP_SEL` on VA, VIO28, VUSB, VMC, VMCH, VEMC3V3, VM, VIO18
+   (0x404/0x500/0x502/0x504/0x506/0x508/0x552/0x556 bit 0). Exact-source backed, absent today, no effect while the SoC requests 26 MHz. Needs a kernel/DT change
+   (new image) and an owner-run before/after comparison; writes must be reviewed.
+1b. **VUSB while disconnected:** LDO enabled with the cable removed. Verify in the vendor `usb20.c` whether the LDO is enabled only while a cable is present.
 2. **LDO LP_SEL bits** (VA, VIO28, VUSB, VM, VIO18) from `PMIC_INIT_SETTING_V1`: standard MediaTek low-power-mode select, exact-source backed. Effect only
    if SRCLKEN is deasserted in suspend (26 MHz request released) — not yet shown for the Y2's dpidle-style program.
 3. **eMMC VCC (VEMC3V3) in suspend:** vendor removes it with eMMC sleep; the Y2 deliberately retains it for reliability (patch 0029). High risk (root and data).

@@ -74,5 +74,42 @@
     "connectivity_rails_held_only_while_active": true,
     "sd_card_power_off_in_suspend": false,
     "vendor_init_applied_by_y2": "connectivity subset only"
+  },
+  "probe_run_1": {
+    "archives": [
+      "79",
+      "80",
+      "81"
+    ],
+    "unplugged_cest": "20:33",
+    "reconnected_cest": "21:04",
+    "suspended_seconds": 1849.88,
+    "maintenance_wakes": 3,
+    "spm_entries": 7,
+    "captures": 11,
+    "capture_read_seconds": 0.038,
+    "golden_differences": {
+      "awake": 25,
+      "pre_entry": 22,
+      "post_resume": 20
+    },
+    "connectivity_rails_at_pre_entry": "off",
+    "sd_rails": {
+      "pre_entry": "on",
+      "post_resume": "off"
+    },
+    "vusb_unplugged": "on",
+    "emmc_vcc": "on throughout",
+    "lp_sel_set": [
+      "VTCXO"
+    ],
+    "vproc_vsys_sleep_voltage": "not enabled",
+    "pmic_regs_changed_across_sleep": [
+      "0x504",
+      "0x506",
+      "0x13a",
+      "0x73a"
+    ],
+    "limits": "states just before/after sleep; not during sleep; no current measured"
   }
 }
