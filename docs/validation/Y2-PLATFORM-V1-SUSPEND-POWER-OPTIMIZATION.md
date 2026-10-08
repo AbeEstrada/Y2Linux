@@ -220,7 +220,13 @@ Revised ranking after the PMIC evidence (still unimplemented; every item needs a
 
 ## 22. Changes implemented
 
-None.
+**POWER-FINAL-05 (source `837b614`, built, validated, sealed, not flashed):** vendor `PMIC_INIT_SETTING_V1` `LP_SEL` (bit 0) on VA 0x404, VIO28 0x500, VUSB 0x502,
+VM 0x552, VIO18 0x556: PMIC write whitelist extended by exactly those bits (`policy.h`), `kernel/platform/pmic-lowpower.c` applies them once ~10 s after boot on E2 silicon
+(CID ≥ 0x2023) with readback verification, `/sys/firmware/y2_pmic/lp_sel` (root) reverts/sets at run time. Expected effect: five golden-table differences close (22→17 at
+suspend entry); electrical benefit **unmeasured**. Owner-authorized. Tests: `tests/test_pmic_lowpower.py` (6), production suite 560 cases PASS.
+
+Not implemented (see §23): storage-rail `LP_SEL` switch (blocked by the safety classifier, eMMC supply register), VUSB disable (vendor keeps it on), VGP2 off in suspend,
+VPROC/VSYS sleep voltage, eMMC supply removal, vendor `pcm_suspend`.
 
 ## 23. Changes rejected for safety
 
@@ -254,3 +260,11 @@ measurement.
    entry and immediately on resume (no claim about the in-between interval).
 3. Trace the vendor 597-word non-MT6333 `pcm_suspend` against the Y2's PWRAP/PMIC and DRAM wiring and design a staged experiment.
 4. Owner decision on external current measurement.
+
+## Candidate POWER-FINAL-05 (2026-10-08)
+
+Folder `out/y2linux-platform-v1-power-final-candidate-05/` (own `OWNER-HANDOFF.md`, `SHA256SUMS` verified), symbols `…-candidate-05-symbols/`, worktrees
+`/home/luca/Dokumente/Code/worktrees/y2-power-final-05/`. Release `1.0.0-platform-v1-power-final-candidate.5`, root v1.35, kernel `6.18.0-y2linux-platform-v1-power-final-05`.
+BOOTIMG (7256064 B) `0137a855db96d8f94005333941495c4fdaa2f81c9eb653458b77e9c0fd044117`; Y2ROOT (536870912 B)
+`9175185fd577b759302337cc8d17f678fde3dc621525b90d45cf6cb370e99a4d`. Preserving scatter identical to 04; `fallback/` = sealed 04. Validation: container suite 560 PASS,
+10 native packaging + 27 splash PASS, Reborn fmt/clippy/335 tests, QEMU, ELF 384/1411, package/privacy PASS. Physical: NOT_RUN.

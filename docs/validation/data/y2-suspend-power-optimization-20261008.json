@@ -54,9 +54,11 @@
   "key_finding": "Y2Linux uses vendor pcm_dpidle with INFRA/DDRPHY retained; vendor real suspend uses separate pcm_suspend (597 words) with cpu_pdn=1, infra_pdn=1, ck26m_off (mt_sleep.c defaults).",
   "vendor_source": "android.googlesource.com/kernel/mediatek d53dd75c3ff77cac3f5be58fddfe660e94f94d64 arch/arm/mach-mt6582/{mt_spm_sleep.c,mt_sleep.c,include/mach/mt_spm.h}",
   "maintenance_wake_owner": "SPM PCM timer, Y2_SPM_TIMER=19660800 ticks=600 s; vendor SPM_WAKE_PERIOD=600",
-  "changes_implemented": [],
+  "changes_implemented": [
+    "vendor LP_SEL bit0 (5 LDOs)"
+  ],
   "device_changes": [],
-  "verdict": "MORE_WORK_REQUIRED",
+  "verdict": "SUSPEND_POWER_IMPROVED_OVERNIGHT_TEST_REMAINS (candidate built, NEEDS_OWNER_FLASH; benefit unmeasured)",
   "pmic_awake_dump": {
     "archive": "out/deep-sleep-final/evidence/20261008/78-image04-pmic-regdump",
     "registers": 2079,
@@ -111,5 +113,18 @@
       "0x73a"
     ],
     "limits": "states just before/after sleep; not during sleep; no current measured"
+  },
+  "candidate_05": {
+    "linux": "837b6146ee4d0f551b69cfaddd686a69ce56a060",
+    "bootimg_sha256": "0137a855db96d8f94005333941495c4fdaa2f81c9eb653458b77e9c0fd044117",
+    "y2root_sha256": "9175185fd577b759302337cc8d17f678fde3dc621525b90d45cf6cb370e99a4d",
+    "change": "vendor LP_SEL bit0 on VA,VIO28,VUSB,VM,VIO18 + runtime revert /sys/firmware/y2_pmic/lp_sel",
+    "physical": "NOT_RUN",
+    "tests": {
+      "container": 560,
+      "native_packaging": 10,
+      "native_splash": 27,
+      "reborn": 335
+    }
   }
 }
