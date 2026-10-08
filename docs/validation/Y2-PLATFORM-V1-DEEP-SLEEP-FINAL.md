@@ -1565,6 +1565,7 @@ helper/Reborn hashes, ext4 counters 0, retained PM blank after flash, old 03 gua
 | --- | --- | --- |
 | 1 | 68-71 | request BOOTTIME 556.0, kernel suspend 557.8, resumed 1027.8; SPM 15376821 ticks = **469.27 s**; PM COMPLETE seq48; same boot, taint 0, Reborn restored, ext4 0; guard back to `pending:false` |
 | 1 hour | 72-73 | main sleep from 1364.1 (after a 1.2 s early entry at the unplug); six maintenance wakes (1965...4980 s, dark, connectivity suspended) each re-entered; **3805.25 s suspended / ~3825 s unplugged (99.5%)**; SPM boot totals 9/9, aborts 0, restore failures 0; PM seq 408 COMPLETE |
+| Early-boot | 74-75 | after owner reboot (boot `aae0ddb3`): request 35.6, kernel suspend **39.4 s**, resumed 592.3; SPM 18081448 ticks = **551.80 s**; COMPLETE seq48; taint 0, Reborn restored, ext4 0; guard `pending:false`. Does not support a simple early-boot trigger (03/02 stalled at ~400-460 s); one pass cannot exclude it |
 
 Provisional pre-cable SOC 71%→69% (3.966→3.948 V) includes post-charge relaxation and 1% steps; no pack current. It is not a drain
 measurement. Wake label for the USB reconnects is `unknown` in the product receipt. No `dpm_stall`/stall notes were produced (none

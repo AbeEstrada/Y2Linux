@@ -32,6 +32,11 @@
 > (3.966→3.948 V; post-charge relaxation included): NOT a drain result. Data: `docs/validation/data/y2-deepsleep04-trial1-20261008.json`,
 > `…trial2-1h-20261008.json`.
 >
+> **Early-boot test PASSED (archives 74-75, after the owner's reboot):** new boot `aae0ddb3`, taint0; the product requested sleep at BOOTTIME35.6 and entered
+> the kernel at **39.4 s** (far earlier than the 03/02 stalls at ~400-460 s), slept **551.80 s** (18081448 ticks), woke on the USB reconnect (`0x20`, label
+> `unknown`), PM COMPLETE seq48, Reborn restored, ext4 errors0, 04 guard `pending:false`. A simple "too early after boot" trigger is therefore not supported
+> by this sample; one pass cannot exclude it. Data: `docs/validation/data/y2-deepsleep04-early-boot-20261008.json`. Overnight drain test is next.
+>
 > **Next (agreed with owner):** one owner reboot (early-boot test: unplug ~6 min after boot to probe the 400-460 s stall window),
 > then an overnight unplugged drain test (paused, screen dark, no input; owner reports unplug/reconnect times; morning: archive with
 > `capture-return.py` under `flock -n /tmp/y2-platform-v1-device.lock` BEFORE anything else, then `image04-readonly-health.py <dir>`).
