@@ -35,6 +35,7 @@ int main(void) {
         else if(r==0x52a) assert(mask==0x0010); /* VMC 1.8/3.3 V */
         else if(r==0x52c) assert(mask==0x0080); /* VMCH 3.3 V */
         else if(r==0x508||r==0x52e) assert(mask==0); /* VEMC_3V3 root supply */
+        else if(r==0x404||r==0x500||r==0x502||r==0x552||r==0x556) assert(mask==1); /* POWER-FINAL-05 vendor LP_SEL, bit 0 only */
         else if(r==0) assert(mask==0x18); /* only engine bits; safety predicates in charger owner */
         else if(r==0x002) assert(mask==0xf0);
         else if(r==0x004) assert(mask==0xa);

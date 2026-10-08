@@ -11,4 +11,5 @@ obj-$(CONFIG_Y2_CONNECTIVITY) += connectivity/
 obj-$(CONFIG_Y2_POWER) += cirq.o
 obj-$(CONFIG_Y2_POWER) += cpu-options.o
 obj-$(CONFIG_Y2_POWER) += pm-journal.o resume-vector.o
+obj-$(CONFIG_Y2_POWER) += pmic-lowpower.o
 obj-$(CONFIG_Y2_POWER) += system-idle.o

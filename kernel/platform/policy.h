@@ -62,6 +62,12 @@ static inline unsigned y2_pmic_write_mask(unsigned reg)
 	case 0x340:
 	case 0x348:
 		return 0x1f00;
+	/* Vendor PMIC_INIT_SETTING_V1 LP_SEL (bit 0 only) of the always-on LDOs: VA,
+	 * VIO28, VUSB, VM, VIO18. Enable, selector and mode bits stay unwritable;
+	 * VEMC_3V3, VMC and VMCH LP_SEL are deliberately not admitted.
+	 * Owner-authorized 2026-10-08 (POWER-FINAL-05). */
+	case 0x404: case 0x500: case 0x502: case 0x552: case 0x556:
+		return 0x0001;
 	case 0x50c: /* MT6323 DIGLDO_CON8: VGP2 enable only. */
 		return 0x8000;
 	case 0x532: /* DIGLDO_CON29: VGP2 selector only. */
