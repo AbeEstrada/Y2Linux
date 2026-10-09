@@ -28,6 +28,7 @@
 #include "/project/kernel/diagnostic/usb_wake.h"
 #include "/project/kernel/usb/live.h"
 #include "/project/kernel/usb/fault.h"
+#include "/project/kernel/usb/l1.h"
 #include "pm-journal.h"
 static void y2_usb_begin(void);
 static ssize_t y2_usb_status(char __user *buf);
@@ -492,7 +493,7 @@ static const struct power_supply_desc y2_usb_input_desc = {
     .get_property = y2_usb_input_get,
 };
 static struct y2_usb_irq_guard y2_irq_guard;
-static unsigned y2_irq_unexplained;
+static unsigned y2_irq_unexplained, y2_irq_unowned_masked;
 static unsigned y2_dma_bus_errors[8];
 static DEFINE_RAW_SPINLOCK(y2_fault_lock);
 static struct y2_usb_fault y2_fault;
@@ -699,7 +700,21 @@ static irqreturn_t y2_musb_interrupt(int irq,void *context)
         return IRQ_HANDLED;
     }
     spin_lock_irqsave(&musb->lock,flags);
-    pending=readl(musb->mregs+0xa0)&readl(musb->mregs+0xa4);
+    {
+        unsigned status=readl(musb->mregs+0xa0), mask=readl(musb->mregs+0xa4);
+        unsigned unowned=y2_usb_l1_unowned_pending(status,mask);
+        /* A PHY level condition we do not service (see l1.h): mask it at the
+         * source instead of letting it repeat until the storm guard latches. */
+        if(unowned) {
+            writel(y2_usb_l1_mask_after(mask,unowned),musb->mregs+0xa4);
+            if(!y2_irq_unowned_masked++)
+                dev_warn(musb->controller,"Y2USB masked unowned L1 interrupt %x (status=%x mask=%x)\n",
+                    unowned,status,mask);
+            mask=y2_usb_l1_mask_after(mask,unowned);
+            rc=IRQ_HANDLED;
+        }
+        pending=status&mask;
+    }
     if(!(pending & 15)) ++y2_irq_unexplained;
     if(pending & 7) {
         musb->int_usb=y2_musb_clearb(musb->mregs,MUSB_INTRUSB) &
@@ -920,7 +935,7 @@ void y2_musb_before_restore(struct musb *musb)
 	unsigned long flags;
 	if (musb != READ_ONCE(y2_musb)) return;
 	spin_lock_irqsave(&musb->lock, flags);
-	y2_pm_l1_mask = readl(musb->mregs + 0xa4);
+	y2_pm_l1_mask = y2_usb_l1_restore_mask(readl(musb->mregs + 0xa4));
 	writel(0, musb->mregs + 0xa4);
 	writeb(0, musb->mregs + MUSB_INTRUSBE);
 	writew(0, musb->mregs + MUSB_INTRTXE);
@@ -1028,17 +1043,28 @@ static void y2_usb_finish(void)
         spin_lock_irqsave(&y2_musb->lock,flags);
         writel(0,y2_musb->mregs+0xa4);
         writeb(readb(y2_musb->mregs+MUSB_POWER)&~MUSB_POWER_SOFTCONN,y2_musb->mregs+MUSB_POWER);
+        if(!y2_usb_detached) {
+            /* Return every queued gadget request and stop the controller,
+             * exactly like a cable removal (see y2_usb_detach()). */
+            WRITE_ONCE(y2_usb_detached,true);
+            musb_g_disconnect(y2_musb);
+            musb_stop(y2_musb);
+        }
         spin_unlock_irqrestore(&y2_musb->lock,flags);
     }
     WRITE_ONCE(y2_live.configured,0);
-    /* Tell PID1 to close ttyGS0 before gadget teardown waits for its user. */
+    /* Tell PID1 to close ttyGS0 before the controller is parked. */
     if(!READ_ONCE(y2_live.result)) y2_usb_phase(Y2_USB_STOPPED);
-    if(y2_usb_child) {
+    /* A stopped controller is parked, never unregistered. Unregistering frees
+     * struct musb and with it the gadget device that the configfs ECM netdev
+     * (usb0) keeps as dev.parent without a reference; the next netlink query of
+     * usb0 then reads freed memory (POWER-FINAL-05 overnight: strlen(NULL) in
+     * rtnl_fill_ifinfo on the first `ip` run after the 01:34 USB stop). A parked
+     * controller is in the proven cable-removed state: detached, IRQs masked,
+     * SOFTCONN off, bus clock gated by runtime PM. */
+    if(y2_usb_child)
         y2_usb_runtime_put();
-        platform_device_unregister(y2_usb_child);
-        y2_usb_child=NULL;
-    }
-    if(y2_usb_phy) {iounmap(y2_usb_phy);y2_usb_phy=NULL;
+    else if(y2_usb_phy) {iounmap(y2_usb_phy);y2_usb_phy=NULL;
         release_mem_region(Y2_USB_PHY_BASE,Y2_USB_PHY_BYTES);}
     pr_info("Y2USB stopped stage=%u result=%d IRQ=%u events=%02x\n",
         y2_live.stage,y2_live.result,y2_live.irqs,y2_live.events);
@@ -1264,8 +1290,8 @@ static ssize_t status_show(struct device *dev, struct device_attribute *attr, ch
         atomic64_read(&y2_dma_alignment_rejects));
 #endif
     n += sysfs_emit_at(buf, n,
-        "irq_max_burst=%u irq_burst_limit=%u irq_unexplained=%u dma_bus_errors=%u,%u,%u,%u,%u,%u,%u,%u\n",
-        READ_ONCE(y2_irq_guard.max_burst), Y2_USB_IRQ_BURST_LIMIT, READ_ONCE(y2_irq_unexplained),
+        "irq_max_burst=%u irq_burst_limit=%u irq_unexplained=%u irq_unowned_masked=%u dma_bus_errors=%u,%u,%u,%u,%u,%u,%u,%u\n",
+        READ_ONCE(y2_irq_guard.max_burst), Y2_USB_IRQ_BURST_LIMIT, READ_ONCE(y2_irq_unexplained), READ_ONCE(y2_irq_unowned_masked),
         y2_dma_bus_errors[0], y2_dma_bus_errors[1], y2_dma_bus_errors[2], y2_dma_bus_errors[3],
         y2_dma_bus_errors[4], y2_dma_bus_errors[5], y2_dma_bus_errors[6], y2_dma_bus_errors[7]);
     n += sysfs_emit_at(buf, n, "irq_max_jiffy=%u irq_jiffy_limit=%u irq_progress=%u\n",
