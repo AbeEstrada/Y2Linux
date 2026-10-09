@@ -5,13 +5,26 @@ Status: **MORE_WORK_REQUIRED — phase 1 (research, no device change).** Started
 Every statement is tagged **[measured]**, **[source]** (exact-source backed, not yet observed on the Y2),
 **[estimate]** or **[unknown]**. SOC is voltage-derived and is never used as an energy measurement.
 
+> **Correction (2026-10-09, POWER-FINAL-06 audit).** Earlier text in this report (the §1 "PCM origin" line, §8, and the
+> statements below that follow from them) says Y2Linux runs the 480-word `pcm_dpidle` program for full suspend. **That is wrong.**
+> The `MT6582_d53dd75c_dpidle (480 words)` string comes from the *runtime-idle* (dormant C3) SPM sysfs line, not from system suspend.
+> Full suspend already loads the vendor **597-word `pcm_suspend`** (v34rc10, non-MT6333 variant, IM length 596, event vectors 26/55/99;
+> `kernel/platform/spm-pcm.h`, `spm-suspend-policy.h`; `/sys/firmware/y2_pm/state` reports `pcm_length=596`). Re-verified on 2026-10-09:
+> the 597 words are identical to the arrays in the pinned vendor `mt_spm_sleep.c` (`d53dd75c…`), SHA-256
+> `0ee71194bd3330512e1415c22080cea29942ec7124b77311cfd1bc2215c6ab94`, and the stock `spm_go_to_sleep` disassembly matches the vendor source.
+> The **actual** difference from the vendor's default full suspend (`slp_cpu_pdn=1`, `slp_infra_pdn=1`, `slp_ck26m_on=0`; stock
+> `.data` defaults 01 01 01 at `0xc09b1084` read from the retained FM kernel) is only **`infra_pdn=false`**: Y2Linux sets
+> `CC_DISABLE_INFRA_PWR` (mode `SPM_CPU_SHUTDOWN_INFRA_RETAINED`) and does not port the stock post-wake `mtk_uart_restore` or any other
+> INFRA-domain restore. The PCM program is not the lever; INFRA/DDRPHY power-down plus its restore path is. §8 and §21 below are
+> corrected accordingly; the original wording remains in git history (POWER-FINAL-05 commits).
+
 Naming note: the images in the request called "POWER-FINAL-04" are the repository's **DEEPSLEEP-FINAL-04** (Linux `5e26757`).
 
 ## 1. Exact installed firmware
 
 DEEPSLEEP-FINAL-04: Linux `5e267571d584da7fbe356d3161801ba15f87fa57`, Reborn `97ff8c357bab12319087740d7c97b5051e6588f5`, kernel
 `6.18.0-y2linux-platform-v1-deepsleep-final-04`, root v1.34, taint 0, SPM mode `SPM_CPU_SHUTDOWN_INFRA_RETAINED`,
-PCM origin `MT6582_d53dd75c_dpidle` (480 words), `system_sleep_abi=1`, `maintenance_seconds=600`. Verified read-only in archive 68
+suspend PCM = vendor 597-word `pcm_suspend` (IM length 596; the runtime-idle line of the same sysfs file reports the separate 480-word `dpidle`), `system_sleep_abi=1`, `maintenance_seconds=600`. Verified read-only in archive 68
 (helpers and Reborn byte-identical to the build). The device was unplugged for the overnight test when this phase started and was
 deliberately not contacted. [measured]
 
@@ -104,7 +117,7 @@ Registers that changed between `pre-entry` and `post-resume` (excluding 11 volat
 (minor). **The SPM sleep path does not visibly switch any PMIC low-power configuration bit**: the vendor's static sleep configuration (LP_SEL, sleep voltages) is
 simply absent. Golden-table differences: 22 at pre-entry (down from 25 awake; the three connectivity rails now match), 20 at post-resume.
 
-Interpretation limits: LP_SEL only lowers LDO quiescent current when the SoC releases its 26 MHz request (SRCLKENA) in sleep; whether the Y2's dpidle-style program does is
+Interpretation limits: LP_SEL only lowers LDO quiescent current when the SoC releases its 26 MHz request (SRCLKENA) in sleep; whether the Y2's `pcm_suspend` program does is
 unknown. A different value at the instant of sleep cannot be excluded because the SPM could change and restore state, but the static configuration bits are not expected to be toggled.
 
 ## 7. SoC power-domain inventory
@@ -114,18 +127,17 @@ Linux models; thermal monitor, UART (26 MHz), GPT (13 MHz), PWRAP, AUXADC clocks
 
 ## 8. SPM suspend configuration — **primary finding**
 
-Y2Linux runs the vendor **deep-idle (`pcm_dpidle`, 480 words)** program with `cpu_pdn=1, infra_pdn=0` (INFRA/DDRPHY power kept).
-The exact vendor kernel (`android.googlesource.com/kernel/mediatek` @ `d53dd75c…`, `arch/arm/mach-mt6582/mt_spm_sleep.c`, `mt_sleep.c`)
-uses a **separate `pcm_suspend` program (597 words)** for real suspend: with its defaults `slp_ck26m_on=0`, `slp_cpu_pdn=1`,
-`slp_infra_pdn=1` it performs `spm_go_to_sleep(cpu_pdn=1, infra_pdn=1)` — **CPU shutdown, INFRA/DDRPHY power down, 26 MHz oscillator off**
-(`spm_go_to_sleep_dpidle`, which uses `pcm_dpidle` and keeps INFRA/DDRPHY, is the vendor's shallower "26M on" variant). [source]
-There are two compile-time variants of each program (`CONFIG_IS_VRF18_USE_6333VRF18`, MT6333 VRF18 over I2C1 `0x11008xxx`); the Y2 has no
-MT6333 per the repository's evidence, so the 597-word non-MT6333 variant (vec1=26, vec2=55, vec3=99) would be the candidate. [source,
-hardware match unverified]
-The vendor wake mask for suspend is `KP|EINT|CONN_WDT|CCIF_MD|CONN|USB_CD|THERM|SYSPWREQ|MD_WDT` (`SPM_BYPASS_SYSPWREQ=0` outside LDVT);
+Y2Linux runs the vendor **`pcm_suspend` (597 words, v34rc10, non-MT6333)** with `cpu_pdn=1, infra_pdn=0` (INFRA/DDRPHY power kept). **[source + measured:
+`spm-pcm.h` words identical to vendor, SHA-256 `0ee71194…6ab94`; state line `pcm_length=596`]** The runtime DORMANT (C3) idle uses the separate
+480-word `pcm_dpidle` and is unrelated to full suspend. The exact vendor kernel (`android.googlesource.com/kernel/mediatek` @ `d53dd75c…`,
+`arch/arm/mach-mt6582/mt_spm_sleep.c`, `mt_sleep.c`) runs the same program with its defaults `slp_ck26m_on=0`, `slp_cpu_pdn=1`,
+`slp_infra_pdn=1`: `spm_go_to_sleep(cpu_pdn=1, infra_pdn=1)` = CPU shutdown, INFRA/DDRPHY power down, followed by `mtk_uart_restore()`.
+The only code difference is the `infra_pdn` argument: it clears `CC_DISABLE_INFRA_PWR` in `SPM_CLK_CON` (`spm_kick_pcm_to_run`) and selects the post-wake UART
+restore. [source; stock binary `spm_go_to_sleep`/`slp_will_infra_pdn` confirm the default `infra_pdn=1`]
+Y2's wake mask: see below. The vendor wake mask for suspend is `KP|EINT|CONN_WDT|CCIF_MD|CONN|USB_CD|THERM|SYSPWREQ|MD_WDT` (`SPM_BYPASS_SYSPWREQ=0` outside LDVT);
 Y2's entry mask is `0xfedfbfdb` (enabled bits 2, 5, 14, 21, 24 = KP, EINT, USB_CD, THERM, SYSPWREQ). [source + measured]
-Consequence: the largest unexamined electrical lever is whether the Y2 may safely use the vendor `pcm_suspend` state (INFRA/DDRPHY and
-26 MHz off with DRAM self-refresh handled by the program). It is also the highest-risk change (DRAM retention, PWRAP/PMIC hand-off, resume
+Consequence: the largest unexamined electrical lever is whether the Y2 may safely run the **same** PCM with `infra_pdn=1` (INFRA/DDRPHY power-down with
+DRAM self-refresh handled by the program) together with the restore of whatever INFRA power-down resets (INFRACFG/PERICFG, UART). It is also the highest-risk change (DRAM retention, PWRAP/PMIC hand-off, resume
 vector). Not attempted. See §21–23.
 
 ## 9. DRAM retention
@@ -137,7 +149,7 @@ instruction. Data integrity across 10 clean 04 suspends is empirical. [unknown f
 ## 10. Clock / PLL / oscillator state
 
 26 MHz crystal path and APSRC: vendor program toggles them via events (vec0/vec1 "26M wake/sleep", vec2/vec3 "APSRC wake/sleep"). Whether
-the dpidle program actually switches the 26 MHz source off in the Y2's current configuration cannot be read during sleep. Needs the
+the `pcm_suspend` program actually switches the 26 MHz source off in the Y2's current configuration cannot be read during sleep. Needs the
 SPM wake/`R13` status and a PCM trace, or external measurement. [unknown]
 
 ## 11. DAC / audio power
@@ -204,13 +216,13 @@ Revised ranking after the PMIC evidence (still unimplemented; every item needs a
    (new image) and an owner-run before/after comparison; writes must be reviewed.
 1b. **VUSB while disconnected:** LDO enabled with the cable removed. Verify in the vendor `usb20.c` whether the LDO is enabled only while a cable is present.
 2. **LDO LP_SEL bits** (VA, VIO28, VUSB, VM, VIO18) from `PMIC_INIT_SETTING_V1`: standard MediaTek low-power-mode select, exact-source backed. Effect only
-   if SRCLKEN is deasserted in suspend (26 MHz request released) — not yet shown for the Y2's dpidle-style program.
+   if SRCLKEN is deasserted in suspend (26 MHz request released) — not yet shown for the Y2's `pcm_suspend` program.
 3. **eMMC VCC (VEMC3V3) in suspend:** vendor removes it with eMMC sleep; the Y2 deliberately retains it for reliability (patch 0029). High risk (root and data).
 4. **VPROC/VSYS sleep voltage** (`VPROC_VSLEEP_EN`, `VOSEL_SLEEP=0x18`): reduces leakage; conflicts with the Y2's software-controlled DVFS (`VPROC_VOSEL_CTRL`). High risk.
-5. Vendor `pcm_suspend` state (INFRA/DDRPHY and 26 MHz off), see §8: largest, riskiest.
+5. Vendor `infra_pdn=1` (INFRA/DDRPHY power-down with the existing `pcm_suspend`), see §8: largest, riskiest.
 
-1. **Vendor `pcm_suspend` state** (INFRA/DDRPHY power down + 26 MHz off) — largest expected effect, highest risk; requires staged,
-   backstop-protected experiments and exact-source porting of the 597-word program and its resume handling.
+1. **Vendor `infra_pdn=1`** (INFRA/DDRPHY power-down with the already-present `pcm_suspend`) — largest expected effect, highest risk; requires staged,
+   backstop-protected experiments and an exact-source port of the post-wake restore (UART and the INFRA-domain register blocks).
 2. **Read-only regulator/clock/SPM snapshot at suspend entry and on resume** — needed first to find any rail left on (`vgp2`, `vcn*`,
    SD rails). Low risk, informative.
 3. **VGP2 audio rail in suspend** — disable only after a consumer audit; DAC GPIOs are already low.
@@ -258,7 +270,7 @@ measurement.
 1. Finish the owner's overnight 04 drain test (baseline) and archive.
 2. Read-only snapshot tool: regulator (`/sys/class/regulator`), clock summary, SPM/wake registers, runtime-PM states, captured just before
    entry and immediately on resume (no claim about the in-between interval).
-3. Trace the vendor 597-word non-MT6333 `pcm_suspend` against the Y2's PWRAP/PMIC and DRAM wiring and design a staged experiment.
+3. Trace which state the vendor `infra_pdn=1` path loses and restores (done in POWER-FINAL-06: only `mtk_uart_restore`; PERICFG/INFRACFG are INFRASYS-MTCMOS blocks per the manual) and design the staged experiment.
 4. Owner decision on external current measurement.
 
 ## Candidate POWER-FINAL-05 (2026-10-08)
