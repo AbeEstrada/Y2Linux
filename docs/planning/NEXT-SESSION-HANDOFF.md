@@ -1,4 +1,46 @@
-# Next-session handoff — deep-sleep continuation, 2026-10-08 local
+# Next-session handoff — deep-sleep continuation, 2026-10-09 local
+
+> **LATEST (2026-10-09 evening): POWER-FINAL-06 BRING-UP CANDIDATE SEALED — awaiting the OWNER FLASH (agent has not flashed).**
+> Package `out/y2linux-platform-v1-power-final-candidate-06/` (own `OWNER-HANDOFF.md`, `SHA256SUMS`, `validation/`, `fallback/` = sealed 05), symbols `…-candidate-06-symbols/`, frozen worktrees
+> `/home/luca/Dokumente/Code/worktrees/y2-power-final-06/{Y2Linux,Y2Reborn}` (Linux `c1ef37a6f6338b3abe7fcb4f2aa505b6fb861075`, Reborn `97ff8c3` unchanged), dev branch `codex/platform-v1-power-final-06`
+> (worktree `…/worktrees/platform-v1-power-final-06/Y2Linux`, later commits: probe pin `a2fe9a7`, test fixture `a9f9b0e`, report `bd7e54d`), receipts `out/deep-sleep-final/build06-receipts/`. Kernel `6.18.0-y2linux-platform-v1-power-final-06`,
+> root v1.36, release `1.0.0-platform-v1-power-final-candidate.6`. BOOTIMG (7260160 B) `64a916282b383116fb5d323fe60f5fbf638ae966291ce20827617fd23147869f`, Y2ROOT `e1c0bcd3dc200c3fa2179d65ab18ba1358c46fc4b6fe0b2740f7f44f6c23e4be`.
+> **BRING-UP, NOT PRODUCTION; physical NOT_RUN.** Owner-approved plan: bring-up first, then production cleanup/refactor and a clean rebuild AFTER hardware qualification.
+> - **Correction:** Y2Linux already ran the vendor 597-word `pcm_suspend` (identical words, SHA-256 `0ee71194…6ab94`); the 05 report/handoff "480-word dpidle" was the runtime-idle line (fixed on the 06 branch). Stock `slp_infra_pdn` defaults to 1
+>   (`0xc09b1084` = `01 01 01 00` in `evidence-private/20260908-ram-map/fm-decompressed.bin`, base 0xc0008000, symbols `fm-symbols.json`; retained extraction: `out/deep-sleep-final/vendor-suspend-source/stock-infra-pdn/`). Our difference was `infra_pdn=0`.
+> - **06 changes:** `infra_pdn=1` arm + CLK_CON readback; PERICFG save/verify-restore right after `cpu_suspend()` (`kernel/platform/infra-pdn*.{h,c}`, manual 2.3.2: INFRACFG+PERICFG are in the powered-down domain; PDN0 resets to 0); INFRACFG read-only;
+>   automatic retained-mode fallback on any unverifiable restore (`-EIO`, SPM broken, product guard) and `INFRA_PDN_ENTRY` journal stage (previous boot died inside the attempt => retained next boot); owner switch `/sys/firmware/y2_infra/{mode,state,diff}`;
+>   UART `SLEEP_EN` re-armed on resume (overlay 0061); MUSB L1INTM keeps only bits 0..3 and masks unowned PHY level bits (`kernel/usb/l1.h`); terminal USB stop PARKS the controller (no `platform_device_unregister`).
+> - **Defect 2 root cause (new):** the 05 Oops was the `usb0` ECM netdev's dangling `dev.parent` (stack bytes `"usb0"`) after the 01:34 terminal USB stop unregistered `musb-hdrc`; first `ip` after the radios came back crashed. Not `wlan0`.
+> - **Offline qualification:** full container suite 581 cases PASS (at `a9f9b0e`; first run at `c1ef37a` stopped at a stale USB fixture — `tests.sh` aborts at the first failing module), 25 packaging-host + 27 splash PASS, preserving package/validate/ELF 384/1411/installed-ARM/privacy PASS, new strings present in the Image.
+> - **Idle evidence (archive 89, read-only, 05 image, 9 h):** 95.6% in SPM sleep, 51 maintenance wakes, no USB overflow, no Oops (single run), about 2.2 points/h voltage-derived (data `docs/validation/data/y2-power05-idle9h-20261009.json`).
+> - **Next (owner flashes):** SP Flash Tool Download Only, 06 folder scatter, BOOTIMG+ANDROID only. Then I run `out/deep-sleep-final/image06-readonly-health.py <dir>` (read-only; archive with `capture-return.py` first on any return), check `dmesg | grep Y2INFRA`, `/sys/firmware/y2_infra/state`, then ONE normal
+>   unplugged cycle. Success signature: same boot, `Y2INFRA: restore result=0 ... pdn0 <saved>-><0x0>`, `restore_failures=0`, `fallback=0`. `last_lost=0` after a long sleep means INFRA did NOT power down (check `CC_DISABLE_INFRA_PWR`, PWR_STATUS bit 6).
+>   Failure: ~30 s backstop reset or no wake (hold Power 10 s); next boot says `previous_boot_died_in_infra_pdn`; archive first, then `echo retained > /sys/firmware/y2_infra/mode` to compare with 05. Then repeated cycles, USB cable wake, Wi-Fi/BT restore, overnight vs 05's about 2.1 points/h.
+> - Remaining PMIC sleep-config differences vs the vendor golden table (17 entries, e.g. VEMC3V3, VPROC/VSYS sleep voltage, LP_SEL on storage rails) are NOT in 06; each needs separate design/approval. A USB meter gives a top-up integral only (report §31).
+> - Working-tree note: `kernel/platform/ovl-reset.h`, `tests/fixtures/ovl-recovery.c`, `tests/test_ovl_recovery.py`, `tools/development/power-session/{deepsleep-device-wait.py,y2-display-observe.c,y2-display-recover.c,y2-pm-device-stack.c}` remain untracked diagnostic sources by design (do not ship).
+
+> **LATEST (2026-10-09 morning): 05 OVERNIGHT RESULT — suspend works, two NEW defects.** Archive
+> `out/deep-sleep-final/evidence/20261009/88-power05-overnight-return/` (read-only, under the host lease), data
+> [`y2-power05-overnight-20261009.json`](../validation/data/y2-power05-overnight-20261009.json). Boot `3cae62f2`, taint 0, image 05 unchanged.
+> `88a-accidental-unlocked-readonly-capture/` is a stray duplicate (`capture-return.py` has no argparse: `--help` became the output dir; read-only, no device change).
+> **Time bases:** journal wall time is CEST; `/data/logs/system.log` stamps are **UTC** (+2 h); use `boottime_s`.
+> - **Result:** owner unplugged; suspend entry 23:03:21 CEST (boottime 3804.9), owner Power-button wake 09:40:36 (boottime 42039.5). **38,052.5 s suspended of 38,234.6 s (99.5%)**,
+>   64 cycles, 63 maintenance wakes (600 s), resume result 0 in 2.2 s. SOC 88% (4.084 V) → 66% (3.93 V), ≈2.1 points/h (03 night ≈5.5/h). Voltage-derived, no current sensor, non-linear
+>   curve: indicative only, NOT a drain measurement. Final wake is `wake=0x20` (same code as the earlier USB wakes, here a Power press): the product label `unknown` is not specific.
+> - **Defect 1 — USB dies terminally with no cable (01:34:01 CEST).** `Y2USB IRQ overflow: l1=800/f00 usb=0/0 tx=0/0 rx=0/0` on the resume from a maintenance wake, then
+>   `Y2USB stopped stage=8 result=-75`; `detached=1 gadget_state=0 reconnect_retries=0 irq_max_burst=513>512 irq_unexplained=512`. The guard is terminal (kernel/usb/fault.h,
+>   kernel/platform/usb.c ~688). Sleep kept working 8 more hours (49 later suspends), but at the owner's reconnect there was **no enumeration, no 10.42.0.1, charger "Not charging"**.
+>   Reboot cleared it. Earlier occurrences were under loaded USB; this is the first with no traffic (L1 bit 0x800, no MUSB sub-status, on resume).
+> - **Defect 2 — kernel Oops at Wi-Fi restore (09:40:38 CEST).** NULL deref in `strlen` ← `nla_put_string` ← `rtnl_fill_ifinfo` ← `rtnl_getlink` (Comm `ip`, pid 4183) right after
+>   `wlan0 registered`. Register r5=0x38 = `IFLA_PARENT_DEV_NAME`, so `dev_name(wlan0->dev.parent)` looks NULL (**inferred, not confirmed in source**). First full radio restore after a long
+>   sleep. From 09:40:48 all sleep attempts were refused `kernel_sleep_unavailable` (4 refusals); link to the Oops is **unverified** (the USB fault cannot be the cause).
+> - **After:** owner orderly shutdown 09:49:21, new boot `65d3b0c9`, taint 0, SSH/USB healthy, product guard `pending:false`. `lp_sel` is still set (not cleared). Nothing deployed/changed.
+> - **Next (not started, owner decides):** (a) source fix for a recoverable USB guard (unexplained-IRQ burst on resume → controller reset/rebind instead of a permanent latch) with a
+>   regression test; (b) find why wlan0's parent device has no name when `ip link` runs right after registration (y2-mt6582-wifi glue), regression test; (c) re-check whether the
+>   `kernel_sleep_unavailable` refusals follow from the Oops (system.log.0 after 07:40:38 UTC, product sleep helper); (d) both bugs exist in 05 only as far as tested — compare 04/03 logs
+>   for earlier `Y2USB IRQ overflow`; (e) still open from before: Power/RTC wake and early boot on 05, A/B with `lp_sel` cleared, optional USB-meter measurement, then the `pcm_suspend` (06) decision.
+>   A fix needs a new candidate (06); do not flash or deploy without the owner. Readiness stays MORE_WORK_REQUIRED.
 
 > **LATEST (end of 2026-10-08): POWER-FINAL-05 is INSTALLED** (owner flashed; archives 82–84 verified). Folder `out/y2linux-platform-v1-power-final-candidate-05/`
 > (own `OWNER-HANDOFF.md`, `SHA256SUMS`), symbols `…-candidate-05-symbols/`, worktrees `/home/luca/Dokumente/Code/worktrees/y2-power-final-05/`, receipts
@@ -14,8 +56,9 @@
 > vendor-source comparison and candidate ranking live in `docs/validation/Y2-PLATFORM-V1-SUSPEND-POWER-OPTIMIZATION.md` **on branch `codex/platform-v1-power-final-05`** (worktree
 > `/home/luca/Dokumente/Code/worktrees/platform-v1-power-final-05/Y2Linux`), with data `docs/validation/data/y2-suspend-power-optimization-20261008.json`, `y2-pmic-suspend-golden-vs-awake-20261008.json`,
 > `y2-suspend-probe-analysis-20261008.json`, and tools `tools/development/power-session/{suspend-probe,arm-suspend-probe}.py`, `tools/development/analyze-suspend-probe.py`.
-> **Key findings:** (1) the maintenance wake is the SPM PCM timer, 600 s (vendor `SPM_WAKE_PERIOD`), 603 s cycle with ~3 s awake; (2) Y2Linux runs the vendor deep-idle PCM with INFRA/DDRPHY
-> retained, whereas the vendor's real suspend uses the 597-word `pcm_suspend` with INFRA/DDRPHY and 26 MHz off (highest-risk/highest-payoff lever, separate image); (3) the vendor suspend golden
+> **Key findings:** (1) the maintenance wake is the SPM PCM timer, 600 s (vendor `SPM_WAKE_PERIOD`), 603 s cycle with ~3 s awake; (2) **CORRECTED 2026-10-09:** Y2Linux full suspend ALREADY runs the vendor 597-word
+> `pcm_suspend` (byte-identical, SHA-256 `0ee71194…6ab94`; the "480-word dpidle" in earlier text was the runtime-idle line). The only difference from the vendor default
+> (`infra_pdn=1`) is `infra_pdn=false` (`CC_DISABLE_INFRA_PWR` set) with no INFRA restore path (stock restores the console UART; PERICFG/INFRACFG are INFRASYS-MTCMOS blocks); (3) the vendor suspend golden
 > PMIC table differs in 17 entries at suspend entry (VEMC3V3 on, VPROC/VSYS sleep-voltage enables, LP_SEL on VMC/VMCH/VEMC3V3, clock/OSC control); (4) radios and SD card are already off in suspend.
 > **Next (agreed with owner):** overnight unplugged drain test on 05 (paused, screen dark; started from 88%/4.095 V, post-charge, probe stopped), archive with `capture-return.py` under the host lease
 > before anything else; then Power-button and RTC wake and early-boot on 05; overnight A/B with `lp_sel` cleared; optional USB-meter top-up measurement (KWS-2303C class; verify mAh counter,

@@ -1,6 +1,22 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-05 installed — 2026-10-08 (latest)
+## POWER-FINAL-06 bring-up candidate sealed — 2026-10-09 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-06/` (Linux `c1ef37a`, Reborn `97ff8c3` unchanged, root v1.36; BOOTIMG `64a91628…7869f`, Y2ROOT `e1c0bcd3…c23e4be`) is built and
+offline-qualified; **it is not flashed (physical NOT_RUN) and not production**. Correction: Y2Linux already ran the vendor 597-word `pcm_suspend`; the 05 report's "480-word dpidle" was the runtime-idle line. The real
+difference from stock is `infra_pdn=0`; 06 enables the vendor `infra_pdn=1` (INFRASYS/DDRPHY power-down) with a verified PERICFG restore, an automatic retained-mode fallback and a boot-to-boot guard. The 05
+overnight defects are addressed: the MUSB L1 interrupt guard no longer storms on an unowned PHY level bit, and a terminal USB stop parks the controller instead of unregistering it (the Wi-Fi-time Oops was a dangling
+`usb0` parent, not `wlan0`). A 9 h idle capture of 05 (archive 89) showed 95.6% in SPM sleep with no recurrence (single run). Next: owner flashes 06, read-only check, first power-down cycle, repeated cycles, overnight drain
+vs. 05's about 2.1 points/h (voltage-derived); production cleanup only after hardware qualification. Details: [handoff](planning/NEXT-SESSION-HANDOFF.md). Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-05 overnight result — 2026-10-09
+
+The first overnight unplugged run on 05 (archive 88, same boot `3cae62f2`, taint 0) suspended **38,052 s of 38,235 s (99.5%)** across 64 cycles and 63 600 s maintenance wakes, 88%→66% (voltage-derived, about 2.1
+points/h, indicative only, no current sensor). It also exposed two **new defects**: (1) a terminal `Y2USB IRQ overflow` at 01:34 CEST with no cable, after which USB did not enumerate or charge until reboot, and (2) a kernel
+NULL-dereference Oops (`rtnl_fill_ifinfo`; later shown to be the `usb0` netdev's dangling parent after the 01:34 terminal USB stop, not `wlan0`) at the first Wi-Fi restore after the Power-button wake, followed by `kernel_sleep_unavailable` refusals (link unverified). Nothing was
+changed on the device by that analysis; the fixes are in 06. Details: [handoff](planning/NEXT-SESSION-HANDOFF.md), [data](validation/data/y2-power05-overnight-20261009.json). Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-05 installed — 2026-10-08
 
 The owner flashed POWER-FINAL-05 (Linux `837b614`, Reborn `97ff8c3`, root v1.35; BOOTIMG `0137a855…44117`, Y2ROOT `9175185f…99a4d`). It is DEEPSLEEP-FINAL-04 plus the vendor MT6323 `LP_SEL` low-power
 select on five always-on LDOs (VA, VIO28, VUSB, VM, VIO18) with a root runtime revert at `/sys/firmware/y2_pmic/lp_sel`. Installed and probed: same boot, taint 0, 1573 s asleep with two maintenance wakes,
