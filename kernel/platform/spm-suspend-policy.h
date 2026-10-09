@@ -1,9 +1,12 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* Derived from Copyright (C) 2011-2014 MediaTek Inc., mt_spm{,_sleep}.c.
- * Host protocol for the exact Y2 suspend PCM. CPU and IRQ context belongs
- * to Linux, not to this sequencer. Infrastructure/DDRPHY power is retained.
- * This explicitly supported BSP mode avoids assuming an unported peripheral
- * register restore path. PCM still controls DRAM retention and system clocks. */
+ * Host protocol for the exact Y2 suspend PCM (vendor pcm_suspend, 597 words,
+ * spm-pcm.h). CPU and IRQ context belongs to Linux, not to this sequencer.
+ * `infra_pdn` is the vendor spm_go_to_sleep() argument of the same name:
+ *   0 = INFRA/DDRPHY stay powered (CC_DISABLE_INFRA_PWR set)
+ *   1 = the PCM removes INFRA/DDRPHY power; the caller must have saved and must
+ *       restore the INFRASYS state (infra-pdn-policy.h).
+ * The PCM controls DRAM retention and system clocks in both modes. */
 #ifndef Y2_SPM_SUSPEND_POLICY_H
 #define Y2_SPM_SUSPEND_POLICY_H
 #include "spm-regs.h"
@@ -38,8 +41,10 @@ static inline void y2_spm_normal(const struct y2_spm_io *io, unsigned address)
 	io->write(io->context, SPM_PCM_CON0, CON0_CFG_KEY | CON0_IM_KICK | CON0_PCM_KICK);
 	io->write(io->context, SPM_PCM_CON0, CON0_CFG_KEY);
 }
-static inline int y2_spm_suspend_arm(const struct y2_spm_io *io, unsigned address)
+static inline int y2_spm_suspend_arm(const struct y2_spm_io *io, unsigned address,
+				     unsigned infra_pdn)
 {
+	unsigned infra_flag = infra_pdn ? 0 : CC_DISABLE_INFRA_PWR;
 	unsigned val, settle, n;
 	/* Exact Y2 spm_cpusys_can_power_down: both copies must show CPUs1-3 off. */
 	if ((io->read(io->context, SPM_PWR_STATUS) | io->read(io->context, SPM_PWR_STATUS_S)) & Y2_SPM_SECONDARY_CPU_MASK)
@@ -89,10 +94,11 @@ static inline int y2_spm_suspend_arm(const struct y2_spm_io *io, unsigned addres
 	y2_spm_update(io, SPM_PCM_CON1, 0, CON1_CFG_KEY | CON1_PCM_TIMER_EN);
 	io->write(io->context, SPM_SLEEP_WAKEUP_EVENT_MASK, ~Y2_SPM_WAKE);
 	io->write(io->context, SPM_SLEEP_ISR_MASK, ISRM_PCM_IRQ_AUX | ISR_TWAM);
-	/* CPU shutdown, retained infrastructure and DDRPHY. Do not silently
-	 * turn an unimplemented infrastructure restore into a power-loss test. */
+	/* CPU shutdown; INFRA/DDRPHY follow `infra_pdn` exactly like the vendor
+	 * spm_kick_pcm_to_run(). Power-down is requested only after the caller has
+	 * saved the state the domain loses. */
 	y2_spm_update(io, SPM_CLK_CON, CC_DISABLE_DORM_PWR | CC_DISABLE_INFRA_PWR,
-		CC_DISABLE_INFRA_PWR | CC_LOCK_INFRA_DCM);
+		infra_flag | CC_LOCK_INFRA_DCM);
 	io->write(io->context, SPM_PCM_MAS_PAUSE_MASK, 0xffffffff);
 	io->write(io->context, SPM_PCM_PWR_IO_EN, PCM_PWRIO_EN_R0 | PCM_PWRIO_EN_R7);
 	y2_spm_update(io, SPM_CLK_CON, 0, CC_SRCLKENA_MASK);
@@ -103,7 +109,9 @@ static inline int y2_spm_suspend_arm(const struct y2_spm_io *io, unsigned addres
 	    io->read(io->context, SPM_PCM_TIMER_VAL) != Y2_SPM_TIMER ||
 	    io->read(io->context, SPM_PCM_WDT_TIMER_VAL) != Y2_SPM_TIMER + 30U * 32768U ||
 	    io->read(io->context, SPM_PCM_PWR_IO_EN) != (PCM_PWRIO_EN_R0 | PCM_PWRIO_EN_R7) ||
-	    !(io->read(io->context, SPM_PCM_CON1) & CON1_PCM_WDT_EN)) return -EIO;
+	    !(io->read(io->context, SPM_PCM_CON1) & CON1_PCM_WDT_EN) ||
+	    (io->read(io->context, SPM_CLK_CON) & (CC_DISABLE_DORM_PWR | CC_DISABLE_INFRA_PWR)) != infra_flag)
+		return -EIO;
 	io->write(io->context, SPM_PCM_CON0, CON0_CFG_KEY | CON0_IM_SLEEP_DVS | CON0_PCM_KICK);
 	io->write(io->context, SPM_PCM_CON0, CON0_CFG_KEY | CON0_IM_SLEEP_DVS);
 	return 0;

@@ -57,6 +57,11 @@ bool y2_pm_journal_ready(void)
 {
 	return ready;
 }
+/* What the previous boot's retained record ended on (boot-time snapshot). */
+bool y2_pm_previous_stage_was(unsigned stage)
+{
+	return ready && y2_pm_valid(previous) && previous[2] == stage;
+}
 static const char *const names[] = { "NONE",
 				     "SUSPEND_REQUEST",
 				     "FILESYSTEM_SYNCED",
@@ -106,7 +111,7 @@ static const char *const names[] = { "NONE",
 				     "DORMANT_FINISH", "DORMANT_RETURN", "DORMANT_COMPLETE",
 				     "DORMANT_ABORTED", "DORMANT_RESTORE_PCM",
 				     "DORMANT_RESTORE_CONTEXT", "DORMANT_RESTORE_CIRQ",
-				     "DORMANT_RESTORE_CLOCKS" };
+				     "DORMANT_RESTORE_CLOCKS", "INFRA_PDN_ENTRY" };
 static_assert(ARRAY_SIZE(names) == Y2_PM_STAGE_COUNT);
 static const char *stage_name(unsigned stage)
 {

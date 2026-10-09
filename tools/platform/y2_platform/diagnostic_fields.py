@@ -28,5 +28,5 @@ FIELDS |= frozenset("pcm_contract evidence physical_bit_capture hardware_max_mea
 
 # Integration: additive USB/sleep observation keys; never dynamic names/paths.
 FIELDS |= frozenset('file_transfer filesystem_owner block_export refresh_generation active views access cable restarts'.split())
-KERNEL_FIELDS |= frozenset('suspend_restore_failures'.split())
+KERNEL_FIELDS |= frozenset('suspend_restore_failures suspend_pcm_words suspend_pcm_origin infra_pdn_entries infra_pdn_restore_failures'.split())
 FIELDS |= KERNEL_FIELDS

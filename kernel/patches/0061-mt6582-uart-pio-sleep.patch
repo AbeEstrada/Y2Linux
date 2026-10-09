@@ -35,3 +35,18 @@
  	platform_set_drvdata(pdev, data);
  
  	data->line = serial8250_register_8250_port(&uart);
+@@ -634,6 +648,14 @@
+ 
+ 	serial8250_resume_port(data->line);
+ 
++	/* A full suspend that removes INFRASYS power resets the UART block, which
++	 * clears UART_SLEEP_EN. The global SPM UART handshake needs it again before
++	 * the next sleep (vendor mtk_uart_restore re-establishes the UART). */
++	if (pm_runtime_resume_and_get(dev) >= 0) {
++		mtk8250_enable_pio_sleep(serial8250_get_port(data->line));
++		pm_runtime_put(dev);
++	}
++
+ 	return 0;
+ }
+ 

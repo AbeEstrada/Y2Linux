@@ -25,6 +25,7 @@
 #include "spm-idle-pcm.h"
 #include "spm-idle-policy.h"
 #include "cirq.h"
+#include "infra-pdn.h"
 #include "clocks.h"
 #include "idle-clock-policy.h"
 #include "local-timer.h"
@@ -301,6 +302,9 @@ int y2_spm_cpu_boot(unsigned cpu, unsigned long entry)
 	return ret;
 }
 
+/* This entry asks the PCM to remove INFRA/DDRPHY power (see infra-pdn.c). */
+static bool suspend_infra_pdn;
+static unsigned infra_pdn_entries, infra_pdn_restore_failures;
 static void y2_spm_journal_snapshot(void)
 {
 	unsigned vector, enable;
@@ -339,6 +343,9 @@ static int y2_spm_finish(unsigned long unused)
 		}
 		y2_spm_journal_snapshot();
 		y2_pm_mark(Y2_PM_BEFORE_SPM_ENTRY, 0);
+		/* Last retained mark before WFI: a boot that ends here died inside
+		 * an INFRA power-down and must not repeat it on its own. */
+		if (READ_ONCE(suspend_infra_pdn)) y2_pm_mark(Y2_PM_INFRA_PDN_ENTRY, 0);
 		/* An owner-armed RGU backstop never counts inside SPM sleep. */
 		y2_pm_backstop_pause(true);
 	} else {
@@ -412,6 +419,7 @@ static int y2_spm_enter(suspend_state_t state)
 	unsigned biu;
 	u64 restore_start = 0;
 	int ret, restore;
+	bool infra = false;
 	if (state != PM_SUSPEND_MEM || num_online_cpus() != 1 ||
 	    smp_processor_id() != 0 || READ_ONCE(spm_broken)) return -EBUSY;
 	raw_spin_lock_irqsave(&spm_lock, flags);
@@ -425,18 +433,34 @@ static int y2_spm_enter(suspend_state_t state)
 	suspend_cirq_pending = true;
 	y2_pm_mark(Y2_PM_CIRQ_CLONED, 0);
 	biu = readl(spm_biu); /* actual Y2 MCU_BIU_CONTROL retention context */
+	/* Vendor infra_pdn=1: save the INFRASYS state first; a missing or refused
+	 * save keeps the proven INFRA-retained entry. */
+	infra = !y2_infra_pdn_save();
+	WRITE_ONCE(suspend_infra_pdn, infra);
 	/* Do not call cpu[_cluster]_pm_enter() here. syscore_suspend() already
 	 * saved context; a second save after CIRQ masking overwrites GIC's sole
 	 * saved enable bitmap with only the SPM interrupt enabled. The subsequent
 	 * outer restore then masks storage/GPT IRQs and stalls ext4 thaw I/O. */
-	ret = y2_spm_suspend_arm(&spm_io, pcm_address);
+	ret = y2_spm_suspend_arm(&spm_io, pcm_address, infra);
 	y2_spm_journal_snapshot();
 	if (!ret) {
 		y2_pm_mark(Y2_PM_PCM_INSTALLED, 0);
 		y2_pm_mark(Y2_PM_WAKE_MASK_PROGRAMMED, 0);
 		y2_pm_mark(Y2_PM_CPU_CONTEXT_SAVING, 0);
+		if (infra) infra_pdn_entries++;
 		ret = cpu_suspend(0, y2_spm_finish);
 		y2_pm_backstop_pause(false);
+		if (infra) {
+			/* Before anything else touches a peripheral. A refused or
+			 * unverifiable restore also pins this boot to retained mode. */
+			restore = y2_infra_pdn_restore();
+			if (restore) {
+				infra_pdn_restore_failures++;
+				suspend_restore_failures++;
+				y2_pm_note("suspend_infra", restore);
+				if (!ret) ret = restore;
+			}
+		}
 		if (!ret) resumes++; /* reset return, even if a later restore fails */
 		y2_pm_mark(Y2_PM_AFTER_SPM_RETURN, ret);
 		y2_pm_mark(Y2_PM_CPU_CONTEXT_RESTORED, ret);
@@ -456,6 +480,7 @@ static int y2_spm_enter(suspend_state_t state)
 	}
 	restore = y2_spm_suspend_restore(&spm_io, normal_address);
 	if (restore) { suspend_restore_failures++; ret = restore; }
+	if (infra) y2_infra_pdn_observe(); /* read-only, after the UART request is clear */
 	y2_pm_mark(Y2_PM_NORMAL_PCM_RESTORED, ret);
 	/* Core CPU PM restoration and then our CIRQ replay run during
 	 * syscore_resume(), including every platform entry abort. */
@@ -468,6 +493,7 @@ unlock:
 		y2_pm_mark(Y2_PM_ABORTED, ret);
 		aborts++;
 	}
+	WRITE_ONCE(suspend_infra_pdn, false);
 	if (ret == -EIO || ret == -ETIMEDOUT) WRITE_ONCE(spm_broken, true);
 	last_result = ret;
 	if (restore_start) resume_restore_ns = ktime_get_mono_fast_ns() - restore_start;
@@ -678,10 +704,15 @@ static ssize_t state_show(struct device *dev, struct device_attribute *attr, cha
 	unsigned long flags;
 	ssize_t ret;
 	raw_spin_lock_irqsave(&spm_lock, flags);
-	ret = sysfs_emit(buf, "mode=SPM_CPU_SHUTDOWN_INFRA_RETAINED broken=%u entries=%u resumes=%u aborts=%u result=%d wake=%#x ticks32k=%u event=%#x debug=%#x r13=%#x power=%#x/%#x\n",
+	ret = sysfs_emit(buf, "mode=%s broken=%u entries=%u resumes=%u aborts=%u result=%d wake=%#x ticks32k=%u event=%#x debug=%#x r13=%#x power=%#x/%#x\n",
+		y2_infra_pdn_wanted() ? "SPM_CPU_SHUTDOWN_INFRA_PDN" : "SPM_CPU_SHUTDOWN_INFRA_RETAINED",
 		spm_broken, entries, resumes, aborts, last_result, last_wake, last_ticks,
 		last_event, last_debug, last_r13, spm_read(spm_base, 0x60c), spm_read(spm_base, 0x610));
 	ret += sysfs_emit_at(buf, ret, "suspend_restore_failures=%u\n", suspend_restore_failures);
+	/* Full suspend runs the vendor 597-word pcm_suspend; pcm_words/pcm_origin below describe the
+	 * separate runtime-idle (dormant) program only. */
+	ret += sysfs_emit_at(buf, ret, "suspend_pcm_words=597 suspend_pcm_origin=MT6582_d53dd75c_pcm_suspend infra_pdn_entries=%u infra_pdn_restore_failures=%u\n",
+		infra_pdn_entries, infra_pdn_restore_failures);
 	/* ABI describes the built-in core-context/CIRQ ownership fix, not a
 	 * physical qualification certificate. No writable enable knob on old ROMs.
 	 * BSP d53dd75c spm_output_wake_reason distinguishes timer from TWAM/CPU

@@ -82,7 +82,11 @@ static void y2_cirq_end(void){cirq_exit++;}
 static bool y2_cirq_restore_ok(void){return !bad_cirq;}
 static unsigned readl(void *p){return *(unsigned*)p;}
 static void writel(unsigned v,void *p){if(bad_biu)v^=1;*(unsigned*)p=v;}
-static int y2_spm_suspend_arm(struct y2_spm_io *io,unsigned addr){return fail_arm;}
+static bool suspend_infra_pdn;static unsigned infra_pdn_entries,infra_pdn_restore_failures;
+static int y2_infra_pdn_save(void){return -ENODEV;}
+static int y2_infra_pdn_restore(void){return 0;}
+static void y2_infra_pdn_observe(void){}
+static int y2_spm_suspend_arm(struct y2_spm_io *io,unsigned addr,unsigned infra){(void)infra;return fail_arm;}
 static int y2_spm_finish(unsigned long n){return 0;}
 static int cpu_suspend(unsigned long n,int(*fn)(unsigned long)){assert(n==0);sleeps++;return fail_sleep;}
 static int y2_spm_suspend_restore(struct y2_spm_io *io,unsigned addr){normal_restores++;return fail_restore;}

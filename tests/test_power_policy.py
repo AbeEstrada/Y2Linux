@@ -147,7 +147,7 @@ int main(void){
 #include <string.h>
 #include "spm-policy.h"
 #include "spm-suspend-policy.h"
-static unsigned regs[1024], writes, delay_us, fetched, armed, bad_read;
+static unsigned regs[1024], writes, delay_us, fetched, armed, bad_read, arm_infra, drop_clk;
 static unsigned rd(void *ctx,unsigned reg){
  (void)ctx;assert(reg<sizeof regs && !(reg&3));
  if(reg==SPM_PCM_IM_LEN && bad_read)return 0;
@@ -163,32 +163,44 @@ static void wr(void *ctx,unsigned reg,unsigned value){
    if(regs[SPM_PCM_IM_LEN/4]==596){
     assert(fetched && (regs[SPM_PCM_REG13_DATA/4]&R13_UART_CLK_OFF_ACK));
     assert(regs[SPM_SLEEP_WAKEUP_EVENT_MASK/4]==~Y2_SPM_WAKE);
-    assert((regs[SPM_CLK_CON/4]&(CC_DISABLE_DORM_PWR|CC_DISABLE_INFRA_PWR))==CC_DISABLE_INFRA_PWR);
+    assert((regs[SPM_CLK_CON/4]&(CC_DISABLE_DORM_PWR|CC_DISABLE_INFRA_PWR))==(arm_infra?0:CC_DISABLE_INFRA_PWR));
     assert(regs[SPM_PCM_EVENT_VECTOR3/4]==EVENT_VEC(31,1,0,99));
     assert(regs[SPM_PCM_WDT_TIMER_VAL/4]>regs[SPM_PCM_TIMER_VAL/4]);
    }
   }
  }
  if(reg==SPM_PCM_CON1)assert((value>>16)==SPM_PROJECT_CODE);
- regs[reg/4]=value;
+ if(!(drop_clk && reg==SPM_CLK_CON && !(value&CC_DISABLE_INFRA_PWR)))regs[reg/4]=value;
 }
 static void wait(unsigned us){delay_us+=us;assert(delay_us<=100);}
 static struct y2_spm_io io={0,rd,wr,wait};
-static void reset(void){memset(regs,0,sizeof regs);writes=delay_us=fetched=armed=bad_read=0;
+static void reset(void){memset(regs,0,sizeof regs);writes=delay_us=fetched=armed=bad_read=arm_infra=drop_clk=0;
  regs[SPM_POWER_ON_VAL1/4]=0x15820;regs[SPM_PCM_REG13_DATA/4]=R13_UART_CLK_OFF_ACK;
 }
 int main(void){
  for(unsigned copy=SPM_PWR_STATUS;copy<=SPM_PWR_STATUS_S;copy+=4)for(unsigned bit=9;bit<=11;bit++){
   reset();regs[copy/4]=1U<<bit;
-  assert(y2_spm_suspend_arm(&io,0x81000000)==-EBUSY && !writes && !armed);
+  assert(y2_spm_suspend_arm(&io,0x81000000,0)==-EBUSY && !writes && !armed);
  }
  reset();regs[SPM_PCM_REG13_DATA/4]=0;
- assert(y2_spm_suspend_arm(&io,0x81000000)==-EBUSY && !armed && delay_us==100);
+ assert(y2_spm_suspend_arm(&io,0x81000000,0)==-EBUSY && !armed && delay_us==100);
  assert(!(regs[SPM_POWER_ON_VAL1/4]&R7_UART_CLK_OFF_REQ));
- reset();bad_read=1;assert(y2_spm_suspend_arm(&io,0x81000000)==-EIO && !armed);
+ reset();bad_read=1;assert(y2_spm_suspend_arm(&io,0x81000000,0)==-EIO && !armed);
  /* CPU0/debug/MCU status bits remain powered; they are not secondary CPUs. */
  reset();regs[SPM_PWR_STATUS/4]=regs[SPM_PWR_STATUS_S/4]=0x314c;
- assert(!y2_spm_suspend_arm(&io,0x81000000) && armed==1);
+ assert(!y2_spm_suspend_arm(&io,0x81000000,0) && armed==1);
+ y2_spm_suspend_clean(&io);
+ /* Vendor infra_pdn=1 clears CC_DISABLE_INFRA_PWR so the PCM removes INFRA/DDRPHY power; the
+  * same CLK_CON read-back refuses entry when that request did not reach the hardware. */
+ reset();regs[SPM_PWR_STATUS/4]=regs[SPM_PWR_STATUS_S/4]=0x314c;arm_infra=1;
+ regs[SPM_CLK_CON/4]=CC_DISABLE_INFRA_PWR; /* inherited retained state */
+ assert(!y2_spm_suspend_arm(&io,0x81000000,1) && armed==1);
+ assert(!(regs[SPM_CLK_CON/4]&CC_DISABLE_INFRA_PWR) && (regs[SPM_CLK_CON/4]&CC_LOCK_INFRA_DCM));
+ reset();regs[SPM_PWR_STATUS/4]=regs[SPM_PWR_STATUS_S/4]=0x314c;arm_infra=1;drop_clk=1;
+ regs[SPM_CLK_CON/4]=CC_DISABLE_INFRA_PWR;
+ assert(y2_spm_suspend_arm(&io,0x81000000,1)==-EIO && !armed);
+ reset();regs[SPM_PWR_STATUS/4]=regs[SPM_PWR_STATUS_S/4]=0x314c;
+ assert(!y2_spm_suspend_arm(&io,0x81000000,0) && (regs[SPM_CLK_CON/4]&CC_DISABLE_INFRA_PWR));
  y2_spm_suspend_clean(&io);
  assert(!(regs[SPM_PCM_CON1/4]&(CON1_PCM_WDT_EN|CON1_PCM_TIMER_EN)));
  assert(!regs[SPM_PCM_PWR_IO_EN/4]);

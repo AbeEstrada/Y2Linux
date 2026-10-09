@@ -64,6 +64,9 @@ enum y2_pm_stage {
 	Y2_PM_DORMANT_RESTORE_CONTEXT,
 	Y2_PM_DORMANT_RESTORE_CIRQ,
 	Y2_PM_DORMANT_RESTORE_CLOCKS,
+	/* POWER-FINAL-06: last mark before WFI when INFRA/DDRPHY power-down is
+	 * requested. A previous boot that ended on it died inside the attempt. */
+	Y2_PM_INFRA_PDN_ENTRY,
 	Y2_PM_STAGE_COUNT
 };
 /* Device PM callback phases recorded in the retained callback ring. */
@@ -89,6 +92,7 @@ struct y2_pm_backstop_ops {
 };
 #if IS_ENABLED(CONFIG_Y2_POWER)
 bool y2_pm_journal_ready(void);
+bool y2_pm_previous_stage_was(unsigned stage);
 void y2_pm_entry_snapshot(unsigned timer, unsigned watchdog, unsigned con1,
 			  unsigned clock, unsigned cache);
 void y2_pm_mark(unsigned stage, int error);
@@ -110,6 +114,10 @@ bool y2_pm_dormant_backstop_ready(void);
 bool y2_pm_dormant_backstop_running(void);
 extern void y2_cpu_resume(void);
 #else
+static inline bool y2_pm_previous_stage_was(unsigned stage)
+{
+	return false;
+}
 static inline void y2_pm_device(const struct device *dev, unsigned phase,
 				int result, bool leave)
 {
