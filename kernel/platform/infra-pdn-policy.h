@@ -18,9 +18,12 @@
  * before any other driver touches a peripheral.
  *
  * Only registers that are plain read/write (or the SET/CLR/STA gate triple) are
- * written back. INFRACFG's AXI fabric controls and peripheral register windows
- * are observed read-only ("canaries") so that the first real power-down reports
- * exactly which state it lost; nothing is guessed.
+ * written back. INFRACFG's AXI fabric controls are observed read-only so that
+ * the first real power-down reports whether the domain really lost state;
+ * nothing is guessed. Peripheral register windows (UART, I2C, MSDC, USB, ...) are
+ * not read here: by the time the platform enters sleep their drivers have
+ * suspended them and gated their clocks, and each is restored by its own
+ * resume path (the vendor restores nothing but the console UART either).
  *
  * The caller serialises suspend, owns the MMIO windows and runs with interrupts
  * off. The helpers perform only MMIO reads and, for registers that actually
@@ -107,15 +110,4 @@ static inline int y2_infra_restore(const struct y2_spm_io *io,
 	return result->failed ? -EIO : 0;
 }
 
-/* Read-only observation windows. A peripheral window is read only while its
- * PERICFG clock gate is open: a read of a gated block can stall the bus. */
-struct y2_infra_canary {
-	unsigned char window;	/* index into the window table in infra-pdn.c */
-	unsigned short offset;
-};
-#define Y2_INFRA_NO_GATE 0xffU
-static inline bool y2_infra_window_readable(unsigned pdn0, unsigned gate_bit)
-{
-	return gate_bit == Y2_INFRA_NO_GATE || !(pdn0 & (1U << gate_bit));
-}
 #endif

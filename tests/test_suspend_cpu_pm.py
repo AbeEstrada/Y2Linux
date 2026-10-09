@@ -68,10 +68,9 @@ static unsigned spm_read(void *p,unsigned reg) { return 0; }
 static u64 ktime_get_mono_fast_ns(void) { static u64 n; return ++n; }
 static bool suspend_infra_pdn; static unsigned infra_pdn_entries, infra_pdn_restore_failures;
 static int infra_save=-ENODEV, infra_restore, arm_infra;
-static unsigned infra_saves, infra_restores, infra_observes, restores_at_observe;
+static unsigned infra_saves, infra_restores;
 static int y2_infra_pdn_save(void) { ++infra_saves; return infra_save; }
 static int y2_infra_pdn_restore(void) { ++infra_restores; return infra_restore; }
-static void y2_infra_pdn_observe(void) { ++infra_observes; restores_at_observe = restores; }
 static int y2_spm_suspend_arm(void *io,unsigned address,unsigned infra) { arm_infra=infra; assert(infra_saves>=1 || !infra); return arm_error; }
 static int y2_spm_suspend_restore(void *io,unsigned address) { restores++; return restore_error; }
 static int y2_spm_finish(unsigned long arg) { return 0; }
@@ -85,7 +84,7 @@ static void reset(void) {
  vector_error=cirq_error=arm_error=return_error=restore_error=journal_error=0;
  live_mask=saved_mask=0x713421; flushes=restores=0;
  infra_save=-ENODEV; infra_restore=0; arm_infra=0;
- infra_saves=infra_restores=infra_observes=restores_at_observe=0; suspend_infra_pdn=false;
+ infra_saves=infra_restores=0; suspend_infra_pdn=false;
 }
 static void core_resume(void) {
  live_mask=saved_mask; core_restored=true; y2_spm_resume_syscore();
@@ -111,12 +110,12 @@ int main(void) {
  core_resume(); assert(spm_broken && last_result==-EIO && journal_error==-EIO);
  /* Retained mode (no INFRA save available): no restore or observation runs. */
  reset(); assert(!y2_spm_enter(PM_SUSPEND_MEM)); core_resume();
- assert(!arm_infra && infra_saves==1 && !infra_restores && !infra_observes && !suspend_infra_pdn);
+ assert(!arm_infra && infra_saves==1 && !infra_restores && !suspend_infra_pdn);
  /* INFRA power-down: saved before arming, restored right after the CPU
-  * returns, observed only after the normal PCM is back. */
+  * returns. */
  reset(); infra_save=0; assert(!y2_spm_enter(PM_SUSPEND_MEM)); core_resume();
- assert(arm_infra==1 && infra_saves==1 && infra_restores==1 && infra_observes==1);
- assert(restores_at_observe==1 && !suspend_infra_pdn && !spm_broken && infra_pdn_entries==1);
+ assert(arm_infra==1 && infra_saves==1 && infra_restores==1);
+ assert(!suspend_infra_pdn && !spm_broken && infra_pdn_entries==1);
  /* A refused arm never leaves a pending restore or observation behind. */
  reset(); infra_save=0; arm_error=-EBUSY; assert(y2_spm_enter(PM_SUSPEND_MEM)==-EBUSY);
  assert(!infra_restores && !suspend_infra_pdn); core_resume();

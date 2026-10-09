@@ -98,9 +98,6 @@ int main(void) {
     power_down(); stuck_off = 0x050;
     assert(!y2_infra_restore(&io, y2_pericfg_regs, Y2_PERICFG_REGS, saved, woke, &r) && !r.failed && r.lost);
     stuck_off = ~0U;
-    /* Window gating: a gated block is never read, an open one is. */
-    assert(y2_infra_window_readable(1U << 12, 16) && !y2_infra_window_readable(1U << 12, 12));
-    assert(y2_infra_window_readable(0xffffffff, Y2_INFRA_NO_GATE));
     return 0;
 }
 ''')
@@ -133,7 +130,7 @@ def _driver_tables():
 
 
 class Driver(unittest.TestCase):
-    def test_real_driver_functions_against_fake_windows(self):
+    def test_real_driver_functions_against_fake_blocks(self):
         policy = POLICY.replace('#include "spm-policy.h"', '')
         run_c(r'''
 #include <assert.h>
@@ -156,7 +153,7 @@ class Driver(unittest.TestCase):
 #define mutex_unlock(x) do{assert(*(x));*(x)=0;}while(0)
 #define dsb(x) ((void)0)
 #define udelay(x) ((void)(x))
-#define EINVAL_ EINVAL
+#define pr_info(...) ((void)0)
 typedef struct kobject { int unused; } kobject;
 struct kobj_attribute { int unused; };
 static int sysfs_streq(const char *a, const char *b) {
@@ -166,18 +163,18 @@ static int sysfs_streq(const char *a, const char *b) {
 static const char *last_note; static int last_note_result;
 static void y2_pm_note(const char *name, int result) { last_note = name; last_note_result = result; }
 ''' + policy + r'''
-static unsigned char peri_mem[0x500], win_mem[6][0x100];
-static unsigned win_reads[6], peri_stuck;
+static unsigned char peri_mem[0x500], infra_mem[0x20];
+static unsigned peri_stuck, infra_reads, peri_reads_during_save;
 static void put32(unsigned char *m, unsigned off, unsigned v) { memcpy(m + off, &v, 4); }
 static unsigned get32(const unsigned char *m, unsigned off) { unsigned v; memcpy(&v, m + off, 4); return v; }
 static unsigned readl(const void *p) {
-    unsigned i; unsigned v;
-    for (i = 0; i < 6; i++)
-        if ((const unsigned char *)p >= win_mem[i] && (const unsigned char *)p < win_mem[i] + 0x100) ++win_reads[i];
+    unsigned v;
+    if ((const unsigned char *)p >= infra_mem && (const unsigned char *)p < infra_mem + sizeof infra_mem) ++infra_reads;
     memcpy(&v, p, 4); return v;
 }
 static void writel(unsigned v, void *p) {
     unsigned char *c = p;
+    assert(!(c >= infra_mem && c < infra_mem + sizeof infra_mem)); /* INFRACFG is never written */
     if (c >= peri_mem && c < peri_mem + 0x500) {
         unsigned off = c - peri_mem;
         if (off == 0x08) { put32(peri_mem, 0x18, get32(peri_mem, 0x18) | v); return; }
@@ -190,56 +187,46 @@ static void writel(unsigned v, void *p) {
 static unsigned peri_read(void *context, unsigned reg) { return readl((char *)context + reg); }
 static void peri_write(void *context, unsigned reg, unsigned value) { writel(value, (char *)context + reg); }
 static void peri_delay(unsigned us) { (void)us; }
-''' + function(DRIVER, 'y2_infra_pdn_wanted') + function(DRIVER, 'canaries_read')
-        + function(DRIVER, 'y2_infra_pdn_save') + function(DRIVER, 'record_fallback')
-        + function(DRIVER, 'y2_infra_pdn_restore') + function(DRIVER, 'y2_infra_pdn_observe')
+''' + function(DRIVER, 'y2_infra_pdn_wanted') + function(DRIVER, 'y2_infra_pdn_save')
+        + function(DRIVER, 'record_fallback') + function(DRIVER, 'y2_infra_pdn_restore')
         + function(DRIVER, 'mode_store') + r'''
 static void configure(unsigned pdn0) {
-    unsigned i;
-    memset(peri_mem, 0, sizeof peri_mem); memset(win_mem, 0, sizeof win_mem); memset(win_reads, 0, sizeof win_reads);
+    memset(peri_mem, 0, sizeof peri_mem); memset(infra_mem, 0, sizeof infra_mem);
     put32(peri_mem, 0x018, pdn0); put32(peri_mem, 0x054, 0xff); put32(peri_mem, 0x05c, 1); put32(peri_mem, 0x400, 0x102);
-    for (i = 0; i < 6; i++) { unsigned o; for (o = 0; o < 0x100; o += 4) put32(win_mem[i], o, 0x1000 * (i + 1) + o); }
-    pericfg = peri_mem; for (i = 0; i < 6; i++) window_base[i] = win_mem[i];
+    put32(infra_mem, 0x000, 0x300); put32(infra_mem, 0x004, 0x1); put32(infra_mem, 0x01c, 0x5);
+    pericfg = peri_mem; infracfg = infra_mem;
     peri_io = (struct y2_spm_io){ .context = pericfg, .read = peri_read, .write = peri_write, .delay = peri_delay };
     ready = true; powerdown_mode = true; fallback = false; fallback_reason = "none"; peri_stuck = ~0U;
-    saved_valid = observe_pending = false;
+    saved_valid = false; infra_reads = 0;
 }
 int main(void) {
-    unsigned i, gated_msdc0 = 1U << 12;
     int ret;
-    (void)sysfs_streq;
+    (void)sysfs_streq; (void)peri_reads_during_save;
     /* Not wanted -> nothing is touched. */
     configure(0); ready = false;
-    assert(!y2_infra_pdn_wanted() && y2_infra_pdn_save() == -ENODEV && !saves);
+    assert(!y2_infra_pdn_wanted() && y2_infra_pdn_save() == -ENODEV && !saves && !infra_reads);
     configure(0); powerdown_mode = false; assert(!y2_infra_pdn_wanted() && y2_infra_pdn_save() == -ENODEV);
-    configure(0); fallback = true; assert(!y2_infra_pdn_wanted() && y2_infra_pdn_save() == -ENODEV);
-    for (i = 0; i < 6; i++) assert(!win_reads[i]);
-    /* Save: a gated window (MSDC0, bit 12) is never read; open windows are. */
-    configure(gated_msdc0 | 0x800);
+    configure(0); fallback = true; assert(!y2_infra_pdn_wanted() && y2_infra_pdn_save() == -ENODEV && !infra_reads);
+    /* Save records PERICFG and the read-only INFRACFG. */
+    configure(0x800 | (1U << 12));
     assert(y2_infra_pdn_wanted() && !y2_infra_pdn_save() && saves == 1 && saved_valid);
-    assert(win_reads[4] == 0 && win_reads[0] > 0 && win_reads[1] > 0 && win_reads[2] > 0 && win_reads[3] > 0 && win_reads[5] > 0);
-    assert(reg_saved[PDN0_INDEX] == (gated_msdc0 | 0x800));
-    /* INFRASYS power-down: PERICFG and the UART configuration are reset. */
+    assert(reg_saved[PDN0_INDEX] == (0x800 | (1U << 12)) && fabric_saved[0] == 0x300 && fabric_saved[2] == 0x5);
+    /* INFRASYS power-down reset PERICFG and INFRACFG. */
     memset(peri_mem, 0, sizeof peri_mem); put32(peri_mem, 0x054, 0xff);
-    put32(win_mem[1], 0x00c, 0); put32(win_mem[1], 0x048, 0);
-    memset(win_reads, 0, sizeof win_reads);
+    put32(infra_mem, 0x000, 0); put32(infra_mem, 0x004, 0);
     ret = y2_infra_pdn_restore();
     assert(!ret && restores == 1 && !restore_failures && !fallback && last_lost && !last_failed);
-    assert(get32(peri_mem, 0x018) == (gated_msdc0 | 0x800) && get32(peri_mem, 0x05c) == 1 && get32(peri_mem, 0x400) == 0x102);
+    assert(get32(peri_mem, 0x018) == (0x800 | (1U << 12)) && get32(peri_mem, 0x05c) == 1 && get32(peri_mem, 0x400) == 0x102);
+    assert(fabric_lost == 3 && get32(infra_mem, 0x000) == 0);	/* reported, not written back */
     assert(!strcmp(last_note, "infra_restored") && !last_note_result);
-    for (i = 0; i < 6; i++) assert(!win_reads[i]);	/* PERICFG only until observe() */
-    y2_infra_pdn_observe();
-    assert(win_reads[4] == 0 && win_reads[1] > 0);
-    assert(canary_total_lost == 2 && (canary_lost & BIT(2)) && (canary_lost & BIT(8)));
-    y2_infra_pdn_observe(); /* idempotent */ assert(canary_total_lost == 2);
     /* Restore with no preceding save is refused. */
     assert(y2_infra_pdn_restore() == -ENODEV);
-    /* Nothing lost -> no write, nothing observed as lost. */
-    configure(gated_msdc0); assert(!y2_infra_pdn_save()); canary_total_lost = 0;
-    ret = y2_infra_pdn_restore(); y2_infra_pdn_observe();
-    assert(!ret && !last_lost && !canary_total_lost && !strcmp(last_note, "infra_kept"));
+    /* Nothing lost -> nothing written, nothing reported. */
+    configure(0x800); assert(!y2_infra_pdn_save());
+    ret = y2_infra_pdn_restore();
+    assert(!ret && !last_lost && !fabric_lost && !strcmp(last_note, "infra_kept"));
     /* A verified register that does not take its value pins the boot to retained mode. */
-    configure(gated_msdc0); assert(!y2_infra_pdn_save());
+    configure(0x800); assert(!y2_infra_pdn_save());
     memset(peri_mem, 0, sizeof peri_mem); peri_stuck = 0x054;
     assert(y2_infra_pdn_restore() == -EIO);
     assert(fallback && !y2_infra_pdn_wanted() && restore_failures == 1);
@@ -248,7 +235,7 @@ int main(void) {
     /* Owner switch: retained keeps the fallback, powerdown is an explicit retry. */
     assert(mode_store(NULL, NULL, "retained\n", 9) == 9 && !powerdown_mode && fallback);
     assert(mode_store(NULL, NULL, "powerdown", 9) == 9 && powerdown_mode && !fallback && y2_infra_pdn_wanted());
-    assert(mode_store(NULL, NULL, "bogus\n", 6) == -EINVAL_);
+    assert(mode_store(NULL, NULL, "bogus\n", 6) == -EINVAL);
     return 0;
 }
 ''')
@@ -258,14 +245,12 @@ int main(void) {
         enter = function(spm, 'y2_spm_enter')
         finish = function(spm, 'y2_spm_finish')
         # save before arming; arm told the mode; restore right after the CPU returns,
-        # after the backstop clock is running again; observe after the normal PCM.
+        # after the backstop clock is running again.
         self.assertLess(enter.index('y2_infra_pdn_save()'), enter.index('y2_spm_suspend_arm('))
         self.assertIn('y2_spm_suspend_arm(&spm_io, pcm_address, infra)', enter)
         self.assertLess(enter.index('cpu_suspend(0, y2_spm_finish)'), enter.index('y2_infra_pdn_restore()'))
         self.assertLess(enter.index('y2_pm_backstop_pause(false)'), enter.index('y2_infra_pdn_restore()'))
         self.assertLess(enter.index('y2_infra_pdn_restore()'), enter.index('resumes++'))
-        self.assertLess(enter.index('y2_spm_suspend_restore(&spm_io, normal_address)'),
-                        enter.index('y2_infra_pdn_observe()'))
         # The journal mark that identifies a boot that died inside the attempt is
         # the last one before WFI, after BEFORE_SPM_ENTRY.
         self.assertLess(finish.index('Y2_PM_BEFORE_SPM_ENTRY, 0'), finish.index('Y2_PM_INFRA_PDN_ENTRY'))

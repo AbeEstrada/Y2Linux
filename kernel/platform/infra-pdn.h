@@ -8,11 +8,9 @@
 bool y2_infra_pdn_wanted(void);
 int y2_infra_pdn_save(void);
 int y2_infra_pdn_restore(void);
-void y2_infra_pdn_observe(void);
 #else
 static inline bool y2_infra_pdn_wanted(void) { return false; }
 static inline int y2_infra_pdn_save(void) { return -ENODEV; }
 static inline int y2_infra_pdn_restore(void) { return -ENODEV; }
-static inline void y2_infra_pdn_observe(void) {}
 #endif
 #endif

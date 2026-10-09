@@ -480,7 +480,6 @@ static int y2_spm_enter(suspend_state_t state)
 	}
 	restore = y2_spm_suspend_restore(&spm_io, normal_address);
 	if (restore) { suspend_restore_failures++; ret = restore; }
-	if (infra) y2_infra_pdn_observe(); /* read-only, after the UART request is clear */
 	y2_pm_mark(Y2_PM_NORMAL_PCM_RESTORED, ret);
 	/* Core CPU PM restoration and then our CIRQ replay run during
 	 * syscore_resume(), including every platform entry abort. */
