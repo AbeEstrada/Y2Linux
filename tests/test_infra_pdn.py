@@ -230,7 +230,7 @@ int main(void) {
     memset(peri_mem, 0, sizeof peri_mem); peri_stuck = 0x054;
     assert(y2_infra_pdn_restore() == -EIO);
     assert(fallback && !y2_infra_pdn_wanted() && restore_failures == 1);
-    assert(!strcmp(fallback_reason, "restore_verify_failed") && !strcmp(last_note, "infra_restore_bad") && last_note_result == -EIO);
+    assert(!strcmp(fallback_reason, "restore_verify_failed") && !strcmp(last_note, "infra_failed") && last_note_result == -EIO);
     assert(y2_infra_pdn_save() == -ENODEV);
     /* Owner switch: retained keeps the fallback, powerdown is an explicit retry. */
     assert(mode_store(NULL, NULL, "retained\n", 9) == 9 && !powerdown_mode && fallback);

@@ -114,7 +114,7 @@ int y2_infra_pdn_restore(void)
 		restore_failures++;
 		record_fallback("restore_verify_failed");
 	}
-	y2_pm_note(ret ? "infra_restore_bad" : result.lost ? "infra_restored" : "infra_kept", ret);
+	y2_pm_note(ret ? "infra_failed" : result.lost ? "infra_restored" : "infra_kept", ret);
 	/* Bring-up evidence: the first power-downs and every failure, then quiet. */
 	if (ret || restores <= 8)
 		pr_info("Y2INFRA: restore result=%d lost=%#x failed=%#x pdn0 %#x->%#x infracfg_changed=%#x\n",
