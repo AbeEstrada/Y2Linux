@@ -20,7 +20,8 @@ SSH = ['ssh', '-T', '-oBatchMode=yes', '-oStrictHostKeyChecking=yes', '-oConnect
        '-i', str(Path.home() / '.ssh/y2linux_ed25519'), 'root@10.42.0.1']
 # Reviewed images the read-only probe may be armed on (exact commits, no wildcards).
 ACCEPTED_COMMITS = ('5e267571d584da7fbe356d3161801ba15f87fa57',   # DEEPSLEEP-FINAL-04
-                    '837b6146ee4d0f551b69cfaddd686a69ce56a060')   # POWER-FINAL-05
+                    '837b6146ee4d0f551b69cfaddd686a69ce56a060',   # POWER-FINAL-05
+                    'c1ef37a6f6338b3abe7fcb4f2aa505b6fb861075')   # POWER-FINAL-06 bring-up
 ACCEPTED_REBORN = '97ff8c357bab12319087740d7c97b5051e6588f5'
 
 
