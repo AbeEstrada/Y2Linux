@@ -9,7 +9,15 @@
  */
 #define Y2_CHARGE_UV 4175000
 #define Y2_CHARGE_SAFETY_UV 4200000
-#define Y2_RECHARGE_UV 4110000
+/* Software termination stops at the first loaded sample at 4.175 V, so the
+ * pack relaxes to about 4.09-4.10 V (measured on the Y2: every 70 s hold/restart
+ * loop for a day, never Full, with the stock 4.11 V recharge rule). A hold that
+ * ends the active cycle is therefore Full when it rests at or above
+ * Y2_FULL_REST_UV for the confirmation window; below it the charge is not
+ * finished and charging resumes. After Full the maintenance cycle restarts
+ * only below Y2_RECHARGE_UV, never at the stock 4.11 V. */
+#define Y2_FULL_REST_UV 4070000
+#define Y2_RECHARGE_UV 4000000
 #define Y2_TOPOFF_UV 4050000
 /* Actual Y2 LK uses 3.2 V for ordinary boot, and modes 8/9 for charging
  * below that threshold. Stock Linux leaves precharge above 3.4 V. The
@@ -185,7 +193,7 @@ static inline void y2_charge_account(struct y2_charge_cycle *c,
 static inline int y2_charge_termination(struct y2_charge_cycle *c,
 				      unsigned long long now, int uv, int active)
 {
-	int low = uv < Y2_RECHARGE_UV;
+	int low = uv < Y2_RECHARGE_UV, resume;
 	/* Voltage-limited termination: stop at the target on the FIRST sample.
 	 * POWER-02 waited for CV confirmations while still feeding the battery,
 	 * then hit the independent 4.2V fault. Never wait above the target or
@@ -202,12 +210,15 @@ static inline int y2_charge_termination(struct y2_charge_cycle *c,
 		c->confirm_at = now;
 		return 1;
 	}
-	if (low != c->confirm_low) {
-		c->confirm_low = low;
+	/* Resume when a completing hold rests below the full level, or when any
+	 * other hold falls below the maintenance recharge level. */
+	resume = c->completing ? uv < Y2_FULL_REST_UV : low;
+	if (resume != c->confirm_low) {
+		c->confirm_low = resume;
 		c->confirm_at = now;
 		c->confirmations = 0;
 	}
-	if ((!low && (!c->completing || c->full)) || uv >= Y2_CHARGE_SAFETY_UV) {
+	if ((!resume && (!c->completing || c->full)) || uv >= Y2_CHARGE_SAFETY_UV) {
 		c->confirmations = 0;
 		c->confirm_at = now;
 		return 0;
@@ -218,11 +229,11 @@ static inline int y2_charge_termination(struct y2_charge_cycle *c,
 	c->confirmations = 0;
 	/* An actually completed cycle may start a fresh maintenance cycle.
 	 * Mere pauses/holds cannot repeatedly evade the charging time budget. */
-	if (low && c->full) { c->total = 0; c->precharge = 0; }
-	c->hold = !low;
-	c->full = !low;
+	if (resume && c->full) { c->total = 0; c->precharge = 0; }
+	c->hold = !resume;
+	c->full = !resume;
 	c->completing = 0;
-	if (low) { c->cv = 0; c->topoff = 0; }
+	if (resume) { c->cv = 0; c->topoff = 0; }
 	return 1;
 }
 #endif

@@ -197,21 +197,43 @@ int main(void){
  for(unsigned t=101;t<160;t++)assert(!y2_charge_termination(&c,t,4140000,0));
  assert(y2_charge_termination(&c,160,4140000,0) && c.full);
  c.total=1234;c.precharge=10;
- for(unsigned t=170;t<=300;t+=10)assert(!y2_charge_termination(&c,t,4110000,0));
- for(unsigned t=301;t<361;t++)assert(!y2_charge_termination(&c,t,4109999,0));
- assert(y2_charge_termination(&c,361,4109999,0) && !c.hold && !c.full);
+ /* Full stays latched through the measured 4.09 V rest and the old 4.11 V
+  * stock threshold; only a sustained fall below the maintenance level refills. */
+ for(unsigned t=170;t<=300;t+=10)assert(!y2_charge_termination(&c,t,4090000,0));
+ for(unsigned t=301;t<=400;t+=10)assert(!y2_charge_termination(&c,t,4000000,0));
+ for(unsigned t=401;t<461;t++)assert(!y2_charge_termination(&c,t,3999999,0));
+ assert(y2_charge_termination(&c,461,3999999,0) && !c.hold && !c.full);
  assert(c.total==0 && c.precharge==0 && c.cv==0);
+ /* The measured field loop: the pack stops at 4.175 V under load and rests at
+  * 4.09 V. That is Full (it used to restart forever against the 4.11 V rule). */
+ c=(struct y2_charge_cycle){0};
+ assert(y2_charge_termination(&c,0,4178759,1) && c.hold && !c.full && c.completing);
+ for(unsigned t=1;t<60;t++)assert(!y2_charge_termination(&c,t,4090209,0));
+ assert(y2_charge_termination(&c,60,4090209,0) && c.hold && c.full);
+ /* A hold that rests below the full level is an unfinished charge: it resumes
+  * after a sustained window and never reports Full. */
+ c=(struct y2_charge_cycle){0};
+ assert(y2_charge_termination(&c,0,4176000,1) && c.hold && !c.full);
+ for(unsigned t=1;t<=60;t++)assert(!y2_charge_termination(&c,t,4069999,0));
+ assert(y2_charge_termination(&c,61,4069999,0) && !c.hold && !c.full);
+ /* A single dip and recovery does not restart the window early. */
+ c=(struct y2_charge_cycle){0};
+ assert(y2_charge_termination(&c,0,4176000,1));
+ assert(!y2_charge_termination(&c,30,4069999,0));
+ assert(!y2_charge_termination(&c,45,4090000,0));
+ for(unsigned t=46;t<105;t++)assert(!y2_charge_termination(&c,t,4090000,0));
+ assert(y2_charge_termination(&c,105,4090000,0) && c.full);
  /* High voltage at insertion cannot invent a completed charging cycle. */
  c=(struct y2_charge_cycle){0};
  assert(y2_charge_termination(&c,0,4180000,0));
  for(unsigned t=1;t<=100;t++)assert(!y2_charge_termination(&c,t,4180000,0));
  assert(c.hold && !c.full);
- /* An isolated low sample cannot restart a full battery. */
- assert(!y2_charge_termination(&c,101,4109999,0));
- assert(!y2_charge_termination(&c,151,4110000,0));
- assert(!y2_charge_termination(&c,152,4109999,0));
- for(unsigned t=153;t<212;t++)assert(!y2_charge_termination(&c,t,4109999,0));
- assert(y2_charge_termination(&c,212,4109999,0) && !c.hold);
+ /* An isolated low sample cannot restart a held battery. */
+ assert(!y2_charge_termination(&c,101,3999999,0));
+ assert(!y2_charge_termination(&c,151,4000000,0));
+ assert(!y2_charge_termination(&c,152,3999999,0));
+ for(unsigned t=153;t<212;t++)assert(!y2_charge_termination(&c,t,3999999,0));
+ assert(y2_charge_termination(&c,212,3999999,0) && !c.hold);
  reset(); /* reference fixture functions under -Werror */
  assert(!io.read(io.context,0,&operations));
 }
@@ -325,11 +347,11 @@ int main(void){
  clock_ms+=1000;y2_charger_run(&c);
  assert(!c.active && c.cycle.hold && !c.fault && !c.cycle.full);
  unsigned cutoff_pets=c.pets;
- bat.raw=18850; /* relaxes to 4.142V: no charger feed during confirmation */
+ bat.raw=18600; /* relaxes to 4.087V: no charger feed during confirmation */
  for(unsigned n=0;n<59;n++){clock_ms+=1000;y2_charger_run(&c);assert(!c.active && !c.cycle.full);}
  clock_ms+=1000;y2_charger_run(&c);
  assert(!c.active && c.cycle.full && c.status==POWER_SUPPLY_STATUS_FULL && !c.fault && c.pets==cutoff_pets);
- bat.raw=18700;
+ bat.raw=18000; /* 3.955 V: below the maintenance recharge level */
  for(unsigned n=0;n<60;n++){clock_ms+=1000;y2_charger_run(&c);assert(!c.active);}
  clock_ms+=1000;y2_charger_run(&c);
  assert(c.active && !c.cycle.full && !c.cycle.hold && !c.fault);

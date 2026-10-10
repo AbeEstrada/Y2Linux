@@ -57,9 +57,13 @@ class BatterySoc(unittest.TestCase):
         charging = soc.observe(180, 4175000, 1, 'Charging')['percent']
         self.assertLessEqual(charging, rebound + 1)
         self.assertEqual(soc.observe(181, 4175000, 1, 'Full')['percent'], 100)
-        self.assertLessEqual(soc.observe(182, 3390000, 1, 'Discharging')['percent'], 1)
-        self.assertIsNone(soc.observe(183, 3390000, 0, 'Unknown')['percent'])
-        self.assertEqual(soc.observe(184, 3800000, 1, 'Discharging')['percent'], 45)
+        # Resting full pack of this charger (measured 4.09 V) is 100%, not 94%.
+        self.assertEqual(soc.observe(182, 4090000, 1, 'Full')['percent'], 100)
+        # An implausible Full at a low voltage never forces 100%.
+        self.assertLess(Soc(load_profile(self.ctx)).observe(0, 3900000, 1, 'Full')['percent'], 100)
+        self.assertLessEqual(soc.observe(183, 3390000, 1, 'Discharging')['percent'], 1)
+        self.assertIsNone(soc.observe(184, 3390000, 0, 'Unknown')['percent'])
+        self.assertEqual(soc.observe(185, 3800000, 1, 'Discharging')['percent'], 45)
 
     def test_rest_and_hybrid_require_actual_calibration(self):
         p = load_profile(self.ctx)

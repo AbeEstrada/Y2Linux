@@ -296,7 +296,7 @@ int main(void){
  bat.raw=18850;
  for(unsigned n=0;n<60;n++){clock_ms+=1000;y2_charger_run(&c);}
  assert(c.cycle.full && c.status==POWER_SUPPLY_STATUS_FULL && !c.active);
- bat.raw=18700;
+ bat.raw=18000; /* 3.955 V: below the 4.00 V maintenance recharge level */
  for(unsigned n=0;n<61;n++){clock_ms+=1000;y2_charger_run(&c);}
  assert(c.active && !c.cycle.full && c.charge_ua==1100000 && selector_now()==5);
  /* The independent 4.2 V guard is not raised for the higher current. */

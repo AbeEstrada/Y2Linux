@@ -6,6 +6,11 @@ import time
 
 PROFILE = '/etc/y2linux/battery-profile.json'
 OVERRIDE = '/data/system/platform/battery-profile.json'
+# The charger stops at 4.175 V under load and rests near 4.09 V, so the curve's
+# top point is never seen at rest. The kernel reports Full only after a hold
+# that rests at or above 4.07 V; 4.0 V is the plausibility floor for that claim
+# (it is also the charger's maintenance-recharge level).
+FULL_FLOOR_UV = 4000000
 
 
 def load_profile(ctx):
@@ -112,7 +117,7 @@ class Soc:
                 target = min(target, self.percent)
             change = dt / p['seconds_per_percent']
             self.percent += max(-change, min(change, target - self.percent))
-        if status == 'Full' and voltage >= p['voltage_soc'][-1][0] - p['rest_band_uv']:
+        if status == 'Full' and voltage >= FULL_FLOOR_UV:
             self.percent = 100.
         if voltage <= p['voltage_soc'][0][0]:
             self.percent = min(self.percent, 1.)

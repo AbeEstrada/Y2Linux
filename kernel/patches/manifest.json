@@ -311,6 +311,12 @@
       "patch": "0066-pm-fix-filesystem-freeze-selection.patch",
       "base_sha256": "05a0ccc8eb4c8e4191d0e9756f8e1557734ab58425f7cceb8806bd5a4155e7b3",
       "result_sha256": "c5f3fcab393c7033d51235fc3fa9387431a5da8c03efd5ce6769423fc02d9beb"
+    },
+    {
+      "path": "kernel/power/main.c",
+      "patch": "0067-y2-pm-sync-device-suspend.patch",
+      "base_sha256": "48cf853235097bce2a817cb37a82d4e4c7a78565fd4f793ba4f05466934aa60b",
+      "result_sha256": "8b6d166ae4739cebadc95c83608b8d56264f74df0d32bbe457f39c5fbb148452"
     }
   ]
 }
