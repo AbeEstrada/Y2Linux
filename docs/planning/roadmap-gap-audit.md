@@ -7496,3 +7496,27 @@ clean first boot, taint 0, MTP roots `/media/internal/music` and `/media/sd`, Re
 reports what the screens look like. The first on-device check after flashing is read-only: identity, taint,
 Reborn memory and CPU, thumbnail cache growth, then the owner's visual review.
 Readiness for the next boundary: **PARTIALLY READY** (source, host and splash tests; physical review pending flash).
+
+
+## POWER-FINAL-11 remaining-screens scope audit — 2026-10-10
+
+**Boundary:** a change to a power-adjacent production component: the rescue-environment charger's display
+(`tools/production/offline-charge.c`) is redrawn, and Reborn gains system screens that react to USB, Bluetooth,
+battery and update state. Repeated before source changes, per the standing rule. This audit builds and flashes
+nothing. The owner asked for the screens left out of candidate 10. Candidate 11 is 10 plus those screens; no
+kernel, driver, partition or radio code changes.
+
+| Row | Classification | Evidence and limit |
+| --- | --- | --- |
+| Charger decision logic | UNCHANGED | `power_event`, `safe_boot_sample`, the 3.4 V gate, the 2 s hold, sampling, unplug-wins and every write are untouched; the existing two charger tests still pass. Only `draw()` changed. |
+| Charger display | CHANGE, host-tested | The 5×7 block alphabet and moving blocks are replaced by images rendered from Reborn's quads (ring and bolt, *Charging* / *Charged* / *Charging paused*, three hint lines) plus a ring segment drawn procedurally with integer 3×3 coverage (no libm, no allocation). New tests render real frames into a memory framebuffer and check the sweep, the full and paused ring, text presence and bounds. **On-device NOT_RUN.** |
+| State-of-charge claims | UNCHANGED, deliberate | The design showed a percentage and "about 1 h 10 min to full". Neither is shown: the percentage is a provisional voltage estimate and time-to-full is not computed anywhere. The ring only sweeps (activity) and closes when the status is Full. Copy is tested to contain no digits or "%". |
+| Charger binary size | CHANGE, small | About 30 KB of image data in the initramfs charger. |
+| Computer screen | CHANGE | Shown when the platform reports the transfer service Ready or Copying and the state has been observed; Back dismisses it, volume and transport still work; it returns on a new connection. It only reads the existing USB state. |
+| Update download | CHANGE | A sweeping ring replaces a static page; no progress figure is claimed (none exists in the model). |
+| Battery warning | CHANGE | A dialog once per level (Low, Critical); shutdown behaviour and the platform's low-battery policy are unchanged. |
+| Physical | NOT_RUN | Nothing above is observed on hardware. |
+
+**Gate decision:** build candidate 11 as 10 plus these screens. Offline-charging behaviour must be observed by the
+owner (unplug, replug while off, Power hold) after flashing; the fallback pair (10) is in the package.
+Readiness for the next boundary: **PARTIALLY READY**.

@@ -140,46 +140,70 @@ static void rectangle(unsigned x, unsigned y, unsigned width, unsigned height, u
             for (unsigned k = 0; k < bytes; k++) pixels[at + k] = pixel >> (8 * k);
         }
 }
-/* A small original 5x7 uppercase alphabet; no UI toolkit or external font. */
-static const uint8_t alphabet[26][7] = {
-    {14,17,17,31,17,17,17},{30,17,17,30,17,17,30},{14,17,16,16,16,17,14},
-    {30,17,17,17,17,17,30},{31,16,16,30,16,16,31},{31,16,16,30,16,16,16},
-    {14,17,16,23,17,17,15},{17,17,17,31,17,17,17},{14,4,4,4,4,4,14},
-    {7,2,2,2,2,18,12},{17,18,20,24,20,18,17},{16,16,16,16,16,16,31},
-    {17,27,21,21,17,17,17},{17,25,21,19,17,17,17},{14,17,17,17,17,17,14},
-    {30,17,17,30,16,16,16},{14,17,17,17,21,18,13},{30,17,17,30,20,18,17},
-    {15,16,16,14,1,1,30},{31,4,4,4,4,4,4},{17,17,17,17,17,17,14},
-    {17,17,17,17,17,10,4},{17,17,17,21,21,21,10},{17,17,10,4,10,17,17},
-    {17,17,10,4,4,4,4},{31,1,2,4,8,16,31},
-};
-static void label(const char *text, unsigned y, unsigned scale, unsigned rgb)
+#include "../graphics/offline-charge-art.h"
+
+/* Draw one RGB888 run-length image rendered by Reborn (see offline-charge-art.h). */
+static void blit(const chg_image *image)
 {
-    size_t length = strlen(text);
-    if (!length || length * 6 * scale > 480) return;
-    unsigned x = (480 - (length * 6 - 1) * scale) / 2;
-    for (size_t i = 0; i < length; i++) {
-        if (text[i] < 'A' || text[i] > 'Z') continue;
-        for (unsigned row = 0; row < 7; row++)
-            for (unsigned col = 0; col < 5; col++)
-                if (alphabet[text[i] - 'A'][row] & (16 >> col))
-                    rectangle(x + (i * 6 + col) * scale, y + row * scale, scale, scale, rgb);
+    unsigned x = 0, y = 0, at = image->offset, end = image->offset + image->length;
+    while (at + 3 < end && y < image->h) {
+        unsigned count = chg_art_rle[at];
+        unsigned rgb = (unsigned)chg_art_rle[at + 1] << 16 | (unsigned)chg_art_rle[at + 2] << 8 | chg_art_rle[at + 3];
+        at += 4;
+        while (count--) {
+            rectangle(image->x + x, image->y + y, 1, 1, rgb);
+            if (++x == image->w) { x = 0; y++; }
+        }
     }
+}
+/* Clockwise "diamond angle" (0..4 per turn) from 12 o'clock; monotonic in the
+ * true angle, so ordering needs no trigonometry or libm. */
+static float diamond(float x, float up)
+{
+    if (x >= 0 && up > 0) return x / (x + up);
+    if (x > 0 && up <= 0) return 1 + (-up) / (x - up);
+    if (x <= 0 && up < 0) return 2 + (-x) / (-x - up);
+    return 3 + up / (up - x + (up == 0 && x == 0 ? 1 : 0));
+}
+/* Diamond angles of 30-degree steps. */
+static const float steps[13] = {0, .366f, .634f, 1, 1.366f, 1.634f, 2, 2.366f, 2.634f, 3, 3.366f, 3.634f, 4};
+/* The lit part of the ring, `twelfths` of a turn from 12 o'clock, with 3x3
+ * coverage at its edges. It states that charging is happening, never how much. */
+static void lit_ring(unsigned twelfths)
+{
+    if (!twelfths) return;
+    float outer = CHG_OUTER + 0.5f, inner = CHG_INNER - 0.5f;
+    float limit = steps[twelfths > 12 ? 12 : twelfths];
+    unsigned x0 = (unsigned)(CHG_CX - outer) - 1, x1 = (unsigned)(CHG_CX + outer) + 2;
+    unsigned y0 = (unsigned)(CHG_CY - outer) - 1, y1 = (unsigned)(CHG_CY + outer) + 2;
+    for (unsigned y = y0; y < y1; y++)
+        for (unsigned x = x0; x < x1; x++) {
+            unsigned hits = 0;
+            for (unsigned sy = 0; sy < 3; sy++)
+                for (unsigned sx = 0; sx < 3; sx++) {
+                    float px = (float)x + (sx + 0.5f) / 3 - CHG_CX, py = (float)y + (sy + 0.5f) / 3 - CHG_CY;
+                    float d2 = px * px + py * py;
+                    if (d2 > outer * outer || d2 < inner * inner) continue;
+                    if (twelfths >= 12 || diamond(px, -py) <= limit) hits++;
+                }
+            if (!hits) continue;
+            /* Blend the track colour toward the lit colour by coverage. */
+            unsigned a = hits * 255 / 9, rgb = 0;
+            for (unsigned shift = 0; shift <= 16; shift += 8)
+                rgb |= ((((CHG_TRACK >> shift) & 255) * (255 - a) + ((CHG_LIT >> shift) & 255) * a + 127) / 255) << shift;
+            rectangle(x, y, 1, 1, rgb);
+        }
 }
 static void draw(const char *status, bool held, bool boot_ready, uint64_t now)
 {
     bool charging = !strcmp(status, "Charging\n");
     bool full = !strcmp(status, "Full\n");
-    unsigned accent = charging ? 0x55dba5 : 0xc2c8ce;
-    rectangle(0, 0, 480, 360, 0x080e14);
-    rectangle(151, 110, 170, 84, 0xc2c8ce);
-    rectangle(157, 116, 158, 72, 0x080e14);
-    rectangle(321, 135, 10, 34, 0xc2c8ce);
-    /* Moving blocks indicate activity, never a claimed state of charge. */
-    unsigned blocks = full ? 5 : charging ? 1 + (now / 500) % 5 : 1;
-    for (unsigned i = 0; i < blocks; i++) rectangle(165 + i * 29, 124, 22, 56, accent);
-    label(full ? "CHARGED" : charging ? "CHARGING" : "CHARGING PAUSED", 220, 3, 0xeef3f8);
-    label(held ? (boot_ready ? "RELEASE TO START" : "LOW BATTERY") : "HOLD POWER TO START",
-          281, 2, 0x9babbc);
+    rectangle(0, 0, 480, 360, CHG_BG);
+    blit(&chg_images[CHG_BASE]);
+    /* Sweeping activity, never a claimed state of charge. */
+    lit_ring(full ? 12 : charging ? 1 + (unsigned)(now / 500) % 12 : 0);
+    blit(&chg_images[CHG_TITLE(full ? 1 : charging ? 0 : 2)]);
+    blit(&chg_images[CHG_HINT(held ? (boot_ready ? 1 : 2) : 0)]);
 }
 static void screen(bool on)
 {

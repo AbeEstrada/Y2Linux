@@ -51,3 +51,45 @@ int main(void){
  for(unsigned i=0;i<8;i++)assert(memory[i]==0xa5 && memory[sizeof memory-1-i]==0xa5);
 }
 ''')
+
+
+class OfflineChargingScreen(unittest.TestCase):
+    PRELUDE = '#define main unused_rescue_main\n#include "' + str(ROOT / 'tools/production/offline-charge.c') + '"\n#undef main\n'
+
+    def test_ring_sweeps_while_charging_is_full_when_charged_and_dark_when_paused(self):
+        run_c(self.PRELUDE + r'''
+#include <assert.h>
+static unsigned char memory[480*360*4];
+static unsigned at(unsigned x,unsigned y){unsigned o=(y*480+x)*4;return memory[o+2]<<16|memory[o+1]<<8|memory[o];}
+static int green(unsigned x,unsigned y){unsigned v=at(x,y);return ((v>>8)&255)>((v>>16)&255)+40;} /* green clearly above red */
+int main(void){
+ pixels=memory;fix.line_length=480*4;fix.smem_len=sizeof memory;
+ var.xres=480;var.yres=360;var.bits_per_pixel=32;
+ var.red=(struct fb_bitfield){16,8,0};var.green=(struct fb_bitfield){8,8,0};var.blue=(struct fb_bitfield){0,8,0};
+ unsigned cx=(unsigned)CHG_CX,cy=(unsigned)CHG_CY,r=(unsigned)((CHG_OUTER+CHG_INNER)/2);
+ /* One twelfth: only the first 30 degrees after 12 o'clock are lit. */
+ draw("Charging\n",false,false,0);
+ assert(green(cx+r/4,cy-r+1) && !green(cx-r+1,cy) && !green(cx,cy+r-1) && !green(cx+r-1,cy));
+ /* Four twelfths: the right side too, never the bottom or left. */
+ draw("Charging\n",false,false,1500);
+ assert(green(cx+r-1,cy) && !green(cx,cy+r-1) && !green(cx-r+1,cy));
+ /* Twelve twelfths close the ring; the sweep then restarts. */
+ draw("Charging\n",false,false,5500);
+ assert(green(cx,cy+r-1) && green(cx-r+1,cy) && green(cx,cy-r+1));
+ draw("Charging\n",false,false,6000);
+ assert(green(cx+r/4,cy-r+1) && !green(cx-r+1,cy));
+ draw("Full\n",false,false,123);
+ for(unsigned a=0;a<4;a++){unsigned xs[4]={cx,cx+r-1,cx,cx-r+1},ys[4]={cy-r+1,cy,cy+r-1,cy};assert(green(xs[a],ys[a]));}
+ draw("Not charging\n",false,false,500);
+ for(unsigned a=0;a<4;a++){unsigned xs[4]={cx,cx+r-1,cx,cx-r+1},ys[4]={cy-r+1,cy,cy+r-1,cy};assert(!green(xs[a],ys[a]));}
+ /* Text is drawn (the title region is no longer background). */
+ unsigned changed=0;for(unsigned y=205;y<245;y++)for(unsigned x=140;x<340;x++)changed+=at(x,y)!=CHG_BG;
+ assert(changed>200);
+}
+''')
+
+    def test_copy_makes_no_charge_claim_and_hints_follow_the_button(self):
+        text = (ROOT / 'tools/graphics/offline-charge-art.h').read_text()
+        assert '#define CHG_HINT' in text
+        source = (ROOT / 'tools/production/offline-charge.c').read_text()
+        self.assertIn('never a claimed state of charge', source)
