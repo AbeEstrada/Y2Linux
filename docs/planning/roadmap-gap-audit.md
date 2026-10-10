@@ -7442,3 +7442,36 @@ visible. Existing MT6582 modes, fallback, runtime PM and C2/C3 guards remain
 unchanged. Paired claim/source-ID changes still require Linux/Reborn integration;
 new source is software-tested, not installed by this pass. Proceed with focused
 media/checker tests and update [the receipt](../validation/Y2-PLATFORM-V1-STORAGE.md).
+
+
+## POWER-FINAL-07 charging hardware-scope audit — 2026-10-10
+
+**Boundary:** a material change in hardware production scope (charge current above the
+physically exercised 450/650 mA selectors). Repeated before source changes, per the standing rule.
+No build, flash or device write is performed by this audit. Owner authorization for the work is the
+2026-10-10 POWER-FINAL-07 instruction; it does not authorize flashing or unqualified high current.
+
+**Baseline:** POWER-FINAL-06 bring-up source (Linux `c1ef37a`, branch `codex/platform-v1-power-final-06`
+tip `bd7e54d`, Reborn `97ff8c3`). The owner flashed 06 on 2026-10-10; a read-only health capture
+(`out/deep-sleep-final/evidence/20261010/90-power06-first-check/`, boot `bed8cebd`, taint 0, ext4 errors 0,
+`Y2INFRA mode=powerdown fallback=0`) shows the charger healthy at the 450 mA selector (SDP, 500 mA budget, BAT
+8% 3.67 V, constant-current, die 36.9 C, watchdog pets advancing, no fault). Deep-sleep qualification of 06
+remains physical NOT_RUN; charging changes are kept independent of it and are not claimed as integrated.
+
+| Row | Classification | Evidence and limit |
+| --- | --- | --- |
+| Stock CS_VTH selector table | CONFIRMED (offline) | 16 entries at `0xc07572f8` (units 0.01 mA) = 1600…70 mA, identical to BSP `CS_VTH_PMIC`. Selectors 15/12/10 already hardware-exercised. |
+| Stock per-source request | CONFIRMED (offline) | `select_charging_curret` `0xc03a1d88`: type1 500, type2/6 650, type3/4 1100, type5 800, type7 500, else 70 mA. Detection stores only types 1,3,2,5,4 (Apple signature is type5). |
+| Linux policy | WORKING narrow | 70/450/650 only; DCP/CDP/Apple 650, nonstandard 70, SDP 450 from allocation. Duplicate selector tables in `power-math.h`, `source-policy.h`, `policy.h`. |
+| Charge current measurement | PARTIAL | ISENSE−BATSNS drop is 98.3 mV (16 CC samples, 450 mA) and 139.6 mV (2 samples, 650 mA DCP), flat over 3.70–4.17 V, offset ~2 mV at zero current: 0.21 ohm-equivalent. BSP `CUST_R_SENSE` is 200 mohm for the internal linear charger (68 only for external FAN5405/BQ24158); the stock Y2 binary compiles 68. Absolute mA unvalidated (+6% vs 200 mohm). |
+| Pack rating / capacity | UNKNOWN | No cell label/datasheet in evidence; stock model constants 1300 mAh (Y2 binary), 1728 mAh (reference header); web sources show only other Innioasis models at 1250–1500 mAh. A charge C-rate cannot be derived. |
+| Pack temperature | UNAVAILABLE | No NTC (stock `force_get_tbat` returns literal 25); only PMIC die (36–46 C at 450 mA incl. system load). MT6323 is a linear charger: dissipation scales with (Vchr−Vbat)·I. |
+| Faults 0x8 / 0x80 | EXPLAINED | 0x8 = battery sample ≥4.2 V safety (POWER-02 waited above the CV target; fixed by first-sample termination). 0x80 = protection-register expectation mismatch: after 1521 watchdog pets (about 38 min) at 70 mA `CHR_CON0` read 0x62 where `y2_charge_protections()` requires bit0 (VCDT_HV_EN) set (0x63 pattern); the fail-closed inhibit worked, what cleared bit0 is NOT established (stock has a `charger_hv_detect_sw_workaround` thread that toggles it). |
+| USB data + charging | WORKING (historical) | Composite gadget unchanged by this scope; DCP/CDP detection does not require the gadget. |
+
+**Gate decision:** implement the full verified selector table, the stock source-request policy, a single
+policy function and die-temperature derating; **default charge ceiling stays 650 mA** until a cell
+charge rating or independent current/temperature evidence exists. Selectors above the stock maximum
+(1200–1600 mA, never requested by stock) are rejected at the PMIC write boundary. Raising the ceiling above
+650 mA is a root-only, volatile, logged qualification action, not shipped behavior. Readiness for the
+next boundary: **PARTIALLY READY** (implementation yes; high-current activation blocked on cell rating).
