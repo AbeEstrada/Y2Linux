@@ -100,12 +100,13 @@ int main(void) {
         assert(wire==((op==17||op==18||op==24||op==25)?(global[i]-0x880000)/512:logical[i]));
     }
     assert(Y2_EMMC_USER_OFFSET+Y2_EMMC_DISK_SECTORS+Y2_EMMC_TAIL_SECTORS==15269888);
-    /* Every native sector reachable by an allowed write is in the two
-     * independent physical extents. Nothing reaches the prefix or tail. */
+    /* Every native sector reachable by an allowed write is in the independent
+     * physical extents of ANDROID, USRDATA and the p8 media partition (which
+     * directly follows USRDATA). Nothing reaches the prefix, CACHE or the tail. */
     struct y2_emmc_request r={.opcode=24,.blocks=1,.blksz=512,.direction=Y2_MMC_WRITE,.user_area=1,.identified=1};
     for(r.arg=0;r.arg<15269888;r.arg++) {
         unsigned wire=y2_emmc_wire_arg(24,r.arg);
-        bool expected=(wire>=190464 && wire<1869824)||(wire>=2127872 && wire<3766272);
+        bool expected=(wire>=190464 && wire<1869824)||(wire>=2127872 && wire<3766272)||(wire>=3766272 && wire<15226880);
         assert(!!y2_emmc_request_allowed(&r)==expected);
     }
     return 0;

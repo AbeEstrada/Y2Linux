@@ -18,8 +18,12 @@ static inline int y2_emmc_write_range(unsigned sector, unsigned blocks)
     unsigned end;
     if (!blocks || blocks > 0xffffffffU - sector) return 0;
     end = sector + blocks;
+    /* ANDROID (Y2ROOT), USRDATA (Y2DATA) and the stock runtime FAT partition p8,
+     * which Y2Media owns since POWER-FINAL-08 (owner-approved 2026-10-10). The
+     * window ends at the exposed disk size, so the hidden tail stays unwritable. */
     return (sector >= 166912 && end <= 1846272) ||
-           (sector >= 2104320 && end <= 3742720);
+           (sector >= 2104320 && end <= 3742720) ||
+           (sector >= 3742720 && end <= Y2_EMMC_DISK_SECTORS);
 }
 static inline int y2_emmc_request_allowed(const struct y2_emmc_request *r)
 {

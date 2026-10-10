@@ -31,14 +31,21 @@ class ProductionMMC(unittest.TestCase):
             self.assertFalse(self.io(write,blksz=1024))
             self.assertFalse(self.io(write,user_area=0))
     def test_all_protected_boundaries_and_overflow(self):
-        for start,end in ((166912,1846272),(2104320,3742720)):
+        # ANDROID (Y2ROOT), USRDATA (Y2DATA) and, since POWER-FINAL-08, the stock FAT
+        # partition p8 (Y2Media). p8 directly follows USRDATA, so a one-sector write just
+        # below it belongs to USRDATA and is the only legal start-1 write.
+        for start,end in ((166912,1846272),(2104320,3742720),(3742720,15203328)):
             for blocks in (1,8,128,65535,end-start):
                 self.assertTrue(self.io(True,arg=start,blocks=blocks))
                 self.assertTrue(self.io(True,arg=end-blocks,blocks=blocks))
-                self.assertFalse(self.io(True,arg=start-1,blocks=blocks))
-                self.assertFalse(self.io(True,arg=end-blocks+1,blocks=blocks))
-        for sector in (0,1024,18432,38912,125952,145408,1846272,3742720):
+                self.assertEqual(bool(self.io(True,arg=start-1,blocks=blocks)),start==3742720 and blocks==1)
+                # Past the end is refused, except the single sector that is p8's first.
+                self.assertEqual(bool(self.io(True,arg=end-blocks+1,blocks=blocks)),end==3742720 and blocks==1)
+        # Boot/protected areas, the gap before ANDROID and CACHE stay read-only.
+        for sector in (0,1024,18432,38912,125952,145408,1846272):
             self.assertTrue(self.io(arg=sector));self.assertFalse(self.io(True,arg=sector))
+        self.assertTrue(self.io(arg=3742720));self.assertTrue(self.io(True,arg=3742720))
+        self.assertFalse(self.io(True,arg=3742719,blocks=2))   # a write straddling two spans is refused
         self.assertTrue(self.io(arg=15203327,blocks=1))
         for sector,count in ((0xffffffff,2),(166912,0xffffffff),(15269888,1),(15203328,1),(15203327,2),(0,0)):
             self.assertFalse(self.io(arg=sector,blocks=count));self.assertFalse(self.io(True,arg=sector,blocks=count))
