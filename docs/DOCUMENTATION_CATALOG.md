@@ -214,6 +214,7 @@ Indexed pages: **307**. Explicit scope notices: **220**.
 | [M4 charging prerequisite: this Y2's battery sensor](knowledge/m4-battery-acquisition.md) | Retained research / scoped evidence |
 | [M4 production charging contract](knowledge/m4-charging.md) | Retained research / scoped evidence |
 | [Charging current policy (POWER-FINAL-07)](knowledge/charging-current-policy.md) | Current production policy |
+| [Internal storage and removable media (POWER-FINAL-08)](knowledge/internal-storage.md) | Current production policy |
 | [POWER-FINAL-07 charging validation](validation/Y2-PLATFORM-V1-POWER-FINAL-07-CHARGING.md) | Validation receipt |
 | [M4 end-user power completion](knowledge/m4-end-user-power.md) | Retained research / scoped evidence |
 | [M4 power platform](knowledge/m4-power-platform.md) | Retained research / scoped evidence |
