@@ -54,6 +54,18 @@ is a compiled constant, and there is no pack temperature sensor. The PMIC die al
 the system runs. Until a cell charge rating, or independent source-side current and pack temperature measurements,
 exist, the 1100 mA path is implemented, tested and reachable only by an explicit owner ceiling.
 
+## Thermal reality of a linear charger
+
+The MT6323 charger is linear: the die dissipates `(Vbus - I * 0.2 ohm - Vbat) * I`. With an assumed 5.0 V source
+(VBUS is not measured; a real source sags with cable drop) and a 3.78 V cell this is about 0.51 W at 450 mA,
+0.71 W at 650 mA, 0.85 W at 800 mA and 1.0 W at 1100 mA, and more on a lower cell voltage (about 1.4 W at 1100 mA
+and 3.5 V). Live evidence (`out/deep-sleep-final/evidence/20261010/91-power07-charging-readonly/`, 06 image, USB
+SDP, 450 mA selector, system running): the PMIC die rose from 36.9 C at boot to 46.9 C after 28 minutes of
+charging and was still rising. The 60 C step of the derating ladder is therefore expected to engage during
+sustained high-current wall charging, which makes the higher selectors thermally self-limiting by design. Whether
+the real limit is the die or the cell is not known without a pack sensor; that is why the ladder uses the stock
+PMIC trip points and why the ramp tool stops at 55 C.
+
 ## Measurement
 
 `charging_state` reports three separate quantities: the stock request (`stock_request_ua`), the programmed selector
