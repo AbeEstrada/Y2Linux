@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #ifndef Y2_CHARGER_POLICY_H
 #define Y2_CHARGER_POLICY_H
+#include "charge-table.h"
 /* MT6323 field semantics: MediaTek MT6582 BSP, Copyright (C) 2011-2014
  * MediaTek Inc. Sequence reconciled with the retained Y2 stock kernel.
  * See docs/knowledge/m4-charging.md for exact binary addresses and limits.
@@ -16,9 +17,8 @@
  * a software 3.4-V entry veto would prevent this recovery path. */
 #define Y2_BOOT_MIN_UV 3200000
 #define Y2_PRECHARGE_UV 3400000
-/* The configured 500 mA host profile maps to the MT6323's validated 450 mA
- * selector. Keep the same bounded profile during deep-discharge recovery;
- * there is no validated exact-500 mA selector on this board. */
+/* The configured 500 mA host profile maps to the MT6323's 450 mA selector. Keep
+ * that bounded profile during deep-discharge recovery (charge-limits.h). */
 #define Y2_DEEP_DISCHARGE_MAX_UA 450000U
 #define Y2_PRECHARGE_MAX_SECONDS 10800U /* conservative 3h vs stock 24h total */
 #define Y2_CHARGE_MAX_SECONDS 86400U
@@ -105,7 +105,7 @@ static inline int y2_charge_protections(const struct y2_charge_io *io)
 static inline int y2_charge_regulation(const struct y2_charge_io *io, unsigned selector)
 {
 	int ret = y2_charge_expect(io, 0x006, 0x001f, 30);
-	if (selector != 15 && selector != 12 && selector != 10) return -EINVAL;
+	if (!y2_cs_selector_permitted(selector)) return -EINVAL;
 	if (!ret) ret = y2_charge_expect(io, 0x008, 0x000f, selector);
 	if (!ret) ret = y2_charge_expect(io, 0x004, 0x000e, 0x000e);
 	if (!ret) ret = y2_charge_expect(io, 0x028, 0x0077, 0x0021);
@@ -119,7 +119,7 @@ static inline int y2_charge_prepare(const struct y2_charge_io *io, unsigned sele
 {
 	unsigned input, cv, ov;
 	int ret;
-	if (selector != 15 && selector != 12 && selector != 10) return -EINVAL;
+	if (!y2_cs_selector_permitted(selector)) return -EINVAL;
 	ret = y2_charge_stop(io);
 	/* Do not raise an unexpectedly lower inherited protection/CV setting. */
 	if (!ret) ret = io->read(io->context, 0x002, &input);

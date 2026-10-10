@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* MT6323 production charger. All hardware IO uses the parent's sole regmap.
- * Stock Y2 contract and bounded-profile limitations: docs/knowledge/m4-charging.md.
- * Pack temperature, measured current and SOC deliberately remain unsupported.
+ * Stock Y2 contract and limits: docs/knowledge/m4-charging.md. Current is
+ * decided once, in charge-limits.h. Pack temperature and SOC remain
+ * unsupported; the ISENSE drop is reported only as an unvalidated estimate.
  */
 #include <linux/iio/consumer.h>
 #include <linux/delay.h>
@@ -18,6 +19,7 @@
 #include "power-math.h"
 #include "charger-policy.h"
 #include "source-policy.h"
+#include "charge-limits.h"
 #include "source.h"
 #include "charger-idle.h"
 
@@ -58,8 +60,11 @@ struct y2_charger {
 	unsigned mismatch_reg, mismatch_mask, mismatch_expected, mismatch_actual;
 	int mismatch_error;
 	int first_uv, first_sample_error;
-	unsigned charge_ua, selector, charge_ceiling_ua;
+	unsigned charge_ua, selector, charge_ceiling_ua, thermal_level;
+	struct y2_charge_decision decision;
 	enum y2_source_type source;
+	int sense_drop_uv, sense_offset_uv;
+	bool sense_offset_valid;
 	int uv, baton_raw, isense_raw, die_mc, input_ua, sample_error, stop_error, last_error;
 	int status, behaviour;
 	bool active, paused, stopping, online, present, awake, irq_wake;
@@ -167,6 +172,16 @@ static int y2_charge_sample(struct y2_charger *c)
 	/* These are acquisition validity checks, not a pack-temperature model. */
 	if (c->baton_raw <= 0 || c->baton_raw >= 32767 ||
 	    c->isense_raw <= 0 || c->isense_raw >= 32767) return -ENODATA;
+	c->thermal_level = y2_thermal_level(c->thermal_level, c->die_mc);
+	c->sense_drop_uv = (int)y2_battery_uv(c->isense_raw) - c->uv;
+	/* With both engines verified off no charge current flows, so the drop is
+	 * the channel offset (about 2 mV on this unit); BSP keeps the same
+	 * g_I_SENSE_offset. Smooth it so one noisy sample cannot bias the estimate. */
+	if (!c->active) {
+		c->sense_offset_uv = c->sense_offset_valid ?
+			(3 * c->sense_offset_uv + c->sense_drop_uv) / 4 : c->sense_drop_uv;
+		c->sense_offset_valid = true;
+	}
 	return 0;
 }
 
@@ -204,17 +219,13 @@ static int y2_charger_detect(struct y2_charger *c)
 
 static unsigned y2_charger_target(struct y2_charger *c)
 {
-	unsigned ua;
 	if (!c->source_valid || READ_ONCE(c->source_changed) || !c->online) return 0;
-	ua = y2_source_charge_ua(c->source, c->input_ua);
-	/* Keep the validated configured-host profile through deep discharge. The
-	 * source policy's 500 mA SDP request is the PMIC's 450 mA selector; do not
-	 * fall back to 70 mA below LK's 3.2 V boot threshold. Never exceed the
-	 * source allowance, and keep full userspace out until an explicit,
-	 * adequately powered boot. */
-	if (c->uv <= Y2_PRECHARGE_UV)
-		ua = min(ua, Y2_DEEP_DISCHARGE_MAX_UA);
-	return min(ua, c->charge_ceiling_ua);
+	/* Deep discharge keeps the validated 450 mA profile instead of falling to
+	 * 70 mA below LK's 3.2 V boot threshold; the source allowance, class,
+	 * thermal and owner limits all still apply. Full userspace stays out until
+	 * an explicit, adequately powered boot. */
+	return y2_charge_decide(&c->decision, c->source, c->input_ua, c->uv,
+				c->thermal_level, c->charge_ceiling_ua);
 }
 
 static unsigned y2_charger_sample_fault(struct y2_charger *c)
@@ -303,8 +314,10 @@ static void y2_charger_run(struct y2_charger *c)
 	 * watchdog/fault/elapsed-time budgets survive every source budget change. */
 	if (c->active && target != c->charge_ua && y2_charger_inhibit(c)) goto inhibit;
 	if (!c->active) {
+		int selector = y2_cs_selector_exact(target);
+		if (selector < 0) { c->fault |= Y2_FAULT_PROTECTION; goto inhibit; }
 		c->charge_ua = target;
-		c->selector = y2_charge_selector(target);
+		c->selector = selector;
 	}
 
 	if (!c->active) {
@@ -454,7 +467,9 @@ static int y2_bat_get(struct power_supply *psy, enum power_supply_property p,
 		v->intval = c->fault & (Y2_FAULT_OVP | Y2_FAULT_VOLTAGE) ? POWER_SUPPLY_HEALTH_OVERVOLTAGE :
 			c->fault & Y2_FAULT_WATCHDOG ? POWER_SUPPLY_HEALTH_WATCHDOG_TIMER_EXPIRE :
 			c->fault & Y2_FAULT_TIMEOUT ? POWER_SUPPLY_HEALTH_SAFETY_TIMER_EXPIRE :
-			c->fault ? POWER_SUPPLY_HEALTH_UNSPEC_FAILURE : POWER_SUPPLY_HEALTH_UNKNOWN;
+			c->fault ? POWER_SUPPLY_HEALTH_UNSPEC_FAILURE :
+			c->thermal_level >= Y2_THERMAL_LEVELS ? POWER_SUPPLY_HEALTH_OVERHEAT :
+			POWER_SUPPLY_HEALTH_UNKNOWN;
 		/* Unknown includes unmeasured pack temperature; never claim Good. */
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
@@ -482,9 +497,14 @@ static int y2_bat_set(struct power_supply *psy, enum power_supply_property p,
 	struct y2_charger *c = power_supply_get_drvdata(psy);
 	int ret = 0;
 	if (p == POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX) {
-		/* Only the already supported stock selectors; cap, never allocation. */
-		if (v->intval != 70000 && v->intval != 450000 && v->intval != 650000) return -EINVAL;
+		/* An owner ceiling, never a selector: the policy still takes the minimum
+		 * of every limit. Only exact permitted table steps are accepted, and the
+		 * value reverts to the 650 mA default at the next boot. */
+		if (v->intval < 0 || y2_cs_selector_exact(v->intval) < 0) return -EINVAL;
 		mutex_lock(&c->lock);
+		if ((unsigned)v->intval > Y2_CHARGE_DEFAULT_CEILING_UA)
+			dev_warn(c->dev, "charge ceiling raised to %d uA above the default %u uA (no cell charge rating established)\n",
+				 v->intval, Y2_CHARGE_DEFAULT_CEILING_UA);
 		if (v->intval < c->charge_ua) ret = y2_charger_inhibit(c);
 		if (!ret) c->charge_ceiling_ua = v->intval;
 		if (!c->stopping && !c->paused) mod_delayed_work(c->wq, &c->work, 0);
@@ -556,7 +576,7 @@ static const char *y2_charger_phase(struct y2_charger *c)
 	if (!c->online) return "NO_SOURCE";
 	if (!c->source_valid || READ_ONCE(c->source_changed)) return "SOURCE_DETECT";
 	if (c->cycle.hold) return c->cycle.full ? "FULL" : "HOLD";
-	if (!c->active) return "INHIBITED";
+	if (!c->active) return c->thermal_level >= Y2_THERMAL_LEVELS ? "THERMAL_HOLD" : "INHIBITED";
 	if (c->uv <= Y2_PRECHARGE_UV) return "PRECHARGE";
 	if (c->con4 & BIT(6)) return "CONSTANT_VOLTAGE";
 	return "CONSTANT_CURRENT";
@@ -572,7 +592,9 @@ static ssize_t charging_state_show(struct device *dev, struct device_attribute *
 		"chr_con0=0x%04x cv_status=0x%04x battery_ovp=0x%04x baton=0x%04x watchdog=0x%04x thermal=0x%04x\n"
 		"watchdog_pets=%llu last_pet_ms=%llu total_seconds=%llu cv_seconds=%llu precharge_seconds=%llu hold=%d full=%d timeout=%d\n"
 		"first_fault=0x%x at_ms=%llu battery_uv=%d sample_error=%d chr=0x%x cv=0x%x ovp=0x%x watchdog=0x%x thermal=0x%x\n"
-		"dormant_blocked=%u check_reg=%#x check_mask=%#x check_expected=%#x check_actual=%#x check_error=%d\n",
+		"dormant_blocked=%u check_reg=%#x check_mask=%#x check_expected=%#x check_actual=%#x check_error=%d\n"
+		"selector=%u stock_request_ua=%u class_ceiling_ua=%u thermal_level=%u thermal_cap_ua=%u owner_ceiling_ua=%u vendor_max_ua=%u\n"
+		"sense_drop_uv=%d sense_offset_uv=%d sense_current_est_ua=%d sense_basis=bsp-200mohm-unvalidated\n",
 		y2_charger_phase(c), c->source, c->source_valid, c->charge_ua,
 		c->active, c->online, c->present, c->fault, c->sample_error, c->stop_error, c->paused, c->last_error,
 		c->uv, c->baton_raw, c->isense_raw, c->die_mc, c->input_ua,
@@ -581,7 +603,12 @@ static ssize_t charging_state_show(struct device *dev, struct device_attribute *
 		c->first_fault, c->first_fault_ms, c->first_uv, c->first_sample_error,
 		c->first_con0, c->first_cv, c->first_ov, c->first_wdt, c->first_thr,
 		y2_charger_dormant_blocked(), c->mismatch_reg, c->mismatch_mask,
-		c->mismatch_expected, c->mismatch_actual, c->mismatch_error);
+		c->mismatch_expected, c->mismatch_actual, c->mismatch_error,
+		c->selector, c->decision.stock_request_ua, c->decision.class_ceiling_ua,
+		c->thermal_level, c->decision.thermal_cap_ua == ~0U ? 0 : c->decision.thermal_cap_ua,
+		c->charge_ceiling_ua, Y2_CHARGE_VENDOR_MAX_UA,
+		c->sense_drop_uv, c->sense_offset_uv,
+		c->active ? y2_isense_current_ua(c->sense_drop_uv, c->sense_offset_uv) : 0);
 	mutex_unlock(&c->lock);
 	return n;
 }
@@ -693,9 +720,9 @@ static int y2_charger_probe(struct platform_device *pdev)
 	/* No dependency can defer leaving an inherited charger enabled. */
 	ret = y2_charge_stop(&c->io);
 	if (ret) return dev_err_probe(dev, ret, "charging inhibit\n");
-	c->charge_ceiling_ua = 650000;
+	c->charge_ceiling_ua = Y2_CHARGE_DEFAULT_CEILING_UA;
 	of_property_read_u32(dev->of_node, "innioasis,max-charge-current-microamp", &c->charge_ceiling_ua);
-	if (c->charge_ceiling_ua != 70000 && c->charge_ceiling_ua != 450000 && c->charge_ceiling_ua != 650000)
+	if (y2_cs_selector_exact(c->charge_ceiling_ua) < 0)
 		return dev_err_probe(dev, -EINVAL, "unsupported source-backed charge ceiling\n");
 	c->battery = devm_iio_channel_get(dev, "battery-voltage");
 	if (IS_ERR(c->battery)) return dev_err_probe(dev, PTR_ERR(c->battery), "battery ADC\n");
@@ -738,7 +765,7 @@ static int y2_charger_probe(struct platform_device *pdev)
 	if (ret) return ret;
 	WRITE_ONCE(c->stopping, false);
 	queue_delayed_work(c->wq, &c->work, msecs_to_jiffies(Y2_POLL_MS));
-	dev_info(dev, "stock-derived BC1.1 charging: 70/450/650mA, 4.175V; pack temp/current/SOC unavailable\n");
+	dev_info(dev, "stock-derived BC1.1 charging, selector table up to %u uA, ceiling %u uA, 4.175V; pack temp/SOC unavailable\n", Y2_CHARGE_VENDOR_MAX_UA, c->charge_ceiling_ua);
 	return 0;
 }
 static const struct dev_pm_ops y2_charger_pm = {

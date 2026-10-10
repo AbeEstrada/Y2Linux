@@ -78,14 +78,17 @@ int main(void){
   remove_wait=0;
  }
  for(unsigned source=0;source<=Y2_SOURCE_APPLE;source++)for(int budget=-1;budget<=500001;budget+=10000){
-  unsigned ua=y2_source_charge_ua(source,budget);
-  assert(ua<=650000 && (ua==0 || y2_charge_selector(ua)>=0));
+  struct y2_charge_decision d;
+  unsigned ua=y2_charge_decide(&d,source,budget,4000000,0,Y2_CHARGE_DEFAULT_CEILING_UA);
+  assert(ua<=650000 && ua<=d.stock_request_ua && ua<=d.class_ceiling_ua && (ua==0 || y2_cs_selector_exact(ua)>=0));
   if(source==Y2_SOURCE_UNKNOWN || source==Y2_SOURCE_NONSTANDARD)assert(ua==70000);
   if(source==Y2_SOURCE_SDP && budget>=0 && budget<100000)assert(!ua);
+  if(source==Y2_SOURCE_SDP && budget>=0)assert(ua<=(unsigned)budget);
  }
  for(unsigned selector=0;selector<16;selector++){
   reset();int ret=y2_charge_prepare(&io,selector);
-  if(selector==15 || selector==12 || selector==10){
+  /* Selectors 0..4 (1200..1600 mA) are table entries no stock source requests. */
+  if(selector>=5){
    assert(!ret && !y2_charge_start(&io,selector));
    assert((regs[8/2]&15)==selector);
   }else assert(ret==-EINVAL && !starts);

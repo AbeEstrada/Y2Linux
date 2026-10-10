@@ -445,9 +445,29 @@
       ],
       "configured_current_steps_ua": [
         70000,
+        200000,
+        300000,
         450000,
-        650000
+        550000,
+        650000,
+        700000,
+        800000,
+        900000,
+        1000000,
+        1100000
       ],
+      "default_ceiling_ua": 650000,
+      "stock_maximum_request_ua": 1100000,
+      "high_current_qualified": false,
+      "high_current_reason": "no cell charge rating or independent current/pack-temperature evidence; the owner ceiling above 650 mA is a root-only volatile qualification action",
+      "source_class_ceilings_ua": {
+        "SDP": 450000,
+        "CDP": 650000,
+        "DCP": 1100000,
+        "Apple": 800000,
+        "nonstandard": 70000,
+        "unknown": 70000
+      },
       "max_configured_voltage_uv": 4175000
     },
     "battery_soc": {

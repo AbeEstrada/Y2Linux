@@ -68,32 +68,48 @@ static inline int y2_bc11_detect(const struct y2_bc11_io *io, enum y2_source_typ
 	return ret;
 }
 
-/* Retained Y2 ceilings: configured SDP 450, CDP 650, DCP/nonstandard 1100,
- * detected Apple 800 mA. This production policy limits dedicated charging
- * sources to 650 mA and treats nonstandard signatures conservatively.
- * USB's negotiated allowance applies only to SDP; DCP/CDP do not need an OS
- * gadget. A negative allocation means no data controller has been attached.
- * Once SDP enumeration starts, reset/suspend's zero allowance stops charging.
+/* Stock Y2 `select_charging_curret` (0xc03a1d88) request per detected BSP
+ * charger type. Detection (0xc04cb2a8) only ever stores types 1 STANDARD_HOST,
+ * 2 CHARGING_HOST, 3 NONSTANDARD, 4 STANDARD_CHARGER and 5 APPLE_2_1A:
+ *   SDP 500 (the PMIC floors it to 450), CDP 650, DCP 1100, nonstandard 1100,
+ *   Apple 800, unknown 70 mA.
+ * This is the vendor *request*. What may actually be programmed is
+ * y2_source_class_ceiling_ua() and the battery/thermal limits in charge-limits.h.
+ * USB's negotiated allowance applies only to SDP; DCP/CDP need no OS gadget.
+ * A negative allocation means no data controller has been attached; a
+ * configured host grants 500 mA, an unconfigured one 100 mA, and reset/suspend's
+ * zero allowance stops charging.
  */
-static inline unsigned y2_source_charge_ua(enum y2_source_type type, int allocated_ua)
+static inline unsigned y2_source_stock_request_ua(enum y2_source_type type, int allocated_ua)
 {
-	if (type == Y2_SOURCE_CDP || type == Y2_SOURCE_DCP || type == Y2_SOURCE_APPLE)
-		return 650000;
-	if (type == Y2_SOURCE_SDP && allocated_ua >= 0) {
-		if (allocated_ua >= 500000) return 450000;
-		if (allocated_ua >= 100000) return 70000;
-		return 0;
+	switch (type) {
+	case Y2_SOURCE_CDP: return 650000;
+	case Y2_SOURCE_DCP:
+	case Y2_SOURCE_NONSTANDARD: return 1100000;
+	case Y2_SOURCE_APPLE: return 800000;
+	case Y2_SOURCE_SDP:
+		if (allocated_ua < 0) return 70000;
+		if (allocated_ua < 100000) return 0;
+		return allocated_ua < 500000 ? (unsigned)allocated_ua : 500000;
+	default: return 70000;
 	}
-	return 70000;
 }
 
-static inline int y2_charge_selector(unsigned ua)
+/* Highest current this Linux policy lets a source class draw. Equal to the
+ * stock request except nonstandard: BC1.2 defines no capability for a source
+ * whose data lines are neither shorted (DCP) nor pulled (SDP/CDP) and Linux has
+ * no validated VBUS-collapse check, so it keeps the previously validated
+ * 70 mA. A one-line change once a nonstandard charger has been qualified. */
+static inline unsigned y2_source_class_ceiling_ua(enum y2_source_type type)
 {
-	switch (ua) {
-	case 70000: return 15;
-	case 450000: return 12;
-	case 650000: return 10;
-	default: return -EINVAL;
+	switch (type) {
+	case Y2_SOURCE_NONSTANDARD: return 70000;
+	case Y2_SOURCE_UNKNOWN: return 70000;
+	case Y2_SOURCE_SDP: return 500000;
+	case Y2_SOURCE_CDP: return 650000;
+	case Y2_SOURCE_DCP: return 1100000;
+	case Y2_SOURCE_APPLE: return 800000;
 	}
+	return 70000;
 }
 #endif

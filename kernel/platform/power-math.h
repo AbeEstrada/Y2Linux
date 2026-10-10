@@ -2,6 +2,7 @@
 /* Conversion/OPP definitions derived from Copyright (C) 2011-2014 MediaTek Inc. */
 #ifndef Y2_POWER_MATH_H
 #define Y2_POWER_MATH_H
+#include "charge-table.h"
 /* MT6582 BSP d53dd75c3ff7: mtk_ts_{cpu,pmic}.c, mt_cpufreq.c and
  * charging_hw_pmic.c. Keep vendor integer rounding; never use default fuses.
  * Provenance, units and limitations: docs/knowledge/m4-power-platform.md. */
@@ -65,11 +66,22 @@ static inline unsigned y2_cpu_pcw(unsigned long hz)
 	default: return 0;
 	}
 }
+/* ISENSE-BATSNS drop to charger-path current. The BSP uses CUST_R_SENSE 200 mOhm
+ * for the internal MT6323 linear charger (68 mOhm only with an external
+ * FAN5405/BQ24158), and the Y2 drop is 98.3 mV at the 450 mA and 139.6 mV at the
+ * 650 mA selector, flat across 3.70..4.17 V, about 0.21 ohm. The stock Y2 binary
+ * compiles 68, so this is an ESTIMATE of the charger path only (not net battery
+ * current, not USB input current) and stays unvalidated without an external
+ * meter. Zero when the drop does not exceed the zero-current offset. */
+#define Y2_ISENSE_MOHM 200
+static inline int y2_isense_current_ua(int drop_uv, int offset_uv)
+{
+	int net = drop_uv - offset_uv;
+	return net > 0 ? (int)((long long)net * 1000 / Y2_ISENSE_MOHM) : 0;
+}
 static inline int y2_charge_ua(unsigned selector)
 {
-	static const int ua[16] = {1600000,1500000,1400000,1300000,1200000,1100000,
-		1000000,900000,800000,700000,650000,550000,450000,300000,200000,70000};
-	return ua[selector & 15];
+	return y2_cs_ua(selector);
 }
 static inline int y2_charge_uv(unsigned selector)
 {

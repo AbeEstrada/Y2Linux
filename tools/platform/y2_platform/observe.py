@@ -290,6 +290,11 @@ def thermal(ctx):
             'battery_temperature_reason': 'no_qualified_pack_sensor'}
 
 
+def charge_field(charging_state, name):
+    found = re.search(r'\b%s=(-?\d+)' % name, charging_state or '')
+    return int(found.group(1)) if found else None
+
+
 def power(ctx):
     from .sleep import status as sleep_status
     supplies = []
@@ -611,12 +616,21 @@ def usb_diagnostics(ctx, udcs, link):
     if answer.get('ok'):
         found = re.search(r'inet (\S+)', answer.get('output') or '')
         network['ipv4'] = found.group(1) if found else None
+    charging_state = ctx.read(base + 'BAT0/charging_state') or ''
     return {
         'negotiated_speed': speed, 'functions': functions, 'link': link,
         'charging': {
             'source_type': source_type(read(ctx.path(base + 'y2-usb-presence/usb_type'))),
             'host_allowance_ua': ctx.integer(base + 'y2-usb-input/current_max'),
-            'selected_charge_ceiling_ua': ctx.integer(base + 'BAT0/constant_charge_current'),
+            # Three different quantities: the stock request for the detected source, what
+            # the PMIC selector is programmed to, and an unvalidated charger-path estimate.
+            'programmed_charge_ua': ctx.integer(base + 'BAT0/constant_charge_current'),
+            'owner_charge_ceiling_ua': ctx.integer(base + 'BAT0/constant_charge_current_max'),
+            'stock_request_ua': charge_field(charging_state, 'stock_request_ua'),
+            'class_ceiling_ua': charge_field(charging_state, 'class_ceiling_ua'),
+            'thermal_level': charge_field(charging_state, 'thermal_level'),
+            'sense_current_est_ua': charge_field(charging_state, 'sense_current_est_ua'),
+            'sense_current_basis': 'bsp-200mohm-unvalidated-charger-path-estimate',
             'state': read(ctx.path(base + 'BAT0/status')),
             'usb_online': read(ctx.path(base + 'y2-usb-presence/online')),
         },

@@ -115,7 +115,8 @@ int main(void) {
  for(unsigned v=0;v<16;v++)assert(y2_pmic_value_allowed(0xc,v)==(v==3));
  assert(y2_soc_calibrate(0x73,0xfd,&s));
  for(unsigned v=0;v<32;v++) assert(y2_pmic_value_allowed(6,v)==(v==30));
- for(unsigned v=0;v<16;v++) assert(y2_pmic_value_allowed(8,v)==(v==15 || v==12 || v==10));
+ /* CS_VTH: the table steps up to the stock 1100 mA maximum (selectors 5..15); 1200..1600 mA stay unwritable. */
+ for(unsigned v=0;v<16;v++) assert(y2_pmic_value_allowed(8,v)==(v>=5));
  assert(!y2_pmic_value_allowed(0x3c,0) && !y2_pmic_value_allowed(0x2e,0));
  for(unsigned r=0x600;r<0x700;r+=2) assert(!y2_pmic_write_mask(r));
  assert(y2_pmic_value_allowed(0x8000,0x4300));

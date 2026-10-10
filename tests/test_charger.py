@@ -17,6 +17,7 @@ FIXTURE = r'''
 #include "power-math.h"
 #include "charger-policy.h"
 #include "source-policy.h"
+#include "charge-limits.h"
 #define READ_ONCE(v) (v)
 #define WRITE_ONCE(v,x) ((v)=(x))
 #define min(a,b) ((a)<(b)?(a):(b))
@@ -46,7 +47,7 @@ static int io_update(void *ctx,unsigned reg,unsigned mask,unsigned v,int force){
   assert((regs[0x1a/2]&0x1f)==0x10 && !(regs[0x1e/2]&4));
   assert((regs[0x3c/2]&0x23)==0x20 && (regs[0xc/2]&0x41)==1);
   assert((regs[4/2]&0xe)==0xe && (regs[0x2e/2]&0xc4)==0xc4);
-  assert((regs[6/2]&31)==30 && ((regs[8/2]&15)==15 || (regs[8/2]&15)==12 || (regs[8/2]&15)==10));
+  assert((regs[6/2]&31)==30 && y2_cs_selector_permitted(regs[8/2]&15));
   enabled_once=1;
   if((next&0x18)==0x18 && (old&0x18)!=0x18) starts++;
  }
@@ -66,6 +67,76 @@ static void reset(void){
  regs[0x2c/2]=1;regs[0x2e/2]=0x90;
 }
 '''
+
+def worker_fixture():
+    """The production worker functions, compiled against a register/ADC model."""
+    s = (ROOT/'kernel/platform/mt6323-charger.c').read_text()
+    declarations = re.search(r'enum y2_charge_fault \{.*?\n\};', s, re.S)[0]
+    declarations += re.search(r'struct y2_charger \{.*?\n\};', s, re.S)[0]
+    return FIXTURE + r'''
+#define Y2_PET_LATE_MS 2500
+#define Y2_SOURCE_RETRIES 5
+#define POWER_SUPPLY_PROP_CURRENT_MAX 1
+#define POWER_SUPPLY_STATUS_UNKNOWN 0
+#define POWER_SUPPLY_STATUS_CHARGING 1
+#define POWER_SUPPLY_STATUS_DISCHARGING 2
+#define POWER_SUPPLY_STATUS_NOT_CHARGING 3
+#define POWER_SUPPLY_STATUS_FULL 4
+#define POWER_SUPPLY_CHARGE_BEHAVIOUR_AUTO 0
+#define POWER_SUPPLY_CHARGE_BEHAVIOUR_INHIBIT_CHARGE 1
+struct device {int awake;};struct regmap {int dummy;};
+struct iio_channel {int raw;};struct power_supply {int budget;};
+struct delayed_work {int dummy;};struct notifier_block {int dummy;};
+struct mutex {int dummy;};struct workqueue_struct {int dummy;};
+union power_supply_propval {int intval;};
+static struct regmap map_identity;
+static int regmap_read(struct regmap *m,unsigned r,unsigned *v){assert(m==&map_identity);return io_read(m,r,v);}
+static int regmap_update_bits(struct regmap *m,unsigned r,unsigned mask,unsigned v){assert(m==&map_identity);return io_update(m,r,mask,v,0);}
+static int regmap_write_bits(struct regmap *m,unsigned r,unsigned mask,unsigned v){assert(m==&map_identity);return io_update(m,r,mask,v,1);}
+static struct power_supply supply={500000};
+static int source_kind, bc_step, phy_error, removed_at_wait, waits;
+/* Comparator outcome of each 80 ms BC1.1 stage by source kind (BSP flow:
+ * DCD, then A1 | A2 [+ B2]): 0 SDP [0,0], 2 CDP [0,1,0], 3 nonstandard [1,0],
+ * 4 DCP [0,1,1], 5 Apple [1,1]. */
+static int bc_comparator(int kind,int step){
+ switch(kind){case 2:return step==1;case 3:return step==0;case 4:return step>0;case 5:return step<=1;}
+ return 0;
+}
+static bool phy_owned;
+static int y2_usb_charge_allocation(void){return supply.budget;}
+static void y2_usb_source_invalidate(void){}
+static int y2_usb_bc11_begin(void){assert(!phy_owned);if(phy_error)return phy_error;phy_owned=true;bc_step=0;return 0;}
+static int y2_usb_bc11_end(bool data){assert(phy_owned);phy_owned=false;return 0;}
+static void msleep(unsigned ms){
+ clock_ms+=ms;
+ if(++waits==removed_at_wait)regs[0]&=~0x20;
+ if(ms==80) {
+  /* normal DCD=0, A2=0 gives SDP; DCP is 0,1,1 */
+  regs[0x24/2]&=~0x80;
+  if(bc_comparator(source_kind,bc_step))regs[0x24/2]|=0x80;
+  bc_step++;
+ }
+}
+static int iio_read_channel_raw(struct iio_channel *ch,int *v){
+ if(adc_fail)return -ETIMEDOUT;*v=ch->raw;return 0;
+}
+static int iio_read_channel_processed(struct iio_channel *ch,int *v){return iio_read_channel_raw(ch,v);}
+static void pm_stay_awake(struct device *d){d->awake=1;}
+static void pm_relax(struct device *d){d->awake=0;}
+static bool charger_dormant_blocked=true;
+#define dev_err_ratelimited(...) ((void)0)
+#define dev_info(...) ((void)0)
+''' + declarations + ''.join(function(s,n) for n in (
+            'y2_charge_read','y2_charge_update','y2_charge_mismatch','y2_charge_awake','y2_charger_inhibit','y2_charge_account_now',
+            'y2_charge_sample','y2_wait_source','y2_charger_detect','y2_charger_target','y2_charger_sample_fault','y2_charger_run')) + r'''
+static struct device dev;
+static struct iio_channel bat={17000},baton={10388},isense={17000},die={25000};
+static void charger(struct y2_charger *c){
+ *c=(struct y2_charger){.map=&map_identity,.charge_ceiling_ua=650000,.dev=&dev,.io=io,.battery=&bat,.baton=&baton,.isense=&isense,.die=&die,.input=&supply};
+ c->io=(struct y2_charge_io){c,y2_charge_read,y2_charge_update,y2_charge_mismatch};
+}
+'''
+
 
 class Charger(unittest.TestCase):
     def test_sequence_every_io_failure_and_preserved_protections(self):
@@ -147,64 +218,7 @@ int main(void){
 ''')
 
     def test_actual_worker_faults_usb_removal_suspend_budget_and_manual_inhibit(self):
-        s=(ROOT/'kernel/platform/mt6323-charger.c').read_text()
-        declarations = re.search(r'enum y2_charge_fault \{.*?\n\};', s,re.S)[0]
-        declarations += re.search(r'struct y2_charger \{.*?\n\};', s,re.S)[0]
-        run_c(FIXTURE + r'''
-#define Y2_PET_LATE_MS 2500
-#define Y2_SOURCE_RETRIES 5
-#define POWER_SUPPLY_PROP_CURRENT_MAX 1
-#define POWER_SUPPLY_STATUS_UNKNOWN 0
-#define POWER_SUPPLY_STATUS_CHARGING 1
-#define POWER_SUPPLY_STATUS_DISCHARGING 2
-#define POWER_SUPPLY_STATUS_NOT_CHARGING 3
-#define POWER_SUPPLY_STATUS_FULL 4
-#define POWER_SUPPLY_CHARGE_BEHAVIOUR_AUTO 0
-#define POWER_SUPPLY_CHARGE_BEHAVIOUR_INHIBIT_CHARGE 1
-struct device {int awake;};struct regmap {int dummy;};
-struct iio_channel {int raw;};struct power_supply {int budget;};
-struct delayed_work {int dummy;};struct notifier_block {int dummy;};
-struct mutex {int dummy;};struct workqueue_struct {int dummy;};
-union power_supply_propval {int intval;};
-static struct regmap map_identity;
-static int regmap_read(struct regmap *m,unsigned r,unsigned *v){assert(m==&map_identity);return io_read(m,r,v);}
-static int regmap_update_bits(struct regmap *m,unsigned r,unsigned mask,unsigned v){assert(m==&map_identity);return io_update(m,r,mask,v,0);}
-static int regmap_write_bits(struct regmap *m,unsigned r,unsigned mask,unsigned v){assert(m==&map_identity);return io_update(m,r,mask,v,1);}
-static struct power_supply supply={500000};
-static int source_kind, bc_step, phy_error, removed_at_wait, waits;
-static bool phy_owned;
-static int y2_usb_charge_allocation(void){return supply.budget;}
-static void y2_usb_source_invalidate(void){}
-static int y2_usb_bc11_begin(void){assert(!phy_owned);if(phy_error)return phy_error;phy_owned=true;bc_step=0;return 0;}
-static int y2_usb_bc11_end(bool data){assert(phy_owned);phy_owned=false;return 0;}
-static void msleep(unsigned ms){
- clock_ms+=ms;
- if(++waits==removed_at_wait)regs[0]&=~0x20;
- if(ms==80) {
-  /* normal DCD=0, A2=0 gives SDP; DCP is 0,1,1 */
-  regs[0x24/2]&=~0x80;
-  if(source_kind==4 && bc_step>0)regs[0x24/2]|=0x80;
-  bc_step++;
- }
-}
-static int iio_read_channel_raw(struct iio_channel *ch,int *v){
- if(adc_fail)return -ETIMEDOUT;*v=ch->raw;return 0;
-}
-static int iio_read_channel_processed(struct iio_channel *ch,int *v){return iio_read_channel_raw(ch,v);}
-static void pm_stay_awake(struct device *d){d->awake=1;}
-static void pm_relax(struct device *d){d->awake=0;}
-static bool charger_dormant_blocked=true;
-#define dev_err_ratelimited(...) ((void)0)
-#define dev_info(...) ((void)0)
-''' + declarations + ''.join(function(s,n) for n in (
-            'y2_charge_read','y2_charge_update','y2_charge_mismatch','y2_charge_awake','y2_charger_inhibit','y2_charge_account_now',
-            'y2_charge_sample','y2_wait_source','y2_charger_detect','y2_charger_target','y2_charger_sample_fault','y2_charger_run')) + r'''
-static struct device dev;
-static struct iio_channel bat={17000},baton={10388},isense={17000},die={25000};
-static void charger(struct y2_charger *c){
- *c=(struct y2_charger){.map=&map_identity,.charge_ceiling_ua=650000,.dev=&dev,.io=io,.battery=&bat,.baton=&baton,.isense=&isense,.die=&die,.input=&supply};
- c->io=(struct y2_charge_io){c,y2_charge_read,y2_charge_update,y2_charge_mismatch};
-}
+        run_c(worker_fixture() + r'''
 int main(void){
  reset();struct y2_charger c;charger(&c);
  y2_charger_run(&c);assert(c.active && dev.awake && charger_dormant_blocked && !c.fault && c.pets==1);
@@ -230,8 +244,10 @@ int main(void){
   reset();charger(&c);supply.budget=budgets[i];y2_charger_run(&c);
   assert(!c.active && !starts);
  }
+ /* The vendor picks the closest table step that never exceeds the request
+  * (bmt_find_closest_level), so a 499.999 mA allowance now yields 450 mA, not 70. */
  int ordinary[]={100000,499999,500000,-1};
- unsigned currents[]={70000,70000,450000,70000};
+ unsigned currents[]={70000,450000,450000,70000};
  for(unsigned i=0;i<4;i++) {
   reset();charger(&c);supply.budget=ordinary[i];y2_charger_run(&c);
   assert(c.active && c.charge_ua==currents[i]);
