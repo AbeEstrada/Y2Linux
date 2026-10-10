@@ -236,6 +236,18 @@ class USBProduct(unittest.TestCase):
         self.assertFalse(release_sd(self.ctx,42))
         self.assertFalse(self.ctx.path('/run/y2/usb-release-sd.json').exists())
 
+    def test_responder_roots_are_exactly_the_platform_export_paths(self):
+        """The responder patches name the roots it pins; a stale path leaves a storage declared but never mounted."""
+        from y2_platform.usb import NAMES
+        patches = ''.join((ROOT/'buildroot/package/y2-mtp'/name).read_text()
+                          for name in ('0001-y2-safe-media-transfers.patch', '0002-y2-mtp-pipeline-and-live-storage.patch'))
+        added = [line[1:] for line in patches.splitlines() if line.startswith('+')]
+        for path in NAMES:
+            self.assertTrue(any('strcmp(root, "%s")' % path in line for line in added), path)
+        self.assertTrue(any('y2_fs_init(has_internal ? "%s" : NULL' % [p for p in NAMES if p != '/media/sd'][0] in line
+                            for line in added))
+        self.assertNotIn('/data/music', ''.join(added))
+
 
 class MediaViews(unittest.TestCase):
     def setUp(self):

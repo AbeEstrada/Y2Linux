@@ -841,9 +841,9 @@ index 93fb167..fdc4a61 100644
 +    for (unsigned i=0; i<MAX_STORAGE_NB; i++) {
 +        const char *root=mtp_context->storages[i].root_path;
 +        if (root && !strcmp(root, "/media/sd")) has_sd=1;
-+        if (root && !strcmp(root, "/data/music")) has_internal=1;
++        if (root && !strcmp(root, "/media/internal/music")) has_internal=1;
 +    }
-+    if (y2_fs_init(has_internal ? "/data/music" : NULL, has_sd ? "/media/sd" : NULL, "/run/y2/mtp-events.json")) return -3;
++    if (y2_fs_init(has_internal ? "/media/internal/music" : NULL, has_sd ? "/media/sd" : NULL, "/run/y2/mtp-events.json")) return -3;
  
  	loop_continue = mtp_context->usb_cfg.loop_on_disconnect;
  
