@@ -1,6 +1,13 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-06 bring-up candidate sealed — 2026-10-09 (latest)
+## POWER-FINAL-07 charging candidate sealed — 2026-10-10 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-07/` (Linux `551baad`, Reborn `97ff8c3` unchanged, root v1.37; BOOTIMG `65a1daf4…a3001`, Y2ROOT `83a61c1e…e66`) is 06 plus the full vendor charging policy and is built and offline-qualified;
+**it is not flashed (physical NOT_RUN)**. The installed image is 06 (healthy at first check, power-down cycle still to run). The stock 16-step `CS_VTH` table and per-source requests (DCP/nonstandard 1100, Apple 800, CDP 650, SDP 450) are
+implemented behind one decision function with PMIC-die derating; the default ceiling stays 650 mA and nonstandard stays 70 mA because no cell charge rating, pack temperature or independent current measurement exists.
+Details: [policy](knowledge/charging-current-policy.md), [validation](validation/Y2-PLATFORM-V1-POWER-FINAL-07-CHARGING.md) (on branch `codex/platform-v1-power-final-07`), [handoff](planning/NEXT-SESSION-HANDOFF.md). Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-06 bring-up candidate sealed — 2026-10-09
 
 `out/y2linux-platform-v1-power-final-candidate-06/` (Linux `c1ef37a`, Reborn `97ff8c3` unchanged, root v1.36; BOOTIMG `64a91628…7869f`, Y2ROOT `e1c0bcd3…c23e4be`) is built and
 offline-qualified; **it is not flashed (physical NOT_RUN) and not production**. Correction: Y2Linux already ran the vendor 597-word `pcm_suspend`; the 05 report's "480-word dpidle" was the runtime-idle line. The real

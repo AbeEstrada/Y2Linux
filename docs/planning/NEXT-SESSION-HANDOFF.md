@@ -1,5 +1,19 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
+> **LATEST (2026-10-10): POWER-FINAL-07 CHARGING CANDIDATE SEALED — awaiting the OWNER FLASH (agent has not flashed).** 06 is flashed and healthy at first check (`out/deep-sleep-final/evidence/20261010/90-power06-first-check/`,
+> boot `bed8cebd`, taint 0, `Y2INFRA mode=powerdown fallback=0`) but its first power-down cycle has NOT been run (battery was 8%, then charging).
+> Package `out/y2linux-platform-v1-power-final-candidate-07/` (own `OWNER-HANDOFF.md`, `VALIDATION-REPORT.md`, `SHA256SUMS`, `fallback/` = sealed 06), symbols `…-candidate-07-symbols/`, receipts `out/deep-sleep-final/build07-receipts/`,
+> worktrees `/home/luca/Dokumente/Code/worktrees/platform-v1-power-final-07/{Y2Linux,Y2Reborn}`, branch `codex/platform-v1-power-final-07` (from 06 tip `bd7e54d`; build commit `551baad703b31c4fadfd0db96478481c0f5067bc`, later docs `b78e037`, `017aa18`), Reborn `97ff8c3` unchanged.
+> Kernel `6.18.0-y2linux-platform-v1-power-final-07`, root v1.37, release `1.0.0-platform-v1-power-final-candidate.7`. BOOTIMG `65a1daf484bb54cde14f6dd4906bd9b6b72872213a9409b2ea1fdc3fd38a3001`, Y2ROOT `83a61c1e73c5fa34acc7d6e9af707ac0fd54d20e1226da2ae278846ff6d19e66`.
+> **What it is:** 06 + the complete vendor charging policy. Verified stock `CS_VTH` table (16 steps, `0xc07572f8`; 1200-1600 mA unprogrammable), stock per-source requests (`0xc03a1d88`: SDP 450, CDP 650, DCP 1100, nonstandard 1100, Apple 800, unknown 70),
+> one decision function (`kernel/platform/charge-limits.h`), PMIC-die derating 60/70/80/90 C, read-only diagnostics incl. an unvalidated ISENSE charger-path estimate. **Default owner ceiling stays 650 mA; nonstandard stays 70 mA; PC SDP never above 450 mA.**
+> Why: no cell charge rating, no pack NTC, no independent current measurement (page `docs/knowledge/charging-current-policy.md`). Raising the ceiling is root-only, volatile, logged; owner ramp tool `tools/development/power-session/charge-qualify.py` (restores 650 mA always).
+> **Offline:** container suite 598 cases PASS, 29 packaging-host + 27 splash PASS, package/ELF/installed-ARM/privacy PASS, same 48 host-environment errors as the 06 baseline. **Physical: NOT_RUN** (incl. MTP/eMMC/SD while charging, PC<->wall switching, thermal ladder).
+> **Next (owner flashes):** same SP Flash Tool steps as 06 (BOOTIMG+ANDROID only). Then: read-only check (`charging_state` new fields, `y2_infra` state, gadget/MTP/mounts), PC charging + `tools/usb/qualify.py` MTP matrix while charging, wall charger re-classification without reboot,
+> and ONLY THEN consider `charge-qualify.py ramp` on an attended wall charger. Still open from before: 06's first power-down cycle (needs a charged battery). Verdict: IMPLEMENTATION_READY_HIGH_CURRENT_QUALIFICATION_PENDING; readiness MORE_WORK_REQUIRED.
+> Open questions that need the owner: the pack label/charge rating (open the device or manufacturer data), and whether to rebase the charging commits onto 05 if 06 fails its power-down cycle.
+> Working-tree note: the untracked diagnostics from the 06 note remain untracked by design.
+
 > **LATEST (2026-10-09 evening): POWER-FINAL-06 BRING-UP CANDIDATE SEALED — awaiting the OWNER FLASH (agent has not flashed).**
 > Package `out/y2linux-platform-v1-power-final-candidate-06/` (own `OWNER-HANDOFF.md`, `SHA256SUMS`, `validation/`, `fallback/` = sealed 05), symbols `…-candidate-06-symbols/`, frozen worktrees
 > `/home/luca/Dokumente/Code/worktrees/y2-power-final-06/{Y2Linux,Y2Reborn}` (Linux `c1ef37a6f6338b3abe7fcb4f2aa505b6fb861075`, Reborn `97ff8c3` unchanged), dev branch `codex/platform-v1-power-final-06`
