@@ -1,5 +1,10 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
+> **LATEST (2026-10-10 night): POWER-FINAL-09 SEALED = 08 + MTP internal-root fix — awaiting the OWNER FLASH.** Package `out/y2linux-platform-v1-power-final-candidate-09/` (fallback = sealed 08), symbols `…-09-symbols/`, receipts `out/deep-sleep-final/build09-receipts/`,
+> Linux `9d9d5c454d1eb7cfa461955dad522f5b890f3bf9` (branch `codex/platform-v1-power-final-08`), Reborn `ac5502e`. BOOTIMG `0dabbfabce27f6d33c139136e2df2c1cef08ed6ce89da1f5143aebe0b3de2077`, Y2ROOT `0225ff37ef1668111f7ce2d2579ddda8b2f22d06761f5d1c7054649b00d9d28c`. Container suite 630 PASS.
+> **08 was flashed by the owner and is healthy.** Y2Media was provisioned on the device (ext4 `Y2MEDIA`, 5.3 GB at `/media/internal`, 42 music files migrated and verified, originals removed). Defect found: the MTP responder patches hard-coded `/data/music`, so Internal Storage was listed but never pinned (fixed in 09 + test).
+> **Open:** the first boot after the 08 flash showed "Could not start / Restart the player"; the second boot worked; the failed boot left no trace (never reached the userspace journal). After flashing 09: check MTP on both storages, Reborn on `/media/internal/music` (needs the flash reboot), and 06's first power-down cycle is still unrun.
+
 > **LATEST (2026-10-10 evening): POWER-FINAL-08 SEALED — the one cumulative image (06 + 07 + 08); awaiting the OWNER FLASH (agent has not flashed or provisioned).**
 > Package `out/y2linux-platform-v1-power-final-candidate-08/` (`OWNER-HANDOFF.md`, `VALIDATION-REPORT.md`, `fallback/` = sealed 07), symbols `…-candidate-08-symbols/`, receipts `out/deep-sleep-final/build08-receipts/`,
 > worktrees `/home/luca/Dokumente/Code/worktrees/platform-v1-power-final-08/{Y2Linux,Y2Reborn}`, branch `codex/platform-v1-power-final-08` (Linux build commit `d9fd5a7b57927fc22b4d62d9ee49a8e03c3cb170`, later tests/docs `c65080d`, `32a9d13`; Reborn `ac5502ea96f4d85a9cdbb32f210d46e658430abd`).
