@@ -213,6 +213,7 @@ Indexed pages: **307**. Explicit scope notices: **220**.
 | [M3 headphone-first architecture and source review](knowledge/m3-audio-architecture.md) | Retained research / scoped evidence |
 | [M4 charging prerequisite: this Y2's battery sensor](knowledge/m4-battery-acquisition.md) | Retained research / scoped evidence |
 | [M4 production charging contract](knowledge/m4-charging.md) | Retained research / scoped evidence |
+| [Charging current policy (POWER-FINAL-07)](knowledge/charging-current-policy.md) | Current production policy |
 | [M4 end-user power completion](knowledge/m4-end-user-power.md) | Retained research / scoped evidence |
 | [M4 power platform](knowledge/m4-power-platform.md) | Retained research / scoped evidence |
 | [M5 connectivity entry audit — 2026-09-15](knowledge/m5-connectivity-entry.md) | Retained research / scoped evidence |

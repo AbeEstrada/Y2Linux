@@ -11,6 +11,9 @@ flash, suspend, reboot, calibration or RTC writes occurred in this pass.
 The owner's revised instruction permits the actual stock hardware protection
 architecture without a fabricated BATON temperature. M4 remains ACTIVE/PARTIAL.
 
+> Current charge-current policy, the full verified selector table and the measurement notes live in
+> [charging-current-policy.md](charging-current-policy.md) (POWER-FINAL-07).
+
 ## Premium-02 low-voltage policy update
 
 The Premium-02 kernel candidate removes the former 70 mA clamp below 3.2 V.
