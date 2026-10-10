@@ -102,7 +102,7 @@
       "advanced_authenticated_owner_only": true,
       "filesystem_owner": "linux",
       "host_views": [
-        "/data/music",
+        "/media/internal/music",
         "/media/sd"
       ]
     },
