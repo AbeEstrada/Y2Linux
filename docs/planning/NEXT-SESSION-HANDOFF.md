@@ -1,5 +1,8 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
+> **NEW FINDING (2026-10-11): a software reboot (`y2-platform shutdown reboot`, so also the service-menu Restart and update reboots) left the panel dead on candidate 11 three times in a row** (kernel `mediatek-drm: flip_done timed out`, `vblank wait timed out`; Reborn `graphics presentation -16`; reborn-splash never exits; boot_reason=4). A cold start or reflash recovers. Not caused by the screen-capture tool. Untested on 09/10. **Do not software-reboot the device until investigated.** The owner is also about to test deep sleep unplugged; watch for the same display failure on resume.
+> Screen capture over SSH works (`y2-screen-stream`, kept on the device in `/data/system/capture/`; method in memory `y2-software-reboot-display-failure`). Measured ceilings (11): eMMC HS200 read 113 / write 30 MiB/s, SD SDR104 read 86 / write 26 MiB/s, Wi-Fi 2.4 GHz TCP 33-43 Mbit/s, MTP 10-11 up / 38 down MB/s (on 09).
+
 > **LATEST (2026-10-11): POWER-FINAL-11 SEALED = 10 + the remaining screens — awaiting the OWNER FLASH.** Package `out/y2linux-platform-v1-power-final-candidate-11/` (fallback = sealed 10), symbols `…-11-symbols/`, receipts `out/deep-sleep-final/build11-receipts/`,
 > worktrees `/home/luca/Dokumente/Code/worktrees/platform-v1-power-final-10/{Y2Linux,Y2Reborn}`, branch `codex/platform-v1-power-final-11` (Linux `5741d161699582d5a2696c658c7ede05c712a6ae`, Reborn 0.3.0 `abbb2038dc392c520d76ce6e5a2747a68578252b`).
 > BOOTIMG `1482316d69e470c7625ea5805dbb4e17172ebebad2ecfb9f205c43b155f2ee08`, Y2ROOT `4773d90d11213c5f676dd9f9027a809bf04a635164947bb3e6670f738515d73c`; root v1.41, release `.11`. Flash BOOTIMG + ANDROID only, Download Only.
