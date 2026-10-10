@@ -7555,3 +7555,23 @@ kernel, driver, partition or radio code changes.
 **Gate decision:** build candidate 11 as 10 plus these screens. Offline-charging behaviour must be observed by the
 owner (unplug, replug while off, Power hold) after flashing; the fallback pair (10) is in the package.
 Readiness for the next boundary: **PARTIALLY READY**.
+
+
+## POWER-FINAL-12 suspend-ordering and charge-completion scope audit — 2026-10-11
+
+**Boundary:** two power-adjacent production changes after real hardware evidence from candidate 11 (flashed, owner-run
+unplugged sleep at 23:07, retained logs read afterwards). Repeated before source changes; this audit builds and flashes
+nothing. The display-recovery experiments in the main repo are not part of 12.
+
+| Row | Classification | Evidence and limit |
+| --- | --- | --- |
+| Deep-sleep device-phase stall | CHANGE, unproven | The retained `Y2_DPM_STALL` dump (`/sys/fs/pstore/console-ramoops-0`, round 1 and 2) shows exactly two uninterruptible tasks: the suspending `python3` and one `async` worker, both in `dpm_wait_fn` under `dpm_wait_for_subordinate`. No task is blocked in `synchronize_irq`, an I2C transfer or any driver. The previous hypothesis (APT32F `disable_irq` against its own threaded handler) is **not supported**; the wheel driver is unchanged. The I2C bus numbers also swap between boots (this boot `11007000.i2c` is `i2c-1`). 12 turns async device suspend off by default (`kernel/power/main.c`, overlay 0067), so the 6.18 parent/child async scheduling cannot be waited on; `/sys/power/pm_async` can re-enable it. Whether this removes the stall is only knowable from repeated sleeps. |
+| Charge completion | CHANGE, host-tested | The system log shows the charger stopping at 4.175 V under load and the pack resting at 4.09-4.10 V; the 4.11 V recharge rule then restarted charging every ~70 s with `full=0`, all day. Full is now declared when a completing hold rests at or above 4.07 V for six samples; otherwise charging resumes; a maintenance cycle starts below 4.00 V. The 4.175 V stop, 4.2 V fault, current, timers and all protections are untouched, and the pack is charged no higher than before. |
+| Battery percentage | CHANGE, host-tested | `Full` now reads 100% from 4.0 V up (it required 4.16 V, which this charger never leaves the pack at). After unplugging, the existing rate limit lets the estimate fall to the voltage curve (about 94% at 4.09 V) at 1% per minute; the curve itself is unchanged. |
+| Wi-Fi, display, storage, USB, radio | UNCHANGED | No source change. |
+| Physical | NOT_RUN | Nothing above is observed on hardware. |
+
+**Gate decision:** build candidate 12 as 11 plus these two changes. After the owner flashes: read the charger state
+while plugged in (expect `Full` within a few minutes at ~4.09 V) and run repeated unplug sleeps. Stall rate before 12 is
+unknown, so one passing sleep does not prove the fix.
+Readiness for the next boundary: **PARTIALLY READY**.
