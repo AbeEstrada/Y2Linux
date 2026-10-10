@@ -1,6 +1,11 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-08 cumulative candidate sealed — 2026-10-10 (latest)
+## POWER-FINAL-10 Reborn UI v3 candidate sealed — 2026-10-10 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-10/` (Linux build `04aa8f9`, Reborn 0.3.0 `f31c94c`, root v1.40; BOOTIMG `9d1f00a5…0ca`, Y2ROOT `77a41a33…16`) is 09 plus the redesigned Reborn UI, startup screen and shutdown animation; **not flashed, physical NOT_RUN**.
+The installed image is 09. Kernel, drivers and partitions are unchanged. Details: [validation](validation/Y2-PLATFORM-V1-POWER-FINAL-10-UI.md), [scope audit](planning/roadmap-gap-audit.md), Reborn `docs/ui/REBORN-PRODUCT-UI-V3.md`. Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-08 cumulative candidate sealed — 2026-10-10
 
 `out/y2linux-platform-v1-power-final-candidate-08/` (Linux `d9fd5a7`, Reborn `ac5502e`, root v1.38; BOOTIMG `ad39788a…efb1`, Y2ROOT `e79bac96…c71a`) is the one image containing 06 (deep-sleep power-down bring-up), 07 (charging policy)
 and 08 (internal storage). **Not flashed; physical NOT_RUN.** The installed image is 06. 08 turns the stock FAT partition into ext4 Y2Media (`/media/internal`), exports it as MTP Internal Storage and adds explicit SD `format`/`grow`; the one-time
