@@ -121,7 +121,9 @@ int main(int argc,char **argv) {
     }
     /* Forbidden writes must never reach a command or DMA preparation. */
     const unsigned protected[]={0,1024,2048,8192,18432,38912,59392,59648,
-        60416,93184,125952,138240,139264,145408,146432,1846272,3742720,15269887};
+        60416,93184,125952,138240,139264,145408,146432,1846272,15203328,15269887};
+    /* 3742720 is p8's first sector (Y2Media, owner-approved 2026-10-10) and is writable;
+     * the first sector past the exposed disk (15203328) and the hidden tail are not. */
     for(unsigned i=0;i<sizeof(protected)/sizeof(*protected);i++) {
         setup(25,protected[i],1,true);msdc_ops_request(&mmc,&mrq);
         assert(cmd.error==-EROFS&&done==1&&!ncommands&&!prepared&&!started);
