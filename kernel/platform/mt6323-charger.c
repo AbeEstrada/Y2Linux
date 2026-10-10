@@ -174,10 +174,13 @@ static int y2_charge_sample(struct y2_charger *c)
 	    c->isense_raw <= 0 || c->isense_raw >= 32767) return -ENODATA;
 	c->thermal_level = y2_thermal_level(c->thermal_level, c->die_mc);
 	c->sense_drop_uv = (int)y2_battery_uv(c->isense_raw) - c->uv;
-	/* With both engines verified off no charge current flows, so the drop is
-	 * the channel offset (about 2 mV on this unit); BSP keeps the same
-	 * g_I_SENSE_offset. Smooth it so one noisy sample cannot bias the estimate. */
-	if (!c->active) {
+	/* With a source present and both engines verified off no charge current
+	 * flows, so the drop is the channel offset (about 2 mV on this unit); the BSP
+	 * keeps the same g_I_SENSE_offset. Sample it only in that state and drop it
+	 * when the source goes away, so an unplugged reading can never bias a session. */
+	if (!c->online) {
+		c->sense_offset_valid = false;
+	} else if (!c->active) {
 		c->sense_offset_uv = c->sense_offset_valid ?
 			(3 * c->sense_offset_uv + c->sense_drop_uv) / 4 : c->sense_drop_uv;
 		c->sense_offset_valid = true;

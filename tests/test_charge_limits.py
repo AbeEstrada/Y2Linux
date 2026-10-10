@@ -325,6 +325,11 @@ int main(void){
  assert(c.sense_drop_uv>99000 && c.sense_drop_uv<101000 && est>440000 && est<520000);
  /* The estimate is a separate quantity from the programmed selector. */
  assert(c.charge_ua==450000 && est!=(int)c.charge_ua);
+ /* An unplugged reading must never become the next session's offset. */
+ regs[0]&=~0x20;isense.raw=17000+120;clock_ms+=1000;y2_charger_run(&c);
+ assert(!c.online && !c.sense_offset_valid);
+ regs[0]|=0x20;isense.raw=17000+9;clock_ms+=1000;y2_charger_run(&c);
+ assert(c.sense_offset_valid && c.sense_offset_uv>1500 && c.sense_offset_uv<2500);
  /* With the engines off the same drop is the offset again, so the estimate is 0. */
  c.behaviour=1;clock_ms+=1000;y2_charger_run(&c);
  assert(!c.active);
