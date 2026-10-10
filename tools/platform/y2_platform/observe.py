@@ -405,6 +405,14 @@ def storage(ctx):
                                              item['state'] == 'Failed')
             if vfs.f_files > 0 and vfs.f_favail == 0:
                 item['space_state'] = 'CriticalSpace'
+            if target == '/media/sd':
+                # A filesystem far smaller than its partition (a copied image, an old
+                # partition layout) hides most of the card; report it, never auto-fix it.
+                sectors = read(device / 'size')
+                if sectors and sectors.isdigit():
+                    item['partition_bytes'] = int(sectors) * 512
+                    item['capacity_state'] = ('Undersized' if item['total_bytes'] < 0.9 * item['partition_bytes']
+                                              else 'Full')
         except OSError:
             item['space_state'] = 'Failed'
             item.update(state='Failed', reason='statvfs_failed')

@@ -4,6 +4,8 @@ import fcntl
 import json
 import os
 import hashlib
+import struct
+import time
 from .common import atomic_json, read
 from .observe import mountinfo, device_instance
 
@@ -196,9 +198,164 @@ def operation(ctx, action):
                             state.update(state='Failed', reason='source_changed_during_mount')
                         else:
                             atomic_json(runtime / 'media-mount.json', state)
+                            # The kernel recycles mount ids, so a release marker for a card that was
+                            # ejected or reformatted must not hide the next mount that reuses its id.
+                            try:
+                                ctx.path('/run/y2/usb-release-sd.json').unlink()
+                            except FileNotFoundError:
+                                pass
                     else:
                         state.update(state='Failed', reason=result['reason'] or 'mount_identity_failed')
         atomic_json(runtime / 'media.json', state)
         return state
     finally:
         os.close(lock)
+
+
+# ---------------------------------------------------------------------------
+# Explicit owner operations on the removable card: format and grow.
+# Never automatic: a card with a foreign or undersized filesystem is reported,
+# and only a command that names the card by CID may change it.
+
+MIN_CARD_SECTORS = 16384          # 8 MiB; anything smaller is not a storage card
+PARTITION_START = 2048            # 1 MiB alignment
+WIPE_TAIL_SECTORS = 64            # a stale GPT backup header lives in the last sectors
+BLKRRPART = 0x125F
+
+
+def sd_disk(ctx):
+    """The unique whole-disk entry on the removable-card controller, else None."""
+    found = []
+    for entry in ctx.glob('/sys/class/block/mmcblk*'):
+        try:
+            real = str(entry.resolve())
+        except OSError:
+            continue
+        if '/11240000.mmc/' in real and read(entry / 'partition') is None:
+            found.append(entry)
+    return found[0] if len(found) == 1 else None
+
+
+def mbr_for(sectors):
+    """One Linux partition from sector 2048 to the end of the card."""
+    size = min(sectors - PARTITION_START, 0xFFFFFFFF)
+    entry = struct.pack('<B3sB3sII', 0, b'\xfe\xff\xff', 0x83, b'\xfe\xff\xff', PARTITION_START, size)
+    return bytes(446) + entry + bytes(48) + b'\x55\xaa'
+
+
+def reread_partitions(ctx, fd):
+    return getattr(ctx, 'ioctl', fcntl.ioctl)(fd, BLKRRPART)
+
+
+def detach_for_change(ctx, state):
+    """Release the card from MTP and unmount it, for an explicit owner command."""
+    old = mounts(ctx)
+    if not old:
+        return True
+    if len(old) > 1 or any(not owned_mount(ctx, m) for m in old):
+        state.update(state='Failed', reason='ambiguous_or_foreign_mount')
+        return False
+    from .usb import release_sd
+    if not release_sd(ctx, old[0]['mount_id'], explicit=True):
+        state.update(state='Failed', reason='usb_release_failed')
+        return False
+    result = ctx.command(['umount', '/media/sd'], timeout=10)
+    if not result['ok'] or mounts(ctx):
+        state.update(state='Failed', reason=result['reason'] or 'unmount_busy')
+        return False
+    return True
+
+
+def change_card(ctx, action, confirm_cid=None):
+    """action: 'format' (new table + ext4 over the whole card) or 'grow' (ext4 to the partition)."""
+    if action not in ('format', 'grow'):
+        raise ValueError('unknown_media_change')
+    state = apply_change(ctx, action, confirm_cid)
+    if state['state'] == 'Starting':
+        # Mount through the normal admission path, after the change released the media lock.
+        state.update(operation(ctx, 'mount'))
+        state['action'] = action
+    return state
+
+
+def apply_change(ctx, action, confirm_cid):
+    runtime = ctx.path('/run/y2')
+    runtime.mkdir(mode=0o700, parents=True, exist_ok=True)
+    lock = os.open(runtime / 'media.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        state = {'schema': 1, 'action': action, 'state': 'Starting', 'reason': None,
+                 'boot_id': ctx.read('/proc/sys/kernel/random/boot_id')}
+        disk = sd_disk(ctx)
+        cid = read(disk / 'device/cid') if disk else None
+        sectors = read(disk / 'size') if disk else None
+        if disk is None or not cid or not sectors or not sectors.isdigit():
+            state.update(state='Unavailable', reason='no_unique_card')
+        elif action == 'format' and confirm_cid != cid:
+            # The owner must name the card: a wrong or swapped card is never formatted.
+            state.update(state='Failed', reason='cid_confirmation_mismatch', cid=cid)
+        elif int(sectors) < MIN_CARD_SECTORS:
+            state.update(state='Failed', reason='card_too_small')
+        else:
+            device = '/dev/' + disk.name
+            state.update(cid=cid, sectors=int(sectors), device=device)
+            if detach_for_change(ctx, state):
+                if action == 'format':
+                    format_steps(ctx, state, device, int(sectors))
+                else:
+                    grow_steps(ctx, state)
+        if state['state'] != 'Starting':
+            atomic_json(runtime / 'media.json', state)
+        return state
+    finally:
+        os.close(lock)
+
+
+def format_steps(ctx, state, device, sectors):
+    try:
+        fd = os.open(ctx.path(device), os.O_RDWR | os.O_SYNC)
+    except OSError:
+        state.update(state='Failed', reason='card_not_writable')
+        return
+    try:
+        # The old table, boot sector and a stale GPT backup must not survive.
+        zero = bytes(512)
+        for sector in list(range(1, PARTITION_START)) + list(range(sectors - WIPE_TAIL_SECTORS, sectors)):
+            os.pwrite(fd, zero, sector * 512)
+        os.pwrite(fd, mbr_for(sectors), 0)
+        os.fsync(fd)
+        try:
+            reread_partitions(ctx, fd)
+        except OSError as error:
+            state.update(state='Failed', reason='partition_reread_failed', errno=error.errno)
+            return
+    except OSError as error:
+        state.update(state='Failed', reason='card_write_failed', errno=error.errno)
+        return
+    finally:
+        os.close(fd)
+    argv = ['mkfs.ext4', '-F', '-q', '-L', 'Y2SD', '-m', '0', '-E', 'lazy_itable_init=1,lazy_journal_init=1']
+    if sectors >= 32 * 1024 * 1024:           # 16 GiB and up: a 128 MiB journal is plenty
+        argv += ['-J', 'size=128']
+    partition = device + 'p1'
+    deadline = time.monotonic() + 5
+    while not ctx.path(partition).exists() and time.monotonic() < deadline:
+        time.sleep(0.05)          # devtmpfs creates the node as the kernel re-reads the table
+    result = ctx.command(argv + [partition], timeout=180)
+    if not result['ok']:
+        state.update(state='Failed', reason='mkfs_failed:' + str(result['reason']))
+
+
+def grow_steps(ctx, state):
+    available = candidates(ctx)
+    if len(available) != 1 or available[0]['filesystem'] != 'ext4':
+        state.update(state='Failed', reason='grow_requires_one_ext4_card')
+        return
+    device = available[0]['device']
+    # Only a clean (or safely auto-corrected) filesystem is resized.
+    if not ctx.command(['e2fsck', '-f', '-p', device], timeout=300)['ok']:
+        state.update(state='Failed', reason='filesystem_check_failed')
+        return
+    result = ctx.command(['resize2fs', device], timeout=300)
+    if not result['ok']:
+        state.update(state='Failed', reason='resize_failed:' + str(result['reason']))

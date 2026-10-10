@@ -85,8 +85,9 @@ def main():
     shutdown.add_argument('action', choices=['poweroff', 'reboot'])
     shutdown.add_argument('--reason', choices=['user', 'service', 'update'], default='user')
     media = sub.add_parser('media')
-    media.add_argument('action', choices=['mount', 'unmount', 'check', 'status', 'reconcile'])
+    media.add_argument('action', choices=['mount', 'unmount', 'check', 'status', 'reconcile', 'format', 'grow'])
     media.add_argument('--json', action='store_true')
+    media.add_argument('--confirm-cid', help='format only: the CID shown by `media status`; formats exactly that card')
     bench = sub.add_parser('bench-storage')
     bench.add_argument('--volume', choices=['/data', '/media/sd'], default='/data')
     bench.add_argument('--size-mib', type=int, default=16)
@@ -269,8 +270,11 @@ def main():
         from .space import policy
         result = policy(ctx, args.cleanup)
     elif args.command == 'media':
-        from .media import operation, reconcile
-        result = reconcile(ctx) if args.action == 'reconcile' else operation(ctx, args.action)
+        from .media import change_card, operation, reconcile
+        if args.action in ('format', 'grow'):
+            result = change_card(ctx, args.action, args.confirm_cid)
+        else:
+            result = reconcile(ctx) if args.action == 'reconcile' else operation(ctx, args.action)
     elif args.command == 'bench-storage':
         from .bench import storage_benchmark
         result = storage_benchmark(ctx, args.volume, args.size_mib, args.operations, args.seconds)
@@ -289,7 +293,7 @@ def main():
     print(json.dumps(result, sort_keys=True, allow_nan=False))
     failed = (args.command == 'health' and result['state'] == 'FAILED' or
               args.command == 'media' and (result['state'] in ('Failed', 'Degraded') or
-                                          args.action == 'mount' and result['state'] != 'Ready') or
+                                          args.action in ('mount', 'format', 'grow') and result['state'] != 'Ready') or
               args.command in ('bench-storage', 'bench-library') and result['record']['result'] == 'FAILED')
     return 1 if failed else 0
 

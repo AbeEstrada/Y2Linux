@@ -113,12 +113,17 @@ def request_mode(ctx, mode):
     return {'state': 'Queued', 'mode': mode, 'apply': 'when_disconnected'}
 
 
-def release_sd(ctx, mount_id):
-    """Drop responder root pins before a device-side eject; never force umount."""
+def release_sd(ctx, mount_id, explicit=False):
+    """Drop responder root pins before a device-side eject; never force umount.
+
+    An automatic eject refuses while a host cable is attached. An explicit owner
+    command (format/grow, which name the card by CID) may release the SD view
+    from the responder anyway: the host only sees the storage leave, exactly as
+    it would on removal."""
     current = status(ctx)
     if not any(v.get('path') == '/media/sd' for v in current.get('views', [])):
         return True
-    if current.get('cable') != 'not attached':
+    if not explicit and current.get('cable') != 'not attached':
         return False
     atomic_json(ctx.path('/run/y2/usb-release-sd.json'), {'mount_id': mount_id})
     pid = ctx.integer('/run/y2/readiness.pid')
