@@ -356,7 +356,8 @@ def storage(ctx):
     mounts = mountinfo(ctx.read('/proc/self/mountinfo'))
     boot_id = ctx.read('/proc/sys/kernel/random/boot_id')
     volumes = []
-    for target in ('/', '/data', '/media/sd'):
+    # Index order is a consumer contract: root, Y2DATA, SD, then Y2Media (internal user media).
+    for target in ('/', '/data', '/media/sd', '/media/internal'):
         found = [m for m in mounts if m['path'] == target]
         # Stacked mounts are ambiguous to consumers; fail closed.
         if len(found) != 1:
@@ -378,7 +379,8 @@ def storage(ctx):
             answer = ctx.command(['blkid', '-p', '-s', 'UUID', '-o', 'value', item['source']])
             item['uuid'] = (answer['output'] or None) if answer['ok'] else None
             expected_uuid = {'/': '79324c69-6e75-4801-8000-000000000101',
-                             '/data': '79324c69-6e75-4801-8000-000000000102'}.get(target)
+                             '/data': '79324c69-6e75-4801-8000-000000000102',
+                             '/media/internal': '79324c69-6e75-4801-8000-000000000103'}.get(target)
             if expected_uuid and item['uuid'] != expected_uuid:
                 item.update(state='Failed', reason='filesystem_identity_invalid')
             if target == '/media/sd':

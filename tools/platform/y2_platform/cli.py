@@ -88,15 +88,19 @@ def main():
     media.add_argument('action', choices=['mount', 'unmount', 'check', 'status', 'reconcile', 'format', 'grow'])
     media.add_argument('--json', action='store_true')
     media.add_argument('--confirm-cid', help='format only: the CID shown by `media status`; formats exactly that card')
+    internal = sub.add_parser('internal-media')
+    internal.add_argument('action', choices=['status', 'mount', 'unmount', 'provision'])
+    internal.add_argument('--confirm-serial', help='provision only: the stock FAT serial from `status`; that filesystem is replaced')
+    internal.add_argument('--no-migrate', action='store_true', help='provision only: leave /data/music untouched')
     bench = sub.add_parser('bench-storage')
-    bench.add_argument('--volume', choices=['/data', '/media/sd'], default='/data')
+    bench.add_argument('--volume', choices=['/data', '/media/sd', '/media/internal'], default='/data')
     bench.add_argument('--size-mib', type=int, default=16)
     bench.add_argument('--operations', type=int, default=64)
     bench.add_argument('--seconds', type=int, default=300)
     space = sub.add_parser('space')
     space.add_argument('--cleanup', action='store_true')
     library = sub.add_parser('bench-library')
-    library.add_argument('--volume', choices=['/data', '/media/sd'], default='/data')
+    library.add_argument('--volume', choices=['/data', '/media/sd', '/media/internal'], default='/data')
     library.add_argument('--tracks', type=int, choices=[1000, 10000, 20000], default=1000)
     library.add_argument('--scan', action='store_true')
     collect = sub.add_parser('collect')
@@ -275,6 +279,14 @@ def main():
             result = change_card(ctx, args.action, args.confirm_cid)
         else:
             result = reconcile(ctx) if args.action == 'reconcile' else operation(ctx, args.action)
+    elif args.command == 'internal-media':
+        from . import internal_media
+        if args.action == 'status':
+            result = internal_media.status(ctx)
+        elif args.action == 'provision':
+            result = internal_media.provision(ctx, args.confirm_serial, not args.no_migrate)
+        else:
+            result = getattr(internal_media, args.action)(ctx)
     elif args.command == 'bench-storage':
         from .bench import storage_benchmark
         result = storage_benchmark(ctx, args.volume, args.size_mib, args.operations, args.seconds)
@@ -292,6 +304,9 @@ def main():
                 result['capabilities'][name]['enabled'] = ctx.read(path) == '1'
     print(json.dumps(result, sort_keys=True, allow_nan=False))
     failed = (args.command == 'health' and result['state'] == 'FAILED' or
+              args.command == 'internal-media' and (
+                  args.action in ('mount', 'provision') and result['state'] != 'Ready' or
+                  args.action == 'unmount' and result['state'] == 'Failed') or
               args.command == 'media' and (result['state'] in ('Failed', 'Degraded') or
                                           args.action in ('mount', 'format', 'grow') and result['state'] != 'Ready') or
               args.command in ('bench-storage', 'bench-library') and result['record']['result'] == 'FAILED')

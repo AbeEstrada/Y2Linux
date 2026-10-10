@@ -35,7 +35,7 @@ class USBProduct(unittest.TestCase):
         self.put('/sys/class/udc/musb/state', 'not attached')
         self.ctx.path('/sys/kernel/config/usb_gadget').mkdir(parents=True)
         self.ctx.path('/run/y2').mkdir(parents=True)
-        self.views = [{'path':'/data/music', 'name':'Internal Storage', 'access':'rw', 'mount_id':5}]
+        self.views = [{'path':'/media/internal/music', 'name':'Internal Storage', 'access':'rw', 'mount_id':5}]
         self.service = USBService(self.ctx, launch=Child)
         self.mock = patch('y2_platform.usb.media_views', return_value=self.views)
         self.mock.start(); self.addCleanup(self.mock.stop)
@@ -68,7 +68,7 @@ class USBProduct(unittest.TestCase):
         self.assertEqual(selection('developer'), ('acm.usb0','ecm.usb0'))
         for path in ('/','/data','/dev/mmcblk0','/data/reborn','/data/ssh'):
             with self.assertRaises(ValueError): config([{'path':path,'name':'Internal Storage','access':'rw'}])
-        self.assertIn('storage "/data/music" "Internal Storage" "rw"', config(self.views))
+        self.assertIn('storage "/media/internal/music" "Internal Storage" "rw"', config(self.views))
 
     def test_disconnect_refresh_keeps_linux_ownership_and_reconnect(self):
         self.ready()
@@ -142,7 +142,7 @@ class USBProduct(unittest.TestCase):
 
     def test_both_views_declared_in_fixed_slots_missing_sd_is_notmounted(self):
         text = config(self.views)
-        self.assertIn('storage "/data/music" "Internal Storage" "rw"', text)
+        self.assertIn('storage "/media/internal/music" "Internal Storage" "rw"', text)
         self.assertIn('storage "/media/sd" "SD Card" "rw,removable,notmounted"', text)
         sd = {'path':'/media/sd','name':'SD Card','access':'ro','mount_id':9}
         text = config(self.views + [sd])
@@ -159,24 +159,24 @@ class USBProduct(unittest.TestCase):
         def command(message):
             sent.append(message)
             name = message.split(':', 1)[1]
-            roots = {'Internal Storage': '/data/music', 'SD Card': '/media/sd'}
+            roots = {'Internal Storage': '/media/internal/music', 'SD Card': '/media/sd'}
             current = set(json.loads(self.ctx.read('/run/y2/mtp-roots.json') or '{"roots":[]}')['roots'])
             (current.add if message.startswith('mount') else current.discard)(roots[name])
             self.put('/run/y2/mtp-roots.json', json.dumps({'pid':123, 'roots':sorted(current)}))
             return True
-        self.put('/run/y2/mtp-roots.json', json.dumps({'pid':123, 'roots':['/data/music']}))
+        self.put('/run/y2/mtp-roots.json', json.dumps({'pid':123, 'roots':['/media/internal/music']}))
         sd = {'path':'/media/sd','name':'SD Card','access':'rw','mount_id':9,'device_id':'179:9','uuid':'u'}
         with patch.object(self.service, 'write', side_effect=watch), patch.object(self.service, 'command', side_effect=command):
             self.mock.stop(); self.mock = patch('y2_platform.usb.media_views', return_value=self.views + [sd]); self.mock.start()
             self.put('/proc/self/mountinfo', 'sd inserted')
             first = self.service.tick(); generation = first['refresh_generation']
             self.assertEqual(sent, ['mount:SD Card'])
-            self.assertEqual([v['path'] for v in first['views']], ['/data/music', '/media/sd'])
+            self.assertEqual([v['path'] for v in first['views']], ['/media/internal/music', '/media/sd'])
             self.mock.stop(); self.mock = patch('y2_platform.usb.media_views', return_value=list(self.views)); self.mock.start()
             self.put('/proc/self/mountinfo', 'sd removed')
             second = self.service.tick()
         self.assertEqual(sent, ['mount:SD Card', 'unmount:SD Card'])
-        self.assertEqual([v['path'] for v in second['views']], ['/data/music'])
+        self.assertEqual([v['path'] for v in second['views']], ['/media/internal/music'])
         self.assertEqual(binds, [])
         self.assertGreater(second['refresh_generation'], 0)
 
@@ -218,7 +218,7 @@ class USBProduct(unittest.TestCase):
         self.mock.stop()
         self.mock = patch('y2_platform.usb.media_views', return_value=[dict(self.views[0])])
         self.mock.start()
-        self.service.views = [{'path':'/data/music', 'name':'Internal Storage', 'access':'rw', 'mount_id':5}]
+        self.service.views = [{'path':'/media/internal/music', 'name':'Internal Storage', 'access':'rw', 'mount_id':5}]
         self.put('/proc/self/mountinfo','new mount generation')
         self.service.tick()
         self.assertEqual(old.result,0)
@@ -241,19 +241,20 @@ class MediaViews(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.ctx=Context(self.temp.name)
-        self.ctx.path('/data/music').mkdir(parents=True)
+        self.ctx.path('/media/internal/music').mkdir(parents=True)
         self.ctx.path('/media/sd').mkdir(parents=True)
         device=self.ctx.path('/sys/dev/block/179:2'); device.mkdir(parents=True)
-        (device/'start').write_text('2104320'); (device/'size').write_text('1638400')
+        (device/'start').write_text('3742720'); (device/'size').write_text('11460608')
         self.volumes=[{}, {'path':'/data','state':'Ready','uuid':'79324c69-6e75-4801-8000-000000000102'},
-                         {'path':'/media/sd','state':'Unavailable'}]
+                         {'path':'/media/sd','state':'Unavailable'},
+                         {'path':'/media/internal','state':'Ready','uuid':'79324c69-6e75-4801-8000-000000000103'}]
         self.mount='/proc/self/mountinfo'; self.ctx.path('/proc/self').mkdir(parents=True)
-        self.ctx.path(self.mount).write_text('5 1 179:2 / /data rw - ext4 /dev/mmcblk0p2 rw')
+        self.ctx.path(self.mount).write_text('5 1 179:2 / /media/internal rw - ext4 /dev/mmcblk0p8 rw')
         mock=patch('y2_platform.usb.storage',return_value={'volumes':self.volumes})
         mock.start(); self.addCleanup(mock.stop)
 
     def test_missing_sd_never_exposes_empty_mountpoint(self):
-        self.assertEqual([v['path'] for v in media_views(self.ctx)],['/data/music'])
+        self.assertEqual([v['path'] for v in media_views(self.ctx)],['/media/internal/music'])
 
     def test_dirty_or_failed_media_and_remount_failure_are_not_exposed(self):
         self.volumes[2].update(state='Failed',reason='filesystem_check_required')
@@ -263,18 +264,26 @@ class MediaViews(unittest.TestCase):
         self.assertEqual(media_views(self.ctx),[])
 
     def test_readonly_superblock_is_never_advertised_writable(self):
-        self.volumes[1]['state']='Degraded'
-        self.ctx.path(self.mount).write_text('5 1 179:2 / /data rw - ext4 /dev/mmcblk0p2 ro')
+        self.volumes[3]['state']='Degraded'
+        self.ctx.path(self.mount).write_text('5 1 179:2 / /media/internal rw - ext4 /dev/mmcblk0p8 ro')
         self.assertEqual(media_views(self.ctx)[0]['access'],'ro')
 
     def test_wrong_internal_geometry_uuid_or_nested_mount_is_excluded(self):
         self.ctx.path('/sys/dev/block/179:2/start').write_text('0')
         self.assertEqual(media_views(self.ctx),[])
-        self.ctx.path('/sys/dev/block/179:2/start').write_text('2104320')
-        self.volumes[1]['uuid']='system-root'
+        self.ctx.path('/sys/dev/block/179:2/start').write_text('3742720')
+        self.volumes[3]['uuid']='system-root'
         self.assertEqual(media_views(self.ctx),[])
-        self.volumes[1]['uuid']='79324c69-6e75-4801-8000-000000000102'
-        self.ctx.path(self.mount).write_text(self.ctx.path(self.mount).read_text()+'\n8 5 179:1 / /data/music rw - ext4 /dev/mmcblk0p1 rw')
+        self.volumes[3]['uuid']='79324c69-6e75-4801-8000-000000000103'
+        # The old Y2DATA geometry/uuid is no longer an acceptable internal export.
+        self.ctx.path('/sys/dev/block/179:2/start').write_text('2104320')
+        self.ctx.path('/sys/dev/block/179:2/size').write_text('1638400')
+        self.volumes[3]['uuid']='79324c69-6e75-4801-8000-000000000102'
+        self.assertEqual(media_views(self.ctx),[])
+        self.ctx.path('/sys/dev/block/179:2/start').write_text('3742720')
+        self.ctx.path('/sys/dev/block/179:2/size').write_text('11460608')
+        self.volumes[3]['uuid']='79324c69-6e75-4801-8000-000000000103'
+        self.ctx.path(self.mount).write_text(self.ctx.path(self.mount).read_text()+'\n8 5 179:1 / /media/internal/music rw - ext4 /dev/mmcblk0p1 rw')
         self.assertEqual(media_views(self.ctx),[])
 
 
@@ -310,11 +319,11 @@ class PhysicalHarness(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'identity_changed'): harness.guard()
 
     def test_benchmark_requires_the_exact_writable_user_partition(self):
-        good={'state':'Ready','uuid':'79324c69-6e75-4801-8000-000000000102',
-              'start':'2104320','sectors':'1638400','filesystem':'ext4'}
-        self.assertEqual(self.module.validate_volume([{},good,{}],'internal'),good)
-        for changes in ({'uuid':'system'},{'start':'0'},{'state':'Degraded'}):
-            with self.assertRaises(RuntimeError):self.module.validate_volume([{},dict(good,**changes),{}],'internal')
+        good={'state':'Ready','uuid':'79324c69-6e75-4801-8000-000000000103',
+              'start':'3742720','sectors':'11460608','filesystem':'ext4'}
+        self.assertEqual(self.module.validate_volume([{},{},{},good],'internal'),good)
+        for changes in ({'uuid':'system'},{'start':'0'},{'state':'Degraded'},{'uuid':'79324c69-6e75-4801-8000-000000000102'}):
+            with self.assertRaises(RuntimeError):self.module.validate_volume([{},{},{},dict(good,**changes)],'internal')
 
     def test_sd_benchmark_refuses_missing_dirty_or_readonly_media(self):
         for state in ('Unavailable','Failed','Degraded'):

@@ -136,7 +136,8 @@ def plan(ctx, scope):
         raise ValueError('resume_existing_reset_before_planning_another')
     live = busy(ctx, scope)
     requirements = {'stop_services': services(scope), 'restart': 'owner reboot after completion',
-                    'preserved': ['SSH identity', 'entropy', 'update/rollback', 'factory/calibration', 'unknown data directories']}
+                    'preserved': ['SSH identity', 'entropy', 'update/rollback', 'factory/calibration', 'unknown data directories',
+                                  'Y2Media internal music (/media/internal; delete files over MTP)']}
     if live:
         return {'state': 'NeedsQuiescence', 'scope': scope, 'pids': live, **requirements}
     data = os.open(ctx.path('/data'), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)

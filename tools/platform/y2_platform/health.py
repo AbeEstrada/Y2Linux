@@ -11,7 +11,7 @@ def check(ctx, full=False):
         checks.append(dict(name=name, state=state, reason=reason, **details))
 
     for volume in status['storage']['volumes']:
-        name = {'/': 'root', '/data': 'data', '/media/sd': 'sd'}[volume['path']]
+        name = {'/': 'root', '/data': 'data', '/media/sd': 'sd', '/media/internal': 'internal_media'}[volume['path']]
         state = {'Ready': 'OK', 'Degraded': 'DEGRADED', 'Failed': 'FAILED'}.get(volume['state'], 'UNAVAILABLE')
         if volume['space_state'] in ('LowSpace', 'CriticalSpace'):
             state = 'DEGRADED'

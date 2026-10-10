@@ -11,10 +11,12 @@ import uuid
 from pathlib import Path
 from .boot import private_directory
 from .common import atomic_json, json_read
+from . import internal_media
 from .observe import storage
 from .space import admission
 
 MAX_BYTES = 512 * 1024**2
+RESERVE = 96 * 1024**2
 
 
 def data_volume(ctx):
@@ -22,6 +24,55 @@ def data_volume(ctx):
     if value['state'] != 'Ready' or not value.get('generation'):
         raise ValueError('verified_data_unavailable')
     return value
+
+
+def media_volume(ctx):
+    """The verified Y2Media volume; uploads are published there once it is mounted and recorded Ready."""
+    value = next((v for v in storage(ctx)['volumes'] if v['path'] == internal_media.PATH), None)
+    if not value or value['state'] != 'Ready' or not value.get('generation'):
+        raise ValueError('verified_internal_media_unavailable')
+    return value
+
+
+def same_device(a, b):
+    return os.fstat(a).st_dev == os.fstat(b).st_dev
+
+
+def publish_copy(stage, name, target, size, expected):
+    """Cross-filesystem publish: copy the sealed bytes into the target directory, verify, link without replacing.
+
+    A hard link cannot leave Y2DATA, so the already hash-verified sealed file is copied to an exclusive
+    temporary name beside its destination and then linked: the final name appears atomically and never
+    replaces an existing file."""
+    temporary = '.' + name + '.y2part'
+    source = os.open('sealed.part', os.O_RDONLY | os.O_NOFOLLOW, dir_fd=stage)
+    out = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644, dir_fd=target)
+    try:
+        digest, remaining = hashlib.sha256(), size
+        free = os.fstatvfs(out)
+        if free.f_bavail * free.f_frsize - size < RESERVE:
+            raise ValueError('transfer_storage_reserve')
+        while remaining:
+            chunk = os.read(source, min(1024**2, remaining))
+            if not chunk:
+                raise ValueError('sealed_upload_truncated')
+            view = memoryview(chunk)
+            while view:
+                view = view[os.write(out, view):]
+            digest.update(chunk)
+            remaining -= len(chunk)
+        if digest.hexdigest() != expected or os.fstat(out).st_size != size:
+            raise ValueError('published_copy_hash_or_size_mismatch')
+        os.fsync(out)
+        # Atomic and fails on an existing name: never overwrite music.
+        os.link(temporary, name, src_dir_fd=target, dst_dir_fd=target, follow_symlinks=False)
+    finally:
+        os.close(source)
+        os.close(out)
+        try:
+            os.unlink(temporary, dir_fd=target)
+        except FileNotFoundError:
+            pass
 
 
 def filename(name):
@@ -80,7 +131,7 @@ def commit(ctx, token):
     stage_path(ctx, token)  # validate before any path access
     volume = data_volume(ctx)
     data = os.open(ctx.path('/data'), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-    stage_root = stage = source = sealed = target = lock = None
+    stage_root = stage = source = sealed = target = lock = media = None
     try:
         stage_root = open_directory(data, 'transfer-staging')
         stage = open_directory(stage_root, token)
@@ -133,13 +184,25 @@ def commit(ctx, token):
         os.fsync(sealed)
         if data_volume(ctx)['generation'] != value['data_generation']:
             raise ValueError('data_generation_changed')
-        target = open_directory(data, 'music', create=True)
+        # Music lives on Y2Media once it is mounted and recorded Ready, else on Y2DATA.
+        if internal_media.ready(ctx):
+            destination = media_volume(ctx)
+            media = os.open(ctx.path(internal_media.PATH), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        target = open_directory(media if media is not None else data, 'music', create=True)
         for part in parts[:-1]:
             nextfd = open_directory(target, part, create=True)
             os.close(target)
             target = nextfd
-        # linkat is atomic and fails on an existing name; never overwrite music.
-        os.link('sealed.part', parts[-1], src_dir_fd=stage, dst_dir_fd=target, follow_symlinks=False)
+        if media is not None:
+            if media_volume(ctx)['generation'] != destination['generation']:
+                raise ValueError('media_generation_changed')
+            if same_device(stage, target):
+                os.link('sealed.part', parts[-1], src_dir_fd=stage, dst_dir_fd=target, follow_symlinks=False)
+            else:
+                publish_copy(stage, parts[-1], target, size, expected)
+        else:
+            # linkat is atomic and fails on an existing name; never overwrite music.
+            os.link('sealed.part', parts[-1], src_dir_fd=stage, dst_dir_fd=target, follow_symlinks=False)
         os.fsync(target)
         value['state'] = 'Committed'
         value['record'].update(result='OK', failure=None)
@@ -149,7 +212,7 @@ def commit(ctx, token):
         os.fsync(stage)
         return value
     finally:
-        for fd in (target, sealed, source, lock, stage, stage_root, data):
+        for fd in (target, sealed, source, lock, stage, stage_root, media, data):
             if fd is not None:
                 os.close(fd)
 

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Mount Y2Media (internal user media, eMMC p8) after Y2DATA. It is never boot-critical:
+# any failure leaves the system up without internal media, and the library falls back to /data.
+[ "$1" = start ] || exit 0
+/usr/sbin/y2-platform internal-media mount > /dev/null 2>&1 || :
+if mountpoint -q /media/internal; then
+    mkdir -p /media/internal/music
+fi
+exit 0

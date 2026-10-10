@@ -29,15 +29,17 @@ def media_views(ctx):
     volumes = storage(ctx)['volumes']
     mounts = mountinfo(ctx.read('/proc/self/mountinfo'))
     result = []
-    for volume, path, label in ((volumes[1], '/data/music', 'Internal Storage'),
+    # Internal Storage is the Y2Media partition's music folder (volumes[3]); the old
+    # /data/music folder on Y2DATA is no longer exported.
+    for volume, path, label in ((volumes[3], '/media/internal/music', 'Internal Storage'),
                                 (volumes[2], '/media/sd', 'SD Card')):
         mount = next((m for m in mounts if m['path'] == volume['path']), None)
         root = ctx.path(path)
-        if path == '/data/music':
+        if path == '/media/internal/music':
             device = ctx.path('/sys/dev/block/' + mount['device_id']) if mount else None
-            if (not device or read(device / 'start') != '2104320' or
-                    read(device / 'size') != '1638400' or
-                    volume.get('uuid') != '79324c69-6e75-4801-8000-000000000102' or
+            if (not device or read(device / 'start') != '3742720' or
+                    read(device / 'size') != '11460608' or
+                    volume.get('uuid') != '79324c69-6e75-4801-8000-000000000103' or
                     not mount or mount['filesystem'] != 'ext4'):
                 continue
         # Existing validated internal partition and platform SD mount claim
@@ -47,14 +49,14 @@ def media_views(ctx):
             continue
         if (volume['state'] in ('Ready', 'Degraded') and mount and root.is_dir() and not root.is_symlink()
                 and not any(m['path'].startswith(path + '/') or
-                            (path == '/data/music' and m['path'] == path) for m in mounts)):
+                            (path == '/media/internal/music' and m['path'] == path) for m in mounts)):
             result.append({'path': path, 'name': label, 'mount_id': mount['mount_id'],
                            'device_id': mount['device_id'], 'uuid': volume.get('uuid'),
                            'filesystem': mount['filesystem'], 'access': 'ro' if 'ro' in mount['options'] or 'ro' in mount['super_options'] else 'rw'})
     return result
 
 
-NAMES = {'/data/music': 'Internal Storage', '/media/sd': 'SD Card'}
+NAMES = {'/media/internal/music': 'Internal Storage', '/media/sd': 'SD Card'}
 
 
 def identity(view):

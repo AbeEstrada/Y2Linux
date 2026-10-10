@@ -70,6 +70,57 @@ class Transfer(unittest.TestCase):
         with self.assertRaises(FileExistsError): commit(self.ctx,stage['id'])
         self.assertEqual(target.read_bytes(),self.payload)
 
+    def use_internal_media(self, cross_device):
+        """Y2Media mounted and Ready: uploads stage on Y2DATA and publish on the media volume."""
+        self.media = {'path':'/media/internal', 'state':'Ready', 'space_state':'Normal', 'generation':'boot:9:179:8'}
+        self.ctx.path('/media/internal').mkdir(parents=True)
+        for patcher in (patch('y2_platform.transfer.storage', side_effect=lambda _: {'volumes':[self.volume, self.media]}),
+                        patch('y2_platform.transfer.internal_media.ready', return_value=True),
+                        patch('y2_platform.transfer.same_device', return_value=not cross_device)):
+            patcher.start(); self.addCleanup(patcher.stop)
+
+    def test_uploads_publish_on_y2media_by_copy_across_filesystems_and_never_replace(self):
+        self.use_internal_media(cross_device=True)
+        stage,path=self.begin(); path.write_bytes(self.payload)
+        self.assertEqual(commit(self.ctx,stage['id'])['state'],'Committed')
+        target=self.ctx.path('/media/internal/music/Album/track.flac')
+        self.assertEqual(target.read_bytes(),self.payload)
+        self.assertFalse(self.ctx.path('/data/music').exists())
+        self.assertEqual(sorted(p.name for p in target.parent.iterdir()),['track.flac'])      # temporary name gone
+        discard(self.ctx,stage['id'])
+        stage,path=self.begin(); path.write_bytes(self.payload)
+        with self.assertRaises(FileExistsError): commit(self.ctx,stage['id'])
+        self.assertEqual(target.read_bytes(),self.payload)
+        self.assertEqual(sorted(p.name for p in target.parent.iterdir()),['track.flac'])
+
+    def test_same_filesystem_media_still_uses_an_atomic_link(self):
+        self.use_internal_media(cross_device=False)
+        stage,path=self.begin(); path.write_bytes(self.payload)
+        with patch('y2_platform.transfer.publish_copy') as copy:
+            self.assertEqual(commit(self.ctx,stage['id'])['state'],'Committed')
+        copy.assert_not_called()
+        self.assertEqual(self.ctx.path('/media/internal/music/Album/track.flac').read_bytes(),self.payload)
+
+    def test_media_replacement_and_low_space_fail_closed_before_publishing(self):
+        self.use_internal_media(cross_device=True)
+        stage,path=self.begin(); path.write_bytes(self.payload)
+        real=__import__('y2_platform.transfer',fromlist=['x']).media_volume
+        calls=[]
+        def changing(ctx):
+            calls.append(1)
+            value=dict(real(ctx))
+            if len(calls)>1: value['generation']='boot:11:179:8'      # replaced between open and publish
+            return value
+        with patch('y2_platform.transfer.media_volume',side_effect=changing):
+            with self.assertRaisesRegex(ValueError,'media_generation_changed'): commit(self.ctx,stage['id'])
+        self.assertFalse(self.ctx.path('/media/internal/music/Album/track.flac').exists())
+        discard(self.ctx,stage['id'])
+        stage,path=self.begin(); path.write_bytes(self.payload)
+        with patch('y2_platform.transfer.RESERVE',1<<62):                       # the media volume cannot keep its reserve
+            with self.assertRaisesRegex(ValueError,'transfer_storage_reserve'): commit(self.ctx,stage['id'])
+        self.assertFalse(self.ctx.path('/media/internal/music/Album/track.flac').exists())
+        self.assertEqual([p.name for p in self.ctx.path('/media/internal/music/Album').iterdir()],[])
+
     def test_mount_replacement_and_symlink_escape_fail_closed(self):
         stage,path=self.begin(); path.write_bytes(self.payload)
         self.volume['generation']='boot:2:179:7'

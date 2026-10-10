@@ -72,11 +72,11 @@ def delta(before, after, seconds):
 
 
 def validate_volume(volumes, volume):
-    selected=volumes[1 if volume=='internal' else 2]
+    selected=volumes[3 if volume=='internal' else 2]
     if selected.get('state')!='Ready':
         raise RuntimeError('media_not_ready_or_writable')
-    if volume=='internal' and (selected.get('uuid')!='79324c69-6e75-4801-8000-000000000102' or
-            selected.get('start')!='2104320' or selected.get('sectors')!='1638400' or selected.get('filesystem')!='ext4'):
+    if volume=='internal' and (selected.get('uuid')!='79324c69-6e75-4801-8000-000000000103' or
+            selected.get('start')!='3742720' or selected.get('sectors')!='11460608' or selected.get('filesystem')!='ext4'):
         raise RuntimeError('internal_user_partition_identity_invalid')
     if volume=='sd' and selected.get('filesystem') not in ('vfat','exfat','ext4'):
         raise RuntimeError('unsupported_sd_filesystem')
@@ -168,10 +168,10 @@ class Harness:
             installed=json.loads(self.identity['versions'])
             for field in ('build_git_commit','reborn_source_commit','kernel_version','rootfs_version'):
                 if installed.get(field)!=expected.get(field): raise RuntimeError('wrong_installed_candidate:'+field)
-        script='import sys,json,pathlib;sys.path.insert(0,"/usr/lib/y2-platform");from y2_platform.common import Context,read;from y2_platform.observe import storage;v=storage(Context())["volumes"];p=pathlib.Path("/sys/dev/block")/v[1].get("device_id","absent");v[1].update(start=read(p/"start"),sectors=read(p/"size"));print(json.dumps(v))'
+        script='import sys,json,pathlib;sys.path.insert(0,"/usr/lib/y2-platform");from y2_platform.common import Context,read;from y2_platform.observe import storage;v=storage(Context())["volumes"]\nfor i in (1,3):\n p=pathlib.Path("/sys/dev/block")/v[i].get("device_id","absent");v[i].update(start=read(p/"start"),sectors=read(p/"size"))\nprint(json.dumps(v))'
         self.volume_identity=validate_volume(json.loads(self.remote(['python3','-c',script])),self.args.volume)
         self.folder='Y2-USB-check-'+uuid.uuid4().hex
-        base='/media/sd' if self.args.volume=='sd' else '/data/music' if self.args.protocol=='mtp' else '/data'
+        base='/media/sd' if self.args.volume=='sd' else '/media/internal/music'
         self.device_dir=base+'/'+self.folder
         # mkdir refuses a collision. No owner-selected destination path.
         if self.args.protocol=='mtp': run(['gio','mkdir',self.device_url('')])
