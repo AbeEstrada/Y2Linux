@@ -1,6 +1,11 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-10 Reborn UI v3 candidate sealed — 2026-10-10 (latest)
+## POWER-FINAL-11 remaining-screens candidate sealed — 2026-10-11 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-11/` (Linux build `5741d16`, Reborn 0.3.0 `abbb203`, root v1.41; BOOTIMG `1482316d…ee08`, Y2ROOT `4773d90d…d73c`) is 10 plus the computer, pairing, download, scanning and battery screens and a redrawn offline charging screen; **not flashed, physical NOT_RUN**.
+The installed image is 10. Kernel and drivers unchanged; the rescue charger's decision logic is untouched (display only). Details: [validation](validation/Y2-PLATFORM-V1-POWER-FINAL-11-SCREENS.md), [scope audit](planning/roadmap-gap-audit.md). Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-10 Reborn UI v3 candidate sealed — 2026-10-10
 
 `out/y2linux-platform-v1-power-final-candidate-10/` (Linux build `04aa8f9`, Reborn 0.3.0 `f31c94c`, root v1.40; BOOTIMG `9d1f00a5…0ca`, Y2ROOT `77a41a33…16`) is 09 plus the redesigned Reborn UI, startup screen and shutdown animation; **not flashed, physical NOT_RUN**.
 The installed image is 09. Kernel, drivers and partitions are unchanged. Details: [validation](validation/Y2-PLATFORM-V1-POWER-FINAL-10-UI.md), [scope audit](planning/roadmap-gap-audit.md), Reborn `docs/ui/REBORN-PRODUCT-UI-V3.md`. Readiness remains **MORE_WORK_REQUIRED**.
