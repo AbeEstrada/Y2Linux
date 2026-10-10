@@ -42,15 +42,10 @@ def reborn_rasterizer(reborn):
     spec = importlib.util.spec_from_file_location('render_previews', reborn / 'tools/preview/render_previews.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    ui_font = module.texture(reborn / 'assets/fonts/reborn-ui.rgba', 1024, 1024)
-    icons = module.texture(reborn / 'assets/icons/reborn-icons.rgba', 192, 160)
-    artwork = Image.open(reborn / 'docs/ui/fixtures/album-art.png').convert('RGBA')
+    raster = module.Rasterizer(reborn)
 
     def render(path):
-        canvas = Image.new('RGBA', SIZE, (9, 11, 13, 255))
-        for quad in json.loads(path.read_text())['quads']:
-            module.draw_quad(canvas, quad, ui_font, ui_font, icons, artwork)
-        return canvas.convert('RGB')
+        return raster.render(json.loads(path.read_text())['quads'])
     return render
 
 

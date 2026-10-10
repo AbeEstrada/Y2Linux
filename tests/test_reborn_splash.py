@@ -177,7 +177,7 @@ int main(int argc,char **argv) {
         return [dict(item.split('=') for item in line.split()[1:]) for line in lines]
 
     def layout(self):
-        path = REBORN / 'docs/ui/previews/v2/boot-layout.json'
+        path = REBORN / 'docs/ui/previews/v3/boot-layout.json'
         if not path.exists():
             self.skipTest('Reborn boot layout not present')
         return json.loads(path.read_text())
@@ -192,7 +192,7 @@ int main(int argc,char **argv) {
         self.assertEqual(fills, sorted(set(fills)), 'strictly increasing coarse positions')
         generated = Path(self.build.name) / 'regenerated.h'
         subprocess.run([sys.executable, str(ROOT / 'tools/graphics/make-splash-mark.py'),
-                        str(REBORN / 'docs/ui/previews/v2/boot-layout.json'), str(generated),
+                        str(REBORN / 'docs/ui/previews/v3/boot-layout.json'), str(generated),
                         '--reborn', str(REBORN)], check=True, capture_output=True)
         self.assertEqual(generated.read_text(), (ROOT / 'tools/graphics/reborn-splash-mark.h').read_text(),
                          'reborn-splash-mark.h is stale: rerun tools/graphics/make-splash-mark.py')
@@ -257,7 +257,7 @@ int main(int argc,char **argv) {
                  ('01c-boot-60', ['conn_wifi']), ('01d-boot-final-phase', ['runtime_ready']),
                  ('02-boot-handoff', ['ready'])]
         for name, tokens in cases:
-            reference = REBORN / f'docs/ui/previews/v2/{name}.png'
+            reference = REBORN / f'docs/ui/previews/v3/{name}.png'
             if not reference.exists():
                 self.skipTest('Reborn v2 preview not present')
             splash, reborn = self.picture('frame', *tokens), Image.open(reference).convert('RGB')
@@ -271,7 +271,7 @@ int main(int argc,char **argv) {
             self.assertEqual(self.picture('finish', earlier).tobytes(), final, earlier)
 
     def test_failure_screen_is_pixel_identical_and_has_no_bar(self):
-        reference = REBORN / 'docs/ui/previews/v2/03b-boot-failed.png'
+        reference = REBORN / 'docs/ui/previews/v3/03b-boot-failed.png'
         if not reference.exists():
             self.skipTest('Reborn v2 preview not present')
         from PIL import Image
@@ -282,14 +282,25 @@ int main(int argc,char **argv) {
         bar = layout['bar']
         track, fill = bar['track'], bar['fill']
         y = int(bar['y'])
-        half = self.picture('mid', str(int(36.5 * 256)), 'fsck_complete').load()
+        # Before the leading dot appears (it needs three lit pixels) the edge pixel is a blend.
+        half = self.picture('mid', str(int(2.5 * 256)), 'fsck_complete').load()
         x0 = int(bar['x'])
-        self.assertEqual(half[x0 + 35, y], tuple(fill.to_bytes(3, 'big')))
-        edge = half[x0 + 36, y]
+        self.assertEqual(half[x0 + 1, y], tuple(fill.to_bytes(3, 'big')))
+        edge = half[x0 + 2, y]
         low, high = tuple(track.to_bytes(3, 'big')), tuple(fill.to_bytes(3, 'big'))
         self.assertTrue(all(min(l, h) <= e <= max(l, h) for l, e, h in zip(low, edge, high)) and edge not in (low, high))
-        self.assertEqual(half[x0 + 37, y], low)
-        self.assertEqual(half[x0 + 36, y + 1], edge, 'both rows of the thin bar agree')
+        self.assertEqual(half[x0 + 3, y], low)
+        self.assertEqual(half[x0 + 2, y + 1], edge, 'both rows of the thin bar agree')
+        # Later the dot rides the leading edge, in hard pixels over three rows either side.
+        later = self.picture('mid', str(int(36.5 * 256)), 'fsck_complete').load()
+        self.assertEqual(later[x0 + 36, y], tuple(fill.to_bytes(3, 'big')))
+        self.assertEqual(later[x0 + 36, y - 2], tuple(fill.to_bytes(3, 'big')))
+        self.assertEqual(later[x0 + 36 + 4, y - 2], tuple(int(bar_bg) for bar_bg in self.background_rgb(layout)))
+
+    @staticmethod
+    def background_rgb(layout):
+        value = layout['background']
+        return (value >> 16 & 255, value >> 8 & 255, value & 255)
 
     def test_no_yellow_and_only_the_current_bar_state_is_drawn(self):
         gold = {(0xe7, 0xc9, 0x8b), (0xff, 0xe2, 0xa4), (0x7d, 0x63, 0x37)}

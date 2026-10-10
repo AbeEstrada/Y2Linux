@@ -10,7 +10,7 @@ geometry and colours, the startup phase table (milestone name, status line,
 coarse bar position) and the failure milestones come from the same layout.
 
 Input is `boot-layout.json`, written by Y2Reborn's `reborn-preview`
-(docs/ui/previews/v2/boot-layout.json).
+(docs/ui/previews/v3/boot-layout.json).
 
 Usage: make-splash-mark.py BOOT_LAYOUT.json OUTPUT.h [--reborn REBORN_ROOT]
 """
@@ -26,15 +26,10 @@ def rasterizer(reborn):
     spec = importlib.util.spec_from_file_location('render_previews', reborn / 'tools/preview/render_previews.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    ui_font = module.texture(reborn / 'assets/fonts/reborn-ui.rgba', 1024, 1024)
-    icons = module.texture(reborn / 'assets/icons/reborn-icons.rgba', 192, 160)
-    blank = Image.new('RGBA', (1, 1))
+    raster = module.Rasterizer(reborn)
 
     def render(quads, background):
-        canvas = Image.new('RGBA', (480, 360), background + (255,))
-        for quad in quads:
-            module.draw_quad(canvas, quad, ui_font, ui_font, icons, blank)
-        return canvas.convert('RGB')
+        return raster.render(quads, background + (255,))
     return render
 
 

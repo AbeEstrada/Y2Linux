@@ -231,15 +231,29 @@ static uint32_t mix(uint32_t from, uint32_t to, unsigned level /* 0..255 */) {
     }
     return out;
 }
-/* The thin track with its fill from the left; the leading pixel is blended so
- * the fill advances smoothly in sub-pixel steps. */
+/* The hairline track with its fill from the left and a small leading dot; the
+ * leading pixel is blended so the fill advances smoothly in sub-pixel steps.
+ * The rows around the bar are cleared first so the dot leaves no trail. */
 static void bar(Display *d, unsigned shown) {
     unsigned ox = (d->width - 480) / 2, oy = (d->height - 360) / 2;
     unsigned whole = shown / FILL_UNIT, fraction = shown % FILL_UNIT;
+    unsigned top = RB_BAR_Y - 2, bottom = RB_BAR_Y + RB_BAR_H + 2;
+    for (unsigned row = top; row < bottom; row++) {
+        uint32_t *p = (uint32_t *)(d->pixels + (size_t)(oy + row) * d->pitch) + ox + RB_BAR_X - 3;
+        for (unsigned x = 0; x < RB_BAR_W + 6; x++) p[x] = BG;
+    }
     for (unsigned row = 0; row < RB_BAR_H; row++) {
         uint32_t *p = (uint32_t *)(d->pixels + (size_t)(oy + RB_BAR_Y + row) * d->pitch) + ox + RB_BAR_X;
         for (unsigned x = 0; x < RB_BAR_W; x++)
             p[x] = x < whole ? RB_BAR_FILL : x == whole && fraction ? mix(RB_BAR_TRACK, RB_BAR_FILL, fraction) : RB_BAR_TRACK;
+    }
+    if (whole < 3 || whole >= RB_BAR_W) return;
+    /* The dot is hard-edged pixels (offset, width per row), the same table
+     * Reborn's boot screen draws, so the hand-off is pixel-identical. */
+    static const unsigned char dot[6][2] = {{2, 2}, {1, 4}, {0, 6}, {0, 6}, {1, 4}, {2, 2}};
+    for (unsigned row = 0; row < 6; row++) {
+        uint32_t *p = (uint32_t *)(d->pixels + (size_t)(oy + RB_BAR_Y - 2 + row) * d->pitch) + ox + RB_BAR_X + whole - 3 + dot[row][0];
+        for (unsigned x = 0; x < dot[row][1]; x++) p[x] = RB_BAR_FILL;
     }
 }
 static void status(Display *d, unsigned phase) {

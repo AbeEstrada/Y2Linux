@@ -7465,3 +7465,34 @@ image is POWER-FINAL-06. Evidence: `out/deep-sleep-final/evidence/20261010/{91,9
 | Physical | NOT_RUN | Nothing above is installed. Provisioning runs only after the owner flashes and only on the exact serial. |
 
 Readiness for the next boundary: **PARTIALLY READY** (source and offline tests; physical provisioning pending flash).
+
+
+## POWER-FINAL-10 Reborn UI v3 scope audit — 2026-10-10
+
+**Boundary:** a material change in production scope (what the owner sees and presses) and a bounded change in
+graphics-memory scope: Reborn Product UI v3 replaces the v2 interface, the early boot splash and the shutdown
+screens, and changes what the Power button does. Repeated before source changes, per the standing rule. This audit
+builds and flashes nothing, and the owner asked for this redesign to be built as candidate 10. **No kernel,
+driver, partition, power or radio code changes in this candidate**; it is POWER-FINAL-09 plus Reborn 0.3.0.
+
+**Baseline:** POWER-FINAL-09 is installed and checked (evidence `out/deep-sleep-final/evidence/20261010/94-power09-first-check`:
+clean first boot, taint 0, MTP roots `/media/internal/music` and `/media/sd`, Reborn playing from Y2Media).
+
+| Row | Classification | Evidence and limit |
+| --- | --- | --- |
+| GPU path | UNCHANGED shader, NEW textures | The fragment program is still `texture × tint`. New: three 1024-wide glyph pages and one 512-wide shape/icon page uploaded as `GL_LUMINANCE_ALPHA` (1 byte/texel in the binary), a 1024×512 RGBA thumbnail atlas and 5 draw-state combinations. A host harness renders all 62 preview frames through the production GL code on Mesa and matches the Python rasteriser (mean difference < 1.5/255). Mali-400 behaviour of luminance-alpha and non-power-of-two textures is standard GLES2 but **NOT_RUN on the device**. |
+| Memory | CHANGE, bounded | UI textures grow from about 4.4 MB to about 9 MB (fonts 5.9 MB, masks 1.5 MB, thumbnails 2.1 MB, artwork 0.2 MB) against `MemTotal` 951824 KiB. Frame lists fall from up to ~1800 quads to a few hundred in about 40 batches. Resident set not yet measured on a flashed image. |
+| Storage | CHANGE, bounded | A cover cache of at most 1500 files (about 55 MB) under `/data/reborn/cache`, written atomically, emptied by Clear cache; Y2Data is 800 MiB shared with settings, logs and the library database. Disk-full falls back to no cache (placeholders and decode on demand). |
+| CPU | CHANGE, unmeasured | Cover decoding runs on a background worker under the existing artwork-decode workload hint, one cover at a time, only for covers on screen; it replaces the old single-slot collection-art worker. No measurement yet. |
+| Power button | CHANGE | A short press still turns the screen off or on (or sleeps when paused). A hold no longer opens a confirmation sheet: at the existing 650 ms long-press a ring fills over 1.2 s and turning off happens at about 1.85 s from the press; release cancels (`Action::PowerHoldCancel`). The shutdown request, grace period and acknowledgement path are unchanged. There is no Quick Settings or Power menu any more. |
+| Shutdown timeline | UNKNOWN | User shutdowns have a 10 s grace and low-battery shutdowns a 3 s grace. The normal animation is 76 frames at 34 ms (about 2.6 s) around the real save; the low-battery farewell is 30 frames (about 1.0 s). If Reborn does not acknowledge, the platform's deadline still fires and blanks the panel. On-device timing NOT_RUN. |
+| Early splash | CHANGE, tested | `reborn-splash-mark.h` is regenerated from Reborn's boot layout; the hand-off frame, every progress frame and the failure screen are pixel-identical to Reborn's own frames (27 splash tests pass), including the new hard-edged leading dot. The failure screen now reads *Couldn't start / Hold Power for 10 seconds, then turn it on again.* |
+| Removed from the normal UI | CHANGE | Diagnostics, maintenance, codec/LDAC tuning, update internals, song info and jump to letter move to a service menu opened by seven taps on Version in About & Updates. SSH and `rebornctl` are unchanged. |
+| Licensing | CHANGE | Open Sans (SIL OFL 1.1) glyph data is compiled into the Reborn binary; the licence text is installed at `/usr/share/reborn/OpenSans-OFL.txt` and named in the package licence. No font file is installed. |
+| Open first-boot failure | UNRESOLVED, unrelated | The 08 first boot showed the splash failure screen once; it did not recur on 09. This candidate does not change that path but its new failure text must be read on the device if it recurs. |
+| Physical | NOT_RUN | Nothing above is observed on hardware. |
+
+**Gate decision:** build candidate 10 as 09 plus Reborn 0.3.0; keep the platform untouched; the owner flashes and
+reports what the screens look like. The first on-device check after flashing is read-only: identity, taint,
+Reborn memory and CPU, thumbnail cache growth, then the owner's visual review.
+Readiness for the next boundary: **PARTIALLY READY** (source, host and splash tests; physical review pending flash).
