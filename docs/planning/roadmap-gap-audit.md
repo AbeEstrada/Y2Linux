@@ -7475,3 +7475,28 @@ charge rating or independent current/temperature evidence exists. Selectors abov
 (1200–1600 mA, never requested by stock) are rejected at the PMIC write boundary. Raising the ceiling above
 650 mA is a root-only, volatile, logged qualification action, not shipped behavior. Readiness for the
 next boundary: **PARTIALLY READY** (implementation yes; high-current activation blocked on cell rating).
+
+
+## POWER-FINAL-08 internal-storage hardware-scope audit — 2026-10-10
+
+**Boundary:** a material change in hardware/production scope: the eMMC host write allow-list gains the
+stock FAT partition (p8), and that partition is reformatted. Repeated before source changes, per the
+standing rule. This audit builds and flashes nothing. **Owner authorization (2026-10-10):** extend the
+write guard to p8, replace the stock FAT filesystem with ext4 `Y2MEDIA`, and migrate then delete the
+old `/data/music` originals once hash-verified. Flashing remains the owner's.
+
+**Baseline:** POWER-FINAL-07 (Linux `551baad`, branch `codex/platform-v1-power-final-07`), installed
+image is POWER-FINAL-06. Evidence: `out/deep-sleep-final/evidence/20261010/{91,92,93}-*`.
+
+| Row | Classification | Evidence and limit |
+| --- | --- | --- |
+| eMMC geometry | CONFIRMED | `mmcblk0` 15203328 sectors (7423 MiB); p5 Y2ROOT 1679360, p7 Y2DATA 1638400 at 2104320, **p8 stock runtime FAT 11460608 at 3742720 (5596 MiB), directly after USRDATA and ending at the exposed disk end**. Hidden prefix/tail, BOOTIMG, NVRAM, PROTECT, SEC_RO, SECCFG, BMTPOOL, CACHE stay outside every write span. |
+| Stock p8 contents | CONFIRMED | vfat serial `3F93-07E6`, 541 files / 31 MB (stock `Music`, `Y2Player`, `Themes`, Android folders, screenshots); `fsck.fat -n` reports only a stale dirty bit. **File-level backup retained** (`93-stock-fat-partition-backup/p8-contents.tar`, 20.4 MB). |
+| Why MTP showed 808 MB / 511 MB | EXPLAINED | Internal Storage was a folder (`/data/music`) on the 800 MiB Y2DATA that also holds state and logs; the SD filesystem was a 512 MiB copy of a root image on a 121 GiB partition. SD reformatted 2026-10-10 (125.7 GB over MTP, hashes verified). |
+| Write guard | CHANGE | One added span `[3742720, Y2_EMMC_DISK_SECTORS)`; tests pin ANDROID, USRDATA, p8 and the exact native extents sector by sector, and that a write straddling spans is refused. |
+| Y2Media identity | DEFINED | ext4, label `Y2MEDIA`, UUID `...0103`, geometry-checked; mounted only on exact match at `/media/internal` after `e2fsck -p`; never boot-critical. Provisioning is explicit and names the stock serial. |
+| Library / MTP / SFTP / upload | CHANGE | Internal Storage = `/media/internal/music`; Reborn follows the platform's Ready record and falls back to `/data/music` before provisioning. Factory reset does NOT erase Y2Media music (listed as preserved). |
+| Wear / power loss | UNKNOWN | ext4 on eMMC with journal; unclean power loss repaired by `e2fsck -p` at mount. No endurance measurement. |
+| Physical | NOT_RUN | Nothing above is installed. Provisioning runs only after the owner flashes and only on the exact serial. |
+
+Readiness for the next boundary: **PARTIALLY READY** (source and offline tests; physical provisioning pending flash).

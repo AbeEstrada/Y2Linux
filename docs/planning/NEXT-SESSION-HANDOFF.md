@@ -1,5 +1,15 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
+> **LATEST (2026-10-10 evening): POWER-FINAL-08 SEALED — the one cumulative image (06 + 07 + 08); awaiting the OWNER FLASH (agent has not flashed or provisioned).**
+> Package `out/y2linux-platform-v1-power-final-candidate-08/` (`OWNER-HANDOFF.md`, `VALIDATION-REPORT.md`, `fallback/` = sealed 07), symbols `…-candidate-08-symbols/`, receipts `out/deep-sleep-final/build08-receipts/`,
+> worktrees `/home/luca/Dokumente/Code/worktrees/platform-v1-power-final-08/{Y2Linux,Y2Reborn}`, branch `codex/platform-v1-power-final-08` (Linux build commit `d9fd5a7b57927fc22b4d62d9ee49a8e03c3cb170`, later tests/docs `c65080d`, `32a9d13`; Reborn `ac5502ea96f4d85a9cdbb32f210d46e658430abd`).
+> BOOTIMG `ad39788aa61303633d875ee4ff30068faa87ef5778496f31ec768144b449efb1`, Y2ROOT `e79bac968b559e19332a54dafa00566a552e028c0ea86999b46f2e8424eec71a`; kernel `-power-final-08`, root v1.38, release `.8`.
+> **New in 08:** Y2Media = stock FAT p8 as ext4 `Y2MEDIA` at `/media/internal` (eMMC write guard extended by exactly that span, owner-approved); MTP Internal Storage = `/media/internal/music`; Reborn follows the platform Ready record (fallback `/data/music`);
+> `y2-media format --confirm-cid`/`grow`, undersized report, recycled-mount-id marker fix, `resize2fs`. SD card was already reformatted live (125.7 GB over MTP). Backup of the stock p8 files: `out/deep-sleep-final/evidence/20261010/93-stock-fat-partition-backup/`.
+> **Provisioning after the owner flashes (I run it, device idle):** `y2-platform internal-media provision --confirm-serial 3F93-07E6` (replaces only that stock FAT, migrates `/data/music` with hashes, removes originals only after verification), then reboot.
+> **Offline:** container suite 629 PASS, 29 + 27 host PASS, package/ELF/ARM/privacy PASS, Reborn fmt/clippy/tests PASS; same 48 environment errors as 07 on the broad host run. **Physical NOT_RUN.** Still open: 06's first power-down cycle, MTP to Y2Media, library rescan after the root change, high-current charging (needs the cell rating).
+> Verdict: IMPLEMENTATION_READY_PROVISIONING_PENDING; readiness MORE_WORK_REQUIRED.
+
 > **LATEST (2026-10-10): POWER-FINAL-07 CHARGING CANDIDATE SEALED — awaiting the OWNER FLASH (agent has not flashed).** 06 is flashed and healthy at first check (`out/deep-sleep-final/evidence/20261010/90-power06-first-check/`,
 > boot `bed8cebd`, taint 0, `Y2INFRA mode=powerdown fallback=0`) but its first power-down cycle has NOT been run (battery was 8%, then charging).
 > Package `out/y2linux-platform-v1-power-final-candidate-07/` (own `OWNER-HANDOFF.md`, `VALIDATION-REPORT.md`, `SHA256SUMS`, `fallback/` = sealed 06), symbols `…-candidate-07-symbols/`, receipts `out/deep-sleep-final/build07-receipts/`,

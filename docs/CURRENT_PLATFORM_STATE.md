@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-07 charging candidate sealed — 2026-10-10 (latest)
+## POWER-FINAL-08 cumulative candidate sealed — 2026-10-10 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-08/` (Linux `d9fd5a7`, Reborn `ac5502e`, root v1.38; BOOTIMG `ad39788a…efb1`, Y2ROOT `e79bac96…c71a`) is the one image containing 06 (deep-sleep power-down bring-up), 07 (charging policy)
+and 08 (internal storage). **Not flashed; physical NOT_RUN.** The installed image is 06. 08 turns the stock FAT partition into ext4 Y2Media (`/media/internal`), exports it as MTP Internal Storage and adds explicit SD `format`/`grow`; the one-time
+provisioning runs only after the owner flashes. Details: [storage](knowledge/internal-storage.md), [policy](knowledge/charging-current-policy.md), [handoff](planning/NEXT-SESSION-HANDOFF.md). Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-07 charging candidate sealed — 2026-10-10
 
 `out/y2linux-platform-v1-power-final-candidate-07/` (Linux `551baad`, Reborn `97ff8c3` unchanged, root v1.37; BOOTIMG `65a1daf4…a3001`, Y2ROOT `83a61c1e…e66`) is 06 plus the full vendor charging policy and is built and offline-qualified;
 **it is not flashed (physical NOT_RUN)**. The installed image is 06 (healthy at first check, power-down cycle still to run). The stock 16-step `CS_VTH` table and per-source requests (DCP/nonstandard 1100, Apple 800, CDP 650, SDP 450) are
