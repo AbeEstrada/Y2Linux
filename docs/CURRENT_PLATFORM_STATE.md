@@ -1,5 +1,51 @@
 # Current Y2Linux platform state
 
+## POWER-FINAL-11 remaining-screens candidate sealed — 2026-10-11 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-11/` (Linux build `5741d16`, Reborn 0.3.0 `abbb203`, root v1.41; BOOTIMG `1482316d…ee08`, Y2ROOT `4773d90d…d73c`) is 10 plus the computer, pairing, download, scanning and battery screens and a redrawn offline charging screen; **not flashed, physical NOT_RUN**.
+The installed image is 10. Kernel and drivers unchanged; the rescue charger's decision logic is untouched (display only). Details: [validation](validation/Y2-PLATFORM-V1-POWER-FINAL-11-SCREENS.md), [scope audit](planning/roadmap-gap-audit.md). Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-10 Reborn UI v3 candidate sealed — 2026-10-10
+
+`out/y2linux-platform-v1-power-final-candidate-10/` (Linux build `04aa8f9`, Reborn 0.3.0 `f31c94c`, root v1.40; BOOTIMG `9d1f00a5…0ca`, Y2ROOT `77a41a33…16`) is 09 plus the redesigned Reborn UI, startup screen and shutdown animation; **not flashed, physical NOT_RUN**.
+The installed image is 09. Kernel, drivers and partitions are unchanged. Details: [validation](validation/Y2-PLATFORM-V1-POWER-FINAL-10-UI.md), [scope audit](planning/roadmap-gap-audit.md), Reborn `docs/ui/REBORN-PRODUCT-UI-V3.md`. Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-08 cumulative candidate sealed — 2026-10-10
+
+`out/y2linux-platform-v1-power-final-candidate-08/` (Linux `d9fd5a7`, Reborn `ac5502e`, root v1.38; BOOTIMG `ad39788a…efb1`, Y2ROOT `e79bac96…c71a`) is the one image containing 06 (deep-sleep power-down bring-up), 07 (charging policy)
+and 08 (internal storage). **Not flashed; physical NOT_RUN.** The installed image is 06. 08 turns the stock FAT partition into ext4 Y2Media (`/media/internal`), exports it as MTP Internal Storage and adds explicit SD `format`/`grow`; the one-time
+provisioning runs only after the owner flashes. Details: [storage](knowledge/internal-storage.md), [policy](knowledge/charging-current-policy.md), [handoff](planning/NEXT-SESSION-HANDOFF.md). Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-07 charging candidate sealed — 2026-10-10
+
+`out/y2linux-platform-v1-power-final-candidate-07/` (Linux `551baad`, Reborn `97ff8c3` unchanged, root v1.37; BOOTIMG `65a1daf4…a3001`, Y2ROOT `83a61c1e…e66`) is 06 plus the full vendor charging policy and is built and offline-qualified;
+**it is not flashed (physical NOT_RUN)**. The installed image is 06 (healthy at first check, power-down cycle still to run). The stock 16-step `CS_VTH` table and per-source requests (DCP/nonstandard 1100, Apple 800, CDP 650, SDP 450) are
+implemented behind one decision function with PMIC-die derating; the default ceiling stays 650 mA and nonstandard stays 70 mA because no cell charge rating, pack temperature or independent current measurement exists.
+Details: [policy](knowledge/charging-current-policy.md), [validation](validation/Y2-PLATFORM-V1-POWER-FINAL-07-CHARGING.md) (on branch `codex/platform-v1-power-final-07`), [handoff](planning/NEXT-SESSION-HANDOFF.md). Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-06 bring-up candidate sealed — 2026-10-09
+
+`out/y2linux-platform-v1-power-final-candidate-06/` (Linux `c1ef37a`, Reborn `97ff8c3` unchanged, root v1.36; BOOTIMG `64a91628…7869f`, Y2ROOT `e1c0bcd3…c23e4be`) is built and
+offline-qualified; **it is not flashed (physical NOT_RUN) and not production**. Correction: Y2Linux already ran the vendor 597-word `pcm_suspend`; the 05 report's "480-word dpidle" was the runtime-idle line. The real
+difference from stock is `infra_pdn=0`; 06 enables the vendor `infra_pdn=1` (INFRASYS/DDRPHY power-down) with a verified PERICFG restore, an automatic retained-mode fallback and a boot-to-boot guard. The 05
+overnight defects are addressed: the MUSB L1 interrupt guard no longer storms on an unowned PHY level bit, and a terminal USB stop parks the controller instead of unregistering it (the Wi-Fi-time Oops was a dangling
+`usb0` parent, not `wlan0`). A 9 h idle capture of 05 (archive 89) showed 95.6% in SPM sleep with no recurrence (single run). Next: owner flashes 06, read-only check, first power-down cycle, repeated cycles, overnight drain
+vs. 05's about 2.1 points/h (voltage-derived); production cleanup only after hardware qualification. Details: [handoff](planning/NEXT-SESSION-HANDOFF.md). Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-05 overnight result — 2026-10-09
+
+The first overnight unplugged run on 05 (archive 88, same boot `3cae62f2`, taint 0) suspended **38,052 s of 38,235 s (99.5%)** across 64 cycles and 63 600 s maintenance wakes, 88%→66% (voltage-derived, about 2.1
+points/h, indicative only, no current sensor). It also exposed two **new defects**: (1) a terminal `Y2USB IRQ overflow` at 01:34 CEST with no cable, after which USB did not enumerate or charge until reboot, and (2) a kernel
+NULL-dereference Oops (`rtnl_fill_ifinfo`; later shown to be the `usb0` netdev's dangling parent after the 01:34 terminal USB stop, not `wlan0`) at the first Wi-Fi restore after the Power-button wake, followed by `kernel_sleep_unavailable` refusals (link unverified). Nothing was
+changed on the device by that analysis; the fixes are in 06. Details: [handoff](planning/NEXT-SESSION-HANDOFF.md), [data](validation/data/y2-power05-overnight-20261009.json). Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-05 installed — 2026-10-08
+
+The owner flashed POWER-FINAL-05 (Linux `837b614`, Reborn `97ff8c3`, root v1.35; BOOTIMG `0137a855…44117`, Y2ROOT `9175185f…99a4d`). It is DEEPSLEEP-FINAL-04 plus the vendor MT6323 `LP_SEL` low-power
+select on five always-on LDOs (VA, VIO28, VUSB, VM, VIO18) with a root runtime revert at `/sys/firmware/y2_pmic/lp_sel`. Installed and probed: same boot, taint 0, 1573 s asleep with two maintenance wakes,
+SPM 3/3, vendor golden-table differences at suspend entry 22→17. **No battery or current benefit is claimed** (no current sensor, unknown capacity, voltage-derived SOC). Overnight drain, Power/RTC wake and early-boot
+on 05 are next. Details: [handoff](planning/NEXT-SESSION-HANDOFF.md), [report §40](validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md#40-power-final-05-suspend-power-campaign-2026-10-08). Readiness remains **MORE_WORK_REQUIRED**.
+
 ## DEEPSLEEP-FINAL-04 installed — 2026-10-08 (latest)
 
 The owner flashed the diagnostic successor DEEPSLEEP-FINAL-04 (Linux `5e26757`, Reborn `97ff8c3`, root v1.34, BOOTIMG

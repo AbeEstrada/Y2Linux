@@ -2,6 +2,15 @@
 
 ## Current deep-sleep investigation — 2026-10-07
 
+**POWER-FINAL-06 bring-up candidate (2026-10-09, latest, source + offline only):** vendor `infra_pdn=1` (INFRASYS/DDRPHY power-down) on the already-present
+`pcm_suspend`, with PERICFG save/restore, automatic retained-mode fallback, a recoverable MUSB L1 guard and park-not-unregister on a terminal USB stop (the
+cause of the Wi-Fi-time Oops). Physical status NOT_RUN; owner flashes. Corrects the 05 report: Y2Linux already ran `pcm_suspend` with `infra_pdn=false`. After hardware
+qualification the production cleanup/refactor and a clean rebuild follow. **MORE_WORK_REQUIRED**, no milestone promotion.
+
+**POWER-FINAL-05 installed (2026-10-08):** 04 + vendor PMIC `LP_SEL` on five always-on LDOs, runtime-revertible. Probed on device: 1573 s suspended, same boot, golden-table gap 22→17; benefit unmeasured
+(no current sensor). Next: overnight drain, Power/RTC wake, early-boot on 05, optional USB-meter top-up measurement; the vendor `pcm_suspend` state (INFRA/DDRPHY and 26 MHz off) is the next large, high-risk lever (image 06).
+**MORE_WORK_REQUIRED**, no milestone promotion.
+
 **04 diagnostic successor installed and trialed (2026-10-08, latest):** DEEPSLEEP-FINAL-04 (Linux `5e26757`) is flashed; owner-driven
 normal-policy trials passed: 469 s first sleep and a one-hour run with six maintenance wakes and 3805 s suspended, same boot, taint 0.
 This is encouraging but not a fix (diagnostic-only change, nine clean entries, stall rate unknown). Next: reboot + early-unplug test, then

@@ -1,8 +1,43 @@
 # Roadmap gap audit
 
+## POWER-FINAL-06 INFRASYS power-down bring-up admission — 2026-10-09
+
+Standing milestone-boundary audit before materially changing hardware/memory scope, using real hardware
+evidence only. Reviewed: the 05 overnight archive 88 (38,052.5 s of 38,234.6 s suspended, 64 cycles, resume
+2.2 s, SOC 88%→66% voltage-derived, about 2.1 points/h, with a terminal `Y2USB IRQ overflow` at 01:34 and a
+kernel Oops at the first Wi-Fi restore) and the 9 h idle archive 89 (boot `65d3b0c9`, taint 0, 31,230 s of
+32,679 s in SPM sleep, 51 maintenance wakes, no USB overflow, no Oops, single run; SOC about 2.2 points/h).
+The owner recalls stock at about 1 percent per night; no stock baseline has been measured on this unit.
+
+Corrections admitted: full suspend already runs the vendor 597-word `pcm_suspend` (words identical to vendor
+`mt_spm_sleep.c` d53dd75c, SHA-256 `0ee71194…6ab94`; stock `slp_infra_pdn` defaults to 1 in the retained FM
+kernel). The 05 report's "480-word dpidle" statement was the runtime-idle line and is corrected on the 06
+branch. The real difference is `infra_pdn=false` plus a missing post-wake restore. The Wi-Fi Oops is explained
+by the 01:34 terminal USB stop: `platform_device_unregister(musb-hdrc)` freed the gadget device that the ECM
+netdev `usb0` references as `dev.parent` (the stack carries `"usb0"`), so the first later netlink query crashed.
+
+Scope change admitted for **source work and offline qualification only**: vendor `infra_pdn=1` (INFRASYS and
+DDRPHY MTCMOS power-down) with an exact-source restore of PERICFG and a read-only INFRACFG report; MUSB L1
+interrupt ownership; park-not-unregister on a terminal USB stop; UART sleep re-arm. Bounds retained: the PCM
+and wake mask are unchanged, the 30 s RGU backstop is kept, any unverifiable restore or a previous boot that
+ended on the new `INFRA_PDN_ENTRY` journal stage pins the boot to the proven INFRA-retained mode, and
+`/sys/firmware/y2_infra/mode` is the explicit owner switch. The agent does not flash; no PMIC rail, eMMC
+supply, storage or DRAM setting is changed; nothing is claimed about drain.
+
+Coverage table: the full suspend/power row stays PARTIAL and MORE_WORK_REQUIRED; physical status of the
+bring-up candidate is NOT_RUN. New physical gates: first INFRA power-down cycle (restore verified, DRAM and
+all drivers healthy), repeated cycles and maintenance wakes, USB cable wake and re-enumeration, Wi-Fi/BT
+restore, an overnight drain compared with the 05 baseline of about 2.1 points/h. No milestone is promoted
+or closed; the production cleanup phase follows only after hardware qualification.
+
 ## Deep-sleep continuation admission — 2026-10-07
 
 ### Clean corrective-image physical admission
+
+**05 hardware evidence refresh, 2026-10-08:** scope unchanged for memory layout and production scope; one PMIC write-allowlist extension (bit 0 of VA/VIO28/VUSB/VM/VIO18) with explicit owner approval and a runtime
+revert. Owner flashed POWER-FINAL-05 (Linux `837b614`). Archive 82–84: identity, taint 0, `lp_sel applied=1`, Reborn/helper hashes match, ext4 0. Archive 85–87 (before/after-sleep probe): 1573.4 s suspended, 2 maintenance wakes,
+SPM 3/3, aborts 0, golden PMIC differences at suspend entry 22→17, connectivity and SD rails off in suspend, eMMC VCC/VUSB/VGP2 on. #28/#34 suspend: PARTIAL unchanged (reliability), electrical minimum still UNKNOWN (no current
+measurement, capacity unknown). Open: overnight/8 h drain, Power/RTC wake and early-boot on 05, vendor `pcm_suspend`, display/poweroff gaps. No milestone promotion. Linux provenance `837b614`.
 
 **04 hardware evidence refresh, 2026-10-08:** scope unchanged (no memory-layout, hardware or production-scope change; retained SRAM region
 and ring size untouched). Owner flashed DEEPSLEEP-FINAL-04 (diagnostic successor; Linux `5e26757`, Reborn `97ff8c3`). Archive68 verified identity,
