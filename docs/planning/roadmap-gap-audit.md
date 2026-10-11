@@ -7631,3 +7631,28 @@ sleep. If USB is dead after the wake, restart by holding Power and read the prev
 `/data/system/platform/sleep-diagnostics.jsonl` and `power-journal.jsonl`. Then decide the Defect B fix and the
 golden-based power step.
 Readiness for the next boundary: **PARTIALLY READY**.
+
+
+## POWER-FINAL-15 dependency-update scope audit — 2026-10-11
+
+**Boundary:** the owner asked for every software component on its newest upstream release, except Linux, which
+stays on the 6.18 long-term line. This is a material packaging/toolchain change with no functional goal of its own.
+Evidence for the gap: the 2026-10-11 version survey (release-monitoring.org, kernel.org, buildroot.org, Bootlin).
+The kernel is 6.18.0, 56 stable releases behind. The Buildroot 2025.02 line ended with 2025.02.18. Mesa is
+24.0.9 and the Bootlin toolchain is 2024.05-1. Built on 14 (persistent diagnostics), which is flashed but not yet
+sleep-tested. Repeated before source changes; this audit builds and flashes nothing.
+
+| Row | Classification | Plan and risk |
+| --- | --- | --- |
+| Linux | CHANGE | 6.18.0 → 6.18.56 (newest 6.18.y). Every overlay in `kernel/patches` must apply and the audited-source list is re-recorded for 6.18.56. Risk: stable backports touching MTK/MUSB/DRM/ASoC code that our overlays also change. |
+| Buildroot | CHANGE | 2025.02.18 (line ended) → 2026.08 (newest release, not LTS). Already brings most packages to the newest version. The defconfig and external packages must be ported. |
+| Packages beyond 2026.08 | CHANGE | OpenSSL 4.0.3 (major API change), Python 3.15.0 (released this month; cross-build patches), Mesa 26.2.4 (Lima), GLib 2.90.1, OpenSSH 10.6p1, util-linux 2.42.4, iproute2 7.2.0, SQLite 3.54.0, expat 2.9.0, exfatprogs 1.4.3, fdk-aac 3.0.0, iperf3 3.22, json-c 0.19, pcre2 10.49, procps-ng 4.0.7, strace 7.2, CA certificates; the existing pins are kept (BlueZ 5.87, SBC 2.2, bluez-alsa 5.0.0, Dropbear, FFmpeg 9.0.2, wireless-regdb). Each pin is hash-checked in `modernize_buildroot.py`. |
+| Toolchains | CHANGE | Bootlin armv7-eabihf glibc stable 2025.08-1 (in 2026.08) → 2026.08-1. Rust 1.90.0 → 1.99.0 (Reborn, with any new strict-Clippy findings fixed). Kernel build sandbox: Alpine 3.22.1 → 3.24 with its LLVM/Clang. |
+| Rust crates (Reborn `vendor/`) | NOT CHANGED | They are pinned by `Cargo.lock`. Major crate updates change APIs and are a separate step. |
+| Behaviour | UNCHANGED by intent | No platform, sleep or UI change. Any change forced by a new API is recorded with the commit that makes it. |
+| Physical | NOT_RUN | GPU (Mesa/Lima), audio, Bluetooth, Wi-Fi, USB/MTP, SSH and sleep all need re-checking on the device. |
+
+**Gate decision:** build 15 as 14 plus these updates, as one candidate. If a component's newest release cannot be
+built or breaks a test, report it and keep the newest version that works, rather than patching around it silently.
+After the owner flashes: read-only check, then the 13/14 sleep test, then display, audio, Bluetooth, Wi-Fi, MTP and SSH.
+Readiness for the next boundary: **PARTIALLY READY**.
