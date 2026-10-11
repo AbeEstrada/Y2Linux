@@ -37,7 +37,9 @@ BUMPS = (
      ("0010-gh-139275-Fix-compilation-of-Modules-_remote_debuggi.patch",)),
     ("mesa3d", (("MESA3D_VERSION = 26.1.8", "MESA3D_VERSION = 26.2.4"),),
      "mesa-26.1.8.tar.xz", "mesa-26.2.4.tar.xz",
-     "bce5f7fbebb934373b86c999a064d52fb5065878dc57f287f95346648ec832e9", ()),
+     "bce5f7fbebb934373b86c999a064d52fb5065878dc57f287f95346648ec832e9",
+     # Intel "jay" compiler workaround for host GCC < 13; no Intel driver here.
+     ("0005-src-intel-compiler-jay-jay_ir.h-do-not-used-typed-en.patch",)),
     ("libglib2", (("LIBGLIB2_VERSION_MAJOR = 2.88", "LIBGLIB2_VERSION_MAJOR = 2.90"),
                   ("LIBGLIB2_VERSION = $(LIBGLIB2_VERSION_MAJOR).3", "LIBGLIB2_VERSION = $(LIBGLIB2_VERSION_MAJOR).1")),
      "glib-2.88.3.tar.xz", "glib-2.90.1.tar.xz",
@@ -48,7 +50,11 @@ BUMPS = (
     ("util-linux", (("UTIL_LINUX_VERSION_MAJOR = 2.41", "UTIL_LINUX_VERSION_MAJOR = 2.42"),
                     ("UTIL_LINUX_VERSION = $(UTIL_LINUX_VERSION_MAJOR).5", "UTIL_LINUX_VERSION = $(UTIL_LINUX_VERSION_MAJOR).4")),
      "util-linux-2.41.5.tar.xz", "util-linux-2.42.4.tar.xz",
-     "fbd62a100ab7bb8746ba0661255c3c48185b1e9021507c624da01fbc696330ec", ()),
+     "fbd62a100ab7bb8746ba0661255c3c48185b1e9021507c624da01fbc696330ec",
+     # All three are part of 2.42.4.
+     ("0001-include-mount-api-utils.h-fix-LSMT_ROOT-definition.patch",
+      "0002-autotools-optionally-add-libpthread-to-uuid.pc.patch",
+      "0003-loopdev-use-openat2-RESOLVE_NO_SYMLINKS-for-backing-.patch")),
     ("iproute2", (("IPROUTE2_VERSION = 7.1.0", "IPROUTE2_VERSION = 7.2.0"),),
      "iproute2-7.1.0.tar.xz", "iproute2-7.2.0.tar.xz",
      "4c2fa124c2cf0afd7ca34d1eeacba6ba048a56f6374e2aab93dafbdbd4eea9c0", ()),
@@ -230,7 +236,9 @@ def apply(buildroot_source: Path) -> None:
     bluez_alsa(buildroot_source)
     bootlin_toolchain(buildroot_source)
     # Local product-policy patches follow the pinned package security fixes.
-    for package in ('dropbear', 'openssh', 'bluez-alsa'):
+    # python3: Buildroot's 3.14 patches 0002/0005 rebased onto 3.15.0 (same
+    # names, so they replace the originals; the series applies with fuzz 0).
+    for package in ('dropbear', 'openssh', 'bluez-alsa', 'python3'):
         for policy in (Path(__file__).resolve().parents[2] / 'buildroot/patches' / package).glob('*.patch'):
             (buildroot_source / 'package' / package / policy.name).write_bytes(policy.read_bytes())
 
