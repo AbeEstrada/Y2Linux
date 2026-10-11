@@ -86,6 +86,8 @@ BUMPS = (
                          ("archive/debian/20260223T202245Z/", "archive/debian/20260817T022356Z/")),
      "ca-certificates_20260223.tar.xz", "ca-certificates_20260816.tar.xz",
      "d939bcdd0cb058712cf4175bac76997676eb8b68fe9473765e1b40fb3d5b186a", ()),
+    # (OpenSSL 4.0 removed the c_rehash script; ca_certificates() below uses
+    # the built-in "openssl rehash".)
     ("meson", (("MESON_VERSION = 1.11.1", "MESON_VERSION = 1.12.1"),),
      "meson-1.11.1.tar.gz", "meson-1.12.1.tar.gz",
      "ab0a6ca09f8ef70c564c8241fb5a23957886a0b53fb58412b5e07eaf07dba743", ()),
@@ -166,6 +168,16 @@ def bump_pypi(buildroot_source: Path, name, version, source, site, md5, sha256) 
              if not re.match(r"^(md5|sha256)\s+[0-9a-f]+\s+\S+\.(tar\.gz|tar\.bz2|zip)$", l)]
     lines += [f"md5  {md5}  {source}", f"sha256  {sha256}  {source}"]
     hashes.write_text("\n".join(lines) + "\n")
+
+
+def ca_certificates(buildroot_source: Path) -> None:
+    """OpenSSL 4.0 has no c_rehash script; "openssl rehash" does the same."""
+    recipe = buildroot_source / "package/ca-certificates/ca-certificates.mk"
+    text = recipe.read_text()
+    updated = text.replace("$(HOST_DIR)/bin/c_rehash ", "$(HOST_DIR)/bin/openssl rehash ")
+    if "c_rehash" in updated or "openssl rehash" not in updated:
+        raise ValueError("ca-certificates rehash anchor missing")
+    recipe.write_text(updated)
 
 
 def bluez_alsa(buildroot_source: Path) -> None:
@@ -274,6 +286,7 @@ def apply(buildroot_source: Path) -> None:
     for row in PYPI_BUMPS:
         bump_pypi(buildroot_source, *row)
     bluez_alsa(buildroot_source)
+    ca_certificates(buildroot_source)
     bootlin_toolchain(buildroot_source)
     # Local product-policy patches follow the pinned package security fixes.
     # python3: Buildroot's 3.14 patches 0002/0005 rebased onto 3.15.0 (same
