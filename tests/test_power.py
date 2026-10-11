@@ -22,9 +22,11 @@ def run_c(source):
 
 class Power(unittest.TestCase):
     def test_filesystem_freeze_opt_in_and_always_freeze_filesystems(self):
-        spec = next(s for s in json.loads((ROOT/'kernel/patches/manifest.json').read_text())['overlays']
-                    if s['path'] == 'fs/super.c')
-        source = prepare_overlay(ROOT, spec).read_text()
+        # Linux 6.18.y carries this fix itself (the former 0066 overlay); check the
+        # overlay if one exists, otherwise the locked upstream source.
+        spec = next((s for s in json.loads((ROOT/'kernel/patches/manifest.json').read_text())['overlays']
+                     if s['path'] == 'fs/super.c'), None)
+        source = (prepare_overlay(ROOT, spec) if spec else ROOT/'.cache/sources/linux-6.18/fs/super.c').read_text()
         run_c(r'''
 #include <assert.h>
 #include <stdbool.h>
