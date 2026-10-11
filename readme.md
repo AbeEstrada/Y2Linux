@@ -6,19 +6,20 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Baseline 13 (2026-10-11), developer preview.** It runs every day on
+> **Status: Baseline 15 (2026-10-12), developer preview.** It runs every day on
 > the maintainer's Y2. There are no prebuilt images yet: you build from source
 > and flash with SP Flash Tool. Only one hardware revision has been tested (see
 > [Supported hardware](#supported-hardware)). Read [Known issues](#known-issues)
 > before you flash.
 
-| | Baseline 13 |
+| | Baseline 15 |
 | --- | --- |
-| Git tag (both repositories) | `baseline-13` |
-| Kernel | `6.18.0-y2linux-platform-v1-power-final-13` |
-| Root filesystem / release | `2025.02.18-platform-v1.43` / `1.0.0-platform-v1-power-final-candidate.13` |
-| Player | Y2Reborn 0.3.0 |
-| Maintainer's images built from | Y2Linux `47c1cf2`, Y2Reborn `71ddb0d` (later commits: tests, packaging tool and docs only) |
+| Git tag (both repositories) | `baseline-15` (previous: `baseline-13`) |
+| Kernel | `6.18.56-y2linux-platform-v1-power-final-15` (Linux 6.18 long-term line) |
+| Root filesystem / release | `2026.08-platform-v1.45` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.15` |
+| Player | Y2Reborn 0.3.0 (Rust 1.99) |
+| Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 — every component on its newest release |
+| Maintainer's images built from | Y2Linux `be1aac2`, Y2Reborn `f68e088` (later commits: tests and docs only) |
 
 ## Getting started
 
@@ -30,7 +31,7 @@ factory partitions untouched.
 
 ## What works
 
-Observed on the maintainer's device on Baseline 13 or the candidates just before it:
+Observed on the maintainer's device on Baseline 15 or the candidates just before it:
 
 - Boots from internal eMMC: stock preloader and LK, then Linux 6.18 and Buildroot. No SD card needed.
 - Display with GPU (DRM + Lima), buttons, click wheel and the Reborn player UI.
@@ -43,17 +44,18 @@ Observed on the maintainer's device on Baseline 13 or the candidates just before
 - Charging over USB (conservative 650 mA default ceiling) with a real "Full" state, and an
   offline charging screen when the player is off.
 - Deep sleep when the screen times out: the SoC suspends and wakes every 30 min for
-  housekeeping. The first sleep on 13 lasted 3.4 h (7 suspends) and ended with a clean
-  Power-button wake.
+  housekeeping, with the stock suspend settings (CPU at 0.85 V, USB PHY off, wheel controller
+  asleep). Sleep and USB state are written to `/data` so they survive a restart.
 
 ## Known issues
 
 - **Never use a software restart.** A warm reboot (the menu's Restart, update
   reboots, `reboot`) can leave the panel dark (`flip_done timed out`). Turn the
   player off by holding Power, then start it again. Not yet investigated.
-- **USB networking can stop passing traffic after a wake from deep sleep.** The
-  device re-enumerates but sends nothing (seen on 12 and on the first 13 wake). Turning
-  the player off and on again recovers it. Under investigation.
+- **USB stops sending after a wake from deep sleep.** The device re-enumerates and
+  receives, but its transmit DMA never completes (diagnosed with 14's persistent
+  records), so USB networking and MTP stay silent. Turning the player off and on again
+  recovers it. A fix is being worked on.
 - **Battery life is not stock-like yet.** Asleep: about 2.2 percentage points/h on
   12. 13 adds the stock sleep settings, but its overnight result is not measured yet.
   Awake with the screen off: about 4.9 points/h, because only the backlight is
@@ -64,7 +66,9 @@ Observed on the maintainer's device on Baseline 13 or the candidates just before
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-[Baseline 13 report](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-13.md).
+reports for [15](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-15.md) (newest versions),
+[14](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-14.md) (persistent sleep diagnostics) and
+[13](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-13.md) (stock suspend power parity).
 
 ## Supported hardware
 

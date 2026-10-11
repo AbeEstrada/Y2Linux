@@ -3,7 +3,7 @@
 This builds the kernel, the Buildroot root filesystem with the Y2Reborn player,
 and a **first-install package** that you flash with SP Flash Tool
 ([INSTALL.md](INSTALL.md)). These are the same commands that produced
-Baseline 13 on the maintainer's machine (an Arch-based Linux, x86_64). They have
+Baseline 15 on the maintainer's machine (an Arch-based Linux, x86_64). They have
 not yet been run on a second machine. If a step fails, please open an issue with
 the log.
 
@@ -18,11 +18,11 @@ the log.
   `perl`, `rsync`, `cpio`, `unzip`, `bzip2`, `gzip`, `tar`, `file`, `bc`, `wget`,
   `which`, `diffutils`, `findutils`, `gawk`, `git`. The root filesystem is built on the
   host (not inside bubblewrap), so these must be installed.
-- **Rust via rustup**, with toolchain **1.90.0** and the ARM target. The Buildroot recipe
+- **Rust via rustup**, with toolchain **1.99.0** and the ARM target. The Buildroot recipe
   calls `~/.cargo/bin/cargo`. Override that with `REBORN_CARGO=/path/to/cargo` if needed.
 
   ```sh
-  rustup toolchain install 1.90.0 --profile minimal \
+  rustup toolchain install 1.99.0 --profile minimal \
       --target armv7-unknown-linux-gnueabihf -c rustfmt -c clippy
   ```
 
@@ -45,8 +45,8 @@ Buildroot builds Reborn from `../Y2Reborn`.
 mkdir y2 && cd y2
 git clone https://github.com/SchulzCode/Y2Linux.git
 git clone https://github.com/SchulzCode/Y2Reborn.git
-git -C Y2Linux checkout baseline-13
-git -C Y2Reborn checkout baseline-13
+git -C Y2Linux checkout baseline-15
+git -C Y2Reborn checkout baseline-15
 cd Y2Linux
 ```
 
@@ -106,8 +106,8 @@ python3 tools/production/build.py --output out/y2-build --owner-firmware out/own
 On the first run this:
 
 1. Downloads and hash-checks the locked inputs (`tools/build/inputs.lock.json`:
-   Linux 6.18 and the Alpine build userspace; `buildroot/inputs.lock.json`:
-   Buildroot 2025.02.18) into `.cache/`.
+   Linux 6.18.56 and the Alpine 3.24 build userspace with LLVM 22; `buildroot/inputs.lock.json`:
+   Buildroot 2026.08) into `.cache/`. Buildroot uses the Bootlin GCC 15.3 cross toolchain.
 2. Builds the kernel inside bubblewrap with the overlays in `kernel/patches/`.
 3. Builds the Buildroot toolchain and root filesystem on the host, including FFmpeg
    9.0.2 and Y2Reborn (offline, from its vendored crates).
@@ -125,8 +125,8 @@ The result is `out/y2-build/BOOTIMG.img` (kernel and rescue initramfs) and
 python3 tools/build/run.py --output out/y2-build -- sh /project/tools/production/tests.sh
 ```
 
-This runs the platform test suite inside the locked environment. Baseline 13
-passed 651 cases there. Running the same tests directly on the host gives some
+This runs the platform test suite inside the locked environment. Baseline 15
+passed 664 cases there. Running the same tests directly on the host gives some
 errors that only depend on the host (missing `qemu-arm`, `pyelftools`); use the
 container.
 
