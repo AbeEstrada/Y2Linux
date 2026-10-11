@@ -111,14 +111,14 @@ static void reset(void){
 int main(void){
  reset();assert(!y2_spm_enter(PM_SUSPEND_MEM));
  assert(suspend_cirq_pending && !cirq_exit && vproc_begins==1 && vproc_ends==1);
- y2_spm_resume_syscore();
+ y2_spm_resume_syscore((void *)0);
  assert(entries==1 && resumes==1 && !aborts && !spm_broken && sleeps==1);
  assert(cirq_enter==cirq_exit);
  reset();fail_sleep=-EBUSY;assert(y2_spm_enter(PM_SUSPEND_MEM)==-EBUSY);
- y2_spm_resume_syscore();assert(cirq_exit==1);
+ y2_spm_resume_syscore((void *)0);assert(cirq_exit==1);
  assert(!resumes && aborts==1 && !spm_broken && normal_restores>=1 && !spm_lock);
  reset();fail_arm=-EBUSY;assert(y2_spm_enter(PM_SUSPEND_MEM)==-EBUSY);
- y2_spm_resume_syscore();assert(!sleeps && cirq_exit==1);
+ y2_spm_resume_syscore((void *)0);assert(!sleeps && cirq_exit==1);
  assert(vproc_begins==vproc_ends); /* every abort after arming restores VPROC */
  for(unsigned fault=0;fault<4;fault++){
   reset();bad_biu=fault==0;bad_timer=fault==1;bad_cirq=fault==2;fail_restore=fault==3?-EIO:0;
@@ -126,7 +126,7 @@ int main(void){
   /* Timer/CIRQ checks belong after the core GIC restore. Their error is
    * durable and quarantines SPM even though syscore resume returns void. */
   assert(result==((bad_timer || bad_cirq)?0:-EIO));
-  y2_spm_resume_syscore();
+  y2_spm_resume_syscore((void *)0);
   assert(last_result==-EIO && resumes==1 && spm_broken && suspend_restore_failures && !spm_lock);
   assert(cirq_exit==1 && !suspend_cirq_pending);
   unsigned prior=sleeps;assert(y2_spm_enter(PM_SUSPEND_MEM)==-EBUSY && sleeps==prior);

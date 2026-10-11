@@ -389,7 +389,7 @@ static int y2_spm_prepare_suspend(void)
 /* The core CPU PM syscore owner saves GIC/timer context before ->enter().
  * Restore/replay CIRQ only after that owner has restored the distributor.
  * Runtime C3 still owns its separate, non-nested CPU PM notifications. */
-static void y2_spm_resume_syscore(void)
+static void y2_spm_resume_syscore(void *data)
 {
 	int ret = 0;
 	if (!suspend_cirq_pending)
@@ -413,7 +413,9 @@ static void y2_spm_resume_syscore(void)
 		last_result = ret;
 	}
 }
-static struct syscore_ops y2_spm_syscore = { .resume = y2_spm_resume_syscore };
+static const struct syscore_ops y2_spm_syscore_ops = { .resume = y2_spm_resume_syscore };
+/* Linux 6.18.y syscore API: callbacks get the registration's context. */
+static struct syscore y2_spm_syscore = { .ops = &y2_spm_syscore_ops };
 /* POWER-FINAL-13 read-only stock golden comparison (golden-policy.h): the SoC
  * clock/PLL/clock-gate state at the last suspend entry, read right before the
  * PCM is armed, like stock slp_chk_golden. Mapped without claiming regions. */
@@ -918,7 +920,7 @@ static int y2_spm_probe(struct platform_device *pdev)
 	}
 	/* Probe follows the core_initcall CPU PM syscore registration. Resume
 	 * callbacks run in registration order with CPU0 alone and IRQs disabled. */
-	register_syscore_ops(&y2_spm_syscore);
+	register_syscore(&y2_spm_syscore);
 	suspend_set_ops(&y2_suspend_ops);
 	y2_cpu_dvfs_ready();
 	dev_info(&pdev->dev, "CPU1-3 MTCMOS and SPM CPU/cluster shutdown, infrastructure retained; power=%#x/%#x\n",

@@ -94,14 +94,14 @@ static void reset(void) {
 }
 static void core_resume(void) {
  assert(!vproc_armed);
- live_mask=saved_mask; core_restored=true; y2_spm_resume_syscore();
+ live_mask=saved_mask; core_restored=true; y2_spm_resume_syscore((void *)0);
  assert(!suspend_cirq_pending && !cirq_active && live_mask==saved_mask);
 }
 int main(void) {
  reset(); assert(!y2_spm_enter(PM_SUSPEND_MEM));
  assert(suspend_cirq_pending && cirq_active && !flushes && !live_mask);
  core_resume(); assert(flushes==1 && !journal_error);
- y2_spm_resume_syscore(); assert(flushes==1);
+ y2_spm_resume_syscore((void *)0); assert(flushes==1);
  /* Every entry-abort path still balances a successful CIRQ begin. */
  reset(); arm_error=-EBUSY; assert(y2_spm_enter(PM_SUSPEND_MEM)==-EBUSY);
  assert(suspend_cirq_pending); core_resume(); assert(flushes==1);
