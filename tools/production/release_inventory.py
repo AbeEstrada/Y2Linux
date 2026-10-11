@@ -75,8 +75,9 @@ def inventory(project,reborn,build):
     # Executables loaded by service scripts and dlopen/plugin families are not
     # inferred unused from DT_NEEDED absence. This is only a review inventory.
     host={}
+    rust='+'+json.loads((project/'tools/build/rust-toolchain.lock.json').read_text())['version']
     for name,args in [('cc',['cc','--version']),('make',['make','--version']),('python',[sys.executable,'--version']),
-                      ('rustc',['rustc','+1.90.0','-Vv']),('cargo',['cargo','+1.90.0','-V'])]:
+                      ('rustc',['rustc',rust,'-Vv']),('cargo',['cargo',rust,'-V'])]:
         host[name]=subprocess.check_output(args,text=True,stderr=subprocess.STDOUT,timeout=10).strip()
     inputs={}
     for repo,prefix,names in ((project,'Y2Linux',('tools/build/inputs.lock.json','tools/build/connectivity-host.lock.json',

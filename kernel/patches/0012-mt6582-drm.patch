@@ -39,7 +39,7 @@
  	{ .compatible = "mediatek,mt7623-mmsys",
  	  .data = &mt7623_mmsys_driver_data},
  	{ .compatible = "mediatek,mt2712-mmsys",
-@@ -728,6 +746,8 @@
+@@ -730,6 +748,8 @@
  	  .data = (void *)MTK_DISP_CCORR },
  	{ .compatible = "mediatek,mt2701-disp-color",
  	  .data = (void *)MTK_DISP_COLOR },
@@ -48,7 +48,7 @@
  	{ .compatible = "mediatek,mt8167-disp-color",
  	  .data = (void *)MTK_DISP_COLOR },
  	{ .compatible = "mediatek,mt8173-disp-color",
-@@ -750,6 +770,8 @@
+@@ -752,6 +772,8 @@
  	  .data = (void *)MTK_DISP_MERGE },
  	{ .compatible = "mediatek,mt2701-disp-mutex",
  	  .data = (void *)MTK_DISP_MUTEX },
@@ -57,7 +57,7 @@
  	{ .compatible = "mediatek,mt2712-disp-mutex",
  	  .data = (void *)MTK_DISP_MUTEX },
  	{ .compatible = "mediatek,mt8167-disp-mutex",
-@@ -771,6 +793,8 @@
+@@ -773,6 +795,8 @@
  	{ .compatible = "mediatek,mt8173-disp-od",
  	  .data = (void *)MTK_DISP_OD },
  	{ .compatible = "mediatek,mt2701-disp-ovl",
@@ -66,7 +66,7 @@
  	  .data = (void *)MTK_DISP_OVL },
  	{ .compatible = "mediatek,mt8167-disp-ovl",
  	  .data = (void *)MTK_DISP_OVL },
-@@ -795,6 +819,8 @@
+@@ -797,6 +821,8 @@
  	{ .compatible = "mediatek,mt8173-disp-pwm",
  	  .data = (void *)MTK_DISP_PWM },
  	{ .compatible = "mediatek,mt2701-disp-rdma",
@@ -75,7 +75,7 @@
  	  .data = (void *)MTK_DISP_RDMA },
  	{ .compatible = "mediatek,mt8167-disp-rdma",
  	  .data = (void *)MTK_DISP_RDMA },
-@@ -828,6 +854,8 @@
+@@ -830,6 +856,8 @@
  	  .data = (void *)MTK_DPI },
  	{ .compatible = "mediatek,mt2701-dsi",
  	  .data = (void *)MTK_DSI },

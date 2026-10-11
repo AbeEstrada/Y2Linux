@@ -8,7 +8,7 @@ import io
 import tarfile
 
 VERSION = '2026.09.03'
-# Pinned Buildroot 2025.02.18 package/wireless-regdb/wireless-regdb.hash.
+# Same archive as the wireless-regdb pin in tools/production/modernize_buildroot.py.
 SHA256 = 'b22e0901227b820cd1c280abe681a15b773a5103a5e10dc442e94ebb34cbf58d'
 FILES = {
     'regulatory.db': 'lib/firmware/regulatory.db',

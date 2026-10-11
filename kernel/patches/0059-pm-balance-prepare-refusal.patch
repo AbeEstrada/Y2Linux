@@ -8,7 +8,7 @@
  #include <linux/timer.h>
  
  #include "../base.h"
-@@ -482,6 +483,19 @@
+@@ -486,6 +487,19 @@
  		  usecs / USEC_PER_MSEC, usecs % USEC_PER_MSEC);
  }
  
@@ -28,7 +28,7 @@
  static int dpm_run_callback(pm_callback_t cb, struct device *dev,
  			    pm_message_t state, const char *info)
  {
-@@ -495,7 +509,9 @@
+@@ -499,7 +513,9 @@
  
  	pm_dev_dbg(dev, state, info);
  	trace_device_pm_callback_start(dev, info, state.event);
@@ -38,7 +38,7 @@
  	trace_device_pm_callback_end(dev, error);
  	suspend_report_result(dev, cb, error);
  
-@@ -1257,7 +1273,9 @@
+@@ -1261,7 +1277,9 @@
  		mutex_unlock(&dpm_list_mtx);
  
  		trace_device_pm_callback_start(dev, "", state.event);
@@ -48,7 +48,7 @@
  		trace_device_pm_callback_end(dev, 0);
  
  		put_device(dev);
-@@ -1857,6 +1875,9 @@
+@@ -1861,6 +1879,9 @@
  	TRACE_DEVICE(dev);
  	TRACE_SUSPEND(0);
  
@@ -58,7 +58,7 @@
  	dpm_wait_for_subordinate(dev, async);
  
  	if (READ_ONCE(async_error)) {
-@@ -1908,7 +1929,9 @@
+@@ -1912,7 +1933,9 @@
  	dev->power.must_resume = !dev_pm_test_driver_flags(dev, DPM_FLAG_MAY_SKIP_RESUME);
  
  	dpm_watchdog_set(&wd, dev);
@@ -68,7 +68,7 @@
  
  	if (dev->pm_domain) {
  		info = "power domain ";
-@@ -1934,8 +1957,10 @@
+@@ -1938,8 +1961,10 @@
  			callback = pm_op(dev->bus->pm, state);
  		} else if (dev->bus->suspend) {
  			pm_dev_dbg(dev, state, "legacy bus ");
@@ -79,7 +79,7 @@
  			goto End;
  		}
  	}
-@@ -2218,7 +2243,9 @@
+@@ -2223,7 +2248,9 @@
  		mutex_unlock(&dpm_list_mtx);
  
  		trace_device_pm_callback_start(dev, "", state.event);
@@ -89,7 +89,7 @@
  		trace_device_pm_callback_end(dev, error);
  
  		mutex_lock(&dpm_list_mtx);
-@@ -2257,11 +2284,15 @@
+@@ -2262,11 +2289,15 @@
  	ktime_t starttime = ktime_get();
  	int error;
  

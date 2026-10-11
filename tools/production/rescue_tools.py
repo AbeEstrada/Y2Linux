@@ -8,9 +8,9 @@ import json
 import tarfile
 import subprocess
 
-TOOLCHAIN = 'armv7-eabihf--glibc--stable-2024.05-1'
-# Buildroot 2025.02.17 toolchain-external-bootlin.hash, same production toolchain.
-TOOLCHAIN_SHA256 = '608263bc9dc3eadf0962ddb1165f1c2291001190f9927dee47d464e26374462c'
+TOOLCHAIN = 'armv7-eabihf--glibc--stable-2026.08-1'
+# Bootlin's published .sha256, pinned in modernize_buildroot.py; same production toolchain.
+TOOLCHAIN_SHA256 = '9b7e25a74e87dac1e05d399444295e254a3073a056101e3197a859490e5701cd'
 
 
 def rebuild(project, out, run):

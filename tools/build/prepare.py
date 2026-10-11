@@ -78,6 +78,45 @@ def connectivity_environment(project, offline=False):
         raise SystemExit('Connectivity host inventory changed')
     return root
 
+def linux_archive(lock):
+    """The locked Linux release archive (6.18.y); its tree lives in linux-6.18."""
+    return next(item for item in lock['base_archives'] if item['destination'] == 'sources')
+
+
+def linux_source(cache, lock):
+    """Extract the locked 6.18.y release into .cache/sources/linux-6.18.
+
+    The directory keeps the series name for every tool; a sibling marker names
+    the archive it came from, so a cache from another 6.18.y is replaced, never
+    mixed.
+    """
+    item = linux_archive(lock)
+    sources = cache / 'sources'
+    kernel = sources / 'linux-6.18'
+    marker = sources / 'linux-6.18.archive-sha256'
+    current = marker.read_text().strip() if marker.exists() else None
+    if kernel.exists() and current is None and item['name'] == 'linux-6.18.tar.xz':
+        current = item['sha256']
+    if kernel.exists() and current == item['sha256']:
+        return kernel
+    sources.mkdir(exist_ok=True)
+    if kernel.exists():
+        stale = sources / ('linux-6.18.replaced-' + (current or 'unknown')[:12])
+        if stale.exists():
+            raise SystemExit(f'Remove {stale} before replacing the kernel source cache')
+        kernel.rename(stale)
+    staging = sources / '.linux-staging'
+    if staging.exists():
+        raise SystemExit(f'Remove incomplete {staging}')
+    staging.mkdir()
+    extract(cache / 'downloads' / item['name'], staging)
+    top = staging / item['name'].removesuffix('.tar.xz')
+    top.rename(kernel)
+    staging.rmdir()
+    marker.write_text(item['sha256'] + '\n')
+    return kernel
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--offline', action='store_true', help='require cached archives')
@@ -126,10 +165,7 @@ def main():
     if installed(rootfs) != lock['installed_packages']:
         raise SystemExit('Environment package inventory changed')
     sources = cache / 'sources'
-    kernel = sources / 'linux-6.18'
-    if not kernel.exists():
-        sources.mkdir(exist_ok=True)
-        extract(cache / 'downloads/linux-6.18.tar.xz', sources)
+    kernel = linux_source(cache, lock)
     for row in (PROJECT / 'docs/knowledge/linux-6.18-sources.tsv').read_text().splitlines()[1:]:
         name, size, digest, _ = row.split('\t')
         if name.endswith('.listing.json'):
@@ -138,7 +174,7 @@ def main():
         if path.stat().st_size != int(size) or sha(path) != digest:
             raise SystemExit(f'Audited upstream source mismatch: {name}')
     connectivity_environment(PROJECT,args.offline)
-    print('Locked build environments and audited v6.18 sources verified.')
+    print('Locked build environments and audited ' + linux_archive(lock)['name'] + ' sources verified.')
 
 
 if __name__ == '__main__':

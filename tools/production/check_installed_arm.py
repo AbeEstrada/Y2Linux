@@ -74,7 +74,9 @@ with tempfile.TemporaryDirectory(prefix='y2-cpu-final-arm-bench-') as directory:
 codec_contract = run('usr/sbin/y2-codec-software-contract', []).stdout
 (build/'arm-codec-software-contract.txt').write_text(codec_contract)
 binaries={}
-for name in ('usr/bin/python3.12','usr/sbin/y2-audio-contract','usr/bin/reborn','usr/bin/reborn-bench'):
+interpreters=sorted(p.name for p in (target/'usr/bin').glob('python3.[0-9]*') if p.name.replace('python3.','').isdigit())
+assert len(interpreters)==1, interpreters
+for name in ('usr/bin/'+interpreters[0],'usr/sbin/y2-audio-contract','usr/bin/reborn','usr/bin/reborn-bench'):
     with (target/name).open('rb') as f: binaries[name]=hashlib.file_digest(f,'sha256').hexdigest()
 help_text=run('usr/bin/bluealsad', ['--help']).stdout
 for codec in ('SBC', 'AAC', 'aptX', 'aptX-HD', 'LDAC'):

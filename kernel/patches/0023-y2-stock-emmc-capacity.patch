@@ -10,7 +10,7 @@
  
  #include <linux/mmc/ioctl.h>
  #include <linux/mmc/card.h>
-@@ -2676,6 +2679,15 @@
+@@ -2684,6 +2687,15 @@
  			<< (card->csd.read_blkbits - 9);
  	}
  

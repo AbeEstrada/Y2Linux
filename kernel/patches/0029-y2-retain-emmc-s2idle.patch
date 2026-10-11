@@ -1,6 +1,6 @@
 --- a/drivers/mmc/core/mmc.c
 +++ b/drivers/mmc/core/mmc.c
-@@ -2143,6 +2143,20 @@
+@@ -2157,6 +2157,20 @@
  			goto out;
  	}
  

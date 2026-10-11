@@ -38,7 +38,9 @@ def seal(package, build, reborn, logs):
         require(actual == commit, 'full source commit')
         subprocess.run(['git','archive','--format=tar.gz','--prefix='+label+'/',
                         '-o',str(source/(label+'.tar.gz')),commit],cwd=repo,check=True)
-    for lockfile, filename in ((PROJECT/'tools/build/inputs.lock.json','linux-6.18.tar.xz'),
+    kernel_lock = json.loads((PROJECT/'tools/build/inputs.lock.json').read_text())
+    kernel_archive = next(item['name'] for item in kernel_lock['base_archives'] if item['destination'] == 'sources')
+    for lockfile, filename in ((PROJECT/'tools/build/inputs.lock.json',kernel_archive),
                                 (PROJECT/'buildroot/inputs.lock.json',None)):
         lock = json.loads(lockfile.read_text())
         if filename is None: filename='buildroot-'+lock['version']+'.tar.xz'

@@ -10,5 +10,5 @@ config BR2_PACKAGE_REBORN
 	select BR2_PACKAGE_DBUS
 	select BR2_PACKAGE_UTIL_LINUX_LIBBLKID
 	help
-	  Native Rust Reborn Baseline 01. Requires pre-provisioned Rust 1.90.0
+	  Native Rust Reborn Baseline 01. Requires pre-provisioned Rust 1.99.0
 	  and the ARMv7 hard-float target; production Cargo builds are offline.

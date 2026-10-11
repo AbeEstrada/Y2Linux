@@ -33,6 +33,13 @@ def dirty_source(path):
         )
     ]
 
+def kernel_release_base(project):
+    """VERSION.PATCHLEVEL.SUBLEVEL of the locked 6.18.y source, e.g. 6.18.56."""
+    makefile=(project/'.cache/sources/linux-6.18/Makefile').read_text()
+    fields={k:re.search(r'^'+k+r' = (\d+)$',makefile,re.M).group(1) for k in ('VERSION','PATCHLEVEL','SUBLEVEL')}
+    return '{VERSION}.{PATCHLEVEL}.{SUBLEVEL}'.format(**fields)
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output',default='out/y2linux-platform-v1-build')
@@ -48,7 +55,7 @@ def main():
     reborn_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=REBORN,text=True).strip()
     reborn_version=reborn_source_version((REBORN/'Cargo.toml').read_text())
     localversion=re.search(r'^CONFIG_LOCALVERSION="([^"]+)"$',(PROJECT/'kernel/config/production.config').read_text(),re.M).group(1)
-    versions={**json.loads((PROJECT/'tools/production/release.json').read_text()),'layout_version':1,'kernel_version':'6.18.0'+localversion,'data_schema_version':1,'reborn_version':reborn_version,'build_git_commit':commit,'reborn_source_commit':reborn_commit}
+    versions={**json.loads((PROJECT/'tools/production/release.json').read_text()),'layout_version':1,'kernel_version':kernel_release_base(PROJECT)+localversion,'data_schema_version':1,'reborn_version':reborn_version,'build_git_commit':commit,'reborn_source_commit':reborn_commit}
     if not a.reuse_userspace:
         if not a.owner_firmware:p.error('M5 requires explicit --owner-firmware local provisioning')
         from tools.connectivity.provision import verify_provision

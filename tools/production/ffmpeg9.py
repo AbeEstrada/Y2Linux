@@ -60,6 +60,12 @@ def apply(buildroot_source: Path, download_dir: Path) -> None:
     for line in ("FFMPEG_CONF_OPTS += --disable-omx\n", "FFMPEG_CONF_OPTS += --disable-omx-rpi\n"):
         mk_text = mk_text.replace(line, "")
     mk_text = mk_text.replace("FFMPEG_CONF_OPTS += --disable-mmal --disable-omx --disable-omx-rpi\n", "FFMPEG_CONF_OPTS += --disable-mmal\n")
+    # Buildroot 2026.08 lists the same options in the main block, and an empty
+    # postproc else-branch. FFmpeg 9 no longer has OMX or libpostproc.
+    mk_text = mk_text.replace("\t--disable-mmal \\\n\t--disable-omx \\\n\t--disable-omx-rpi\n", "\t--disable-mmal\n")
+    mk_text = mk_text.replace("ifeq ($(BR2_PACKAGE_FFMPEG_POSTPROC),y)\nFFMPEG_CONF_OPTS += --enable-postproc\nelse\nendif\n", "")
+    if "--disable-omx" in mk_text or "postproc" in mk_text:
+        raise ValueError("FFmpeg 9 recipe still names removed OMX/postproc options")
     mk.write_text(mk_text)
     hash_text = hashes.read_text()
     if ARCHIVE not in hash_text:
