@@ -152,5 +152,14 @@ class Composition(unittest.TestCase):
                 u.package(build,root/'no-base',root/'no-fallback',out,public=True)
             self.assertFalse(out.exists())
 
+    def test_first_install_package_reads_stock_firmware_from_the_given_folder(self):
+        import ast
+        source=(Path(__file__).resolve().parents[1]/'tools/production/package.py').read_text()
+        main=next(n for n in ast.parse(source).body if isinstance(n,ast.FunctionDef) and n.name=='main')
+        uses=[n for n in ast.walk(main) if isinstance(n,ast.Name) and n.id=='STOCK']
+        option=[n for n in ast.walk(main) if isinstance(n,ast.Call) and n.args and getattr(n.args[0],'value',None)=='--stock']
+        self.assertEqual(len(option),1)
+        self.assertEqual([k.value for k in option[0].keywords if k.arg=='default'],uses)
+
 
 if __name__ == '__main__':unittest.main()

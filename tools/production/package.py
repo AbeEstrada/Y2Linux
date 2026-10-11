@@ -12,7 +12,7 @@ STOCK=Path('/home/luca/Dokumente/Code/Y2Player/y2_v3.2.0_FM-20260813')
 RESTORE={'boot.img':'5ef1bdf28481ee0bf5f3528c1ddd91cf3f4d2d5f39e4d0ea049a8137a30f6af6','system.img':'5a7a92f3a95374f31abe8b3ddbd68c5c2ce5677547db3d1cbc21653d24c76989','userdata.img':'552e325ecf2faffeb9351022147bbfda3b7cebe25df491b2d732e85c5c68f27c'}
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--build',type=Path,default=PROJECT/'out/y2linux-production-build-v1-r6');p.add_argument('--output',type=Path,default=PROJECT/'out/y2linux-production-v1-r6');p.add_argument('--public-key',type=Path,default=Path.home()/'.ssh/y2linux_ed25519.pub',help='existing owner public key; never generates an identity');p.add_argument('--data-template',type=Path,help='reuse a verified layout-1 data template unchanged');a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--build',type=Path,default=PROJECT/'out/y2linux-production-build-v1-r6');p.add_argument('--output',type=Path,default=PROJECT/'out/y2linux-production-v1-r6');p.add_argument('--public-key',type=Path,default=Path.home()/'.ssh/y2linux_ed25519.pub',help='existing owner public key; never generates an identity');p.add_argument('--stock',type=Path,default=STOCK,help='unpacked stock Innioasis Y2 FM firmware folder: boot.img, system.img, userdata.img, MT6582_Android_scatter.txt');p.add_argument('--data-template',type=Path,help='reuse a verified layout-1 data template unchanged');a=p.parse_args()
     out=a.output.resolve();require(out.is_relative_to(PROJECT/'out') and not out.exists(),'fresh package directory required')
     key=public_key(a.public_key)
     subprocess.run(['ssh-keygen','-lf',str(a.public_key)],check=True)
@@ -20,8 +20,8 @@ def main():
     require(versions['build_git_commit']==head and (a.build/'kernel-source-commit').read_text().strip()==head,'build commit mismatch')
     require(not subprocess.check_output(['git','status','--porcelain'],cwd=PROJECT,text=True).strip(),'release packaging requires committed source')
     out.mkdir();(out/'metadata').mkdir()
-    for name,expected in RESTORE.items():require(digest(STOCK/name)==expected,'restore source changed: '+name)
-    stock=(STOCK/'MT6582_Android_scatter.txt').read_text();require(digest(STOCK/'MT6582_Android_scatter.txt')==STOCK_SCATTER_SHA256,'scatter identity')
+    for name,expected in RESTORE.items():require(digest(a.stock/name)==expected,'restore source changed: '+name)
+    stock=(a.stock/'MT6582_Android_scatter.txt').read_text();require(digest(a.stock/'MT6582_Android_scatter.txt')==STOCK_SCATTER_SHA256,'scatter identity')
     # Keep host sparse allocation while copying the raw ext4 image.
     subprocess.run(['cp','--sparse=always',str((a.build/'buildroot/images/rootfs.ext4').resolve()),str(out/'Y2ROOT.img')],check=True)
     shutil.copyfile(a.build/'BOOTIMG.img',out/'BOOTIMG.img')
@@ -93,9 +93,9 @@ def main():
     (out/'MT6582_preserve_data_scatter.txt').write_text(make_scatter(stock,False))
     restoration=[]
     for partition,filename in [('BOOTIMG','boot.img'),('ANDROID','system.img'),('USRDATA','userdata.img')]:
-        entry={'target_partition':partition,'source':str(STOCK/filename),'size_bytes':(STOCK/filename).stat().st_size,'sha256':RESTORE[filename],'kind':'owner-proven FM factory source; not personalized Android backup'}
+        entry={'target_partition':partition,'source':str(a.stock/filename),'size_bytes':(a.stock/filename).stat().st_size,'sha256':RESTORE[filename],'kind':'owner-proven FM factory source; not personalized Android backup'}
         if filename!='boot.img':
-            identity=sparse_identity(STOCK/filename);entry['expanded_bytes']=identity['expanded_bytes'];entry['dont_care_policy']='stock holes are unspecified; no whole expanded readback hash asserted'
+            identity=sparse_identity(a.stock/filename);entry['expanded_bytes']=identity['expanded_bytes'];entry['dont_care_policy']='stock holes are unspecified; no whole expanded readback hash asserted'
         restoration.append(entry)
     shutil.copyfile(PROJECT/'docs/architecture/production-partitions.json',out/'metadata/partitions.json')
     partition_map=json.loads((out/'metadata/partitions.json').read_text())
@@ -114,6 +114,9 @@ def main():
     (out/'metadata/source-notice.md').write_text('# Source and copyright\n\nCanonical source: https://github.com/SchulzCode/Y2Linux at manifest build_git_commit. Locked Linux6.18 and Buildroot inputs are recorded alongside this notice. Existing upstream/donor copyright and GPL notices remain in their source files; no source attribution has been removed. This is an owner-local manual test package, not a public distribution/legal qualification. Third-party package sources and full license collection must accompany a later public release. No device calibration or private key is included.\n')
     manifest={'schema':'org.schulzcode.y2linux.release/v1',**versions,'status':'offline-validated candidate; manual physical acceptance pending','hardware_compatibility':{'vendor':'Innioasis','board':'Y2 eastaeon82_wet_kk','soc':'MT6582','emmc_user_capacity_bytes':7784103936,'capacity_semantics':'stock Android exported layout bound','emmc_physical_user_capacity_bytes':7818182656,'accepted_linux_user_sector_counts':[15203328],'stock_scatter_sha256':STOCK_SCATTER_SHA256,'other_revisions':'unsupported until their layout and hardware are verified'},'payloads':payloads,'normal_update_allowlist':['BOOTIMG','ANDROID'],'data_policy':'USRDATA persists; data template only for explicit first initialization/factory reset','runtime_kernel_write_allowlist':['ANDROID','USRDATA'],'application':reborn_application(versions['reborn_version']),'minimum_compatible_components':{'layout_version':1,'data_schema_version':1,'rootfs_abi':'armv7-eabihf-glibc','kernel_contract':'y2-platform-v1','rootfs_contract':'y2-platform-v1'},'preserved_paths':['/data','external microSD'],'restoration_sources':restoration,'debug_access':{'scope':'owner-personalized first-install data image; NOT a universal production credential','authorized_public_key_sha256':digest(a.public_key),'private_key_packaged':False,'host_keys':'generated on device and persisted on Y2DATA'},'future_security':{'signature':None,'signing_key_id':None,'update_channel':None,'rollback_index':None},'profiles':{n:{'sha256':digest(out/n),'selected_partitions':parts} for n,parts in [('MT6582_Android_scatter.txt',['BOOTIMG','ANDROID','USRDATA']),('MT6582_preserve_data_scatter.txt',['BOOTIMG','ANDROID'])]}}
     manifest['storage_addressing']=addressing_contract()
+    if versions.get('feature_contract_version')==2:
+        from tools.production.system_update import configuration_inventory
+        manifest['hardware_configuration']=configuration_inventory(a.build/'buildroot/target')
     (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     (out/'SHA256SUMS').write_text(''.join(digest(f)+'  '+str(f.relative_to(out))+'\n' for f in sorted(out.rglob('*')) if f.is_file() and f != out/'SHA256SUMS'))
     print('Prepared:',out)
