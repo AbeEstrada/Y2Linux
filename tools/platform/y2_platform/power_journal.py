@@ -68,9 +68,17 @@ class PowerJournal:
         self.next_event = 0
         self.signature = None
         self.failures = 0
+        from .sleep_diagnostics import Diagnostics
+        self.diagnostics = Diagnostics(ctx)
 
     def observe(self, state, battery, shutdown=None, event=None, now=None):
         now = time.monotonic() if now is None else now
+        try:
+            # POWER-FINAL-14: persist USB state changes (and one follow-up) so a
+            # USB failure after a wake leaves evidence across a restart.
+            self.diagnostics.observe_usb(now)
+        except (OSError, ValueError, TypeError):
+            self.diagnostics.failures += 1
         signature = (state, battery.get('status'), battery.get('charging'))
         safety = state == 'ShutdownPending' and signature != self.signature
         if not (event or safety or now >= self.next_snapshot or
@@ -81,10 +89,8 @@ class PowerJournal:
         self.signature = signature
         try:
             # Do not create persistent state on an unverified/missing data mount.
-            from .observe import mountinfo
-            mounts = [m for m in mountinfo(self.ctx.read('/proc/self/mountinfo')) if m['path'] == '/data']
-            if (self.ctx.read('/data/.y2data-schema') != '1' or len(mounts) != 1 or
-                    mounts[0]['source'] != self.ctx.read('/run/y2-data-device')):
+            from .sleep_diagnostics import data_ready, usb_net
+            if not data_ready(self.ctx):
                 return False
             ctx = self.ctx
             from .sleep import status as sleep_status
@@ -98,6 +104,7 @@ class PowerJournal:
                    'build': ctx.json('/etc/y2linux/versions.json'), 'state': state,
                    'battery': battery, 'shutdown': shutdown,
                    'usb': {p.name: read(p / 'state') for p in ctx.glob('/sys/class/udc/*')},
+                   'usb_net': usb_net(ctx),
                    'charger': ctx.read('/sys/class/power_supply/BAT0/charging_state'),
                    'backlight': {p.parent.name: read(p) for p in ctx.glob('/sys/class/backlight/*/bl_power')},
                    'radios': {p.name: {'type': read(p / 'type'), 'blocked': read(p / 'soft')}
@@ -119,37 +126,43 @@ class PowerJournal:
             return False
 
     def append(self, row, durable=False):
-        path = self.ctx.path(PATH)
-        private_directory(path.parent)
-        lock = os.open(path.parent / '.power-journal.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            self._append(path, row, durable)
-        finally:
-            os.close(lock)
-
-    def _append(self, path, row, durable):
         encoded = (json.dumps(row, separators=(',', ':')) + '\n').encode()
         if len(encoded) > 16384:
             raise ValueError('power_journal_row_too_large')
-        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK, 0o600)
-        try:
-            if not stat.S_ISREG(os.fstat(fd).st_mode):
-                raise ValueError('power_journal_not_regular')
-            if os.fstat(fd).st_size + len(encoded) > LIMIT:
-                os.close(fd)
-                fd = -1
-                os.replace(path, path.with_suffix('.previous.jsonl'))
-                fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
-            # Regular-file append is bounded; handle short writes without dropping a row.
-            remaining = memoryview(encoded)
-            while remaining:
-                n = os.write(fd, remaining)
-                if n <= 0:
-                    raise OSError('power_journal_short_write')
-                remaining = remaining[n:]
-            if durable:
-                os.fsync(fd)
-        finally:
-            if fd >= 0:
-                os.close(fd)
+        append_bounded(self.ctx, PATH, encoded, LIMIT, durable)
+
+
+def append_bounded(ctx, name, encoded, limit, durable=False):
+    """Append one complete row to a private file on Y2DATA; rotate once at `limit`."""
+    path = ctx.path(name)
+    private_directory(path.parent)
+    lock = os.open(path.parent / ('.' + path.stem + '.lock'), os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _append(path, encoded, limit, durable)
+    finally:
+        os.close(lock)
+
+
+def _append(path, encoded, limit, durable):
+    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK, 0o600)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise ValueError('power_journal_not_regular')
+        if os.fstat(fd).st_size + len(encoded) > limit:
+            os.close(fd)
+            fd = -1
+            os.replace(path, path.with_suffix('.previous.jsonl'))
+            fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+        # Regular-file append is bounded; handle short writes without dropping a row.
+        remaining = memoryview(encoded)
+        while remaining:
+            n = os.write(fd, remaining)
+            if n <= 0:
+                raise OSError('power_journal_short_write')
+            remaining = remaining[n:]
+        if durable:
+            os.fsync(fd)
+    finally:
+        if fd >= 0:
+            os.close(fd)

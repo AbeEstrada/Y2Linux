@@ -7604,3 +7604,30 @@ owner's recollection of stock at about 1% per night). Reference: the Y2's own st
 owner flashes: read `golden`, `vproc_sleep_state`, `phy_savecurrent`, the wheel `sleep` attribute and `y2_infra/state`
 after one unplugged 30-min sleep, then an overnight drain against 12's ~2.2 points/h.
 Readiness for the next boundary: **PARTIALLY READY**.
+
+
+## POWER-FINAL-14 persistent sleep and USB diagnostics scope audit — 2026-10-11
+
+**Boundary:** a diagnostics-only change after real evidence from 13. 13 was flashed and slept correctly once
+(archive 104: 12,104 s suspended, 6 maintenance wakes, Power wake, `complete_result_0`). The USB-after-wake defect
+(Defect B) then reproduced twice. The first time was at 18:39: the gadget was configured, but the host received
+0 bytes. The second time was at 20:56: the host received 0 bytes and MTP also returned no storage, while the Y2's earlier Wi-Fi
+address still answered ping (not confirmed to be the Y2). Each time, the only recovery was a hold-Power restart. That restart erased every
+in-memory counter that 13 was built to report (`vproc_sleep_state`, `phy_savecurrent`, wheel `sleep`,
+`y2_infra/state`, the `golden` capture at sleep entry). The boot's syslog (two 256 KiB files) did not keep the
+night either. Without these values neither 13 nor Defect B can be judged. Repeated before source changes; this
+audit builds and flashes nothing.
+
+| Row | Classification | Evidence and limit |
+| --- | --- | --- |
+| Sleep feature counters | CHANGE, host-tested | At kernel suspend, kernel resume, maintenance wake, radio restore and completion/failure, the platform appends one bounded row to `/data/system/platform/sleep-diagnostics.jsonl` (2 × 2 MiB, private, fsync): the 13 switches and counters, `y2_infra/state`, the SPM `state` and `golden` (entry column), the USB/network snapshot, and a filtered kernel-log tail. Read-only sysfs; a failure never blocks or delays sleep. |
+| USB/network snapshot | CHANGE, host-tested | UDC state, configfs gadget binding, `usb0` operstate/carrier/IPv4 (from `/proc/net/fib_trie`), interface counters, the y2-usb controller summary and whether `umtprd`/`dropbear` run. Added compactly to every power-journal row, and written to the diagnostics file when the UDC state changes plus once 30 s later (at most one row per 10 s). This catches the moment a cable is plugged in after a wake. |
+| Wi-Fi owner shell | NOT CHANGED, by design | SSH stays bound to `usb0`. A shell on the wireless network is outside the security scope. The persisted rows replace the need for it. |
+| Kernel, drivers, sleep policy, Reborn | UNCHANGED | Only the identity string changes in the kernel. |
+| Physical | NOT_RUN | Nothing above has been observed on hardware. |
+
+**Gate decision:** build candidate 14 as 13 plus these diagnostics. After the owner flashes, repeat the unplugged
+sleep. If USB is dead after the wake, restart by holding Power and read the previous boot's rows from
+`/data/system/platform/sleep-diagnostics.jsonl` and `power-journal.jsonl`. Then decide the Defect B fix and the
+golden-based power step.
+Readiness for the next boundary: **PARTIALLY READY**.

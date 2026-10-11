@@ -10,6 +10,9 @@ import socket
 import sys
 import time
 
+# POWER-FINAL-14: stages that also write a persistent sleep-diagnostics row.
+DIAGNOSTIC_STAGES = {'kernel_suspend', 'kernel_resumed', 'restoring_radios', 'product_failure'}
+
 
 def record(ctx, stage, result=None, reason=None, reborn_ack=None, mode=None):
     directory = private_directory(ctx.path('/data/system/platform'))
@@ -83,6 +86,9 @@ def record(ctx, stage, result=None, reason=None, reborn_ack=None, mode=None):
     from .power_journal import PowerJournal
     PowerJournal(ctx).observe('Suspend', ctx.json('/run/y2/power.json', {}).get('battery', {}),
                               event='suspend_' + stage)
+    if stage in DIAGNOSTIC_STAGES or stage.startswith('complete_result_'):
+        from .sleep_diagnostics import record as diagnostics
+        diagnostics(ctx, stage)
     parent = os.open(directory.parent, os.O_RDONLY | os.O_DIRECTORY)
     try:
         os.fsync(parent)
