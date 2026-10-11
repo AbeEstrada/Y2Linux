@@ -1,6 +1,36 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-11 remaining-screens candidate sealed — 2026-10-11 (latest)
+## Baseline 13 (POWER-FINAL-13) installed and published — 2026-10-11 (latest)
+
+**Image:** build `Y2LINUX-PLATFORM-V1-POWER-FINAL-13`, kernel `6.18.0-y2linux-platform-v1-power-final-13`, root
+`2025.02.18-platform-v1.43`, release `1.0.0-platform-v1-power-final-candidate.13`; compiled from Linux `47c1cf2` and
+Reborn 0.3.0 `71ddb0d`. BOOTIMG `f73c24da…c178`, Y2ROOT `e62cb6c7…1915`. Git tag `baseline-13` (both repositories)
+is this source plus the tests, the `package.py --stock` packaging fix and documentation. Build and install:
+[BUILDING](BUILDING.md), [INSTALL](INSTALL.md).
+
+**What 12 and 13 changed:** 12 made device suspend synchronous (the intermittent pre-SPM stall did not recur over a
+5.5 h night, 34 suspends) and added a real charger "Full" state. 13 fixed the sleep guard that blocked all sleep
+after a radio-quiesce race (Defect A). It also applied the stock firmware's suspend settings, taken from the Y2's own
+stock kernel: VPROC 0.85 V while asleep, LP_SEL on VMC/VMCH/VEMC3V3, USB PHY save-current, click-wheel controller
+sleep, and a 30-min maintenance wake. Each one can be switched off at run time. Details:
+[13 report](validation/Y2-PLATFORM-V1-POWER-FINAL-13.md).
+
+**Hardware results on 13 (2026-10-11):** first check healthy (taint 0, every new switch active). First unplugged
+sleep: 15:17 to 18:39, 12,104 s suspended in 7 kernel suspends with 6 clean 1800 s maintenance wakes, Power-button
+wake, restore result 0. Battery 76% to 76% (4.036 V to about 4.007 V) over 3.4 h. That is one short run, and the
+percentage comes from voltage; 12's overnight drain was about 2.2 points/h. **USB networking failed after that wake:**
+the gadget enumerated 5 s after the wake and the device reported it configured, but the host received 0 bytes for
+3 min (same symptom as 12's "Defect B"; this time without a preceding sleep failure). Power off and on recovered it.
+That restart lost the in-memory counters for the new features (VPROC, PHY, wheel, INFRA power-down, golden entry
+capture), so the run does not show whether they worked as intended.
+
+**Open, in priority order:** (1) USB traffic after a wake (Defect B). (2) Repeat the sleep test and read the new
+counters and the `golden` capture at sleep entry, then an overnight drain. (3) A warm reboot leaves the panel dark
+(`flip_done timed out`); use power off and on only. (4) Screen-off while awake keeps the display pipeline running
+(about 4.9 points/h). (5) PLL/clock-gating parity at sleep entry, eMMC supply in suspend, VGP2/DAC rail, panel deep
+standby. No current sensor exists, so no mA figure is claimed. Readiness: **MORE_WORK_REQUIRED** (developer preview).
+
+## POWER-FINAL-11 remaining-screens candidate sealed — 2026-10-11
 
 `out/y2linux-platform-v1-power-final-candidate-11/` (Linux build `5741d16`, Reborn 0.3.0 `abbb203`, root v1.41; BOOTIMG `1482316d…ee08`, Y2ROOT `4773d90d…d73c`) is 10 plus the computer, pairing, download, scanning and battery screens and a redrawn offline charging screen; **not flashed, physical NOT_RUN**.
 The installed image is 10. Kernel and drivers unchanged; the rescue charger's decision logic is untouched (display only). Details: [validation](validation/Y2-PLATFORM-V1-POWER-FINAL-11-SCREENS.md), [scope audit](planning/roadmap-gap-audit.md). Readiness remains **MORE_WORK_REQUIRED**.
@@ -46,7 +76,7 @@ select on five always-on LDOs (VA, VIO28, VUSB, VM, VIO18) with a root runtime r
 SPM 3/3, vendor golden-table differences at suspend entry 22→17. **No battery or current benefit is claimed** (no current sensor, unknown capacity, voltage-derived SOC). Overnight drain, Power/RTC wake and early-boot
 on 05 are next. Details: [handoff](planning/NEXT-SESSION-HANDOFF.md), [report §40](validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md#40-power-final-05-suspend-power-campaign-2026-10-08). Readiness remains **MORE_WORK_REQUIRED**.
 
-## DEEPSLEEP-FINAL-04 installed — 2026-10-08 (latest)
+## DEEPSLEEP-FINAL-04 installed — 2026-10-08
 
 The owner flashed the diagnostic successor DEEPSLEEP-FINAL-04 (Linux `5e26757`, Reborn `97ff8c3`, root v1.34, BOOTIMG
 `4738de48…ace5f6`, Y2ROOT `b0e66751…c041`). It differs from 03 only by retained per-device `WAIT`/`LOCK` records and a built-in
@@ -450,7 +480,7 @@ battery improvement. Owner actions: USB unplug and reconnect only.
 The [capability ledger](validation/Y2-HARDWARE-FINAL-CAPABILITIES.md) separates
 latest observations from historical build flags. Runtime status determines
 actual admission/faults. [Hardware gates](knowledge/platform-v1-hardware-gates.md)
-and [Reborn state](../../Y2Reborn/docs/CURRENT_REBORN_STATE.md) retain other limits.
+and [Reborn state](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/CURRENT_REBORN_STATE.md) retain other limits.
 
 ## Next smallest correction boundary
 

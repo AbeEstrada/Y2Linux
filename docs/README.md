@@ -1,30 +1,28 @@
 # Y2Linux documentation
 
-Baseline02 is the newest sealed candidate. UART01 supplies the latest physical
-CPU-idle evidence: C1/C2/C3 work, including 21 bounded C3 trials and 3,624 entries
-in normal policy. Baseline02 adds automatic qualified C3 boot activation;
-new-image hardware and cold-boot qualification remain PHYSICAL_NOT_RUN.
+**Baseline 13 (2026-10-11)** is the current published state: the POWER-FINAL-13
+image (stock suspend power parity) that runs on the maintainer's Y2. Git tag
+`baseline-13` in both repositories.
 
 | Need | Start here |
 | --- | --- |
-| Current facts and limits | [Current platform state](CURRENT_PLATFORM_STATE.md) |
-| Baseline02 versions, hashes, checks and owner handoff | [Baseline02 receipt](validation/Y2-BASELINE-02.md) |
-| Authoritative CPU-idle hardware results | [UART01 qualification](validation/Y2-CPU-C3-UART-PHYSICAL.md) |
-| Exact candidate and rollback pair | [Candidate index](knowledge/candidate-index.md) |
-| CPU-idle implementation and progression | [Completion source](validation/Y2-CPU-IDLE-COMPLETION.md), [physical progression](validation/Y2-CPU-IDLE-COMPLETION-PHYSICAL.md), [UART fix](validation/Y2-CPU-C3-UART.md) |
-| Current capability scope | [Capability ledger](validation/Y2-HARDWARE-FINAL-CAPABILITIES.md) |
-| Full release gaps | [Feature audit](release/Y2-COMMUNITY-BETA-FEATURE-AUDIT.md), [beta plan](release/Y2-COMMUNITY-BETA-PLAN.md) |
-| API and ownership | [Platform API](architecture/platform-api-v1.md), [power contract](architecture/platform-power-v1.md) |
-| Next milestones | [Roadmap](planning/platform-v1-roadmap.md), [standing audit](planning/roadmap-gap-audit.md#standing-milestone-boundary-rule) |
-| Rebuild / source delivery | [Reconstruction](build/platform-v1-reconstruction.md), [source delivery](release/Y2-COMMUNITY-SOURCE-DELIVERY.md) |
-| Application documentation | [Reborn state](../../Y2Reborn/docs/CURRENT_REBORN_STATE.md) |
-| Every retained page / authority rules | [Complete catalog](DOCUMENTATION_CATALOG.md), [knowledge rules](KNOWLEDGE_BASE.md) |
+| Build it yourself | [BUILDING.md](BUILDING.md) |
+| Flash it, connect, update, go back to stock | [INSTALL.md](INSTALL.md) |
+| What works, what doesn't, latest hardware results | [Current platform state](CURRENT_PLATFORM_STATE.md) |
+| What 13 changed and why | [Baseline 13 report](validation/Y2-PLATFORM-V1-POWER-FINAL-13.md) |
+| Deep sleep history (01 to 13) | [Deep-sleep report](validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md), [suspend architecture](architecture/deep-suspend.md) |
+| Charging, storage | [Charging policy](knowledge/charging-current-policy.md), [internal storage](knowledge/internal-storage.md) |
+| Platform API and ownership | [Platform API](architecture/platform-api-v1.md), [power contract](architecture/platform-power-v1.md) |
+| Partition layout and recovery | [Partitions](architecture/production-partitions.json), [install runbook](architecture/production-install.md), [recovery runbook](architecture/production-recovery.md) |
+| Build inputs and source delivery | [Locked environment](build/environment.md), [reconstruction](build/platform-v1-reconstruction.md), [source delivery](release/Y2-COMMUNITY-SOURCE-DELIVERY.md) |
+| Roadmap and open work | [Roadmap](planning/platform-v1-roadmap.md), [scope audits](planning/roadmap-gap-audit.md), [maintainer handoff](planning/NEXT-SESSION-HANDOFF.md) |
+| The player | [Y2Reborn](https://github.com/SchulzCode/Y2Reborn) ([current state](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/CURRENT_REBORN_STATE.md)) |
+| Every page | [Complete catalog](DOCUMENTATION_CATALOG.md), [knowledge rules](KNOWLEDGE_BASE.md) |
 
-Historical reports remain at their original paths. Their “current image”, “next
-step” and authorization statements apply to their dated sessions. A current
-summary does not rewrite raw evidence or grant new hardware authorization.
-Full system suspend, electrical battery measurement and other release gates
-remain separate from the physically qualified runtime C3 architecture.
+Most pages under `build/`, `validation/`, `hardware-evidence/` and `release/` are
+dated records of a specific candidate. Their "current", "next" and permission
+statements belong to that date. Paths like `out/...` in them refer to the
+maintainer's local build outputs and are not part of the repository.
 
 
 ## Historical navigation snapshot
@@ -51,7 +49,7 @@ Start with the [complete community beta audit](release/Y2-COMMUNITY-BETA-FEATURE
 | Power/hardware acceptance gates | [Hardware gates](knowledge/platform-v1-hardware-gates.md) |
 | Next scope and decisions | [Roadmap](planning/platform-v1-roadmap.md), [standing audit](planning/roadmap-gap-audit.md#standing-milestone-boundary-rule) |
 | Rebuild a recorded source pair | [Reconstruction](build/platform-v1-reconstruction.md) |
-| Application state | [Reborn current state](../../Y2Reborn/docs/CURRENT_REBORN_STATE.md) |
+| Application state | [Reborn current state](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/CURRENT_REBORN_STATE.md) |
 | Every retained document | [Complete catalog](DOCUMENTATION_CATALOG.md) |
 | How this knowledge base stays truthful | [Knowledge rules](KNOWLEDGE_BASE.md) |
 

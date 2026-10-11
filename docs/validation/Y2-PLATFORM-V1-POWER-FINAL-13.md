@@ -1,6 +1,7 @@
 # POWER-FINAL-13 — stock suspend power parity (golden master from the Y2's own firmware)
 
-Status: **IMPLEMENTATION_READY_PHYSICAL_NOT_RUN** (sealed, awaiting the owner flash). Branch
+Status: **FLASHED, FIRST SLEEP PASSED, USB-AFTER-WAKE DEFECT OPEN** (published as Baseline 13, tag `baseline-13`;
+see [physical result](#physical-result-2026-10-11)). Sealed as IMPLEMENTATION_READY_PHYSICAL_NOT_RUN. Branch
 `codex/platform-v1-power-final-13` (worktrees `~/Dokumente/Code/worktrees/platform-v1-power-final-13/{Y2Linux,Y2Reborn}`),
 Linux build commit `47c1cf225dc140d151366f9e6309a3a07556fa67` (later test-only `tests:` commit), Reborn unchanged (`71ddb0d`).
 Package `out/y2linux-platform-v1-power-final-candidate-13/` (fallback = sealed 12), symbols `…-13-symbols/`, receipts
@@ -66,3 +67,21 @@ Source: `evidence-private/20260908-ram-map/fm-decompressed.bin` (the Y2's stock 
 PLL hardware control (AP_PLL_CON3 / CLK_SCP_CFG) and the DIS/MMSYS power domain, eMMC supply removal in suspend,
 VGP2/DAC rail, panel deep-standby table, PMIC low-battery interrupt instead of timer wakes, AUXADC clocking, and the
 awake-dark drain (Reborn blanks only the backlight; the display pipeline keeps scanning out).
+
+## Physical result (2026-10-11)
+
+- **First check** (archive `100-power13-first-check`, read-only): boot `604bc0e6`, taint 0, `pm_async` 0;
+  `vproc_sleep` = Y, `lp_sel` applied on all eight rails, `phy_savecurrent` enabled, wheel `sleep` enabled (firmware 1,
+  sleep command), SPM `SPM_CPU_SHUTDOWN_INFRA_PDN` with 1800 s maintenance. Awake `golden`: PLL hardware-control bits
+  (APMIXED+0x00c = 0x780000) and CLK_SCP_CFG already match stock. MAIN/UNIV/MM/MSDC PLL are software-enabled,
+  VENCPLL is on, and AP_PLL_CON1 and the INFRA/PERI DCM differ (all candidates for 14).
+- **First unplugged sleep** (archive `104-power13-first-sleep-coldstart-archive`; device clock = host minus 37.9 min):
+  host 15:17:30 to 18:39:33, 12,104 s suspended, 7 kernel suspends, 6 clean 1800 s maintenance wakes, Power wake,
+  `complete_result_0`. 76% to 76% (4.036 V to about 4.007 V at the maintenance wakes) in 3.4 h: indicative only,
+  from voltage.
+- **Defect B reproduced on a clean wake:** the gadget enumerated 5 s after the wake (`udc configured`,
+  `detached=0`), but the host received 0 bytes for 3 min. Owner power-off (`shutdown_execute`), offline charging,
+  power-on (boot `8cdde856`, taint 0) recovered it. That lost the in-memory counters (`vproc_sleep_state`,
+  `phy_savecurrent`, wheel `sleep`, `y2_infra/state`, the `golden` capture at sleep entry), and the boot's syslog was
+  not persisted past start-up. Next: repeat the sleep, and if USB is dead, read the counters another way before any
+  restart.

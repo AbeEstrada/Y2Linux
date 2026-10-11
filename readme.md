@@ -1,66 +1,100 @@
 # Y2Linux
 
-Linux 6.18 and Buildroot platform for the Innioasis Y2, paired with the native
-[Y2Reborn player](https://github.com/SchulzCode/Y2Reborn).
+Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
+(MediaTek MT6582), together with the native music player
+[Y2Reborn](https://github.com/SchulzCode/Y2Reborn). It replaces the stock
+Android system on the internal eMMC and leaves the bootloaders, calibration and
+factory partitions untouched.
 
-**Baseline02 is the newest sealed integrated candidate.** It includes automatic,
-guarded CPU0 C3 activation after boot. **C1 WFI, C2 SLIDLE and C3 DORMANT have
-physically passed on the preceding UART01 image**; qualification of Baseline02's
-new images and automatic cold boot is pending.
+> **Status: Baseline 13 (2026-10-11), developer preview.** It runs every day on
+> the maintainer's Y2. There are no prebuilt images yet: you build from source
+> and flash with SP Flash Tool. Only one hardware revision has been tested (see
+> [Supported hardware](#supported-hardware)). Read [Known issues](#known-issues)
+> before you flash.
 
-| Field | Sealed Baseline02 |
+| | Baseline 13 |
 | --- | --- |
-| Build | `Y2LINUX-BASELINE-02` |
-| Candidate | `out/y2linux-baseline-02-candidate/` |
-| Kernel | `6.18.0-y2linux-baseline-02` |
-| Rootfs / release | `2025.02.18-platform-v1.21` / `1.0.0-baseline-candidate.2` |
-| Compiled Linux | `8584ccd85f052f351fe51650b2348c83ca894ed4` |
-| Compiled Reborn | `b71b468860233faa0a42b8448ec5777fa952b8e3` |
-| ABI / feature contract / layout / data | 1 / 2 / 1 / 1 |
-| Software / package | PASS |
-| New-image hardware / automatic cold boot | PHYSICAL_NOT_RUN |
+| Git tag (both repositories) | `baseline-13` |
+| Kernel | `6.18.0-y2linux-platform-v1-power-final-13` |
+| Root filesystem / release | `2025.02.18-platform-v1.43` / `1.0.0-platform-v1-power-final-candidate.13` |
+| Player | Y2Reborn 0.3.0 |
+| Maintainer's images built from | Y2Linux `47c1cf2`, Y2Reborn `71ddb0d` (later commits: tests, packaging tool and docs only) |
 
-Start with the [current platform state](docs/CURRENT_PLATFORM_STATE.md),
-[Baseline02 receipt](docs/validation/Y2-BASELINE-02.md),
-[UART01 hardware qualification](docs/validation/Y2-CPU-C3-UART-PHYSICAL.md)
-and [documentation index](docs/README.md).
+## Getting started
 
-The UART01 run observed C2 at **84.35% residency** with zero clock restore
-failures, 21 bounded C3 reset-and-return trials, and **3,624 C3 entries / 65.25%
-residency** in a 60-second normal-policy window. The final same-boot count was
-3,647 real C3 returns. Timers, hotplug, all five 598–1300 MHz OPPs, bounded
-storage integrity, playback and USB/Wi-Fi regressions passed. Those results do
-not establish full system suspend, endurance or measured battery savings.
+1. **[Build from source](docs/BUILDING.md)**: host setup, the stock firmware
+   files you extract from Innioasis's own firmware package, the build and the
+   first-install package.
+2. **[Install on the Y2](docs/INSTALL.md)**: back up, flash with SP Flash
+   Tool, first boot, SSH over USB, updating and going back to stock.
 
-Useful installed diagnostics:
+## What works
 
-```sh
-y2-status system --json
-y2-platform status cpu
-y2-platform capabilities
-y2-health --full --json
-y2-platform boot-evidence
-```
+Observed on the maintainer's device on Baseline 13 or the candidates just before it:
 
-The platform provides internal root/data and SD ownership, ALSA/ASoC/CS43131,
-DRM/Lima, native radio services, authenticated USB SSH/SFTP, workload QoS,
-thermal authority, updates and rescue. Enabled, admitted and physically qualified
-remain separate. Wired hardware output supports S16 stereo 44.1/48 kHz;
-higher-rate sources convert to that sink. Optional Bluetooth encoders belong to
-the private experiment profile and require separate peer/distribution acceptance.
-Battery SOC and low-voltage policy remain provisional.
+- Boots from internal eMMC: stock preloader and LK, then Linux 6.18 and Buildroot. No SD card needed.
+- Display with GPU (DRM + Lima), buttons, click wheel and the Reborn player UI.
+- Wired headphone audio (CS43131 DAC), S16 stereo at 44.1/48 kHz; higher-rate files are converted.
+- Bluetooth audio (SBC).
+- Wi-Fi (2.4 GHz).
+- USB: MTP (internal storage and SD card), and SSH/SFTP over USB Ethernet for developers.
+- microSD card for music (`/media/sd`). Optionally, the stock FAT partition can be turned into
+  a 5.4 GiB ext4 music partition (`y2-platform internal-media provision`).
+- Charging over USB (conservative 650 mA default ceiling) with a real "Full" state, and an
+  offline charging screen when the player is off.
+- Deep sleep when the screen times out: the SoC suspends and wakes every 30 min for
+  housekeeping. The first sleep on 13 lasted 3.4 h (7 suspends) and ended with a clean
+  Power-button wake.
 
-Only **BOOTIMG and ANDROID/Y2ROOT** are installation payloads. Preserve Y2DATA,
-preloader/LK, NVRAM/PROTECT, calibration and factory/table partitions. The package
-retains the exact physically qualified UART01 fallback pair. Only the owner
-flashes; this repository is not an approved public firmware release.
+## Known issues
 
-For exact hashes, limits and the next owner boundary, use the
-[candidate index](docs/knowledge/candidate-index.md),
-[Platform API](docs/architecture/platform-api-v1.md),
-[source reconstruction](docs/build/platform-v1-reconstruction.md),
-[hardware gates](docs/knowledge/platform-v1-hardware-gates.md),
-[roadmap](docs/planning/platform-v1-roadmap.md) and
-[standing audit](docs/planning/roadmap-gap-audit.md#standing-milestone-boundary-rule).
-Local candidate source commits may be newer than published `main`; later
-documentation commits are not the revisions compiled into the images.
+- **Never use a software restart.** A warm reboot (the menu's Restart, update
+  reboots, `reboot`) can leave the panel dark (`flip_done timed out`). Turn the
+  player off by holding Power, then start it again. Not yet investigated.
+- **USB networking can stop passing traffic after a wake from deep sleep.** The
+  device re-enumerates but sends nothing (seen on 12 and on the first 13 wake). Turning
+  the player off and on again recovers it. Under investigation.
+- **Battery life is not stock-like yet.** Asleep: about 2.2 percentage points/h on
+  12. 13 adds the stock sleep settings, but its overnight result is not measured yet.
+  Awake with the screen off: about 4.9 points/h, because only the backlight is
+  switched off. The percentage is estimated from voltage; there is no current sensor.
+- Bluetooth uses SBC only. AAC/aptX/LDAC sources exist but are not enabled in
+  normal builds.
+- No public update channel or release signing. You flash or copy updates by hand.
+
+The full list, with evidence and next steps, is in the
+[current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
+[Baseline 13 report](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-13.md).
+
+## Supported hardware
+
+One device has been tested: Innioasis Y2, board `eastaeon82_wet_kk`, MT6582,
+7.8 GB eMMC, shipped with Innioasis firmware **v3.2.0 FM (2026-08-13)**. The
+build and packaging tools check the stock firmware files by SHA-256. A Y2 with a
+different board, eMMC size or partition table is **not supported** until someone
+verifies it. Please report your device's details in an issue.
+
+## Repository layout
+
+| Path | Contents |
+| --- | --- |
+| `kernel/` | Kernel configuration, device tree, platform drivers (`kernel/platform`, `kernel/usb`, `kernel/audio`) and the overlay patches applied to Linux 6.18 (`kernel/patches`) |
+| `buildroot/` | Buildroot external tree: defconfig, board overlays, local packages (Reborn, connectivity, MTP, updater) |
+| `initramfs/` | Boot-time rescue and handover to the internal root filesystem |
+| `tools/build/` | Locked, network-isolated kernel build environment (bubblewrap) |
+| `tools/production/` | Production build, packaging and validation, plus on-device helper sources |
+| `tools/platform/` | `y2-platform`, the on-device platform service and CLI |
+| `tools/connectivity/` | Wi-Fi/Bluetooth services and stock firmware provisioning |
+| `tests/` | Host and container test suites (`tools/production/tests.sh`) |
+| `docs/` | Documentation; start at [docs/README.md](docs/README.md) |
+
+## Licence
+
+Each source file carries its own SPDX licence identifier; the kernel drivers and
+patches are GPL-2.0, and Y2Reborn is MIT. The proprietary MediaTek radio firmware is
+**not** in this repository and is never downloaded. You extract it from your own
+copy of the Innioasis firmware (see [BUILDING](docs/BUILDING.md)). Images that
+contain it are for your own device; do not redistribute them.
+
+This project is not affiliated with Innioasis or MediaTek. Flashing replaces the
+stock system; you do it at your own risk.

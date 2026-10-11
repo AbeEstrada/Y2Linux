@@ -72,7 +72,7 @@ input-reader thread or semantic input channel**.
 Screens do not parse evdev types, device names or key codes. The separate
 semantic screen-off guard in UI also protects control-socket/global actions;
 it is not another bounce filter. Full source contract:
-[Reborn ownership](../../../Y2Reborn/docs/architecture/platform-v1-input.md).
+[Reborn ownership](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/architecture/platform-v1-input.md).
 
 ## 2–4. Actual retained wheel pattern, bounce and accuracy
 

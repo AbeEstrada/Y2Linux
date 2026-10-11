@@ -122,7 +122,7 @@ and mount generation before pruning [C], but target removal during scan/decode,
 blocked unmounts, card replacement, full filesystems and I/O-error recovery
 remain unqualified. Preserve prior library data when media disappears.
 
-Reborn's [SQLite boundary](../../../Y2Reborn/crates/reborn-library/src/lib.rs)
+Reborn's [SQLite boundary](https://github.com/SchulzCode/Y2Reborn/blob/main/crates/reborn-library/src/lib.rs)
 uses one writer, WAL, `synchronous=NORMAL`, a two-second busy timeout and startup
 `quick_check(10)`. Recent tests distinguish corruption from lock, permission,
 I/O and full-disk failures. Its last-query latency gauge is useful but does not
@@ -131,7 +131,7 @@ committed transactions to be lost on power failure; application crash recovery
 is a different claim. [SQLite's synchronous contract](https://www.sqlite.org/pragma.html#pragma_synchronous).
 
 The platform must define how much loss is acceptable for rebuildable metadata
-and for user state. Reborn's [session writer](../../../Y2Reborn/crates/reborn-core/src/lib.rs)
+and for user state. Reborn's [session writer](https://github.com/SchulzCode/Y2Reborn/blob/main/crates/reborn-core/src/lib.rs)
 fsyncs the temporary file, renames it and fsyncs the parent; periodic checkpoints
 run at 15 seconds plus explicit events. These mechanisms do not prove the
 end-to-end flush path or cap a stalled write's latency. Source limits of 20,000
@@ -186,7 +186,7 @@ Commit `3dc0a8b` subsequently changes depleted-battery charging to retain the
 still requires physical evidence. Do not extrapolate older acceptance to it.
 
 [Offline charging](../../tools/production/offline-charge.c) gates normal boot
-on voltage and user intent. Reborn's [power adapter](../../../Y2Reborn/crates/reborn-platform/src/power.rs)
+on voltage and user intent. Reborn's [power adapter](https://github.com/SchulzCode/Y2Reborn/blob/main/crates/reborn-platform/src/power.rs)
 reads supplies and requests shutdown; neither it nor the inspected normal
 platform services implements a complete low-battery warning/checkpoint/shutdown
 policy. This is a missing operational capability, distinct from charger
@@ -222,7 +222,7 @@ rootfs do not complete this contract.
 BlueZ plus BlueALSA/SBC is built. The platform
 [preferred-peer helper](../../tools/connectivity/reconnect.c) owns retries;
 upstream reconnect attempts are disabled to avoid competing owners. The current
-[Reborn adapter](../../../Y2Reborn/crates/reborn-platform/src/bluetooth.rs)
+[Reborn adapter](https://github.com/SchulzCode/Y2Reborn/blob/main/crates/reborn-platform/src/bluetooth.rs)
 sets trust after user confirmation and invalidates stale transport epochs [M],
 [C], superseding the earlier missing-trust finding. Physical evidence remains
 adapter power/discovery and short concurrent Wi-Fi scans, not pairing or PCM

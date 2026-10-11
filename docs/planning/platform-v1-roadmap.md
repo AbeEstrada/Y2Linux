@@ -1124,7 +1124,7 @@ slot: Baseline02 Linux `8584ccd8` / Reborn `b71b4688`, boot
 initial/incremental 5526/393 ms, peak 10656 KiB; SD/ext4/SDR104 5495/401 ms,
 peak 10936 KiB. Each initial scan completes 1000/zero failures, each rescan
 reuses all tracks; storage fault deltas remain zero. Original private receipts
-and hashes are summarized in the [media report](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md).
+and hashes are summarized in the [media report](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md).
 
 #29/#32/#33 classification: CONFIRMED bounded physical **stock** scan/reuse,
 CONFIRMED candidate software, UNTESTED new-candidate physical scan/concurrent
@@ -1141,7 +1141,7 @@ The owner-authorized Reborn media subpass is software-ready with limitations,
 following the [closing gap audit](roadmap-gap-audit.md#ffmpeg-metadata-and-library-software-closing-review--2026-10-04).
 Reborn `a22107c` + `43a695c` retain FFmpeg/float DSP/SQLite ownership while
 repairing metadata/gapless/artwork correctness and bounding scan work. The
-[complete media receipt](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md)
+[complete media receipt](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md)
 records 252 host tests, ARM release, 32+30 QEMU tests, native ownership stress,
 component/ABI checks and 100/1k/10k benchmarks. Host 10k initial scan median
 7408→1084 ms, unchanged 191→130 ms, process peak 66488→53720 KiB.
@@ -1242,7 +1242,7 @@ limit prevents a safe single-volume 50k fixture; no resize/format is authorized.
 1k/10k use only DATA. 50k after artifact is Reborn `c161404`; before is archived
 `b71b468` production code with current benchmark-only adapters. Transfers are
 SHA256-verified; checked-in sanitized results retain artifact identity and all
-median/p95/worst samples. See [Reborn evidence/report](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-LIBRARY-DB.md).
+median/p95/worst samples. See [Reborn evidence/report](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/REBORN-PLATFORM-V1-LIBRARY-DB.md).
 The target lacks `/proc/self/io`; target write bytes are unavailable, not zero.
 
 | Coverage / existing epic | Classification | Evidence and next boundary |
@@ -1317,7 +1317,7 @@ qualification remains PHYSICAL_NOT_RUN. #28/#31/#32/#34 refreshed read-only agai
 | Y2DATA/storage | CONFIRMED retained UART01 bounded scope; target DB benchmark NOT_RUN | Parallel storage session retains device lock during owner removal/reinsert confirmation; do not remove its lock or touch its SD state |
 | Release/suspend/endurance; #28/#31/#34 | PARTIAL, unchanged | Exact-image/new-boot, full suspend, wider endurance, battery and release gates remain separate |
 
-The [Reborn pass record](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-LIBRARY-DB.md)
+The [Reborn pass record](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/REBORN-PLATFORM-V1-LIBRARY-DB.md)
 and checked-in host samples retain median/p95/worst and observed regressions.
 The next smallest gate is locked scratch-only Y2DATA before/after timing/memory,
 without flash, production database or installed binary replacement. Source-ID
@@ -1386,7 +1386,7 @@ The scoped Product v2 application performance pass is CONFIRMED on Baseline02
 boot `88b85fa3-2282-4d93-b0b8-818a105ddd0a`, taint0, with preserved baseline and
 exact candidate `069415a` ARM SHA `7871ec67f6678c7f522b1b84da0f1e53ab1646e89bc6abb6b7eafe10c02286c7`.
 See the [closing gap audit](roadmap-gap-audit.md#reborn-performance-pass-closing-boundary--2026-10-04)
-and [Reborn evidence](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md).
+and [Reborn evidence](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md).
 
 Wheel KMS p95 is 59.93→17.52 ms and Now Playing 77.61→17.15 ms; all 1,000
 steps match. Frame CPU p95 falls from 5.09–9.94 to 1.65–2.82 ms. Sampled static

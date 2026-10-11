@@ -26,12 +26,15 @@ Indexed pages: **307**. Explicit scope notices: **220**.
 | [Y2Linux complete document catalog](DOCUMENTATION_CATALOG.md) | Current entry / index |
 | [Knowledge-base authority and maintenance](KNOWLEDGE_BASE.md) | Current entry / index |
 | [Y2Linux documentation](README.md) | Current entry / index |
+| [Building Y2Linux from source](BUILDING.md) | Current entry / index |
+| [Installing Y2Linux on the Innioasis Y2](INSTALL.md) | Current entry / index |
 
 ## Architecture
 
 | Page | Scope |
 | --- | --- |
 | [Platform API v1](architecture/platform-api-v1.md) | Source contract |
+| [Deep suspend — developer architecture](architecture/deep-suspend.md) | Source contract |
 | [Bluetooth platform v1 contract](architecture/platform-bluetooth-v1.md) | Source contract |
 | [Owner reset and state export](architecture/platform-maintenance-v1.md) | Source contract |
 | [Network, clock and entropy contract v1](architecture/platform-network-time-v1.md) | Source contract |
@@ -256,6 +259,8 @@ Indexed pages: **307**. Explicit scope notices: **220**.
 
 | Page | Scope |
 | --- | --- |
+| [Next-session handoff](planning/NEXT-SESSION-HANDOFF.md) | Maintainer session handoff (newest entry first) |
+| [Deep suspend investigation prompt, 2026-10-08](planning/CLAUDE-DEEP-SUSPEND-PROMPT.md) | Historical investigation brief |
 | [Handoff for 2026-10-02 — documentation and repository catch-up](planning/HANDOFF-2026-10-02.md) | Current working handoff |
 | [Production Storage / Installation v1 — issue 33](planning/issues/production-storage-v1.md) | Historical issue specification |
 | [Y2A-300 — M3 current state, 2026-09-10](planning/issues/Y2A-300.md) | Historical issue specification |
@@ -299,6 +304,14 @@ Indexed pages: **307**. Explicit scope notices: **220**.
 
 | Page | Scope |
 | --- | --- |
+| [POWER-FINAL-13 — stock suspend power parity (Baseline 13)](validation/Y2-PLATFORM-V1-POWER-FINAL-13.md) | Current candidate report with physical result |
+| [POWER-FINAL-11 — remaining screens](validation/Y2-PLATFORM-V1-POWER-FINAL-11-SCREENS.md) | Candidate validation receipt |
+| [POWER-FINAL-10 — Reborn Product UI v3](validation/Y2-PLATFORM-V1-POWER-FINAL-10-UI.md) | Candidate validation receipt |
+| [POWER-FINAL-06 — INFRASYS/DDRPHY power-down bring-up](validation/Y2-PLATFORM-V1-POWER-FINAL-06-BRINGUP.md) | Candidate validation receipt |
+| [Suspend power optimization (POWER-FINAL-05)](validation/Y2-PLATFORM-V1-SUSPEND-POWER-OPTIMIZATION.md) | Dated power campaign |
+| [Final deep-sleep investigation](validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md) | Deep-sleep report, 01 to 13 |
+| [Power / battery investigation](validation/Y2-PLATFORM-V1-POWER-BATTERY-FINAL.md) | Dated power/battery report |
+| [Suspend state probe — test plan](validation/Y2-SUSPEND-STATE-PROBE-PLAN.md) | Proposed test plan |
 | [Platform v1 capability report](validation/PLATFORM-V1-CAPABILITY-REPORT.md) | Scoped validation record |
 | [Platform v1 completion ledger](validation/PLATFORM-V1-COMPLETION.md) | Scoped validation record |
 | [Hardware 02 — coherent hardware ceiling candidate](validation/PLATFORM-V1-HARDWARE-02.md) | Scoped validation record |
@@ -377,7 +390,6 @@ Platform 1.0 parallel integration observation (2026-10-04):
 | [Y2 wired high-resolution PCM completion (route study and serializer-pad measurement)](validation/Y2-HIGHRES-AUDIO-COMPLETION.md) | Current evidence record; MT6582 wired playback measured at 16 meaningful bits maximum |
 | [Y2 Platform 1.0 input validation](validation/Y2-PLATFORM-V1-INPUT.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
 | [Y2 Platform 1.0 storage and filesystem pass](validation/Y2-PLATFORM-V1-STORAGE.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
-| [Y2 Platform 1.0 full system suspend / resume](validation/Y2-PLATFORM-V1-SUSPEND.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
 | [Y2 Platform 1.0 USB / desktop file transfer](validation/Y2-PLATFORM-V1-USB.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
 | [Y2 Platform 1.0 Wi-Fi optimization](validation/Y2-PLATFORM-V1-WIFI-OPTIMIZATION.md) | Source-bound owner handoff or current master plan; physical scope remains explicit |
 
@@ -404,4 +416,3 @@ Platform 1.0 parallel integration observation (2026-10-04):
 
 | Page | Scope |
 | --- | --- |
-| [Storage Platform 1.0](validation/Y2-PLATFORM-V1-STORAGE.md) | Current isolated storage/filesystem pass, exact hardware evidence and remaining gates |

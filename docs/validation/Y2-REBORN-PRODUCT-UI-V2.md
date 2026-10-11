@@ -7,10 +7,10 @@
 > remains the CPU platform change set this candidate is built on.
 
 This candidate is the CPU Final Fix03 platform with the Reborn Product UI v2
-pass ([product UI](../../../Y2Reborn/docs/ui/REBORN-PRODUCT-UI-V2.md),
-[navigation](../../../Y2Reborn/docs/ui/REBORN-PRODUCT-NAVIGATION-V2.md),
-[platform boundary](../../../Y2Reborn/docs/architecture/platform-api-boundary.md),
-[pass record](../../../Y2Reborn/docs/review/REBORN-PRODUCT-PASS-V2.md)).
+pass ([product UI](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/ui/REBORN-PRODUCT-UI-V2.md),
+[navigation](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/ui/REBORN-PRODUCT-NAVIGATION-V2.md),
+[platform boundary](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/architecture/platform-api-boundary.md),
+[pass record](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/review/REBORN-PRODUCT-PASS-V2.md)).
 
 ## Platform changes in this candidate
 

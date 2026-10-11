@@ -1,5 +1,15 @@
 # Candidate and fallback identity index
 
+## Baseline 13 / POWER-FINAL-13 — installed, published 2026-10-11
+
+`Y2LINUX-PLATFORM-V1-POWER-FINAL-13`: compiled Linux `47c1cf225dc140d151366f9e6309a3a07556fa67` / Reborn
+`71ddb0d523187d61035304d3ea5e42b70d63e357`; kernel `6.18.0-y2linux-platform-v1-power-final-13`, root
+`2025.02.18-platform-v1.43`, release `1.0.0-platform-v1-power-final-candidate.13`. BOOTIMG
+`f73c24da3abe5978f2c234bd9501a929415fc156fc5ab79ebc7755390dddc178`, Y2ROOT
+`e62cb6c7bab621e6f791359e5b56bba3a21f065d2ba864f4917b3ae808c01915`. Maintainer package
+`out/y2linux-platform-v1-power-final-candidate-13/` (fallback = sealed 12, BOOTIMG `f33fac4d…`, Y2ROOT `215892b5…`).
+Published as tag `baseline-13`. Older "current"/"newest" labels below are historical.
+
 ## Newest independent Platform 1.0 baseline — 2026-10-04
 
 `Y2LINUX-PLATFORM-V1-BASELINE-01`: compiled Linux `98daf3f0220f4a1580bb4893094ee9f0e02362a5` / Reborn `9cd12baeeb70b204e08299bd4c91c8c35604c304`;

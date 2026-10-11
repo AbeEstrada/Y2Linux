@@ -143,7 +143,7 @@ mere existence of promising exported names, but still not a silicon ceiling.
 sets 0x1000c=0x05 (ASP sample24), 0x5000a=0x06 and 0x5000b=0x0e
 (channel24). The recovered 32-slot second-I2S programming and stock PCM16
 source therefore do **not** establish meaningful incoming24. Existing retained
-[second-I2S analysis](../../../Y2Player/docs/Y2_AUDIO_PATH_PHASE4_SECOND_I2S.md)
+second-I2S analysis (`Y2Player/docs/Y2_AUDIO_PATH_PHASE4_SECOND_I2S.md`, private research repository)
 and `Y2Player/out/afe-runtime/2026-07-30_135519/` cover runtime CONN0=0x00400020,
 CON3=0x90b active/0x90a idle and CON1=0. No stock wide DL1 operation was found.
 

@@ -23,9 +23,9 @@ permission. See [source delivery](release/Y2-COMMUNITY-SOURCE-DELIVERY.md).
 
 This repository and adjacent Y2Reborn describe one product. Start with
 [platform state](CURRENT_PLATFORM_STATE.md) and
-[application state](../../Y2Reborn/docs/CURRENT_REBORN_STATE.md). The complete
+[application state](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/CURRENT_REBORN_STATE.md). The complete
 [Linux catalog](DOCUMENTATION_CATALOG.md) and
-[Reborn catalog](../../Y2Reborn/docs/DOCUMENTATION_CATALOG.md) cover retained pages.
+[Reborn catalog](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/DOCUMENTATION_CATALOG.md) cover retained pages.
 
 ## Authority order
 

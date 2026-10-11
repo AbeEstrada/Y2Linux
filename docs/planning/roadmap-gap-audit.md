@@ -2038,7 +2038,7 @@ peak 10656 KiB; SD/ext4/SDR104 initial 5495 ms, incremental 401 ms, peak
 1000. Storage controller fault deltas remain zero during write/fsync, read/SHA
 and scans; known scratch is cleaned. Original receipts are private storage
 `out/platform-v1-storage/{emmc,sd}-corpus.json` and `corpus-restored.stdout`,
-with hashes and summaries in the [media receipt](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md).
+with hashes and summaries in the [media receipt](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md).
 
 This supersedes “physical stock mixed scan unmeasured,” not the candidate's
 NOT_RUN gate. #29/#32/#33 now have CONFIRMED bounded physical stock scan/reuse
@@ -2057,7 +2057,7 @@ Repeat the standing boundary review before closing this owner-authorized
 software subpass. Reborn `a22107c` + `43a695c` on the isolated media branch
 preserve the direct FFmpeg/float-DSP/sink architecture and add bounded inspection,
 correct extraction, bounded artwork and lean incremental ingestion. Linux changes
-are planning documentation only. The [media receipt](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md)
+are planning documentation only. The [media receipt](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md)
 and checked-in measurements distinguish host/ARM/QEMU results from hardware.
 The blueprint and owner scope exclude flash, push, production installation,
 kernel/partition/memory-layout changes and interference with parallel radio/audio
@@ -2168,7 +2168,7 @@ limit prevents a safe single-volume 50k fixture; no resize/format is authorized.
 1k/10k use only DATA. 50k after artifact is Reborn `c161404`; before is archived
 `b71b468` production code with current benchmark-only adapters. Transfers are
 SHA256-verified; checked-in sanitized results retain artifact identity and all
-median/p95/worst samples. See [Reborn evidence/report](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-LIBRARY-DB.md).
+median/p95/worst samples. See [Reborn evidence/report](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/REBORN-PLATFORM-V1-LIBRARY-DB.md).
 The target lacks `/proc/self/io`; target write bytes are unavailable, not zero.
 
 | Coverage / existing epic | Classification | Evidence and next boundary |
@@ -2243,7 +2243,7 @@ qualification remains PHYSICAL_NOT_RUN. #28/#31/#32/#34 refreshed read-only agai
 | Y2DATA/storage | CONFIRMED retained UART01 bounded scope; target DB benchmark NOT_RUN | Parallel storage session retains device lock during owner removal/reinsert confirmation; do not remove its lock or touch its SD state |
 | Release/suspend/endurance; #28/#31/#34 | PARTIAL, unchanged | Exact-image/new-boot, full suspend, wider endurance, battery and release gates remain separate |
 
-The [Reborn pass record](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-LIBRARY-DB.md)
+The [Reborn pass record](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/REBORN-PLATFORM-V1-LIBRARY-DB.md)
 and checked-in host samples retain median/p95/worst and observed regressions.
 The next smallest gate is locked scratch-only Y2DATA before/after timing/memory,
 without flash, production database or installed binary replacement. Source-ID
@@ -2375,10 +2375,10 @@ Evidence origin: synthetic supported evdev records/kernel timestamps, real
 480x360 GLES2/KMS frames, disposable 10k SQL/UI fixtures, 16 collection trips,
 1,000 wheel steps, four warm starts, playback/idle windows, cover sequences,
 native write-size probes and a supplemental 16 resume/16 pause replay per binary.
-See the [Reborn report](../../../Y2Reborn/docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md),
-[matched summary](../../../Y2Reborn/docs/validation/evidence/reborn-platform-v1-performance/summary.json),
-[controls](../../../Y2Reborn/docs/validation/evidence/reborn-platform-v1-performance/play-pause.json)
-and [restoration](../../../Y2Reborn/docs/validation/evidence/reborn-platform-v1-performance/restoration.json).
+See the [Reborn report](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md),
+[matched summary](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/evidence/reborn-platform-v1-performance/summary.json),
+[controls](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/evidence/reborn-platform-v1-performance/play-pause.json)
+and [restoration](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/validation/evidence/reborn-platform-v1-performance/restoration.json).
 Mechanical/IRQ/debounce-to-photon, analog response, electrical power, peer radios
 and cold-boot improvement are not claimed. Live input uses three owner-library
 tracks/private PCM queue; 10k SQL/layout/GPU stress is a separate fixture.
