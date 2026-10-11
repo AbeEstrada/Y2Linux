@@ -222,9 +222,14 @@ def package(build, base, fallback_root, out, fallback_overlay=None, public=False
         shutil.copyfile(source,out/'metadata'/name)
     if '-gpu.' in versions['rootfs_version'] or versions.get('platform_api_version') == 1:
         licenses=out/'metadata/graphics-licenses'; licenses.mkdir()
+        def built(package):
+            found=sorted((build/'buildroot/build').glob(package+'-[0-9]*'))
+            if len(found)!=1: raise ValueError('expected one '+package+' build: '+str(found))
+            return found[0], found[0].name.removeprefix(package+'-')
+        mesa,mesa_version=built('mesa3d'); drm,drm_version=built('libdrm')
         for source,name in [
-                (build/'buildroot/build/mesa3d-24.0.9/docs/license.rst','Mesa-24.0.9-license.rst'),
-                (build/'buildroot/build/libdrm-2.4.124/data/meson.build','libdrm-2.4.124-license.txt'),
+                (mesa/'docs/license.rst','Mesa-'+mesa_version+'-license.rst'),
+                (drm/'data/meson.build','libdrm-'+drm_version+'-license.txt'),
                 (PROJECT/'tools/graphics/LICENSE','y2-gpu-check-MIT.txt'),
                 (PROJECT/'tools/graphics/include/lima_drm.h','Linux-6.18-lima-uapi.h'),
                 (PROJECT/'docs/knowledge/evidence/gpu-source-contract.json','gpu-source-contract.json')]:
