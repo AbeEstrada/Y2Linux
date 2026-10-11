@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """One host-only validation of layout, transports, filesystems and release contract."""
-import argparse, hashlib, json, posixpath, struct, subprocess, sys, tarfile
+import argparse, hashlib, json, posixpath, re, struct, subprocess, sys, tarfile
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 from tools.production.layout import (TARGETS, CAPACITY, digest, require, scatter_rows,
@@ -325,7 +325,18 @@ def validate_rootfs(out,build,m):
                 content=read(name)
                 require(content[:6]==b'\x7fELF\x01\x01' and struct.unpack_from('<H',content,18)[0]==40,'connectivity ARM binary '+name)
         if '-gpu.' in m['rootfs_version'] or m.get('platform_api_version') == 1:
-            for name in ('usr/bin/y2-gpu-check','usr/lib/libEGL.so.1','usr/lib/libGLESv2.so.2','usr/lib/libgbm.so.1','usr/lib/libdrm.so.2','usr/lib/dri/lima_dri.so','usr/lib/dri/mediatek_dri.so'):
+            # Mesa <= 24 shipped one DRI file per driver; Mesa >= 25 builds every Gallium
+            # driver into one libgallium-<version>.so and GBM loads gbm/dri_gbm.so.
+            gallium=sorted(n for n in members if re.fullmatch(r'usr/lib/libgallium-[0-9.]+\.so',n))
+            if 'usr/lib/dri/lima_dri.so' in members:
+                drivers=('usr/lib/dri/lima_dri.so','usr/lib/dri/mediatek_dri.so')
+            else:
+                require(len(gallium)==1 and 'usr/lib/gbm/dri_gbm.so' in members,'Mesa Gallium driver library and GBM backend')
+                drivers=(gallium[0],'usr/lib/gbm/dri_gbm.so')
+                library=read(gallium[0])
+                require(b'lima' in library and b'kmsro' in library,'Lima with KMSRO render-only display in libgallium')
+                require(b'softpipe' not in library and b'llvmpipe' not in library,'no software rasterizer in libgallium')
+            for name in ('usr/bin/y2-gpu-check','usr/lib/libEGL.so.1','usr/lib/libGLESv2.so.2','usr/lib/libgbm.so.1','usr/lib/libdrm.so.2')+drivers:
                 content=read(name)
                 require(content[:6]==b'\x7fELF\x01\x01' and struct.unpack_from('<H',content,18)[0]==40,'graphics ARM binary '+name)
                 require(struct.unpack_from('<I',content,36)[0]&0x400,'graphics hard-float '+name)
