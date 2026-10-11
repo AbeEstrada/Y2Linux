@@ -63,7 +63,10 @@ for command in poweroff reboot; do
 done
 install -m 755 "$Y2_ARTIFACT_DIR/y2-usb-status" "$target/usr/sbin/y2-usb-status"
 printf '%s\n' y2-platform-v1 > "$target/etc/y2linux/platform-contract"
-install -m 755 "$Y2_ARTIFACT_DIR/buildroot/build/openssh-9.9p2/sftp-server" "$target/usr/libexec/y2-sftp-server"
+# The one OpenSSH build directory of this configuration (version follows Buildroot's pin).
+set -- "$Y2_ARTIFACT_DIR"/buildroot/build/openssh-[0-9]*/sftp-server
+[ "$#" -eq 1 ] && [ -f "$1" ] || { echo "expected exactly one OpenSSH sftp-server build: $*" >&2; exit 1; }
+install -m 755 "$1" "$target/usr/libexec/y2-sftp-server"
 install -m 644 "$project/tools/update/trust.json" "$target/etc/y2linux/update-trust.json"
 python3 - "$target/etc/y2linux" <<'PYUPDATE'
 import json, pathlib, sys
