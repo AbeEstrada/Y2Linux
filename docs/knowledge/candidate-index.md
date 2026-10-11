@@ -1,5 +1,14 @@
 # Candidate and fallback identity index
 
+## POWER-FINAL-14 — sealed 2026-10-11, not flashed
+
+`Y2LINUX-PLATFORM-V1-POWER-FINAL-14`: compiled Linux `9d06ac4deb158183f56f845086aaa307ce836177` / Reborn
+`63ac4a75286944ac0c57a2f15bb3b841923dd0f3`; kernel `6.18.0-y2linux-platform-v1-power-final-14`, root
+`2025.02.18-platform-v1.44`, release `1.0.0-platform-v1-power-final-candidate.14`. BOOTIMG
+`273dc927fbdb5778089ad76179ae92f8a32cb7625a83b39cc0850b572d7d3e5a`, Y2ROOT
+`78203697a71be7669c9e6f88dedc3a6daa80cd8ff6876d35779e86bb6ba314b9`. Package
+`out/y2linux-platform-v1-power-final-candidate-14/` (fallback = sealed 13).
+
 ## Baseline 13 / POWER-FINAL-13 — installed, published 2026-10-11
 
 `Y2LINUX-PLATFORM-V1-POWER-FINAL-13`: compiled Linux `47c1cf225dc140d151366f9e6309a3a07556fa67` / Reborn

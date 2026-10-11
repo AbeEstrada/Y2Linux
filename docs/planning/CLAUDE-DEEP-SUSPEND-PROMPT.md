@@ -13,21 +13,21 @@ ignored hardware archives. A GitHub checkout alone does not contain this handoff
 
 ## Read first, in this order
 
-1. [Repository instructions](/home/luca/Dokumente/Code/Y2Linux/AGENTS.md).
-2. [Latest handoff](/home/luca/Dokumente/Code/Y2Linux/docs/planning/NEXT-SESSION-HANDOFF.md).
+1. Repository instructions (`/home/luca/Dokumente/Code/Y2Linux/AGENTS.md`).
+2. Latest handoff (`/home/luca/Dokumente/Code/Y2Linux/docs/planning/NEXT-SESSION-HANDOFF.md`).
    The October 8 evening and morning entries at the top are authoritative.
    Older NOT_RUN, not-deployed, cleanup and installation instructions farther
    down are historical where superseded. Do not execute historical cleanup.
-3. [Current platform state](/home/luca/Dokumente/Code/Y2Linux/docs/CURRENT_PLATFORM_STATE.md).
-4. [Full investigation and validation report](/home/luca/Dokumente/Code/Y2Linux/docs/validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md).
+3. Current platform state (`/home/luca/Dokumente/Code/Y2Linux/docs/CURRENT_PLATFORM_STATE.md`).
+4. Full investigation and validation report (`/home/luca/Dokumente/Code/Y2Linux/docs/validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md`).
    Prioritize sections 21–28, 30–32, and the unresolved failures in the handoff.
-5. [Roadmap](/home/luca/Dokumente/Code/Y2Linux/docs/planning/platform-v1-roadmap.md)
-   and [gap audit](/home/luca/Dokumente/Code/Y2Linux/docs/planning/roadmap-gap-audit.md).
+5. Roadmap (`/home/luca/Dokumente/Code/Y2Linux/docs/planning/platform-v1-roadmap.md`)
+   and gap audit (`/home/luca/Dokumente/Code/Y2Linux/docs/planning/roadmap-gap-audit.md`).
    Follow its “Standing milestone-boundary rule” before activation, closure or
    a material hardware, memory or production scope change. A planning row is
    not hardware authorization.
-6. [Morning machine summary](/home/luca/Dokumente/Code/Y2Linux/docs/validation/data/y2-deepsleep03-overnight-20261008.json)
-   and [evening machine summary](/home/luca/Dokumente/Code/Y2Linux/docs/validation/data/y2-deepsleep03-evening-20261008.json).
+6. Morning machine summary (`/home/luca/Dokumente/Code/Y2Linux/docs/validation/data/y2-deepsleep03-overnight-20261008.json`)
+   and evening machine summary (`/home/luca/Dokumente/Code/Y2Linux/docs/validation/data/y2-deepsleep03-evening-20261008.json`).
 
 ## Installed baseline and latest findings
 
@@ -68,59 +68,59 @@ dated observations as current.
 
 ## Raw evidence and matching artifacts
 
-- [Archive65: image03 installation check](/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/evidence/20261008/65-image03-first-check).
-- [Archive66: failed overnight morning return](/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/evidence/20261008/66-image03-morning-return).
+- Archive65: image03 installation check (`/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/evidence/20261008/65-image03-first-check`).
+- Archive66: failed overnight morning return (`/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/evidence/20261008/66-image03-morning-return`).
   Read `analysis.json`, `first-return.json`, `health.json`, battery timeline,
   retained/persistent archives and their SHA256 receipts.
-- [Archive67: evening return](/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/evidence/20261008/67-image03-evening-return).
+- Archive67: evening return (`/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/evidence/20261008/67-image03-evening-return`).
   Read `summary.json`, `first-return.json`, `health.json`, `battery-timeline.csv`,
   `SHA256SUMS` and the extracted boot ledger/guard/journal/pstore.
-- [Earlier experiments](/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/evidence/20261007).
+- Earlier experiments (`/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/evidence/20261007`).
   Prioritize `28b-clean-power-recovered`, `30-device-wait-return`,
   `34-device-wait-normal-return`, `40-device-wait-clean-display-return`,
   `42-observed-stages-rtc-return`, clean returns47/50, product returns53/56/59,
   and interrupted30-minute return62. Resolve exact directory names locally.
   Passing observer runs contain transient UART/SRCU waits; causation is unproven.
-- [Matching03 symbols](/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-deepsleep-final-candidate-03-symbols):
+- Matching03 symbols (`/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-deepsleep-final-candidate-03-symbols`):
   `vmlinux`, `System.map`, config, Module.symvers and SHA256 inventory.
-- [Sealed03 package](/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-deepsleep-final-candidate-03)
-  and [owner package handoff](/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-deepsleep-final-candidate-03/OWNER-HANDOFF.md).
-- [Build03 receipts](/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/build03-receipts).
+- Sealed03 package (`/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-deepsleep-final-candidate-03`)
+  and owner package handoff (`/home/luca/Dokumente/Code/Y2Linux/out/y2linux-platform-v1-deepsleep-final-candidate-03/OWNER-HANDOFF.md`).
+- Build03 receipts (`/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/build03-receipts`).
 - Frozen exact03 paired worktrees:
-  [Linux](/home/luca/Dokumente/Code/worktrees/y2-deepsleep-final-03/Y2Linux),
-  [Reborn](/home/luca/Dokumente/Code/worktrees/y2-deepsleep-final-03/Y2Reborn).
+  Linux (`/home/luca/Dokumente/Code/worktrees/y2-deepsleep-final-03/Y2Linux`),
+  Reborn (`/home/luca/Dokumente/Code/worktrees/y2-deepsleep-final-03/Y2Reborn`).
   Matching kernel build is under Linux `out/deepsleep-final-build/kernel`;
   inspect its `source` link to locate patched upstream code. Use an isolated
   new worktree for changes; preserve frozen sources, caches, packages and symbols.
 
 ## Source and diagnostic entry points
 
-- [SPM implementation](/home/luca/Dokumente/Code/Y2Linux/kernel/platform/spm.c)
-  and [persistent PM journal](/home/luca/Dokumente/Code/Y2Linux/kernel/platform/pm-journal.h).
-- [Kernel suspend breadcrumbs patch](/home/luca/Dokumente/Code/Y2Linux/kernel/patches/0060-y2-persistent-suspend-stages.patch).
+- SPM implementation (`/home/luca/Dokumente/Code/Y2Linux/kernel/platform/spm.c`)
+  and persistent PM journal (`/home/luca/Dokumente/Code/Y2Linux/kernel/platform/pm-journal.h`).
+- Kernel suspend breadcrumbs patch (`/home/luca/Dokumente/Code/Y2Linux/kernel/patches/0060-y2-persistent-suspend-stages.patch`).
   Inspect exact03 patched upstream `kernel/power/suspend.c`,
   `drivers/base/power/main.c`, async completion/wait handling, console/UART PM,
   and relevant driver callbacks. Determine the exact interval after the last
   breadcrumb instead of guessing from its label.
-- [Product automatic sleep](/home/luca/Dokumente/Code/Y2Linux/tools/platform/y2_platform/product_sleep.py),
-  [sleep receipts](/home/luca/Dokumente/Code/Y2Linux/tools/platform/y2_platform/suspend_record.py),
-  [power journal](/home/luca/Dokumente/Code/Y2Linux/tools/platform/y2_platform/power_journal.py).
-- [Qualification harness](/home/luca/Dokumente/Code/Y2Linux/tools/development/qualify-platform-v1-suspend.py)
-  and [collector instructions](/home/luca/Dokumente/Code/Y2Linux/tools/development/power-session/README.md).
-- [Device-phase stack observer](/home/luca/Dokumente/Code/Y2Linux/tools/development/power-session/y2-pm-device-stack.c)
-  and [devices-only diagnostic](/home/luca/Dokumente/Code/Y2Linux/tools/development/power-session/deepsleep-device-wait.py).
+- Product automatic sleep (`/home/luca/Dokumente/Code/Y2Linux/tools/platform/y2_platform/product_sleep.py`),
+  sleep receipts (`/home/luca/Dokumente/Code/Y2Linux/tools/platform/y2_platform/suspend_record.py`),
+  power journal (`/home/luca/Dokumente/Code/Y2Linux/tools/platform/y2_platform/power_journal.py`).
+- Qualification harness (`/home/luca/Dokumente/Code/Y2Linux/tools/development/qualify-platform-v1-suspend.py`)
+  and collector instructions (`/home/luca/Dokumente/Code/Y2Linux/tools/development/power-session/README.md`).
+- Device-phase stack observer (`/home/luca/Dokumente/Code/Y2Linux/tools/development/power-session/y2-pm-device-stack.c`)
+  and devices-only diagnostic (`/home/luca/Dokumente/Code/Y2Linux/tools/development/power-session/deepsleep-device-wait.py`).
   They are diagnostic tools, not proven production corrections. Check their
   hardcoded image02 identity gates; never run them unchanged on03 or weaken
   the source/boot/taint guards to force acceptance.
-- [Clean collector](/home/luca/Dokumente/Code/Y2Linux/tools/development/power-session/deepsleep-clean-session.py)
-  and [normal-product collector](/home/luca/Dokumente/Code/Y2Linux/tools/development/power-session/deepsleep-product-session.py).
-- [Read-only return archiver](/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/capture-return.py)
-  and [morning analysis](/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/analyze-morning03.py).
+- Clean collector (`/home/luca/Dokumente/Code/Y2Linux/tools/development/power-session/deepsleep-clean-session.py`)
+  and normal-product collector (`/home/luca/Dokumente/Code/Y2Linux/tools/development/power-session/deepsleep-product-session.py`).
+- Read-only return archiver (`/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/capture-return.py`)
+  and morning analysis (`/home/luca/Dokumente/Code/Y2Linux/out/deep-sleep-final/analyze-morning03.py`).
   Preserve old output directories; use a fresh archive name and take the host lease.
-- [CPU PM tests](/home/luca/Dokumente/Code/Y2Linux/tests/test_suspend_cpu_pm.py),
-  [platform suspend tests](/home/luca/Dokumente/Code/Y2Linux/tests/test_platform_v1_suspend.py),
-  [automatic sleep tests](/home/luca/Dokumente/Code/Y2Linux/tests/test_product_auto_sleep.py)
-  and [product flow tests](/home/luca/Dokumente/Code/Y2Linux/tests/test_sleep_product.py).
+- CPU PM tests (`/home/luca/Dokumente/Code/Y2Linux/tests/test_suspend_cpu_pm.py`),
+  platform suspend tests (`/home/luca/Dokumente/Code/Y2Linux/tests/test_platform_v1_suspend.py`),
+  automatic sleep tests (`/home/luca/Dokumente/Code/Y2Linux/tests/test_product_auto_sleep.py`)
+  and product flow tests (`/home/luca/Dokumente/Code/Y2Linux/tests/test_sleep_product.py`).
 
 ## Preserve established corrections and independent gaps
 

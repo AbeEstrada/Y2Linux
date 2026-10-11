@@ -1,6 +1,15 @@
 # Current Y2Linux platform state
 
-## Baseline 13 (POWER-FINAL-13) installed and published — 2026-10-11 (latest)
+## POWER-FINAL-14 diagnostics candidate sealed — 2026-10-11 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-14/` (Linux `9d06ac4`, Reborn `63ac4a7` with code identical to 13, root
+v1.44; BOOTIMG `273dc927…3e5a`, Y2ROOT `78203697…14b9`) is 13 plus persistent sleep and USB diagnostics:
+`/data/system/platform/sleep-diagnostics.jsonl` rows at each suspend stage and around USB state changes, and the USB/network
+snapshot in every power-journal row. **Not flashed; physical NOT_RUN.** Why: the USB-after-wake defect (Defect B)
+recurred at 18:39 and 20:56 on 13. The only recovery is a hold-Power restart, which erased 13's in-memory counters.
+Details: [14 report](validation/Y2-PLATFORM-V1-POWER-FINAL-14.md). Readiness remains **MORE_WORK_REQUIRED**.
+
+## Baseline 13 (POWER-FINAL-13) installed and published — 2026-10-11
 
 **Image:** build `Y2LINUX-PLATFORM-V1-POWER-FINAL-13`, kernel `6.18.0-y2linux-platform-v1-power-final-13`, root
 `2025.02.18-platform-v1.43`, release `1.0.0-platform-v1-power-final-candidate.13`; compiled from Linux `47c1cf2` and

@@ -119,7 +119,7 @@ Dependencies: Foundation; shared radio ownership; diagnostic union C08; Wi-Fi co
 
 Integration risk: Medium: observer/reconnect ownership + diagnostic union. Merge order: 5.
 
-Handoff: [Y2-PLATFORM-V1-BLUETOOTH-OPTIMIZATION.md](/home/luca/Dokumente/Code/worktrees/platform-v1-bluetooth/Y2Linux/docs/validation/Y2-PLATFORM-V1-BLUETOOTH-OPTIMIZATION.md). Final paired report is reviewed. Source requires semantic composition; no new claim/mount/playback guard was installed.
+Handoff: `/home/luca/Dokumente/Code/worktrees/platform-v1-bluetooth/Y2Linux/docs/validation/Y2-PLATFORM-V1-BLUETOOTH-OPTIMIZATION.md`. Final paired report is reviewed. Source requires semantic composition; no new claim/mount/playback guard was installed.
 
 
 ## ffmpeg-metadata
@@ -201,7 +201,7 @@ Dependencies: Highres narrowing/precision C09; DB-owned scan contracts C02; grap
 
 Integration risk: High: duplicated scanner and JPEG decoder C02/C03, storage suffix-free artwork C26, production 9.0.2 environment C22. Merge order: 6 → 7 → 8.
 
-Handoff: [REBORN-PLATFORM-V1-FFMPEG-METADATA.md](/home/luca/Dokumente/Code/worktrees/platform-v1-ffmpeg-metadata/Y2Reborn/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md). Native membrane/Rust ABI must be built and packaged together. Extracted date/genre do not create new DB/UI features.
+Handoff: `/home/luca/Dokumente/Code/worktrees/platform-v1-ffmpeg-metadata/Y2Reborn/docs/validation/REBORN-PLATFORM-V1-FFMPEG-METADATA.md`. Native membrane/Rust ABI must be built and packaged together. Extracted date/genre do not create new DB/UI features.
 
 
 ## graphics
@@ -249,7 +249,7 @@ Dependencies: FFmpeg artwork selection C03; performance timing/capture; full-sus
 
 Integration risk: Medium/high: JPEG lowres duplicated with FFmpeg C03. Merge order: 8.
 
-Handoff: [Y2-PLATFORM-V1-GRAPHICS.md](/home/luca/Dokumente/Code/worktrees/platform-v1-graphics/Y2Linux/docs/validation/Y2-PLATFORM-V1-GRAPHICS.md), clean paired 383234de/a2df691e closing receipt; overall PARTIAL with explicit remaining gates.
+Handoff: `/home/luca/Dokumente/Code/worktrees/platform-v1-graphics/Y2Linux/docs/validation/Y2-PLATFORM-V1-GRAPHICS.md`, clean paired 383234de/a2df691e closing receipt; overall PARTIAL with explicit remaining gates.
 
 
 ## highres-audio
@@ -318,7 +318,7 @@ Dependencies: FFmpeg FFI/metadata and DSP integration C09; safe diagnostic union
 
 Integration risk: Medium/high: FFI + honest hardware precision contract. Merge order: 6.
 
-Handoff: [Y2-PLATFORM-V1-HIGHRES-AUDIO.md](/home/luca/Dokumente/Code/worktrees/platform-v1-highres-audio/Y2Linux/docs/validation/Y2-PLATFORM-V1-HIGHRES-AUDIO.md). Final paired report is reviewed. Source requires semantic composition; no new claim/mount/playback guard was installed.
+Handoff: `/home/luca/Dokumente/Code/worktrees/platform-v1-highres-audio/Y2Linux/docs/validation/Y2-PLATFORM-V1-HIGHRES-AUDIO.md`. Final paired report is reviewed. Source requires semantic composition; no new claim/mount/playback guard was installed.
 
 
 ## input
@@ -373,7 +373,7 @@ Dependencies: Suspend resumed hooks and wake-edge routing C04; performance input
 
 Integration risk: High: competing physical stream/Power router changes C04. Merge order: 9 → 10.
 
-Handoff: [Y2-PLATFORM-V1-INPUT.md](/home/luca/Dokumente/Code/worktrees/platform-v1-input/Y2Linux/docs/validation/Y2-PLATFORM-V1-INPUT.md). Final paired report is reviewed. Source requires semantic composition; no new claim/mount/playback guard was installed.
+Handoff: `/home/luca/Dokumente/Code/worktrees/platform-v1-input/Y2Linux/docs/validation/Y2-PLATFORM-V1-INPUT.md`. Final paired report is reviewed. Source requires semantic composition; no new claim/mount/playback guard was installed.
 
 
 ## library-db
@@ -431,7 +431,7 @@ Dependencies: FFmpeg demux-only acquisition C02 and additive metadata_revision r
 
 Integration risk: High: two incompatible incremental scanners C02. Merge order: 7.
 
-Draft handoff: [REBORN-PLATFORM-V1-LIBRARY-DB.md](/home/luca/Dokumente/Code/worktrees/platform-v1-library-db/Y2Reborn/docs/validation/REBORN-PLATFORM-V1-LIBRARY-DB.md), frozen closing cdbdfe8/c7a8786 with host and native-Y2 durable JSON. Whole-platform source/physical integration remains separate.
+Draft handoff: `/home/luca/Dokumente/Code/worktrees/platform-v1-library-db/Y2Reborn/docs/validation/REBORN-PLATFORM-V1-LIBRARY-DB.md`, frozen closing cdbdfe8/c7a8786 with host and native-Y2 durable JSON. Whole-platform source/physical integration remains separate.
 
 
 ## reborn-performance
@@ -505,7 +505,7 @@ Dependencies: Graphics renderer C05; FFmpeg artwork worker/cache C27; DB catalog
 
 Integration risk: High: native render C21, audio pacing C29, app/control/catalog, input timing C14, asynchronous source observations versus suspend quiescence C25; final source-bound pass retained; supplemental control pass and clean documentation freeze reviewed. Merge order: 8 → 10.
 
-Final handoff: [REBORN-PLATFORM-V1-PERFORMANCE.md](/home/luca/Dokumente/Code/worktrees/platform-v1-reborn-performance/Y2Reborn/docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md). Final primary comparison/capture/restoration reviewed; supplemental control pass and clean paired closing7ed4a406/949b78ce reviewed.
+Final handoff: `/home/luca/Dokumente/Code/worktrees/platform-v1-reborn-performance/Y2Reborn/docs/validation/REBORN-PLATFORM-V1-PERFORMANCE.md`. Final primary comparison/capture/restoration reviewed; supplemental control pass and clean paired closing7ed4a406/949b78ce reviewed.
 
 
 ## storage
@@ -570,7 +570,7 @@ Dependencies: USB root pins/eject C07; Reborn source identity and DB prune/reuse
 
 Integration risk: High: persistent source-ID upgrade C19, resolved owner source guard C26 still needing combined-media regression and USB/scanner lifetime/claim C07; no automatic faster-mode admission from bounded measurements. Merge order: 1 → 2.
 
-Handoff: [Y2-PLATFORM-V1-STORAGE.md](/home/luca/Dokumente/Code/worktrees/platform-v1-storage/Y2Linux/docs/validation/Y2-PLATFORM-V1-STORAGE.md). Final paired report is reviewed. Source requires semantic composition; no new claim/mount/playback guard was installed.
+Handoff: `/home/luca/Dokumente/Code/worktrees/platform-v1-storage/Y2Linux/docs/validation/Y2-PLATFORM-V1-STORAGE.md`. Final paired report is reviewed. Source requires semantic composition; no new claim/mount/playback guard was installed.
 
 
 ## suspend
@@ -651,7 +651,7 @@ Dependencies: Input pipeline C04; graphics scanout foundation; USB copy/refusal,
 
 Integration risk: High: protected shared SPM + input/Power + Reborn RPC. Merge order: 1 (kernel review) → 10 (product).
 
-Handoff: [Y2-PLATFORM-V1-SUSPEND.md](/home/luca/Dokumente/Code/worktrees/platform-v1-suspend/Y2Linux/docs/validation/Y2-PLATFORM-V1-SUSPEND.md). Final clean report/source pair reviewed; exact inner codec stall remains unknown until a coherent owner-installed future image. Ordinary product full-sleep gate remains refused. Master must compose shared contracts and preserve both the failure and software-only fix limits.
+Handoff: `/home/luca/Dokumente/Code/worktrees/platform-v1-suspend/Y2Linux/docs/validation/Y2-PLATFORM-V1-SUSPEND.md`. Final clean report/source pair reviewed; exact inner codec stall remains unknown until a coherent owner-installed future image. Ordinary product full-sleep gate remains refused. Master must compose shared contracts and preserve both the failure and software-only fix limits.
 
 
 ## usb
@@ -735,7 +735,7 @@ Dependencies: Storage diskseq/root identity C07; shared Wi-Fi event wait C01; on
 
 Integration risk: High: package/gadget/media lifetime + wait loop. Merge order: 1 → 3 → 4 → 10.
 
-Handoff: [Y2-PLATFORM-V1-USB.md](/home/luca/Dokumente/Code/worktrees/platform-v1-usb/Y2Linux/docs/validation/Y2-PLATFORM-V1-USB.md); exact-image desktop acceptance remains MORE_WORK_REQUIRED. Latest Linux fix supersedes the earlier CDC module design with configfs-only ownership.
+Handoff: `/home/luca/Dokumente/Code/worktrees/platform-v1-usb/Y2Linux/docs/validation/Y2-PLATFORM-V1-USB.md`; exact-image desktop acceptance remains MORE_WORK_REQUIRED. Latest Linux fix supersedes the earlier CDC module design with configfs-only ownership.
 
 
 ## wifi
@@ -794,7 +794,7 @@ Dependencies: USB service wait C01; preserved checksum-offload disable; Bluetoot
 
 Integration risk: High: USB/Wi-Fi service wait replacement C01. Merge order: 4.
 
-Handoff: [Y2-PLATFORM-V1-WIFI-OPTIMIZATION.md](/home/luca/Dokumente/Code/worktrees/platform-v1-wifi/Y2Linux/docs/validation/Y2-PLATFORM-V1-WIFI-OPTIMIZATION.md). Final paired report is reviewed. Source requires semantic composition; no new claim/mount/playback guard was installed.
+Handoff: `/home/luca/Dokumente/Code/worktrees/platform-v1-wifi/Y2Linux/docs/validation/Y2-PLATFORM-V1-WIFI-OPTIMIZATION.md`. Final paired report is reviewed. Source requires semantic composition; no new claim/mount/playback guard was installed.
 
 ## Cross-branch overlaps
 
