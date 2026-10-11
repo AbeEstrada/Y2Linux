@@ -304,6 +304,7 @@ Indexed pages: **307**. Explicit scope notices: **220**.
 
 | Page | Scope |
 | --- | --- |
+| [POWER-FINAL-15 — newest release of every component](validation/Y2-PLATFORM-V1-POWER-FINAL-15.md) | Sealed candidate report |
 | [POWER-FINAL-14 — persistent sleep and USB diagnostics](validation/Y2-PLATFORM-V1-POWER-FINAL-14.md) | Sealed candidate report |
 | [POWER-FINAL-13 — stock suspend power parity (Baseline 13)](validation/Y2-PLATFORM-V1-POWER-FINAL-13.md) | Installed candidate report with physical result |
 | [POWER-FINAL-11 — remaining screens](validation/Y2-PLATFORM-V1-POWER-FINAL-11-SCREENS.md) | Candidate validation receipt |

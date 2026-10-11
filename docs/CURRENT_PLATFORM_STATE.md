@@ -1,6 +1,16 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-14 diagnostics candidate sealed — 2026-10-11 (latest)
+## POWER-FINAL-15 dependency-update candidate sealed — 2026-10-12 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-15/` (Linux `be1aac2`, Reborn `f68e088`, root `2026.08-platform-v1.45`;
+BOOTIMG `86dc957a…844d`, Y2ROOT `0b14b794…20ae`) is 14 rebuilt on the newest release of every component:
+Linux 6.18.56 (the owner kept the 6.18 line), Buildroot 2026.08, Bootlin GCC 15.3/glibc 2.44, Rust 1.99, Mesa
+26.2.4, OpenSSL 4.0.3, Python 3.15.0 and the rest. Offline: container suite 664 cases, exit 0; package, ELF,
+ARM, inventory and privacy checks PASS. **Not flashed; physical NOT_RUN.** The display (panel `prepare_prev_first`,
+Mesa 26/Lima) needs checking first. Details: [15 report](validation/Y2-PLATFORM-V1-POWER-FINAL-15.md).
+Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-14 diagnostics candidate sealed — 2026-10-11
 
 `out/y2linux-platform-v1-power-final-candidate-14/` (Linux `9d06ac4`, Reborn `63ac4a7` with code identical to 13, root
 v1.44; BOOTIMG `273dc927…3e5a`, Y2ROOT `78203697…14b9`) is 13 plus persistent sleep and USB diagnostics:
