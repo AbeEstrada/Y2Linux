@@ -86,11 +86,29 @@ BUMPS = (
                          ("archive/debian/20260223T202245Z/", "archive/debian/20260817T022356Z/")),
      "ca-certificates_20260223.tar.xz", "ca-certificates_20260816.tar.xz",
      "d939bcdd0cb058712cf4175bac76997676eb8b68fe9473765e1b40fb3d5b186a", ()),
+    ("meson", (("MESON_VERSION = 1.11.1", "MESON_VERSION = 1.12.1"),),
+     "meson-1.11.1.tar.gz", "meson-1.12.1.tar.gz",
+     "ab0a6ca09f8ef70c564c8241fb5a23957886a0b53fb58412b5e07eaf07dba743", ()),
     # Buildroot 2025.02.18 (September 2026) already carried a newer database
     # than 2026.08 (August 2026); tools/build/regulatory.py pins the same file.
     ("wireless-regdb", (("WIRELESS_REGDB_VERSION = 2026.05.30", "WIRELESS_REGDB_VERSION = 2026.09.03"),),
      "wireless-regdb-2026.05.30.tar.xz", "wireless-regdb-2026.09.03.tar.xz",
      "b22e0901227b820cd1c280abe681a15b773a5103a5e10dc442e94ebb34cbf58d", ()),
+)
+
+# Host Python build packages: newest PyPI sdist, PyPI-published md5/sha256 (Python 3.15 needs
+# the newest pypa-build; the rest follow the "newest release" policy).
+PYPI_BUMPS = (
+    ('python-cython', '3.3.0', 'cython-3.3.0.tar.gz', 'https://files.pythonhosted.org/packages/a9/d8/4981ef716ad0e3ff0d3ef383aefc6b03c4a88dee33b272bf8e0d833001ca', 'df8ac911bb3c6af48fb0158160e5b029', 'eed0d93fbca7087f143b42c34b05a825849bdf17f101572c2105acfa49aa88b8'),
+    ('python-flit-core', '4.1.0', 'flit_core-4.1.0.tar.gz', 'https://files.pythonhosted.org/packages/e7/91/add211b38c357bf1b94900b4f79c34661a92be65c0243d2b0a3393c5092d', '6aed048324976ab2178d4d57a7933763', '62e12b63ead8335b37f59fabb977c7167fe476dafb5e41785dfa8c9aff843bc6'),
+    ('python-installer', '1.0.1', 'installer-1.0.1.tar.gz', 'https://files.pythonhosted.org/packages/06/fe/b9f481cf0cc867958a21338baa900357b7b7d86cac9b025948049d77923c', 'c919fdc746e46b0a93ae53ed375e047f', '052c7fc3721d54c696e2dea019be67539d7b144e924f559f54beb3121831c364'),
+    ('python-mako', '1.4.3', 'mako-1.4.3.tar.gz', 'https://files.pythonhosted.org/packages/5a/09/e07c4b5579a79f4b16f8d4f29f6c54514ac787c4ad506b8c4f28a0e6b0bf', '4b7555300a75b951bf99aa067cbb3633', 'cd6537fe88d5fec315c55c2f8529bc4ce7a9a352ad7db3eeaa6a66e2dd4ec37a'),
+    ('python-markupsafe', '3.0.4', 'markupsafe-3.0.4.tar.gz', 'https://files.pythonhosted.org/packages/38/9b/e422a865e1d5d57d0e509b4e0bf1c1a70a7f6382c29a5aa428df994c8bc8', '7c70b0284d3733795287d8d67e7164e0', '2e9ad7dd851bf45fab9f75cbff4cb493fee9979e8d8c7c9c3ee119022518edd6'),
+    ('python-packaging', '26.3', 'packaging-26.3.tar.gz', 'https://files.pythonhosted.org/packages/7d/fa/3944b40b07da9ce895c0e6303a5ab7d53da063554f534556b134a54d6093', 'c6809ec56986682ceffe573b8778a1ce', '94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79'),
+    ('python-pypa-build', '1.6.1', 'build-1.6.1.tar.gz', 'https://files.pythonhosted.org/packages/bd/67/4898a44ea4f3f8e213b0954ec0aa0a16971d62a6212d6ea3931e97115b99', '56f61c2663493ebe4916b8acf40bb039', '51cc11666391ab6f092070437ac747002ff46f3e4113a3622177ee6b488bfc53'),
+    ('python-pyproject-hooks', '1.3.3', 'pyproject_hooks-1.3.3.tar.gz', 'https://files.pythonhosted.org/packages/6d/5d/f2ddeef4a855a102aaae5e97826a0260007522ab504421b75addfdb1517c', '4946aadbb25ac57019c431257e910583', 'defda19b854fa0d3bd4f76ea4ddcba8abd7dcfcdd585a6690ade050744fc5f43'),
+    ('python-setuptools', '84.0.0', 'setuptools-84.0.0.tar.gz', 'https://files.pythonhosted.org/packages/6d/44/f5da03a8ef95d369145c5bb53050e7877c9f3d312e128605fd9504829143', 'c6919a4b0862ca30604559e163a6cce9', 'f4695c21257f0d9b537ec2692c941d02ee143b7cc1276941349a546573b2ef73'),
+    ('python-wheel', '0.48.0', 'wheel-0.48.0.tar.gz', 'https://files.pythonhosted.org/packages/d0/20/50ed6bdf27dec98b568a8ae25dc599f35baa3d9709f9e83fd1edb56b9a90', 'f668e4885de814378b332eceea04a8a0', '94800765601e9171bf5d58d066e640662842bcedcbab982b2c90787a2c987322'),
 )
 
 BLUEZ_ALSA_VERSION = "5.0.0"
@@ -128,6 +146,26 @@ def bump(buildroot_source: Path, name, edits, old_archive, new_archive, sha256, 
         patch = package / patch_name
         if patch.exists():
             patch.unlink()
+
+
+def bump_pypi(buildroot_source: Path, name, version, source, site, md5, sha256) -> None:
+    """Point a Buildroot python package at a newer PyPI sdist (version, source, site, hashes)."""
+    import re
+    package = buildroot_source / "package" / name
+    recipe = package / f"{name}.mk"
+    var = name.upper().replace("-", "_")
+    text = recipe.read_text()
+    for key, value in (("VERSION", version), ("SOURCE", source), ("SITE", site)):
+        pattern = re.compile(rf"^{var}_{key} = .*$", re.M)
+        if not pattern.search(text):
+            raise ValueError(f"expected {var}_{key} missing from {recipe}")
+        text = pattern.sub(f"{var}_{key} = {value}", text, count=1)
+    recipe.write_text(text)
+    hashes = package / f"{name}.hash"
+    lines = [l for l in hashes.read_text().splitlines()
+             if not re.match(r"^(md5|sha256)\s+[0-9a-f]+\s+\S+\.(tar\.gz|tar\.bz2|zip)$", l)]
+    lines += [f"md5  {md5}  {source}", f"sha256  {sha256}  {source}"]
+    hashes.write_text("\n".join(lines) + "\n")
 
 
 def bluez_alsa(buildroot_source: Path) -> None:
@@ -233,6 +271,8 @@ def bootlin_toolchain(buildroot_source: Path) -> None:
 def apply(buildroot_source: Path) -> None:
     for row in BUMPS:
         bump(buildroot_source, *row)
+    for row in PYPI_BUMPS:
+        bump_pypi(buildroot_source, *row)
     bluez_alsa(buildroot_source)
     bootlin_toolchain(buildroot_source)
     # Local product-policy patches follow the pinned package security fixes.
