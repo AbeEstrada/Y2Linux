@@ -74,6 +74,12 @@ static int y2_infra_pdn_restore(void) { ++infra_restores; return infra_restore; 
 static int y2_spm_suspend_arm(void *io,unsigned address,unsigned infra) { arm_infra=infra; assert(infra_saves>=1 || !infra); return arm_error; }
 static int y2_spm_suspend_restore(void *io,unsigned address) { restores++; return restore_error; }
 static int y2_spm_finish(unsigned long arg) { return 0; }
+/* POWER-FINAL-13: VPROC sleep voltage armed only with CIRQ active and always
+ * restored before the normal PCM; the golden capture is read-only. */
+static int vproc_armed;
+static void y2_golden_capture(void) { }
+static void y2_pmic_vproc_sleep_begin(void) { assert(cirq_active); vproc_armed++; }
+static void y2_pmic_vproc_sleep_end(void) { vproc_armed = 0; }
 static int cpu_suspend(unsigned long arg,int (*fn)(unsigned long)) {
  assert(cirq_active && live_mask==0x200000); live_mask=0; return return_error;
 }
@@ -87,6 +93,7 @@ static void reset(void) {
  infra_saves=infra_restores=0; suspend_infra_pdn=false;
 }
 static void core_resume(void) {
+ assert(!vproc_armed);
  live_mask=saved_mask; core_restored=true; y2_spm_resume_syscore();
  assert(!suspend_cirq_pending && !cirq_active && live_mask==saved_mask);
 }
