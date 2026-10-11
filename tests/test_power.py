@@ -122,7 +122,9 @@ int main(void) {
  assert(y2_pmic_value_allowed(0x8000,0x4300));
  assert(!y2_pmic_value_allowed(0x8000,0x4309));
  assert(y2_pmic_write_mask(0x802e)==0); /* boot state remains read-only */
- assert(!y2_pmic_write_mask(0x216) && !y2_pmic_write_mask(0x21e));
+ /* POWER-FINAL-13: only the VOSEL_CTRL bit of 0x216 (suspend-only stock sleep
+  * voltage, test_vproc_sleep.py); the software VOSEL Y2 DVFS owns stays closed. */
+ assert(y2_pmic_write_mask(0x216) == 0x2 && !y2_pmic_write_mask(0x21e));
 }
 ''')
 

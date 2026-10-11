@@ -21,6 +21,7 @@
 #include "spm.h"
 #include "spm-policy.h"
 #include "spm-suspend-policy.h"
+#include "golden-policy.h"
 #include "spm-pcm.h"
 #include "spm-idle-pcm.h"
 #include "spm-idle-policy.h"
@@ -413,6 +414,26 @@ static void y2_spm_resume_syscore(void)
 	}
 }
 static struct syscore_ops y2_spm_syscore = { .resume = y2_spm_resume_syscore };
+/* POWER-FINAL-13 read-only stock golden comparison (golden-policy.h): the SoC
+ * clock/PLL/clock-gate state at the last suspend entry, read right before the
+ * PCM is armed, like stock slp_chk_golden. Mapped without claiming regions. */
+static void __iomem *golden_blocks[Y2_GOLDEN_BLOCKS];
+static unsigned golden_entry[Y2_GOLDEN_ROWS], golden_captures;
+static bool golden_ready;
+static unsigned y2_golden_read(unsigned row)
+{
+	const struct y2_golden_row *r = &y2_golden_rows[row];
+	int block = y2_golden_block(r->phys);
+	return readl(golden_blocks[block] + (r->phys - y2_golden_blocks[block].phys));
+}
+static void y2_golden_capture(void)
+{
+	unsigned i;
+	if (!READ_ONCE(golden_ready)) return;
+	for (i = 0; i < Y2_GOLDEN_ROWS; i++)
+		golden_entry[i] = y2_golden_read(i);
+	golden_captures++;
+}
 static int y2_spm_enter(suspend_state_t state)
 {
 	unsigned long flags;
@@ -441,6 +462,10 @@ static int y2_spm_enter(suspend_state_t state)
 	 * saved context; a second save after CIRQ masking overwrites GIC's sole
 	 * saved enable bitmap with only the SPM interrupt enabled. The subsequent
 	 * outer restore then masks storage/GPT IRQs and stalls ext4 thaw I/O. */
+	y2_golden_capture();
+	/* Stock VPROC sleep voltage (vproc-sleep-policy.h), only around this
+	 * PCM sleep; restored below before anything else can run. Non-fatal. */
+	y2_pmic_vproc_sleep_begin();
 	ret = y2_spm_suspend_arm(&spm_io, pcm_address, infra);
 	y2_spm_journal_snapshot();
 	if (!ret) {
@@ -478,6 +503,7 @@ static int y2_spm_enter(suspend_state_t state)
 		y2_spm_journal_snapshot();
 		if (last_debug) { WRITE_ONCE(spm_broken, true); ret = -EIO; }
 	}
+	y2_pmic_vproc_sleep_end();
 	restore = y2_spm_suspend_restore(&spm_io, normal_address);
 	if (restore) { suspend_restore_failures++; ret = restore; }
 	y2_pm_mark(Y2_PM_NORMAL_PCM_RESTORED, ret);
@@ -717,7 +743,8 @@ static ssize_t state_show(struct device *dev, struct device_attribute *attr, cha
 	 * BSP d53dd75c spm_output_wake_reason distinguishes timer from TWAM/CPU
 	 * sharing bit 0. Require the full timer horizon as well before userspace
 	 * may keep the display dark through a battery-maintenance return. */
-	ret += sysfs_emit_at(buf, ret, "system_sleep_abi=1 maintenance_seconds=600 timer_wake=%u sleep_isr=%#x cpu_wake=%#x\n",
+	ret += sysfs_emit_at(buf, ret, "system_sleep_abi=1 maintenance_seconds=%u timer_wake=%u sleep_isr=%#x cpu_wake=%#x\n",
+		Y2_SPM_MAINTENANCE_S,
 		!last_result && !last_debug && last_wake == 1 &&
 		last_ticks >= Y2_SPM_TIMER && !(last_sleep_isr & ISR_TWAM) && !last_cpu_wake,
 		last_sleep_isr, last_cpu_wake);
@@ -805,7 +832,28 @@ static ssize_t dormant_preflight_show(struct device *dev, struct device_attribut
 	return n + sysfs_emit_at(buf, n, "\n");
 }
 static DEVICE_ATTR_RO(dormant_preflight);
-static struct attribute *y2_spm_attrs[] = { &dev_attr_state.attr, &dev_attr_dormant_preflight.attr, NULL };
+static ssize_t golden_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	unsigned i, now, differ = 0;
+	ssize_t n;
+	if (!READ_ONCE(golden_ready)) return sysfs_emit(buf, "ready=0\n");
+	for (i = 0; i < Y2_GOLDEN_ROWS && golden_captures; i++)
+		differ += !y2_golden_match(&y2_golden_rows[i], golden_entry[i]);
+	n = sysfs_emit(buf, "source=Y2_FM_mt6582_power_gs_suspend_data rows=%zu captures=%u entry_differences=%u\n",
+		Y2_GOLDEN_ROWS, golden_captures, golden_captures ? differ : 0);
+	for (i = 0; i < Y2_GOLDEN_ROWS; i++) {
+		const struct y2_golden_row *r = &y2_golden_rows[i];
+		now = y2_golden_read(i);
+		/* address name mask golden entry entry_match now now_match (<100 B/row) */
+		n += sysfs_emit_at(buf, n, "%08x %s m=%x g=%x e=%x %u n=%x %u\n",
+			r->phys, r->name, r->mask, r->golden, golden_entry[i],
+			golden_captures ? y2_golden_match(r, golden_entry[i]) : 0, now, y2_golden_match(r, now));
+	}
+	return n;
+}
+static DEVICE_ATTR_ADMIN_RO(golden);
+static struct attribute *y2_spm_attrs[] = { &dev_attr_state.attr, &dev_attr_dormant_preflight.attr,
+	&dev_attr_golden.attr, NULL };
 static const struct attribute_group y2_spm_group = { .attrs = y2_spm_attrs };
 
 static int y2_spm_probe(struct platform_device *pdev)
@@ -845,6 +893,16 @@ static int y2_spm_probe(struct platform_device *pdev)
 	if (ret) return ret;
 	spm_io.context = base;
 	y2_spm_normal(&spm_io, normal_address);
+	{
+		unsigned i;
+		bool mapped = true;
+		for (i = 0; i < Y2_GOLDEN_BLOCKS; i++) {
+			golden_blocks[i] = devm_ioremap(&pdev->dev, y2_golden_blocks[i].phys,
+							y2_golden_blocks[i].size);
+			mapped = mapped && golden_blocks[i];
+		}
+		WRITE_ONCE(golden_ready, mapped);
+	}
 	/* Publish only after firmware and the shared IO context are ready. */
 	smp_store_release(&spm_base, base);
 	ret = devm_device_add_group(&pdev->dev, &y2_spm_group);

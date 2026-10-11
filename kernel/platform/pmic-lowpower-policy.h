@@ -6,8 +6,11 @@
  * VA 0x404, VIO28 0x500, VUSB 0x502, VM 0x552, VIO18 0x556. VTCXO (0x402) is
  * already set by the connectivity subset. LP_SEL selects the LDO low-power mode
  * only while the SoC releases SRCLKEN, so an awake system sees no change.
- * VEMC_3V3 (root eMMC), VMC and VMCH are intentionally excluded from this
- * first step, and no VPROC/VSYS sleep-voltage or clock-control bit is touched. */
+ * POWER-FINAL-13 completes the stock E2 list (the Y2 FM kernel's own init,
+ * 0xc04b81f8): VMC 0x504, VMCH 0x506 and VEMC_3V3 0x508 (eMMC supply; stock
+ * removes it entirely in suspend, this keeps it on in low-power mode only).
+ * No enable, voltage or clock-control bit is touched here; the VPROC sleep
+ * voltage is a separate, suspend-only owner (vproc-sleep-policy.h). */
 #define Y2_PMIC_LP_BIT 0x0001U
 #define Y2_PMIC_CID_REG 0x100U
 #define Y2_PMIC_CID_E2 0x2023U
@@ -17,6 +20,7 @@ struct y2_pmic_lp_rail {
 };
 static const struct y2_pmic_lp_rail y2_pmic_lp_rails[] = {
 	{0x404, "VA"}, {0x500, "VIO28"}, {0x502, "VUSB"}, {0x552, "VM"}, {0x556, "VIO18"},
+	{0x504, "VMC"}, {0x506, "VMCH"}, {0x508, "VEMC3V3"},
 };
 #define Y2_PMIC_LP_RAILS (sizeof(y2_pmic_lp_rails) / sizeof(y2_pmic_lp_rails[0]))
 /* The vendor E2 branch is the verified source for this register map. */

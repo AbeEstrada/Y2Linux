@@ -7540,3 +7540,32 @@ nothing. The display-recovery experiments in the main repo are not part of 12.
 while plugged in (expect `Full` within a few minutes at ~4.09 V) and run repeated unplug sleeps. Stall rate before 12 is
 unknown, so one passing sleep does not prove the fix.
 Readiness for the next boundary: **PARTIALLY READY**.
+
+
+## POWER-FINAL-13 stock suspend power-parity scope audit — 2026-10-11
+
+**Boundary:** a material hardware-scope change (PMIC sleep voltage, storage-rail low-power mode, USB PHY power-down,
+wheel controller sleep) after real evidence from candidate 12: the first full night of synchronous suspend (archive 97:
+34 kernel suspends, 33 clean maintenance wakes, no stall, ~2.2 points/h voltage-derived) and the stuck second boot
+(archive 98: every sleep refused for 4.2 h, 78% to 56%). Repeated before source changes; this audit builds and flashes
+nothing. The owner asked for the golden-master table and the most power-optimal deep sleep (target ~0.1 points/h, the
+owner's recollection of stock at about 1% per night). Reference: the Y2's own stock FM kernel
+(`evidence-private/20260908-ram-map/fm-decompressed.bin` + `fm-symbols.json`), not a generic vendor tree.
+
+| Row | Classification | Evidence and limit |
+| --- | --- | --- |
+| Sleep guard (Defect A) | CHANGE, host-tested | The reconnect daemon holds `/run/y2/bt-operation.lock` after a Power wake; `bluetooth-power off` refused, result 1 left `product-sleep-guard.json` pending, and admission matched it by build identity, so sleep was refused across reboots (archive 98). Radio quiesce now retries within 25 s; the guard is cleared whenever the kernel was not entered and only a record with `kernel_entry` quarantines. |
+| PMIC golden master | RESEARCH | Stock `PMIC_INIT_SETTING_V1` (0xc04b81f8, E2) decoded field by field (~80 writes); 55 differ from the live 12 PMIC dump (archive 99). Stock `mt6323_power_gs_suspend_data` / `mt6582_power_gs_suspend_data` extracted. Data: `docs/validation/data/y2-stock-suspend-golden-20261011.json`. |
+| VPROC sleep voltage | CHANGE, host-tested, highest electrical risk | Stock drops VPROC (CPU and SoC core) to 0.85 V via `VOSEL_SLEEP` when the SPM releases SRCLKEN; Y2 kept 1.15 V in software mode. 13 applies the eight stock fields only inside `->enter()` around the PCM sleep, presets `VOSEL_ON` to the live selector, verifies the voltage is unchanged after the mode switch and restores every word (mode bit first) before the normal PCM returns. Non-fatal; `pwrap.vproc_sleep` switch. |
+| Storage LDO LP_SEL | CHANGE, host-tested | VMC, VMCH and VEMC3V3 get the stock LP_SEL bit (stock additionally removes VEMC3V3 in suspend; 13 does not). Enables stay unwritable; `/sys/firmware/y2_pmic/lp_sel` reverts. |
+| USB PHY save-current | CHANGE, host-tested | Stock `usb_phy_savecurrent` (0xc04d98f0) runs whenever no cable is attached; Y2 only ever ran the recover half at boot. 13 applies the exact stock sequence in the y2-usb parent's noirq suspend (no cable, no session) and writes every byte back in recover order on resume; `phy_savecurrent` switch and counters. |
+| APT32F wheel sleep | CHANGE, host-tested | Stock `tpd_suspend`/`tpd_resume` (0xc04a41c0/0xc04a3088): reg5=1 for firmware 1..19 (this unit reads 0x01), resume pulses GPIO56 reset then reg5=0. Y2 left the controller scanning. GPIO56 is admitted to the pin allowlist with the latch preset high. `sleep` switch. |
+| Maintenance wake | CHANGE | 600 s to 1800 s (stock uses a dynamic battery-meter period); PCM watchdog stays timer + 30 s. |
+| SoC golden diagnostic | NEW, read-only | `golden` attribute on the SPM device: 34 stock golden rows (TOPCKGEN, INFRA/PERI clock gates, DRAMC, APMIXED PLLs) captured at every suspend entry. Decides the next step (PLL hardware control, DIS/MMSYS, clock gates) from evidence. |
+| Not changed | UNCHANGED | eMMC supply removal, VGP2/DAC rail, panel deep-standby table, PLL/MTCMOS ownership, VSYS, AUXADC clocking/trims (would shift battery readings), PMIC low-battery interrupt, Reborn. |
+| Physical | NOT_RUN | Nothing above is observed on hardware; no current measurement exists, so no mA or points/h claim. |
+
+**Gate decision:** build candidate 13 as 12 plus these changes, each with a runtime switch for an A/B night. After the
+owner flashes: read `golden`, `vproc_sleep_state`, `phy_savecurrent`, the wheel `sleep` attribute and `y2_infra/state`
+after one unplugged 30-min sleep, then an overnight drain against 12's ~2.2 points/h.
+Readiness for the next boundary: **PARTIALLY READY**.

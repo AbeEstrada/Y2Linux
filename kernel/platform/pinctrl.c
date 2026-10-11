@@ -168,14 +168,24 @@ static const struct pinctrl_ops pin_ops = {.get_groups_count = group_count,
 					   .dt_node_to_map = pinconf_generic_dt_node_to_map_all,
 					   .dt_free_map = pinconf_generic_dt_free_map};
 static bool audio_output(unsigned n) { return n == 8 || n == 15 || n == 18 || n == 20; }
+/* Stock tpd_suspend/tpd_resume drive GPIO56 as the APT32F wheel reset
+ * (active low): high = running. */
+static bool wheel_reset(unsigned n) { return n == 56; }
+static bool owned_output(unsigned n) { return audio_output(n) || wheel_reset(n); }
 static int mux_gpio_request(struct pinctrl_dev *pc, struct pinctrl_gpio_range *range, unsigned n)
 {
 	struct y2_pins *p = pinctrl_dev_get_drvdata(pc);
-	if (!audio_output(n) && n != 6 && n != 7 && n != 9 && n != 10 && n != 54)
+	if (!owned_output(n) && n != 6 && n != 7 && n != 9 && n != 10 && n != 54)
 		return -ENOTSUPP;
 	/* Clear output latch before selecting GPIO: never pulse amp/power high. */
 	if (audio_output(n))
 		pin_bit(p, 0x400, n, false);
+	/* Set the wheel reset latch high first: selecting GPIO never resets it. */
+	if (wheel_reset(n)) {
+		pin_bit(p, 0x400, n, true);
+		pin_mode(p, n, 0);
+		return 0;
+	}
 	pin_bit(p, 0, n, false);
 	pin_mode(p, n, 0);
 	return 0;
@@ -205,7 +215,7 @@ static int gpio_input(struct gpio_chip *gc, unsigned n)
 static int gpio_output(struct gpio_chip *gc, unsigned n, int value)
 {
 	struct y2_pins *p = gpiochip_get_data(gc);
-	if (!audio_output(n))
+	if (!owned_output(n))
 		return -ENOTSUPP;
 	pin_bit(p, 0x400, n, value);
 	pin_bit(p, 0, n, true);
@@ -213,7 +223,7 @@ static int gpio_output(struct gpio_chip *gc, unsigned n, int value)
 }
 static int gpio_set(struct gpio_chip *gc, unsigned n, int value)
 {
-	if (!audio_output(n))
+	if (!owned_output(n))
 		return -ENOTSUPP;
 	pin_bit(gpiochip_get_data(gc), 0x400, n, value);
 	return 0;

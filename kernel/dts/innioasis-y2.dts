@@ -357,6 +357,8 @@
         wheel@51 { compatible = "innioasis,apt32f-wheel"; reg = <0x51>;
             pinctrl-names = "default"; pinctrl-0 = <&wheel_state>;
             interrupt-parent = <&pio>; interrupts = <55 IRQ_TYPE_EDGE_FALLING>;
+            /* Stock tpd_suspend/tpd_resume: controller reset, active low. */
+            reset-gpios = <&pio 56 GPIO_ACTIVE_LOW>;
         };
     };
     i2c1: i2c@11008000 {

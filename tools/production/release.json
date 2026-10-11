@@ -1,7 +1,7 @@
 {
-  "release_version": "1.0.0-platform-v1-power-final-candidate.12",
-  "rootfs_version": "2025.02.18-platform-v1.42",
-  "build_id": "Y2LINUX-PLATFORM-V1-POWER-FINAL-12",
+  "release_version": "1.0.0-platform-v1-power-final-candidate.13",
+  "rootfs_version": "2025.02.18-platform-v1.43",
+  "build_id": "Y2LINUX-PLATFORM-V1-POWER-FINAL-13",
   "platform_api_version": 1,
   "feature_contract_version": 2,
   "battery_profile_schema": 1,

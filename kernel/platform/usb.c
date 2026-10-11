@@ -181,6 +181,7 @@ static const struct file_operations y2_fops = {
 #include "/src/drivers/usb/musb/musb_core.h"
 #include "/src/drivers/usb/musb/musb_dma.h"
 #include "/project/kernel/usb/session.h"
+#include "/project/kernel/usb/savecurrent.h"
 
 
 static void __iomem *y2_usb_phy;
@@ -1382,8 +1383,27 @@ static ssize_t rx_dma_store(struct device *dev, struct device_attribute *attr,
     return count;
 }
 static DEVICE_ATTR_RW(rx_dma);
+/* POWER-FINAL-13 PHY save-current switch and counters (callbacks below). */
+static bool y2_phy_savecurrent_enabled = true;
+static unsigned y2_phy_saves, y2_phy_restores, y2_phy_mismatches, y2_phy_skips;
+static const char *y2_phy_skip = "none";
+static ssize_t phy_savecurrent_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+    return sysfs_emit(buf, "enabled=%u saves=%u restores=%u mismatches=%u skips=%u last_skip=%s\n",
+        READ_ONCE(y2_phy_savecurrent_enabled), y2_phy_saves, y2_phy_restores,
+        y2_phy_mismatches, y2_phy_skips, y2_phy_skip);
+}
+static ssize_t phy_savecurrent_store(struct device *dev, struct device_attribute *attr,
+                                     const char *buf, size_t count)
+{
+    bool value;
+    if (kstrtobool(buf, &value)) return -EINVAL;
+    WRITE_ONCE(y2_phy_savecurrent_enabled, value);
+    return count;
+}
+static DEVICE_ATTR_RW(phy_savecurrent);
 static struct attribute *y2_usb_attrs[] = { &dev_attr_status.attr, &dev_attr_rxdiag.attr,
-    &dev_attr_rx_late_pio.attr, &dev_attr_rx_dma.attr, NULL };
+    &dev_attr_rx_late_pio.attr, &dev_attr_rx_dma.attr, &dev_attr_phy_savecurrent.attr, NULL };
 ATTRIBUTE_GROUPS(y2_usb);
 static int y2_role_set(struct usb_role_switch *sw, enum usb_role role)
 {
@@ -1484,8 +1504,58 @@ static void y2_usb_complete(struct device *dev)
     WRITE_ONCE(y2_usb_sleeping, false);
     y2_usb_kick();
 }
+/* POWER-FINAL-13: stock usb_phy_savecurrent() across system sleep
+ * (kernel/usb/savecurrent.h). Parent noirq callbacks run after the MUSB child
+ * has finished its system suspend and before it resumes. Only with no cable
+ * and no live session; every touched PHY byte is restored exactly on wake. */
+static bool y2_phy_saved_valid, y2_phy_gate_after;
+static unsigned char y2_phy_saved[Y2_PHY_SAVE_REGS];
+static unsigned y2_phy_io_read(void *context, unsigned offset) { return readb(y2_usb_phy + offset); }
+static void y2_phy_io_write(void *context, unsigned offset, unsigned value) { writeb(value, y2_usb_phy + offset); }
+static void y2_phy_io_delay(void *context, unsigned us) { udelay(us); }
+static const struct y2_phy_io y2_phy_io = {
+    .read = y2_phy_io_read, .write = y2_phy_io_write, .delay = y2_phy_io_delay,
+};
+static int y2_usb_suspend_noirq(struct device *dev)
+{
+    struct y2_pwrap_snapshot power;
+    y2_phy_saved_valid = false;
+    if (!READ_ONCE(y2_phy_savecurrent_enabled)) { y2_phy_skip = "disabled"; goto skip; }
+    if (!y2_usb_phy || y2_usb_finished || READ_ONCE(y2_live.result)) { y2_phy_skip = "usb_stopped"; goto skip; }
+    if (y2_usb_child && !READ_ONCE(y2_usb_detached)) { y2_phy_skip = "session"; goto skip; }
+    y2_pmic_snapshot(&power);
+    if (power.result || power.valid != 7 || (power.chrdet & 0x20)) { y2_phy_skip = "cable_or_unknown"; goto skip; }
+    y2_phy_gate_after = !y2_usb_clock_enabled;
+    if (y2_usb_bus_restore()) { y2_phy_skip = "bus_clock"; goto skip; }
+    y2_phy_save(&y2_phy_io, y2_phy_saved);
+    y2_phy_savecurrent(&y2_phy_io);
+    y2_phy_saved_valid = true;
+    y2_phy_saves++;
+    if (y2_phy_gate_after) y2_usb_bus_gate();
+    return 0;
+skip:
+    y2_phy_skips++;
+    return 0;
+}
+static int y2_usb_resume_noirq(struct device *dev)
+{
+    unsigned bad;
+    if (!y2_phy_saved_valid) return 0;
+    y2_phy_saved_valid = false;
+    if (y2_usb_bus_restore()) { y2_phy_mismatches++; return 0; }
+    bad = y2_phy_restore(&y2_phy_io, y2_phy_saved);
+    if (bad) bad = y2_phy_restore(&y2_phy_io, y2_phy_saved);
+    if (bad) {
+        y2_phy_mismatches++;
+        pr_err("Y2USB PHY savecurrent restore: %u byte(s) differ\n", bad);
+    } else
+        y2_phy_restores++;
+    if (y2_phy_gate_after) y2_usb_bus_gate();
+    return 0;
+}
 static const struct dev_pm_ops y2_usb_pm = {
     .prepare = y2_usb_prepare, .complete = y2_usb_complete,
+    .suspend_noirq = y2_usb_suspend_noirq, .resume_noirq = y2_usb_resume_noirq,
 };
 static struct platform_driver y2_usb_driver = {
     .probe = y2_usb_probe,

@@ -1,6 +1,6 @@
 """Owned product suspend; no polling while asleep and no editable bypass on 04.
 
-The established PCM wakes every ten minutes for a battery safety check. Only
+The established PCM wakes every 30 minutes for a battery safety check. Only
 an unambiguous timer return can re-enter without restoring the screen/radios.
 All other wakes restore the application. Critical operations use real flock
 ownership and bounded kernel leases, never the mere existence of a PID file.
@@ -63,7 +63,11 @@ def admission(ctx):
     if backstop.get('armed_s') != '0' or backstop.get('running') != '0':
         raise Refused('pm_test_in_progress')
     prior = ctx.json(GUARD, {})
-    if prior.get('identity') == identity(ctx) and prior.get('pending'):
+    # Only an attempt that reached the kernel can leave an unproven sleep. A
+    # pending record written before kernel entry (radio quiesce, Reborn) is a
+    # helper failure, not a kernel quarantine; 12 kept those across reboots.
+    if (prior.get('identity') == identity(ctx) and prior.get('pending')
+            and prior.get('kernel_entry', True)):
         # A clean, explicit owner trial on this image can recover a quarantine.
         receipt = ctx.json('/data/system/platform/suspend-last.json', {})
         p = receipt.get('product') or {}
@@ -163,9 +167,10 @@ def launch(ctx, fd):
                      env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'LC_ALL': 'C'})
 
 
-def guard_record(ctx, pending):
+def guard_record(ctx, pending, kernel_entry=False):
     private_directory(ctx.path(GUARD).parent)
     atomic_json(ctx.path(GUARD), {'identity': identity(ctx), 'pending': pending,
+                'kernel_entry': kernel_entry,
                 'boot_id': ctx.read('/proc/sys/kernel/random/boot_id'),
                 'updated': time.time()}, durable=True)
 
@@ -174,6 +179,29 @@ def command(ctx, argv):
     result = ctx.command(argv, timeout=20)
     if not result.get('ok'):
         raise RuntimeError('sleep_service_failed:' + Path(argv[0]).name)
+
+
+RADIO_QUIESCE_SECONDS = 25
+
+
+def quiesce_radio(ctx, radio):
+    """Runtime-off one radio, waiting out a platform Bluetooth operation.
+
+    After a Power wake the reconnect owner holds bt-operation.lock while it
+    reconnects the headset, and `bluetooth-power off` refuses at once. Retry
+    within a bounded window instead of failing the whole sleep request.
+    """
+    argv = ['/usr/sbin/y2-radio', radio, 'off-runtime']
+    deadline = time.monotonic() + RADIO_QUIESCE_SECONDS
+    attempts = 0
+    while True:
+        attempts += 1
+        result = ctx.command(argv, timeout=20)
+        if result.get('ok'):
+            return attempts
+        if time.monotonic() >= deadline:
+            raise RuntimeError('sleep_service_failed:y2-radio:%s:attempts=%d' % (radio, attempts))
+        time.sleep(1)
 
 
 def marker(ctx, stage):
@@ -261,7 +289,7 @@ def execute_owned(ctx, fd, enter, locks):
         record(ctx, 'quiescing_radios', 0)
         radios_changed = True
         for radio in ('wifi', 'bluetooth'):
-            command(ctx, ['/usr/sbin/y2-radio', radio, 'off-runtime'])
+            quiesce_radio(ctx, radio)
         deadline = time.monotonic() + 15
         while not re.search(r'powered=0 functions=(?:0x0|0) ',
                             ctx.read('/sys/devices/platform/18070000.connectivity/status') or ''):
@@ -283,7 +311,7 @@ def execute_owned(ctx, fd, enter, locks):
             record(ctx, 'syncing', 0)
             command(ctx, ['/bin/sync'])
             record(ctx, 'kernel_suspend', 0)
-            guard_record(ctx, True)
+            guard_record(ctx, True, kernel_entry=True)
             pending = True
             try:
                 control_write(ctx, '/sys/power/wakeup_count', count + '\n')
@@ -350,7 +378,10 @@ def execute_owned(ctx, fd, enter, locks):
                 result = value['result']
             if result == 0:
                 marker(ctx, 'COMPLETE')
-        if pending and (restored_kernel or not attempted) and result in (0, 2):
+        # Clear whenever no kernel attempt is left unproven: a refusal, a
+        # proven kernel return, or any failure before kernel entry (12 left
+        # result 1 pending here, refusing all sleep until a reflash).
+        if pending and (restored_kernel or not attempted):
             guard_record(ctx, False)
     return result
 

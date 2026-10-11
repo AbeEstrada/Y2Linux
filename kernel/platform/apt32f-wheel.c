@@ -14,6 +14,8 @@
  * We only handle class 3 (wheel scroll); reg4 selects the direction. Frame
  * layout + the data-ready line were reverse-engineered from the vendor kernel.
  */
+#include <linux/delay.h>
+#include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
 #include <linux/interrupt.h>
@@ -28,6 +30,12 @@
 struct apt32f_wheel {
 	struct i2c_client *client;
 	struct input_dev *input;
+	struct gpio_desc *reset; /* GPIO56, active low; NULL = no reset owner */
+	int version;		 /* reg6 at probe, <0 = read error */
+	bool sleep_enabled;	 /* owner switch, default on (stock behaviour) */
+	enum { APT32F_AWAKE, APT32F_I2C_SLEEP, APT32F_RESET_HELD } state;
+	unsigned sleeps, wakes, wake_retries, failures;
+	int last_error;
 };
 
 /* reg4 scroll-code -> key. Tap = press+release, like a scroll wheel notch. */
@@ -78,6 +86,76 @@ static irqreturn_t apt32f_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+
+/*
+ * Stock tpd_suspend/tpd_resume (Y2 FM kernel 0xc04a41c0 / 0xc04a3088):
+ * suspend reads reg6; firmware 1..19 gets the sleep command reg5=1, any
+ * other version is held in reset (GPIO56 low). Resume always pulses reset
+ * (high, 10 ms, low, 20 ms, high) and then writes reg5=0. The controller
+ * otherwise keeps scanning the touch ring during system sleep.
+ */
+#define APT32F_REG_MODE 5
+#define APT32F_REG_VERSION 6
+static bool apt32f_i2c_sleep_capable(int version)
+{
+	return version >= 1 && version <= 19;
+}
+static int apt32f_enter_sleep(struct apt32f_wheel *w)
+{
+	int ret = 0;
+	w->state = APT32F_AWAKE;
+	if (!w->sleep_enabled)
+		return 0;
+	if (apt32f_i2c_sleep_capable(w->version)) {
+		ret = i2c_smbus_write_byte_data(w->client, APT32F_REG_MODE, 1);
+		if (!ret)
+			w->state = APT32F_I2C_SLEEP;
+	} else if (w->reset) {
+		ret = gpiod_set_value_cansleep(w->reset, 1);
+		if (!ret)
+			w->state = APT32F_RESET_HELD;
+	}
+	if (ret) {
+		w->failures++;
+		w->last_error = ret;
+		return ret;
+	}
+	if (w->state != APT32F_AWAKE)
+		w->sleeps++;
+	return 0;
+}
+static int apt32f_leave_sleep(struct apt32f_wheel *w)
+{
+	unsigned attempt;
+	int ret = 0;
+	if (w->state == APT32F_AWAKE)
+		return 0;
+	if (w->reset) {
+		gpiod_set_value_cansleep(w->reset, 0);
+		msleep(10);
+		gpiod_set_value_cansleep(w->reset, 1);
+		msleep(20);
+		gpiod_set_value_cansleep(w->reset, 0);
+	}
+	/* Stock writes once right after reset release and ignores the result;
+	 * the controller may still be booting, so allow a bounded retry. */
+	for (attempt = 0; attempt < 5; attempt++) {
+		ret = i2c_smbus_write_byte_data(w->client, APT32F_REG_MODE, 0);
+		if (!ret)
+			break;
+		w->wake_retries++;
+		msleep(20);
+	}
+	w->state = APT32F_AWAKE;
+	if (ret) {
+		w->failures++;
+		w->last_error = ret;
+		return ret;
+	}
+	w->wakes++;
+	return 0;
+}
+
 static int apt32f_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
@@ -94,6 +172,12 @@ static int apt32f_probe(struct i2c_client *client)
 	if (!w)
 		return -ENOMEM;
 	w->client = client;
+	w->sleep_enabled = true;
+	w->reset = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_LOW);
+	if (IS_ERR(w->reset))
+		return dev_err_probe(dev, PTR_ERR(w->reset), "reset gpio\n");
+	w->version = i2c_smbus_read_byte_data(client, APT32F_REG_VERSION);
+	i2c_set_clientdata(client, w);
 
 	w->input = devm_input_allocate_device(dev);
 	if (!w->input)
@@ -115,6 +199,9 @@ static int apt32f_probe(struct i2c_client *client)
 	if (ret)
 		return dev_err_probe(dev, ret, "failed to request irq\n");
 
+	dev_info(dev, "firmware %d: suspend uses %s\n", w->version,
+		 apt32f_i2c_sleep_capable(w->version) ? "sleep command" :
+		 w->reset ? "reset hold" : "nothing");
 	return 0;
 }
 
@@ -125,17 +212,47 @@ static const struct of_device_id apt32f_of_match[] = {
 MODULE_DEVICE_TABLE(of, apt32f_of_match);
 
 /* Wheel is not a wake source. Drain the threaded transfer before the I2C
- * adapter suspends; resume the IRQ only after the parent adapter is ready. */
+ * adapter suspends; resume the IRQ only after the parent adapter is ready.
+ * The controller sleeps like stock; a failed sleep command never blocks
+ * system sleep (it only costs power) and is counted. */
 static int apt32f_suspend(struct device *dev)
 {
+	struct apt32f_wheel *w = i2c_get_clientdata(to_i2c_client(dev));
 	disable_irq(to_i2c_client(dev)->irq);
+	apt32f_enter_sleep(w);
 	return 0;
 }
 static int apt32f_resume(struct device *dev)
 {
+	struct apt32f_wheel *w = i2c_get_clientdata(to_i2c_client(dev));
+	if (apt32f_leave_sleep(w))
+		dev_warn(dev, "wake: %d after %u retries\n", w->last_error, w->wake_retries);
 	enable_irq(to_i2c_client(dev)->irq);
 	return 0;
 }
+static ssize_t sleep_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct apt32f_wheel *w = i2c_get_clientdata(to_i2c_client(dev));
+	return sysfs_emit(buf, "enabled=%u firmware=%d method=%s sleeps=%u wakes=%u wake_retries=%u failures=%u last_error=%d\n",
+			  w->sleep_enabled, w->version,
+			  apt32f_i2c_sleep_capable(w->version) ? "sleep_command" :
+			  w->reset ? "reset_hold" : "none",
+			  w->sleeps, w->wakes, w->wake_retries, w->failures, w->last_error);
+}
+static ssize_t sleep_store(struct device *dev, struct device_attribute *attr,
+			   const char *buf, size_t count)
+{
+	struct apt32f_wheel *w = i2c_get_clientdata(to_i2c_client(dev));
+	bool value;
+	int ret = kstrtobool(buf, &value);
+	if (ret)
+		return ret;
+	w->sleep_enabled = value;
+	return count;
+}
+static DEVICE_ATTR_RW(sleep);
+static struct attribute *apt32f_attrs[] = {&dev_attr_sleep.attr, NULL};
+ATTRIBUTE_GROUPS(apt32f);
 static DEFINE_SIMPLE_DEV_PM_OPS(apt32f_pm, apt32f_suspend, apt32f_resume);
 
 static struct i2c_driver apt32f_driver = {
@@ -145,6 +262,7 @@ static struct i2c_driver apt32f_driver = {
 	    .name = "apt32f-wheel",
 	    .of_match_table = apt32f_of_match,
 	    .pm = pm_sleep_ptr(&apt32f_pm),
+	    .dev_groups = apt32f_groups,
 	},
 };
 module_i2c_driver(apt32f_driver);

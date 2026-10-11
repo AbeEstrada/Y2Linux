@@ -11,7 +11,11 @@
 #define Y2_SPM_SUSPEND_POLICY_H
 #include "spm-regs.h"
 #define Y2_SPM_WAKE (WAKE_SRC_KP | WAKE_SRC_EINT | WAKE_SRC_USB_CD | WAKE_SRC_THERM | WAKE_SRC_SYSPWREQ)
-#define Y2_SPM_TIMER (600U * 32768U)
+/* Maintenance wake for the battery-safety check. Vendor SPM_WAKE_PERIOD is
+ * 600 s (a modem-era value); each return costs ~3 s fully awake, so
+ * POWER-FINAL-13 checks every 30 min. The PCM watchdog stays timer + 30 s. */
+#define Y2_SPM_MAINTENANCE_S 1800U
+#define Y2_SPM_TIMER (Y2_SPM_MAINTENANCE_S * 32768U)
 
 static inline void y2_spm_reset_pcm(const struct y2_spm_io *io)
 {

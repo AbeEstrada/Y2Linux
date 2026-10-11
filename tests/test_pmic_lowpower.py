@@ -1,4 +1,4 @@
-"""POWER-FINAL-05 PMIC low-power select regressions. Synthetic evidence, never a device receipt."""
+"""POWER-FINAL-05/13 PMIC low-power select regressions. Synthetic evidence, never a device receipt."""
 from pathlib import Path
 import re
 import unittest
@@ -19,10 +19,12 @@ int main(void) {
   assert(y2_pmic_write_mask(regs[i]) == 0x0001);   /* LP_SEL only */
   assert(y2_pmic_value_allowed(regs[i], 0xc001));
  }
- /* Existing guarded fields are unchanged: VMC/VMCH enable only, eMMC supply, VPROC/VSYS buck. */
- assert(y2_pmic_write_mask(0x504) == 0x1000 || y2_pmic_write_mask(0x504) == 0x1001);
+ /* 13: storage LDOs add LP_SEL to their existing enable bit; the eMMC enable stays closed. */
+ assert(y2_pmic_write_mask(0x504) == 0x1001 && y2_pmic_write_mask(0x506) == 0x4001);
+ assert(y2_pmic_write_mask(0x508) == 0x0001);
  assert(y2_pmic_write_mask(0x50c) == 0x8000 && y2_pmic_write_mask(0x532) == 0x00e0);
- assert(y2_pmic_write_mask(0x230) == 0 && y2_pmic_write_mask(0x256) == 0 && y2_pmic_write_mask(0x216) == 0);
+ /* VSYS sleep fields and both buck enables stay closed (VPROC: test_vproc_sleep.py). */
+ assert(y2_pmic_write_mask(0x256) == 0 && y2_pmic_write_mask(0x23c) == 0);
  assert(y2_pmic_write_mask(0x21a) == 0 && y2_pmic_write_mask(0x240) == 0);   /* buck enables */
  return 0;
 }
@@ -48,7 +50,8 @@ int main(void) {
  assert(y2_pmic_lp_parse("1\n", 2) == 1 && y2_pmic_lp_parse("0", 1) == 0);
  assert(y2_pmic_lp_parse("", 0) == -1 && y2_pmic_lp_parse("2", 1) == -1 && y2_pmic_lp_parse("11", 2) == -1);
  assert(y2_pmic_lp_parse("1\n\n", 3) == -1 && y2_pmic_lp_parse("on", 2) == -1);
- assert(Y2_PMIC_LP_RAILS == 5 && y2_pmic_lp_rails[0].reg == 0x404 && y2_pmic_lp_rails[4].reg == 0x556);
+ assert(Y2_PMIC_LP_RAILS == 8 && y2_pmic_lp_rails[0].reg == 0x404 && y2_pmic_lp_rails[4].reg == 0x556);
+ assert(y2_pmic_lp_rails[5].reg == 0x504 && y2_pmic_lp_rails[6].reg == 0x506 && y2_pmic_lp_rails[7].reg == 0x508);
  return 0;
 }
 ''')
@@ -63,10 +66,12 @@ int main(void) {
         self.assertIn('-EIO', self.source)
         self.assertIn('y2_pmic_lp_chip_ok(cid)', self.source)
 
-    def test_rails_exclude_emmc_sd_vproc_and_vsys(self):
+    def test_rails_are_the_complete_stock_e2_list_and_exclude_bucks(self):
+        # Y2 FM kernel PMIC_INIT_SETTING_V1 sets LP_SEL on exactly these eight
+        # (VTCXO 0x402 is owned by the connectivity subset; VSIM1/2 are unused).
         regs = {int(x, 16) for x in re.findall(r'\{(0x[0-9a-fA-F]+),', self.header.split('struct y2_pmic_lp_rail y2_pmic_lp_rails')[1].split('};')[0])}
-        self.assertEqual(regs, {0x404, 0x500, 0x502, 0x552, 0x556})
-        self.assertTrue(regs.isdisjoint({0x504, 0x506, 0x508, 0x21a, 0x240, 0x230, 0x256}))
+        self.assertEqual(regs, {0x404, 0x500, 0x502, 0x552, 0x556, 0x504, 0x506, 0x508})
+        self.assertTrue(regs.isdisjoint({0x21a, 0x240, 0x230, 0x256}))
 
     def test_makefile_builds_it_under_the_power_option_only(self):
         self.assertIn('obj-$(CONFIG_Y2_POWER) += pmic-lowpower.o', (PLATFORM / 'Makefile').read_text())

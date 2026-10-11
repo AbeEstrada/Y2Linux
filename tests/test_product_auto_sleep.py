@@ -294,6 +294,60 @@ class ProductAutoSleep(unittest.TestCase):
         self.write('/etc/y2linux/versions.json', '{"build_git_commit":"next-source"}')
         pm.admission(self.ctx)
 
+    def test_radio_quiesce_failure_before_kernel_entry_never_quarantines(self):
+        # POWER-FINAL-12 Defect A: a Bluetooth off refused by the reconnect
+        # owner (result 1, kernel never entered) left the guard pending and
+        # every later sleep was refused, across reboots, until a reflash.
+        def refuse_bluetooth_off(argv, **kwargs):
+            self.calls.append(argv)
+            return {'ok': argv[1:] != ['bluetooth', 'off-runtime'], 'output': ''}
+        self.ctx.runner = refuse_bluetooth_off
+        with patch('y2_platform.product_sleep.time.sleep'), \
+                patch.object(pm, 'RADIO_QUIESCE_SECONDS', 0):
+            self.assertEqual(self.run_sleep(lambda ctx: self.fail('entered without radios off')), 1)
+        receipt = self.ctx.json('/data/system/platform/suspend-last.json')
+        self.assertEqual(receipt['product']['reason'], 'sleep_service_failed:y2-radio:bluetooth:attempts=1')
+        guard = self.ctx.json(pm.GUARD)
+        self.assertFalse(guard['pending'])
+        self.assertFalse(guard['kernel_entry'])
+        self.assertEqual(self.rpc, ['sleep_prepare', 'sleep_restore'])
+        pm.admission(self.ctx)
+        # The next request succeeds normally.
+        self.ctx.runner = self.command
+        self.assertEqual(self.run_sleep(lambda ctx: self.returned()), 0)
+
+    def test_bluetooth_operation_in_progress_is_waited_out_within_the_window(self):
+        refusals = []
+        def reconnect_holds_lock(argv, **kwargs):
+            self.calls.append(argv)
+            if argv[1:] == ['bluetooth', 'off-runtime'] and len(refusals) < 3:
+                refusals.append(argv)
+                return {'ok': False, 'output': '{"ok": false}'}
+            return {'ok': True, 'output': ''}
+        self.ctx.runner = reconnect_holds_lock
+        with patch('y2_platform.product_sleep.time.sleep') as pause:
+            self.assertEqual(self.run_sleep(lambda ctx: self.returned()), 0)
+        self.assertEqual(len(refusals), 3)
+        self.assertEqual(pause.call_count, 3)
+        self.assertEqual(self.ctx.json('/data/system/platform/suspend-last.json')['product']['state'], 'restored')
+        self.assertFalse(self.ctx.json(pm.GUARD)['pending'])
+
+    def test_stale_pre_kernel_guard_from_any_boot_does_not_refuse(self):
+        identity = pm.identity(self.ctx)
+        for boot in ('same-boot', 'earlier-boot'):
+            self.write(pm.GUARD, json.dumps({'identity': identity, 'pending': True,
+                                             'kernel_entry': False, 'boot_id': boot,
+                                             'updated': time.time()}))
+            pm.admission(self.ctx)
+        # A pending kernel attempt (or a 12-format record without the field)
+        # still quarantines the image.
+        for record_value in ({'kernel_entry': True}, {}):
+            self.write(pm.GUARD, json.dumps({'identity': identity, 'pending': True,
+                                             'boot_id': 'earlier-boot', 'updated': time.time()}
+                                            | record_value))
+            with self.assertRaisesRegex(pm.Refused, 'sleep_recovery_required'):
+                pm.admission(self.ctx)
+
     def test_old_kernel_and_tainted_diagnostic_cannot_enable_product_sleep(self):
         self.write('/proc/sys/kernel/tainted', '4096')
         with self.assertRaisesRegex(pm.Refused, 'kernel_sleep_unavailable'):

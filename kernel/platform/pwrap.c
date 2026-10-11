@@ -379,6 +379,107 @@ out:
 	mutex_unlock(&y2_wrap_lock);
 	return ret;
 }
+/* POWER-FINAL-13: stock VPROC sleep voltage for full system sleep only
+ * (vproc-sleep-policy.h). Never blocks sleep: a refused or failed begin leaves
+ * (or restores) the proven 1.15-V software configuration and sleep continues.
+ * Called only from the platform ->enter() with IRQs off on the sole online
+ * CPU, around the actual PCM sleep: cpufreq is suspended, cpuidle cannot run
+ * and no other CPU exists, so no DVFS step can observe the HW-mode window.
+ * regmap's own (spinlock) serialization covers each WACS2 transaction; the
+ * sleeping y2_wrap_lock is deliberately not taken here. */
+static struct y2_vproc_sleep vproc_sleep;
+static bool vproc_sleep_enabled = true;
+module_param_named(vproc_sleep, vproc_sleep_enabled, bool, 0600);
+static unsigned vproc_sleep_entries, vproc_sleep_restores, vproc_sleep_failures;
+static int vproc_sleep_error;
+static const char *vproc_sleep_stage = "not_attempted";
+static int vproc_sleep_restore_locked(struct regmap *map)
+{
+	unsigned n, i, value;
+	int ret, first = 0;
+	for (n = 0; n < Y2_VPROC_SLEEP_STEPS; n++) {
+		const struct y2_vproc_field *f;
+		i = y2_vproc_restore_index(n);
+		f = &y2_vproc_sleep_fields[i];
+		ret = regmap_update_bits(map, f->reg, f->mask, vproc_sleep.saved[i] & f->mask);
+		if (!ret) ret = regmap_read(map, f->reg, &value);
+		if (!ret && (value & f->mask) != (vproc_sleep.saved[i] & f->mask)) ret = -EIO;
+		if (ret && !first) first = ret;
+	}
+	vproc_sleep.active = 0;
+	return first;
+}
+void y2_pmic_vproc_sleep_begin(void)
+{
+	unsigned control, software, actual, value, i;
+	int ret = 0;
+	if (!y2_wrap || !READ_ONCE(vproc_sleep_enabled) || vproc_sleep.active) return;
+	vproc_sleep_stage = "read";
+	ret = regmap_read(y2_wrap->map, 0x216, &control);
+	if (!ret) ret = regmap_read(y2_wrap->map, 0x21e, &software);
+	if (!ret) ret = regmap_read(y2_wrap->map, 0x224, &actual); /* NI_VPROC_VOSEL */
+	if (ret) goto fail;
+	vproc_sleep_stage = "plan";
+	if (y2_vproc_sleep_plan(&vproc_sleep, control, software, actual)) { ret = -ERANGE; goto fail; }
+	for (i = 0; i < Y2_VPROC_SLEEP_STEPS; i++) {
+		ret = regmap_read(y2_wrap->map, y2_vproc_sleep_fields[i].reg, &vproc_sleep.saved[i]);
+		if (ret) goto fail;
+		/* An unrestorable original would be refused by the write policy. */
+		if (!y2_pmic_value_allowed(y2_vproc_sleep_fields[i].reg, vproc_sleep.saved[i])) {
+			ret = -ERANGE; goto fail;
+		}
+	}
+	vproc_sleep.active = 1;
+	vproc_sleep_stage = "apply";
+	for (i = 0; i < Y2_VPROC_SLEEP_STEPS; i++) {
+		const struct y2_vproc_field *f = &y2_vproc_sleep_fields[i];
+		ret = regmap_update_bits(y2_wrap->map, f->reg, f->mask, vproc_sleep.planned[i]);
+		if (!ret) ret = regmap_read(y2_wrap->map, f->reg, &value);
+		if (!ret && (value & f->mask) != vproc_sleep.planned[i]) ret = -EIO;
+		if (ret) goto undo;
+	}
+	/* The mode switch itself must not move the live voltage. */
+	vproc_sleep_stage = "verify";
+	udelay(40);
+	ret = regmap_read(y2_wrap->map, 0x224, &actual);
+	if (!ret && (actual & 0x7f) != Y2_VPROC_ACTIVE_SELECTOR) ret = -EIO;
+	if (ret) goto undo;
+	vproc_sleep_entries++;
+	vproc_sleep_stage = "armed";
+	goto out;
+undo:
+	vproc_sleep_restore_locked(y2_wrap->map);
+fail:
+	vproc_sleep_failures++;
+	vproc_sleep_error = ret;
+out:
+	return;
+}
+void y2_pmic_vproc_sleep_end(void)
+{
+	int ret;
+	if (y2_wrap && vproc_sleep.active) {
+		ret = vproc_sleep_restore_locked(y2_wrap->map);
+		if (ret) {
+			vproc_sleep_failures++;
+			vproc_sleep_error = ret;
+			vproc_sleep_stage = "restore_failed";
+			pr_err("Y2VPROC: sleep configuration restore failed: %d\n", ret);
+		} else {
+			vproc_sleep_restores++;
+			vproc_sleep_stage = "restored";
+		}
+	}
+}
+static int vproc_sleep_state_get(char *buffer, const struct kernel_param *kp)
+{
+	return sysfs_emit(buffer, "enabled=%u active=%d stage=%s entries=%u restores=%u failures=%u last_error=%d sleep_uv=%u\n",
+		READ_ONCE(vproc_sleep_enabled), vproc_sleep.active, vproc_sleep_stage,
+		vproc_sleep_entries, vproc_sleep_restores, vproc_sleep_failures,
+		vproc_sleep_error, 700000 + Y2_VPROC_SLEEP_SELECTOR * 6250);
+}
+static const struct kernel_param_ops vproc_sleep_state_ops = { .get = vproc_sleep_state_get };
+module_param_cb(vproc_sleep_state, &vproc_sleep_state_ops, NULL, 0400);
 int y2_pmic_snapshot(struct y2_pwrap_snapshot *s)
 {
 	int ret = -EPROBE_DEFER;

@@ -2,6 +2,7 @@
 #ifndef Y2_PLATFORM_POLICY_H
 #define Y2_PLATFORM_POLICY_H
 #include "charge-table.h"
+#include "vproc-sleep-policy.h"
 /* MT6582 BSP sdm_pll_vco_calc_op. Power-of-two arithmetic avoids a 64-bit
  * divide runtime in ARM kernel code; overflow/disabled PLL means unknown. */
 static inline unsigned y2_pll_decode(unsigned con0, unsigned con1, unsigned arm)
@@ -69,15 +70,28 @@ static inline unsigned y2_pmic_write_mask(unsigned reg)
 	 * Owner-authorized 2026-10-08 (POWER-FINAL-05). */
 	case 0x404: case 0x500: case 0x502: case 0x552: case 0x556:
 		return 0x0001;
+	/* POWER-FINAL-13: the stock E2 PMIC_INIT_SETTING_V1 also sets LP_SEL on the
+	 * storage LDOs: VEMC_3V3 0x508 (LP_SEL only, its enable stays unwritable);
+	 * VMC 0x504 and VMCH 0x506 below add bit 0 to their SD enable bits. */
+	case 0x508: return 0x0001;
+	/* POWER-FINAL-13 stock VPROC sleep fields (vproc-sleep-policy.h), set only
+	 * inside platform prepare_late..wake and restored exactly afterwards. The
+	 * buck enables (0x21a/0x240), software VOSEL 0x21e and VSYS stay unwritable. */
+	case 0x212: return 0x0030; /* QI_VPROC_VSLEEP */
+	case 0x216: return 0x0002; /* VPROC_VOSEL_CTRL only */
+	case 0x21c: return 0x80ff; /* VPROC_SFCHG_FRATE/FEN/REN */
+	case 0x220: return 0x007f; /* VPROC_VOSEL_ON: 72/80/88 only */
+	case 0x222: return 0x007f; /* VPROC_VOSEL_SLEEP: 0.85..1.25 V */
+	case 0x230: return 0x0103; /* VPROC_TRANSTD, VPROC_VSLEEP_EN */
 	case 0x50c: /* MT6323 DIGLDO_CON8: VGP2 enable only. */
 		return 0x8000;
 	case 0x532: /* DIGLDO_CON29: VGP2 selector only. */
 		return 0x00e0;
 	/* SD rails as stock msdc_sd_power/msdc_sd_power_switch drive them
-	 * (docs/validation/Y2-STORAGE-CEILING.md). VEMC_3V3, the root eMMC
-	 * card supply, stays unwritable. */
-	case 0x504: return 0x1000; /* DIGLDO_CON3: VMC (SD IO) enable only. */
-	case 0x506: return 0x4000; /* DIGLDO_CON5: VMCH (SD card) enable only. */
+	 * (docs/validation/Y2-STORAGE-CEILING.md). The VEMC_3V3 (root eMMC)
+	 * enable stays unwritable; only its LP_SEL bit is admitted above. */
+	case 0x504: return 0x1001; /* DIGLDO_CON3: VMC (SD IO) enable + LP_SEL. */
+	case 0x506: return 0x4001; /* DIGLDO_CON5: VMCH (SD card) enable + LP_SEL. */
 	case 0x52a: return 0x0010; /* DIGLDO_CON24: VMC 1.8/3.3 V selector. */
 	case 0x52c: return 0x0080; /* DIGLDO_CON26: VMCH selector, 3.3 V only. */
 	case 0x356:
@@ -113,6 +127,7 @@ static inline int y2_pmic_value_allowed(unsigned reg, unsigned value)
 	if (reg == 0x8000 && value != 0x4300) return 0;
 	if (reg == 0x416 && (value & 0xc)) return 0;
 	if (reg == 0x52c && !(value & 0x80)) return 0; /* VMCH never 3.0 V */
+	if (!y2_vproc_value_allowed(reg, value)) return 0;
 	return y2_pmic_write_mask(reg) != 0;
 }
 /* Command filter precedes any DMA setup. SD CMD6 only changes volatile bus

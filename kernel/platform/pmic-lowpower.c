@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Static MT6323 low-power select for the always-on LDOs, as the vendor kernel's
- * PMIC init does. Writes go through the PWRAP transport, whose policy admits only
- * bit 0 of the five registers in pmic-lowpower-policy.h. Applied once after the
+/* Static MT6323 low-power select for the LDOs, as the stock kernel's PMIC init
+ * does. Writes go through the PWRAP transport, whose policy admits only bit 0 of
+ * the registers in pmic-lowpower-policy.h. Applied once after the
  * PMIC is up, verified by readback, and revertible at run time:
  *   /sys/firmware/y2_pmic/lp_sel  (0600)  write 1 = set, 0 = clear, read = state
  * No voltage, enable, clock or sleep-voltage setting is changed. */
@@ -80,7 +80,7 @@ static void lp_start(struct work_struct *work)
 	}
 	lp_error = lp_apply(true);
 	lp_ready = !lp_error;
-	pr_info("y2-pmic-lp: LP_SEL %s on VA/VIO28/VUSB/VM/VIO18 (CID=%#x err=%d)\n",
+	pr_info("y2-pmic-lp: LP_SEL %s on VA/VIO28/VUSB/VM/VIO18/VMC/VMCH/VEMC3V3 (CID=%#x err=%d)\n",
 		lp_ready ? "set" : "FAILED", cid, lp_error);
 	mutex_unlock(&lp_lock);
 }
