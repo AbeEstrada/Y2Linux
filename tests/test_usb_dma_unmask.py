@@ -27,13 +27,13 @@ int main(void) {
     /* The re-arm writes only the set field: no status bit, no clear field. */
     assert(Y2_USB_DMA_INTR == 0x200);
     assert((Y2_USB_DMA_UNMASK_SET & 0x00ffffffU) == 0);
-    /* Stock init value reads back fully unmasked. */
-    assert(!y2_usb_dma_unmask_lost(0x00ff0000U));
-    assert(!y2_usb_dma_unmask_lost(0x00ff0003U));
+    /* Real 16 readback after the stock init write: unmask in bits 15..8. */
+    assert(!y2_usb_dma_unmask_lost(0x0000ff00U));
+    assert(!y2_usb_dma_unmask_lost(0x0000ff03U));
     /* Any missing channel unmask counts as lost. */
     assert(y2_usb_dma_unmask_lost(0));
-    assert(y2_usb_dma_unmask_lost(0x00fe0000U));
-    assert(y2_usb_dma_unmask_lost(0x000000ffU));
+    assert(y2_usb_dma_unmask_lost(0x0000fe00U));
+    assert(y2_usb_dma_unmask_lost(0x00ff00ffU));
     return 0;
 }
 ''')
