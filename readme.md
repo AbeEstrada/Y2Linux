@@ -6,7 +6,9 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Baseline 15 (2026-10-12), developer preview.** It runs every day on
+> **Status: Baseline 15 (2026-10-12), developer preview; POWER-FINAL-16 on `main`.**
+> Baseline 15 is the last tagged state; 16 (stock sleep parity) is installed on the
+> maintainer's Y2 and its overnight test is running. It runs every day on
 > the maintainer's Y2. There are no prebuilt images yet: you build from source
 > and flash with SP Flash Tool. Only one hardware revision has been tested (see
 > [Supported hardware](#supported-hardware)). Read [Known issues](#known-issues)
@@ -20,6 +22,7 @@ factory partitions untouched.
 | Player | Y2Reborn 0.3.0 (Rust 1.99) |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 — every component on its newest release |
 | Maintainer's images built from | Y2Linux `be1aac2`, Y2Reborn `f68e088` (later commits: tests and docs only) |
+| Newest image (on `main`, not yet tagged) | POWER-FINAL-16: kernel `6.18.56-y2linux-platform-v1-power-final-16`, root `2026.08-platform-v1.46`, built from Y2Linux `a4e9c3b` (Reborn unchanged) |
 
 ## Getting started
 
@@ -46,27 +49,30 @@ Observed on the maintainer's device on Baseline 15 or the candidates just before
 - Deep sleep when the screen times out: the SoC suspends and wakes every 30 min for
   housekeeping, with the stock suspend settings (CPU at 0.85 V, USB PHY off, wheel controller
   asleep). Sleep and USB state are written to `/data` so they survive a restart.
+- On 16: the display hardware is powered off with the screen, stock hardware clock gating is on,
+  and unused PLLs and clocks are switched off for sleep. The battery percentage uses the stock
+  fuel-gauge curve. A PC port charges at the stock 450 mA even when the PC is off or asleep.
 
 ## Known issues
 
 - **Never use a software restart.** A warm reboot (the menu's Restart, update
   reboots, `reboot`) can leave the panel dark (`flip_done timed out`). Turn the
   player off by holding Power, then start it again. Not yet investigated.
-- **USB stops sending after a wake from deep sleep.** The device re-enumerates and
-  receives, but its transmit DMA never completes (diagnosed with 14's persistent
-  records), so USB networking and MTP stay silent. Turning the player off and on again
-  recovers it. A fix is being worked on.
-- **Battery life is not stock-like yet.** Asleep: about 2.2 percentage points/h on
-  12. 13 adds the stock sleep settings, but its overnight result is not measured yet.
-  Awake with the screen off: about 4.9 points/h, because only the backlight is
-  switched off. The percentage is estimated from voltage; there is no current sensor.
+- **USB after a wake from deep sleep.** On 13–15 the device re-enumerated and received,
+  but its transmit never completed, so USB networking and MTP stayed silent until a
+  restart. On 16 the first wake worked; it is not yet confirmed over many wakes.
+- **Battery life is not stock-like yet.** Re-read with the stock fuel-gauge curve, 15
+  drew about 10 mA asleep (≈0.8 points/h); stock is about 1 mA (≈0.1 points/h). 16's
+  overnight result is being measured. The percentage is estimated from voltage; there is
+  no current sensor.
 - Bluetooth uses SBC only. AAC/aptX/LDAC sources exist but are not enabled in
   normal builds.
 - No public update channel or release signing. You flash or copy updates by hand.
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for [15](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-15.md) (newest versions),
+reports for [16](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-16.md) (stock sleep parity),
+[15](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-15.md) (newest versions),
 [14](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-14.md) (persistent sleep diagnostics) and
 [13](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-13.md) (stock suspend power parity).
 

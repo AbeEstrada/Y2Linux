@@ -5,12 +5,19 @@ image (13's stock suspend power parity, 14's persistent sleep diagnostics, every
 component on its newest release, Linux 6.18.56) that runs on the maintainer's Y2.
 Git tag `baseline-15` in both repositories.
 
+**POWER-FINAL-16 (2026-10-12)** is the newest image, on `main` of Y2Linux: stock
+sleep parity from the Y2's own stock kernel (display power domain, stock clock
+gating, golden sleep entry, stock fuel gauge, USB-after-wake and charging fixes).
+Installed on the maintainer's Y2; its overnight drain test is running. See the
+[16 report](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md) and the
+[stock suspend ledger](knowledge/stock-suspend-re-ledger.md).
+
 | Need | Start here |
 | --- | --- |
 | Build it yourself | [BUILDING.md](BUILDING.md) |
 | Flash it, connect, update, go back to stock | [INSTALL.md](INSTALL.md) |
 | What works, what doesn't, latest hardware results | [Current platform state](CURRENT_PLATFORM_STATE.md) |
-| What 15, 14 and 13 changed | [15 dependency update](validation/Y2-PLATFORM-V1-POWER-FINAL-15.md), [14 diagnostics](validation/Y2-PLATFORM-V1-POWER-FINAL-14.md), [13 stock power parity](validation/Y2-PLATFORM-V1-POWER-FINAL-13.md) |
+| What 16, 15, 14 and 13 changed | [16 stock sleep parity](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md), [15 dependency update](validation/Y2-PLATFORM-V1-POWER-FINAL-15.md), [14 diagnostics](validation/Y2-PLATFORM-V1-POWER-FINAL-14.md), [13 stock power parity](validation/Y2-PLATFORM-V1-POWER-FINAL-13.md) |
 | Deep sleep history (01 to 13) | [Deep-sleep report](validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md), [suspend architecture](architecture/deep-suspend.md) |
 | Charging, storage | [Charging policy](knowledge/charging-current-policy.md), [internal storage](knowledge/internal-storage.md) |
 | Platform API and ownership | [Platform API](architecture/platform-api-v1.md), [power contract](architecture/platform-power-v1.md) |

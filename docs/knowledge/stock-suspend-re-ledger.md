@@ -1,5 +1,7 @@
 # Stock suspend reverse-engineering ledger (POWER-FINAL-16)
 
+<!-- knowledge-base-scope: retained-research -->
+
 Target: the Y2's own stock FM kernel, `evidence-private/20260908-ram-map/fm-decompressed.bin`
 (base 0xc0008000), wrapped with its 54,692 kallsyms into `out/rea/fm-kernel.elf`
 (SHA-256 `329466b3…b6d003`, generator script kept in the session scratchpad and reproducible:

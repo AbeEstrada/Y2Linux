@@ -1,6 +1,19 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-15 dependency-update candidate sealed — 2026-10-12 (latest)
+## POWER-FINAL-16 stock sleep parity installed — 2026-10-12 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-16/` (Linux `a4e9c3b`, Reborn `f68e088` unchanged, root
+`2026.08-platform-v1.46`; BOOTIMG `2f1cd1c0…debf`, Y2ROOT `bd4a12a0…3d9f`), fallback 15. Built from the Y2's own stock
+kernel analysed with REA ([ledger](knowledge/stock-suspend-re-ledger.md)): USB-after-wake re-arm, stock 450 mA on any
+PC port and sleep with an idle cable, display power domain off at screen-off and in sleep, stock DCM, golden sleep
+entry (PLLs, muxes, unused clock gates, exact restore), read-only PMIC golden capture, stock fuel-gauge profile.
+Offline: container suite 676, exit 0; package checks PASS. **Physical (boot `0b0e8a77`):** display off/on 5/5, Wi-Fi,
+Bluetooth, MTP, SSH, audio up; one 36-min sleep clean and **USB worked after the wake** (first time since 13; cause not
+yet proven); golden SoC differences 26 → 11, PMIC 15/44. Live test: the AP may gate the never-used modem's clock
+requests (planned for 17). **Overnight drain: running.** Details: [16 report](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md).
+Readiness remains **MORE_WORK_REQUIRED**.
+
+## POWER-FINAL-15 dependency-update candidate sealed — 2026-10-12
 
 `out/y2linux-platform-v1-power-final-candidate-15/` (Linux `be1aac2`, Reborn `f68e088`, root `2026.08-platform-v1.45`;
 BOOTIMG `86dc957a…844d`, Y2ROOT `0b14b794…20ae`) is 14 rebuilt on the newest release of every component:

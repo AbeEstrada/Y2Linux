@@ -50,6 +50,10 @@ git -C Y2Reborn checkout baseline-15
 cd Y2Linux
 ```
 
+The newest development state (POWER-FINAL-16, stock sleep parity) is on `main` of
+Y2Linux; Y2Reborn is unchanged since `baseline-15`. To build it, check out `main`
+in Y2Linux instead of the tag.
+
 Keep both trees clean (no uncommitted changes). The build and packaging tools
 refuse dirty trees and record both commit IDs in the image. If you change
 anything, commit it first.
@@ -126,7 +130,7 @@ python3 tools/build/run.py --output out/y2-build -- sh /project/tools/production
 ```
 
 This runs the platform test suite inside the locked environment. Baseline 15
-passed 664 cases there. Running the same tests directly on the host gives some
+passed 664 cases there; POWER-FINAL-16 (`main`) passed 676. Running the same tests directly on the host gives some
 errors that only depend on the host (missing `qemu-arm`, `pyelftools`); use the
 container.
 
