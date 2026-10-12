@@ -10,9 +10,10 @@ from .common import read
 
 PATH = '/data/system/platform/power-journal.jsonl'
 PERIOD = 300
-# Two bounded files retain at least a normal night even at the maximum row
-# size (128 five-minute rows per file). No increase in sampling/write rate.
-LIMIT = 2097152
+# Two bounded files. POWER-FINAL-16: rows grew to ~6.6 KB and refusal rows add
+# to the five-minute snapshot, so 2 MiB kept only ~4.5 h (archive 109 lost the
+# morning). 8 MiB keeps more than a day per file; no change in write rate.
+LIMIT = 8388608
 
 
 def idle_counters(ctx):

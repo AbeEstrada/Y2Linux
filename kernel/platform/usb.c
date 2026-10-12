@@ -29,6 +29,7 @@
 #include "/project/kernel/usb/live.h"
 #include "/project/kernel/usb/fault.h"
 #include "/project/kernel/usb/l1.h"
+#include "/project/kernel/usb/dma-unmask.h"
 #include "pm-journal.h"
 static void y2_usb_begin(void);
 static ssize_t y2_usb_status(char __user *buf);
@@ -570,7 +571,7 @@ static void y2_usb_fail_at(struct musb *musb,unsigned reason,int rc,bool registe
         }
         writeb(f.index,b+MUSB_INDEX);
         f.endpoints=1;
-        f.dma_intr=readb(b+0x200);
+        f.dma_intr=readl(b+0x200);
         for(i=0;i<8;i++) {
             f.dma_cntl[i]=readw(b+0x204+16*i);
             f.dma_addr[i]=readl(b+0x208+16*i);
@@ -658,9 +659,28 @@ static int y2_musb_fifos(struct musb *musb)
     writeb(index,b+MUSB_INDEX);
     return ok;
 }
+static unsigned y2_dma_rearms, y2_dma_unmask_lost;
+static u32 y2_dma_intr_before, y2_dma_intr_after;
+/* Defect B: re-arm the DMA completion unmask whenever the gate opens again.
+ * Called only where the MAC is clocked (enable, restore); see dma-unmask.h. */
+static void y2_musb_dma_rearm(struct musb *musb)
+{
+#if IS_ENABLED(CONFIG_USB_INVENTRA_DMA)
+    void __iomem *intr=musb->mregs+Y2_USB_DMA_INTR;
+    u32 before;
+    if(!musb->dma_controller) return;
+    before=readl(intr);
+    writel(Y2_USB_DMA_UNMASK_SET,intr);
+    WRITE_ONCE(y2_dma_intr_before,before);
+    WRITE_ONCE(y2_dma_intr_after,readl(intr));
+    if(y2_usb_dma_unmask_lost(before)) WRITE_ONCE(y2_dma_unmask_lost,y2_dma_unmask_lost+1);
+    WRITE_ONCE(y2_dma_rearms,y2_dma_rearms+1);
+#endif
+}
 static void y2_musb_enable(struct musb *musb)
 {
     if(!y2_musb_fifos(musb)) y2_usb_fail_at(musb,Y2_USB_REASON_FIFO_LAYOUT,-EIO,false);
+    if(!READ_ONCE(y2_live.result)) y2_musb_dma_rearm(musb);
     /* Gate before SOFTCONN; ID/role interrupts remain masked. */
     writel(READ_ONCE(y2_live.result) ? 0 :
         (musb->dma_controller ? 15 : 7),musb->mregs+0xa4);
@@ -955,6 +975,7 @@ void y2_musb_after_restore(struct musb *musb)
 	/* Runtime resume has no platform_enable callback. Return its exact gate
 	 * only after endpoint/IRQ context is valid; never revive a terminal fault.
 	 * System suspend saved a zero gate and enables it through its own hook. */
+	if (!READ_ONCE(y2_live.result)) y2_musb_dma_rearm(musb);
 	writel(READ_ONCE(y2_live.result) ? 0 : y2_pm_l1_mask, musb->mregs + 0xa4);
 	y2_pm_system_saved = false;
 	dsb(sy);
@@ -1289,6 +1310,9 @@ static ssize_t status_show(struct device *dev, struct device_attribute *attr, ch
         atomic64_read(&y2_dma_abort_failures));
     n += sysfs_emit_at(buf, n, "dma_alignment_rejects=%lld\n",
         atomic64_read(&y2_dma_alignment_rejects));
+    n += sysfs_emit_at(buf, n, "dma_unmask_rearms=%u dma_unmask_lost=%u dma_intr_before=%08x dma_intr_after=%08x\n",
+        READ_ONCE(y2_dma_rearms), READ_ONCE(y2_dma_unmask_lost),
+        READ_ONCE(y2_dma_intr_before), READ_ONCE(y2_dma_intr_after));
 #endif
     n += sysfs_emit_at(buf, n,
         "irq_max_burst=%u irq_burst_limit=%u irq_unexplained=%u irq_unowned_masked=%u dma_bus_errors=%u,%u,%u,%u,%u,%u,%u,%u\n",
@@ -1316,7 +1340,7 @@ static ssize_t status_show(struct device *dev, struct device_attribute *attr, ch
                 f.gadget_state, f.irqs, f.dma_irqs, f.max_burst, f.endpoints);
             if (f.endpoints) {
                 n += sysfs_emit_at(buf, n,
-                    "fault_l1=%x/%x usb=%x/%x tx=%x/%x rx=%x/%x power=%x devctl=%x faddr=%x index=%x dma_intr=%x\n",
+                    "fault_l1=%x/%x usb=%x/%x tx=%x/%x rx=%x/%x power=%x devctl=%x faddr=%x index=%x dma_intr=%08x\n",
                     f.l1_status, f.l1_mask, f.usb, f.usb_mask, f.tx, f.tx_mask,
                     f.rx, f.rx_mask, f.power, f.devctl, f.faddr, f.index, f.dma_intr);
                 for (i = 0; i < 5; i++)

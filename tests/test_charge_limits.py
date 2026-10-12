@@ -76,9 +76,9 @@ static const struct row rows[]={
  /* stock select_charging_curret 0xc03a1d88; the ceiling column is Linux policy */
  {Y2_SOURCE_UNKNOWN,   500000,  70000,  70000,  70000,  70000},
  {Y2_SOURCE_SDP,       500000, 500000, 500000, 450000, 450000},
- {Y2_SOURCE_SDP,       100000, 100000, 500000,  70000,  70000},
- {Y2_SOURCE_SDP,        99999,      0, 500000,      0,      0},
- {Y2_SOURCE_SDP,            0,      0, 500000,      0,      0},
+ {Y2_SOURCE_SDP,       100000, 500000, 500000, 450000, 450000},
+ {Y2_SOURCE_SDP,        99999, 500000, 500000, 450000, 450000},
+ {Y2_SOURCE_SDP,            0, 500000, 500000, 450000, 450000},
  {Y2_SOURCE_SDP,           -1,  70000, 500000,  70000,  70000},
  {Y2_SOURCE_SDP,      900000, 500000, 500000, 450000, 450000},
  {Y2_SOURCE_CDP,           -1, 650000, 650000, 650000, 650000},
@@ -109,7 +109,7 @@ int main(void){
   assert(ua<=d.thermal_cap_ua && ua<=d.deep_cap_ua && ua<=Y2_CHARGE_VENDOR_MAX_UA);
   assert(ua==0 || y2_cs_selector_exact(ua)>=0);
   if(uv<=Y2_PRECHARGE_UV)assert(ua<=Y2_DEEP_DISCHARGE_MAX_UA);
-  if(t==Y2_SOURCE_SDP && alloc>=0)assert(ua<=(unsigned)alloc && ua<=450000);
+  if(t==Y2_SOURCE_SDP)assert(ua<=(alloc<0 ? 70000U : 450000U));
   if(t==Y2_SOURCE_NONSTANDARD || t==Y2_SOURCE_UNKNOWN)assert(ua<=70000);
   if(level==Y2_THERMAL_LEVELS)assert(ua==0);
  }
@@ -242,8 +242,8 @@ int main(void){
  source_kind=0;supply.budget=500000;c.source_changed=true;
  clock_ms+=1000;y2_charger_run(&c);
  assert(c.source==Y2_SOURCE_SDP && c.active && c.charge_ua==450000 && selector_now()==12 && !c.fault);
- /* PC port A -> PC port B: allowance dropping to 0 (reset) stops, 500 resumes. */
- supply.budget=0;clock_ms+=1000;y2_charger_run(&c);assert(!c.active && !(regs[0]&0x18) && !c.fault);
+ /* Defect C: a suspended/reset host (allowance 0) keeps the stock 450 mA. */
+ supply.budget=0;clock_ms+=1000;y2_charger_run(&c);assert(c.active && c.charge_ua==450000 && !c.fault);
  supply.budget=500000;clock_ms+=1000;y2_charger_run(&c);assert(c.active && c.charge_ua==450000);
  /* A classification failure never leaves a previous wall-charger current programmed. */
  unplug(&c);plug(&c,4,-1);assert(c.charge_ua==1100000);

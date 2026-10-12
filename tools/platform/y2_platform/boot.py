@@ -95,6 +95,9 @@ def mark(ctx, stage):
                 os.write(fd_stage, (json.dumps({'stage': stage, 'monotonic_s': time.monotonic()}) + '\n').encode())
         finally:
             os.close(fd_stage)
+        if stage == 'application_ready':
+            from .power_features import apply
+            apply(ctx)
         return value
     finally:
         os.close(fd)

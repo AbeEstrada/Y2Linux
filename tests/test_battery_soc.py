@@ -63,7 +63,7 @@ class BatterySoc(unittest.TestCase):
         self.assertLess(Soc(load_profile(self.ctx)).observe(0, 3900000, 1, 'Full')['percent'], 100)
         self.assertLessEqual(soc.observe(183, 3390000, 1, 'Discharging')['percent'], 1)
         self.assertIsNone(soc.observe(184, 3390000, 0, 'Unknown')['percent'])
-        self.assertEqual(soc.observe(185, 3800000, 1, 'Discharging')['percent'], 45)
+        self.assertEqual(soc.observe(185, 3800000, 1, 'Discharging')['percent'], 54)
 
     def test_rest_and_hybrid_require_actual_calibration(self):
         p = load_profile(self.ctx)
@@ -84,24 +84,24 @@ class BatterySoc(unittest.TestCase):
         def clock(clock_id):
             return next(physical_time) if clock_id == time.CLOCK_BOOTTIME else 100.
         with patch('y2_platform.battery.time.clock_gettime', side_effect=clock):
-            self.assertEqual(sample(self.ctx, soc)['percent'], 80)
+            self.assertEqual(sample(self.ctx, soc)['percent'], 87)
             self.put('/sys/class/power_supply/BAT0/voltage_now', '3800000')
             after_ten_minutes = sample(self.ctx, soc)
             # The existing one-point-per-minute limit gets ten real minutes,
             # not zero suspended minutes or an artificial one-minute ceiling.
-            self.assertEqual(after_ten_minutes['percent'], 70)
+            self.assertEqual(after_ten_minutes['percent'], 77)
             self.assertLess(after_ten_minutes['filtered_voltage_uv'], 3810000)
             after_two_hours = sample(self.ctx, soc)
-            self.assertEqual(after_two_hours['percent'], 45)
+            self.assertEqual(after_two_hours['percent'], 54)
             self.assertFalse(after_two_hours['resting'])
-            self.assertTrue(after_two_hours['provisional'])
+            self.assertFalse(after_two_hours['provisional'])
             self.assertIsNone(after_two_hours['current_ua'])
 
     def test_sleep_time_alone_never_changes_soc_and_rebound_is_not_charge(self):
         soc = Soc(load_profile(self.ctx))
-        self.assertEqual(soc.observe(0, 3800000, 1, 'Discharging')['percent'], 45)
-        self.assertEqual(soc.observe(28800, 3800000, 1, 'Discharging')['percent'], 45)
-        self.assertEqual(soc.observe(57600, 4000000, 1, 'Discharging')['percent'], 45)
+        self.assertEqual(soc.observe(0, 3800000, 1, 'Discharging')['percent'], 54)
+        self.assertEqual(soc.observe(28800, 3800000, 1, 'Discharging')['percent'], 54)
+        self.assertEqual(soc.observe(57600, 4000000, 1, 'Discharging')['percent'], 54)
 
     def test_low_soc_estimate_warns_but_shutdown_requires_trust_or_hard_floor(self):
         self.put('/etc/y2linux/power-policy.json', (ETC / 'power-policy.json').read_text())
@@ -119,6 +119,38 @@ class BatterySoc(unittest.TestCase):
             state = guard.observe(policy, 3800000, 1, {'percent': 1, 'confidence': 'hardware'})
         self.assertEqual(state, 'ShutdownPending')
 
+
+    def test_stock_profile_is_the_fm_kernel_table(self):
+        """POWER-FINAL-16: fgauge_get_profile(25 C) and r_profile from the Y2 FM kernel."""
+        p = load_profile(self.ctx)
+        self.assertFalse(p['provisional'])
+        self.assertEqual(p['design_capacity_uah'], 1300000)
+        self.assertEqual(p['voltage_soc'][0], [3400000, 0])
+        self.assertEqual(p['voltage_soc'][-1], [4175000, 100])
+        self.assertEqual(len(p['voltage_soc']), 95)
+        self.assertIn([3779000, 50], p['voltage_soc'])  # stock DOD 50 at 3779 mV
+        self.assertEqual(len(p['voltage_resistance_milliohm']), 95)
+        self.assertTrue(all(190 <= r <= 330 for _, r in p['voltage_resistance_milliohm']))
+        value = Soc(p).observe(0, 3779000, 1, 'Discharging')
+        self.assertEqual((value['percent'], value['confidence']), (50, 'calibrated_estimate'))
+        self.assertEqual(value['remaining_uah_estimate'], 650000)
+
+    def test_charging_uses_stock_oam_resistance_times_sense_current(self):
+        p = load_profile(self.ctx)
+        soc = Soc(p)
+        # 450 mA * ~0.2 ohm ~= 90 mV: 3.89 V under charge reads as ~3.80 V OCV.
+        value = soc.observe(0, 3890000, 1, 'Charging', charge_current=450000)
+        self.assertEqual(value['source'], 'stock_oam')
+        self.assertTrue(53 <= value['percent'] <= 57, value)
+        # Without a sense current the fixed charging offset still applies.
+        fallback = Soc(p).observe(0, 3890000, 1, 'Charging')
+        self.assertEqual(fallback['source'], 'voltage_estimate')
+        # An absurd current never moves the estimate by more than 300 mV.
+        clipped = Soc(p).observe(0, 4100000, 1, 'Charging', charge_current=1200000)
+        self.assertGreaterEqual(clipped['percent'], 49)
+        # Discharging never uses the charger-path current.
+        self.assertEqual(Soc(p).observe(0, 3800000, 1, 'Discharging', charge_current=450000)['source'],
+                         'voltage_estimate')
 
 if __name__ == '__main__':
     unittest.main()

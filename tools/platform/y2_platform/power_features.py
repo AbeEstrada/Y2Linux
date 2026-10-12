@@ -1,0 +1,55 @@
+"""POWER-FINAL-16 runtime power features, armed once the UI has drawn its first frame.
+
+Each feature is a kernel parameter whose kernel default is the safe (15)
+behaviour. This module turns them on at `application_ready`, never earlier: the
+display domain must not be cut while the loader-lit panel is still being taken
+over. The owner keeps a feature off for an A/B night with
+/data/system/platform/power-features.json, e.g. {"dis_pdn": false, "golden_apply": 3}.
+A failure is recorded and never blocks boot, sleep or the UI.
+"""
+# SPDX-License-Identifier: GPL-2.0-only
+from .common import atomic_json
+
+OVERRIDE = '/data/system/platform/power-features.json'
+STATE = '/run/y2/power-features.json'
+FEATURES = {
+    # G1: display (DIS) power domain off at screen-off and in suspend.
+    'dis_pdn': ('/sys/module/spm/parameters/dis_pdn', True),
+    # G3b: golden sleep entry, bitmask: 1 PLLs, 2 mux power-down, 4 PERI
+    # gates, 8 INFRA gates (golden-apply-policy.h).
+    'golden_apply': ('/sys/module/spm/parameters/golden_apply', 0xf),
+}
+
+
+def encode(default, value):
+    if isinstance(default, bool):
+        return 'Y' if value is not False else 'N'
+    if value is True:
+        value = default
+    if value is False:
+        value = 0
+    if type(value) is not int or not 0 <= value <= default:
+        raise ValueError('invalid_power_feature')
+    return str(value)
+
+
+def apply(ctx):
+    override = ctx.json(OVERRIDE, {})
+    if not isinstance(override, dict):
+        override = {}
+    result = {}
+    for name, (path, default) in FEATURES.items():
+        wanted = override.get(name, default)
+        try:
+            value = encode(default, wanted)
+            ctx.path(path).write_text(value)
+            result[name] = {'wanted': wanted, 'value': ctx.read(path)}
+        except (OSError, ValueError) as error:
+            result[name] = {'wanted': wanted, 'error': getattr(error, 'strerror', None) or str(error)}
+    try:
+        runtime = ctx.path(STATE)
+        runtime.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        atomic_json(runtime, {'schema': 1, 'features': result})
+    except OSError:
+        pass
+    return result

@@ -43,6 +43,9 @@
 #include "shared.h"
 #include "connectivity/domain.h"
 #include "gpu-policy.h"
+#include "disp-policy.h"
+#include "dcm-policy.h"
+#include "golden-apply-policy.h"
 #include "cpu-dvfs.h"
 #include "charger-idle.h"
 
@@ -89,6 +92,33 @@ static int last_result;
 static struct generic_pm_domain y2_mfg_domain;
 static bool mfg_broken;
 static struct clk *mfg_source;
+/* POWER-FINAL-16 G1: DIS (display/MMSYS) power domain, index 1 of this
+ * provider; MFG is index 0 and a subdomain (Lima reaches DRAM through SMI,
+ * which lives in MMSYS). `dis_pdn` stays 0 until userspace has shown the first
+ * frame, so the loader-lit panel is never cut during boot; writing 0 is also
+ * the A/B switch. `dis_accessible` is cleared before bus protection is raised
+ * and set only after it is released: any MMSYS read in between hangs the bus. */
+static struct generic_pm_domain y2_dis_domain;
+static struct generic_pm_domain *y2_spm_domains[2];
+static struct genpd_onecell_data y2_spm_genpd = { .domains = y2_spm_domains, .num_domains = 2 };
+static DEFINE_RAW_SPINLOCK(dis_lock);
+static bool dis_broken, dis_accessible, dis_registered;
+static bool dis_pdn;
+module_param(dis_pdn, bool, 0644);
+MODULE_PARM_DESC(dis_pdn, "Power the display domain off at screen-off and in suspend (16 G1)");
+static unsigned dis_offs, dis_ons, dis_refusals, dis_failures;
+/* POWER-FINAL-16 G3: stock boot-time DCM (dcm-policy.h). Boot parameter
+ * spm.dcm=0 keeps 15's behaviour for an A/B night. */
+static bool dcm = true;
+module_param(dcm, bool, 0444);
+static int dcm_result = -ENODATA;
+/* POWER-FINAL-16 G3b: golden-entry groups (golden-apply-policy.h), armed by
+ * userspace like dis_pdn; 0 keeps 15's sleep entry. */
+static unsigned golden_apply;
+module_param(golden_apply, uint, 0644);
+static struct y2_ga_state golden_state;
+static unsigned golden_entries, golden_pll_offs;
+static void y2_golden_delay(unsigned us) { udelay(us); }
 
 static unsigned spm_read(void *context, unsigned reg)
 {
@@ -202,6 +232,80 @@ static int y2_mfg_power_off(struct generic_pm_domain *domain)
 	return ret;
 }
 
+bool y2_spm_disp_access_begin(unsigned long *flags)
+{
+	raw_spin_lock_irqsave(&dis_lock, *flags);
+	if (!READ_ONCE(dis_registered)) return y2_spm_disp_status() == 1;
+	return dis_accessible;
+}
+void y2_spm_disp_access_end(unsigned long flags)
+{
+	raw_spin_unlock_irqrestore(&dis_lock, flags);
+}
+struct generic_pm_domain *y2_spm_dis_genpd(void)
+{
+	return smp_load_acquire(&dis_registered) ? &y2_dis_domain : NULL;
+}
+static int y2_dis_power_off(struct generic_pm_domain *domain)
+{
+	unsigned long flags;
+	int ret;
+	if (READ_ONCE(dis_broken)) return -EIO;
+	if (!READ_ONCE(dis_pdn)) { dis_refusals++; return -EBUSY; }
+	raw_spin_lock_irqsave(&dis_lock, flags);
+	dis_accessible = false;
+	raw_spin_unlock_irqrestore(&dis_lock, flags);
+	ret = y2_ccf_disp_protect(true);
+	if (!ret) {
+		raw_spin_lock_irqsave(&dis_lock, flags);
+		raw_spin_lock(&spm_lock);
+		ret = y2_dis_power_down(&spm_io);
+		/* genpd keeps ON after a failure: return to a usable ON state. */
+		if (ret && y2_dis_power_up(&spm_io)) dis_broken = true;
+		raw_spin_unlock(&spm_lock);
+		raw_spin_unlock_irqrestore(&dis_lock, flags);
+	}
+	if (!ret) { dis_offs++; return 0; }
+	dis_failures++;
+	if (!dis_broken && !y2_ccf_disp_protect(false)) {
+		raw_spin_lock_irqsave(&dis_lock, flags);
+		dis_accessible = true;
+		raw_spin_unlock_irqrestore(&dis_lock, flags);
+	} else dis_broken = true;
+	return ret;
+}
+static int y2_dis_power_on(struct generic_pm_domain *domain)
+{
+	unsigned long flags;
+	int ret;
+	if (READ_ONCE(dis_broken)) return -EIO;
+	raw_spin_lock_irqsave(&dis_lock, flags);
+	raw_spin_lock(&spm_lock);
+	ret = y2_dis_power_up(&spm_io);
+	raw_spin_unlock(&spm_lock);
+	raw_spin_unlock_irqrestore(&dis_lock, flags);
+	if (!ret) ret = y2_ccf_disp_protect(false);
+	if (ret) { dis_broken = true; dis_failures++; return ret; }
+	raw_spin_lock_irqsave(&dis_lock, flags);
+	dis_accessible = true;
+	raw_spin_unlock_irqrestore(&dis_lock, flags);
+	dis_ons++;
+	return 0;
+}
+static int y2_dis_domain_register(void)
+{
+	int ret, on = y2_spm_disp_status();
+	if (on < 0) return on;
+	y2_dis_domain.name = "y2-dis";
+	y2_dis_domain.power_on = y2_dis_power_on;
+	y2_dis_domain.power_off = y2_dis_power_off;
+	dis_accessible = on;
+	ret = pm_genpd_init(&y2_dis_domain, NULL, !on);
+	if (ret) return ret;
+	smp_store_release(&dis_registered, true);
+	return 0;
+}
+
 static int y2_mfg_domain_register(struct platform_device *pdev)
 {
 	int ret, on = y2_spm_mfg_status();
@@ -215,7 +319,20 @@ static int y2_mfg_domain_register(struct platform_device *pdev)
 	y2_mfg_domain.power_off = y2_mfg_power_off;
 	ret = pm_genpd_init(&y2_mfg_domain, NULL, !on);
 	if (ret) goto out;
-	ret = of_genpd_add_provider_simple(pdev->dev.of_node, &y2_mfg_domain);
+	y2_spm_domains[0] = &y2_mfg_domain;
+	/* POWER-FINAL-16: DIS is index 1; without it the GPU keeps working and
+	 * the display simply stays powered as on 15. */
+	if (!y2_dis_domain_register()) {
+		y2_spm_domains[1] = &y2_dis_domain;
+		if (pm_genpd_add_subdomain(&y2_dis_domain, &y2_mfg_domain)) {
+			pr_warn("Y2SPM: MFG is not a DIS subdomain; DIS power-down disabled\n");
+			dis_broken = true;
+		}
+	} else {
+		/* A missing DIS domain must still satisfy <&spm 1> consumers. */
+		y2_spm_domains[1] = &y2_mfg_domain;
+	}
+	ret = of_genpd_add_provider_onecell(pdev->dev.of_node, &y2_spm_genpd);
 	if (!ret) return 0;
 	pm_genpd_remove(&y2_mfg_domain);
 out:
@@ -420,20 +537,49 @@ static struct syscore y2_spm_syscore = { .ops = &y2_spm_syscore_ops };
  * clock/PLL/clock-gate state at the last suspend entry, read right before the
  * PCM is armed, like stock slp_chk_golden. Mapped without claiming regions. */
 static void __iomem *golden_blocks[Y2_GOLDEN_BLOCKS];
-static unsigned golden_entry[Y2_GOLDEN_ROWS], golden_captures;
 static bool golden_ready;
+static void __iomem *y2_dcm_map(unsigned phys)
+{
+	int block;
+	if (phys == 0x10208000) return spm_biu;
+	block = y2_golden_block(phys);
+	return block < 0 || !golden_blocks[block] ? NULL :
+		golden_blocks[block] + (phys - y2_golden_blocks[block].phys);
+}
+static unsigned y2_dcm_read(void *context, unsigned phys)
+{
+	void __iomem *va = y2_dcm_map(phys);
+	if (!va) { *(int *)context = -ENXIO; return 0; }
+	return readl(va);
+}
+/* Write side (DCM, golden sleep entry) is defined after y2_spm_enter():
+ * everything between golden_blocks and y2_spm_enter stays read-only. */
+static void y2_dcm_write(void *context, unsigned phys, unsigned value);
+static void y2_golden_entry_apply(void);
+static void y2_golden_entry_restore(void);
+static unsigned golden_entry[Y2_GOLDEN_ROWS], golden_captures;
 static unsigned y2_golden_read(unsigned row)
 {
 	const struct y2_golden_row *r = &y2_golden_rows[row];
 	int block = y2_golden_block(r->phys);
 	return readl(golden_blocks[block] + (r->phys - y2_golden_blocks[block].phys));
 }
+/* POWER-FINAL-16 G2, read-only: MD-side peripheral clock requests and the
+ * AP PLL controls whose meaning is not yet proven (PERI_PDN0_MD1/MD2_STA,
+ * PERI_PDN_MD_MASK, AP_PLL_CON1/CON2/CON3), captured with the golden rows. */
+static const unsigned golden_extra_phys[] = {
+	0x10003030, 0x10003034, 0x10003038, 0x10209004, 0x10209008, 0x1020900c,
+};
+static unsigned golden_extra[ARRAY_SIZE(golden_extra_phys)];
 static void y2_golden_capture(void)
 {
 	unsigned i;
+	int status = 0;
 	if (!READ_ONCE(golden_ready)) return;
 	for (i = 0; i < Y2_GOLDEN_ROWS; i++)
 		golden_entry[i] = y2_golden_read(i);
+	for (i = 0; i < ARRAY_SIZE(golden_extra_phys); i++)
+		golden_extra[i] = y2_dcm_read(&status, golden_extra_phys[i]);
 	golden_captures++;
 }
 static int y2_spm_enter(suspend_state_t state)
@@ -458,6 +604,7 @@ static int y2_spm_enter(suspend_state_t state)
 	biu = readl(spm_biu); /* actual Y2 MCU_BIU_CONTROL retention context */
 	/* Vendor infra_pdn=1: save the INFRASYS state first; a missing or refused
 	 * save keeps the proven INFRA-retained entry. */
+	y2_golden_entry_apply();
 	infra = !y2_infra_pdn_save();
 	WRITE_ONCE(suspend_infra_pdn, infra);
 	/* Do not call cpu[_cluster]_pm_enter() here. syscore_suspend() already
@@ -465,6 +612,7 @@ static int y2_spm_enter(suspend_state_t state)
 	 * saved enable bitmap with only the SPM interrupt enabled. The subsequent
 	 * outer restore then masks storage/GPT IRQs and stalls ext4 thaw I/O. */
 	y2_golden_capture();
+	y2_pmic_golden_capture(); /* read-only, before the VPROC sleep step */
 	/* Stock VPROC sleep voltage (vproc-sleep-policy.h), only around this
 	 * PCM sleep; restored below before anything else can run. Non-fatal. */
 	y2_pmic_vproc_sleep_begin();
@@ -506,12 +654,14 @@ static int y2_spm_enter(suspend_state_t state)
 		if (last_debug) { WRITE_ONCE(spm_broken, true); ret = -EIO; }
 	}
 	y2_pmic_vproc_sleep_end();
+	y2_golden_entry_restore();
 	restore = y2_spm_suspend_restore(&spm_io, normal_address);
 	if (restore) { suspend_restore_failures++; ret = restore; }
 	y2_pm_mark(Y2_PM_NORMAL_PCM_RESTORED, ret);
 	/* Core CPU PM restoration and then our CIRQ replay run during
 	 * syscore_resume(), including every platform entry abort. */
 unlock:
+	y2_golden_entry_restore();
 	if (ret) {
 		/* Normal firmware is mandatory on every platform-entry abort,
 		 * including refusal before the suspend PCM was installed. */
@@ -736,6 +886,10 @@ static ssize_t state_show(struct device *dev, struct device_attribute *attr, cha
 		spm_broken, entries, resumes, aborts, last_result, last_wake, last_ticks,
 		last_event, last_debug, last_r13, spm_read(spm_base, 0x60c), spm_read(spm_base, 0x610));
 	ret += sysfs_emit_at(buf, ret, "suspend_restore_failures=%u\n", suspend_restore_failures);
+	ret += sysfs_emit_at(buf, ret, "dcm=%u dcm_result=%d golden_apply=%#x golden_entries=%u golden_pll_offs=%#x\n",
+		dcm, dcm_result, READ_ONCE(golden_apply), golden_entries, golden_pll_offs);
+	ret += sysfs_emit_at(buf, ret, "dis_pdn=%u dis_broken=%u dis_offs=%u dis_ons=%u dis_refusals=%u dis_failures=%u\n",
+		READ_ONCE(dis_pdn), READ_ONCE(dis_broken), dis_offs, dis_ons, dis_refusals, dis_failures);
 	/* Full suspend runs the vendor 597-word pcm_suspend; pcm_words/pcm_origin below describe the
 	 * separate runtime-idle (dormant) program only. */
 	ret += sysfs_emit_at(buf, ret, "suspend_pcm_words=597 suspend_pcm_origin=MT6582_d53dd75c_pcm_suspend infra_pdn_entries=%u infra_pdn_restore_failures=%u\n",
@@ -834,6 +988,34 @@ static ssize_t dormant_preflight_show(struct device *dev, struct device_attribut
 	return n + sysfs_emit_at(buf, n, "\n");
 }
 static DEVICE_ATTR_RO(dormant_preflight);
+static void y2_dcm_write(void *context, unsigned phys, unsigned value)
+{
+	void __iomem *va = y2_dcm_map(phys);
+	if (!va) { *(int *)context = -ENXIO; return; }
+	writel(value, va);
+	dsb(sy); /* stock mt65xx_reg_sync_writel */
+}
+
+/* Every device and syscore callback has suspended: no consumer of these
+ * gates, muxes or PLLs can run until y2_golden_entry_restore(). */
+static void y2_golden_entry_apply(void)
+{
+	unsigned groups = READ_ONCE(golden_apply) & Y2_GA_ALL;
+	int status = 0;
+	struct y2_dcm_io io = { &status, y2_dcm_read, y2_dcm_write };
+	struct y2_ga_conditions c = { .dis_off = y2_spm_disp_status() == 0 };
+	if (!groups || !READ_ONCE(golden_ready)) return;
+	y2_golden_apply(&io, groups, &c, &golden_state);
+	golden_entries++;
+	golden_pll_offs = golden_state.pll_off;
+}
+static void y2_golden_entry_restore(void)
+{
+	int status = 0;
+	struct y2_dcm_io io = { &status, y2_dcm_read, y2_dcm_write };
+	if (!golden_state.applied) return;
+	y2_golden_restore(&io, &golden_state, y2_golden_delay);
+}
 static ssize_t golden_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	unsigned i, now, differ = 0;
@@ -851,12 +1033,15 @@ static ssize_t golden_show(struct device *dev, struct device_attribute *attr, ch
 			r->phys, r->name, r->mask, r->golden, golden_entry[i],
 			golden_captures ? y2_golden_match(r, golden_entry[i]) : 0, now, y2_golden_match(r, now));
 	}
+	for (i = 0; i < ARRAY_SIZE(golden_extra_phys); i++)
+		n += sysfs_emit_at(buf, n, "extra %08x e=%x\n", golden_extra_phys[i], golden_extra[i]);
 	return n;
 }
 static DEVICE_ATTR_ADMIN_RO(golden);
 static struct attribute *y2_spm_attrs[] = { &dev_attr_state.attr, &dev_attr_dormant_preflight.attr,
 	&dev_attr_golden.attr, NULL };
 static const struct attribute_group y2_spm_group = { .attrs = y2_spm_attrs };
+
 
 static int y2_spm_probe(struct platform_device *pdev)
 {
@@ -904,6 +1089,12 @@ static int y2_spm_probe(struct platform_device *pdev)
 			mapped = mapped && golden_blocks[i];
 		}
 		WRITE_ONCE(golden_ready, mapped);
+		if (dcm && mapped) {
+			int status = 0;
+			struct y2_dcm_io io = { &status, y2_dcm_read, y2_dcm_write };
+			y2_dcm_core(&io);
+			dcm_result = status;
+		} else dcm_result = dcm ? -ENXIO : -EPERM;
 	}
 	/* Publish only after firmware and the shared IO context are ready. */
 	smp_store_release(&spm_base, base);

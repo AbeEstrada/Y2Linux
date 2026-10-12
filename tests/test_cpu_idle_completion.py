@@ -280,7 +280,11 @@ static void writel(unsigned value,void *p){*(unsigned *)p=value;}
 static bool __clk_is_enabled(struct clk *c){return c->enabled;}
 static int clk_prepare_enable(struct clk *c){c->refs++;c->enabled=true;return 0;}
 static void clk_disable_unprepare(struct clk *c){assert(c->refs);if(!--c->refs)c->enabled=false;}
-''' + function(source, 'y2_mm_unused_quiet') + function(source, 'y2_mm_reclaim_unused') + r'''
+static void *mm_dev;
+static int pm_runtime_resume_and_get(void *d){(void)d;return 0;}
+static void pm_runtime_put(void *d){(void)d;}
+static void y2_mm_reclaim_powered(void);
+''' + function(source, 'y2_mm_unused_quiet') + function(source, 'y2_mm_reclaim_unused') + function(source, 'y2_mm_reclaim_powered') + r'''
 int main(void){
  for(unsigned i=0;i<CLK_MM_NR_CLK;i++){gates[i].enabled=true;mm_idle_clocks[i]=gates+i;}
  /* Normal DRM owner has stopped engines, but a real unsupported DMA and

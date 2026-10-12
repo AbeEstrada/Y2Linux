@@ -260,24 +260,19 @@ int main(void){
   fail_at=operations+fail;clock_ms+=1000;y2_charger_run(&c);
   assert(!c.active && !(regs[0]&0x18) && c.fault);
  }
- /* SDP reset / USB suspend inhibits; 100mA budget permits only 70mA. */
- int budgets[]={0,2000,8000};
- for(unsigned i=0;i<3;i++) {
-  reset();charger(&c);supply.budget=budgets[i];y2_charger_run(&c);
-  assert(!c.active && !starts);
- }
- /* The vendor picks the closest table step that never exceeds the request
-  * (bmt_find_closest_level), so a 499.999 mA allowance now yields 450 mA, not 70. */
- int ordinary[]={100000,499999,500000,-1};
- unsigned currents[]={70000,450000,450000,70000};
- for(unsigned i=0;i<4;i++) {
+ /* POWER-FINAL-16 Defect C: like stock, an SDP charges at 450 mA whatever the
+  * gadget negotiated (reset, USB suspend of a powered-off PC, unconfigured).
+  * Without a data controller (-1) it stays at 70 mA. */
+ int ordinary[]={0,2000,8000,100000,499999,500000,-1};
+ unsigned currents[]={450000,450000,450000,450000,450000,450000,70000};
+ for(unsigned i=0;i<7;i++) {
   reset();charger(&c);supply.budget=ordinary[i];y2_charger_run(&c);
   assert(c.active && c.charge_ua==currents[i]);
  }
  supply.budget=500000;
  reset();charger(&c);y2_charger_run(&c);supply.budget=2000;
- clock_ms+=1000;y2_charger_run(&c);assert(!c.active && !c.fault && !dev.awake && !charger_dormant_blocked);
- supply.budget=500000;clock_ms+=1000;y2_charger_run(&c);assert(c.active && starts==2);
+ clock_ms+=1000;y2_charger_run(&c);assert(c.active && !c.fault && starts==1);
+ supply.budget=500000;clock_ms+=1000;y2_charger_run(&c);assert(c.active && starts==1);
  regs[0]&=~0x20;clock_ms+=1000;y2_charger_run(&c);
  assert(!c.active && !(regs[0]&0x18) && c.status==POWER_SUPPLY_STATUS_DISCHARGING);
  regs[0]|=0x20;clock_ms+=1000;y2_charger_run(&c);assert(c.active);

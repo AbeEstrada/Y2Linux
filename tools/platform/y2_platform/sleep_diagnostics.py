@@ -21,7 +21,9 @@ ROW_LIMIT = 65536
 SPM = '/sys/devices/platform/10006000.power-controller/'
 USB_SUMMARY = ('stage', 'error', 'configured', 'detached', 'monitor_parked', 'cable_events',
                'runtime_status', 'runtime_held', 'pm_suspends', 'pm_restores', 'irqs',
-               'dma_errors', 'dma_aborts', 'reconnect_failures', 'monitor_failures')
+               'dma_errors', 'dma_aborts', 'reconnect_failures', 'monitor_failures',
+               'dma_tx_programs', 'dma_irqs', 'dma_unmask_rearms', 'dma_unmask_lost',
+               'dma_intr_before', 'dma_intr_after')
 # Kernel messages kept in a row: USB, gadget, network and the sleep path.
 KERNEL_TOKENS = ('Y2USB', 'Y2NET', 'Y2SPM', 'Y2PM', 'Y2INFRA', 'Y2VPROC', 'Y2DVFS', 'Y2_DPM',
                  'y2-usb', 'y2-spm', 'y2-pmic', 'apt32f-wheel', 'musb', 'udc', 'configfs',
@@ -115,6 +117,7 @@ def features(ctx, golden=False):
         # Read-only always-on/INFRA registers; the entry column is the last
         # suspend-entry capture, so read it once Linux has returned.
         value['golden'] = ctx.read(SPM + 'golden', limit=16384)
+        value['pmic_golden'] = ctx.read('/sys/module/pwrap/parameters/pmic_golden', limit=16384)
     return value
 
 

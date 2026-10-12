@@ -15,6 +15,8 @@
 #include <linux/clk.h>
 #include <linux/io.h>
 #include <linux/of_address.h>
+#include <linux/pm_domain.h>
+#include <linux/pm_runtime.h>
 #include "clocks.h"
 #include "spm.h"
 
@@ -22,6 +24,7 @@
 #include "/src/drivers/clk/mediatek/clk-mtk.h"
 
 #include "mt6582-clk.h"
+#include "dcm-policy.h"
 
 static const struct mtk_gate_regs disp0_cg_regs = {
     .set_ofs = 0x0104,
@@ -83,6 +86,17 @@ static const struct mtk_clk_desc mm_desc = {
     .clks = mm_clks,
     .num_clks = ARRAY_SIZE(mm_clks),
 };
+/* POWER-FINAL-16 G1: with the DIS power domain, every gate register access
+ * goes through the clock core's provider runtime PM, which powers DIS first. */
+static const struct mtk_clk_desc mm_desc_dis = {
+    .clks = mm_clks,
+    .num_clks = ARRAY_SIZE(mm_clks),
+    .need_runtime_pm = true,
+};
+static const struct platform_device_id mm_dis_id = {
+    .name = "clk-mt6582-mm", .driver_data = (kernel_ulong_t)&mm_desc_dis,
+};
+static struct device *mm_dev;
 
 static void __iomem *mm_idle_base;
 static struct clk *mm_idle_clocks[CLK_MM_NR_CLK];
@@ -94,15 +108,42 @@ module_param(retained, uint, 0400);
 module_param(reclaim_failures, uint, 0400);
 module_param(bls_handoff, bool, 0400);
 
+/* POWER-FINAL-16 G3: stock SMI/DIS DCM, re-applied at every CRTC enable
+ * because DIS power-down resets MMSYS (dcm-policy.h). */
+static bool dcm = true;
+module_param(dcm, bool, 0644);
+static unsigned dcm_applied;
+module_param(dcm_applied, uint, 0400);
+static unsigned y2_mm_dcm_read(void *context, unsigned phys)
+{
+	return readl(mm_idle_base + (phys - 0x14000000));
+}
+static void y2_mm_dcm_write(void *context, unsigned phys, unsigned value)
+{
+	writel(value, mm_idle_base + (phys - 0x14000000));
+	dsb(sy);
+}
+void y2_mm_dcm_apply(void)
+{
+	static const struct y2_dcm_io io = { NULL, y2_mm_dcm_read, y2_mm_dcm_write };
+	if (!READ_ONCE(dcm) || !mm_idle_base || y2_spm_disp_status() != 1) return;
+	y2_dcm_mm(&io);
+	dcm_applied++;
+}
+
 int y2_mm_idle_blockers(unsigned *disp0, unsigned *disp1)
 {
+	unsigned long flags;
 	int powered = y2_spm_disp_status();
 	*disp0 = *disp1 = 0;
 	if (powered < 0) return powered;
-	if (!powered) return 0; /* never read an unpowered register window */
 	if (!mm_idle_base) return -ENODEV;
-	*disp0 = ~readl(mm_idle_base + 0x100) & 0x7ffff;
-	*disp1 = ~readl(mm_idle_base + 0x110) & 0xf;
+	/* Never read an unpowered or bus-protected window (DIS genpd, 16 G1). */
+	if (y2_spm_disp_access_begin(&flags)) {
+		*disp0 = ~readl(mm_idle_base + 0x100) & 0x7ffff;
+		*disp1 = ~readl(mm_idle_base + 0x110) & 0xf;
+	}
+	y2_spm_disp_access_end(flags);
 	return 0;
 }
 
@@ -147,7 +188,15 @@ static bool y2_mm_unused_quiet(unsigned id)
 	default: return false; /* Linux-owned live pipeline is never reclaimed */
 	}
 }
+static void y2_mm_reclaim_powered(void);
 void y2_mm_reclaim_unused(void)
+{
+	/* Hold DIS across every direct register read below. */
+	if (mm_dev && pm_runtime_resume_and_get(mm_dev) < 0) return;
+	y2_mm_reclaim_powered();
+	if (mm_dev) pm_runtime_put(mm_dev);
+}
+static void y2_mm_reclaim_powered(void)
 {
 	unsigned id;
 	bool quiet[CLK_MM_NR_CLK] = { false };
@@ -205,10 +254,22 @@ static int y2_mm_probe(struct platform_device *pdev)
 	int ret;
 	/* Shared read-only engine diagnostics; MMSYS/DRM retain each resource. */
 	if (of_address_to_resource(pdev->dev.parent->of_node, 0, &resource)) return -EINVAL;
+	/* The SPM owner registers DIS; without it, keep 15's always-on gates. */
+	if (y2_spm_disp_status() == -EPROBE_DEFER) return -EPROBE_DEFER;
+	if (y2_spm_dis_genpd()) {
+		ret = pm_genpd_add_device(y2_spm_dis_genpd(), &pdev->dev);
+		if (ret) return ret;
+		pdev->id_entry = &mm_dis_id;
+		mm_dev = &pdev->dev;
+	}
 	mm_idle_base = devm_ioremap(&pdev->dev, resource.start, 0x12000);
-	if (!mm_idle_base) return -ENOMEM;
-	ret = mtk_clk_pdev_probe(pdev);
-	if (ret) { mm_idle_base = NULL; return ret; }
+	if (!mm_idle_base) ret = -ENOMEM;
+	else ret = mtk_clk_pdev_probe(pdev);
+	if (ret) {
+		mm_idle_base = NULL;
+		if (mm_dev) { pm_genpd_remove_device(&pdev->dev); mm_dev = NULL; }
+		return ret;
+	}
 	data = platform_get_drvdata(pdev);
 	for (i = 0; i < CLK_MM_NR_CLK; i++) {
 		mm_idle_clocks[i] = devm_clk_hw_get_clk(&pdev->dev, data->hws[i], "idle-handoff");

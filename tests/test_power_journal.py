@@ -88,13 +88,14 @@ class Journal(unittest.TestCase):
     def test_overnight_retention_at_maximum_row_size_and_real_sleep_receipt(self):
         # An eight-hour night plus eight hours before/after must survive even
         # with the largest permitted row; rotation must not depend on SOC.
-        for index in range(289):
+        # POWER-FINAL-16: 8 MiB files keep a full day of maximum-size rows.
+        for index in range(1153):
             self.journal.append({'sample': index, 'detail': 'x' * 16200})
         old = self.ctx.path(PATH).with_suffix('.previous.jsonl')
         retained = [json.loads(line)['sample'] for path in (old, self.ctx.path(PATH))
                     for line in path.read_text().splitlines()]
-        self.assertTrue(set(range(193, 289)).issubset(retained))
-        self.assertLessEqual(sum(p.stat().st_size for p in (old, self.ctx.path(PATH))), 4194304)
+        self.assertTrue(set(range(865, 1153)).issubset(retained))
+        self.assertLessEqual(sum(p.stat().st_size for p in (old, self.ctx.path(PATH))), 16777216)
         receipt = self.ctx.path('/data/system/platform/suspend-last.json')
         receipt.write_text(json.dumps({'product': {'state': 'sleeping', 'request_boot_id': 'old'}}))
         self.journal.observe('Normal', {}, now=0)

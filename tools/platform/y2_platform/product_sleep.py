@@ -80,11 +80,23 @@ def admission(ctx):
         guard_record(ctx, False)
 
 
+def usb_host_configured(ctx):
+    """True while any host has configured the gadget (SSH/MTP in use)."""
+    return any(ctx.read(path.relative_to(ctx.root)) == 'configured'
+               for path in ctx.glob('/sys/class/udc/*/state'))
+
+
 def battery_and_cable(ctx):
     from .power import load_policy
+    status = ctx.read('/sys/class/power_supply/BAT0/status')
     if ctx.read('/sys/class/power_supply/y2-usb-presence/online') != '0':
-        raise Refused('charger_or_usb_active')
-    if ctx.read('/sys/class/power_supply/BAT0/status') != 'Discharging':
+        # POWER-FINAL-16 Defect C (archive 109): VBUS from a powered-off or
+        # sleeping PC with nothing charging must not hold the Y2 awake. Sleep
+        # while the cable is in only when no host uses the gadget and the
+        # charger is idle (Full, or inhibited/paused).
+        if status not in ('Full', 'Not charging') or usb_host_configured(ctx):
+            raise Refused('charger_or_usb_active')
+    elif status != 'Discharging':
         raise Refused('battery_state_unavailable')
     policy, error = load_policy(ctx)
     voltage = ctx.integer('/sys/class/power_supply/BAT0/voltage_now')

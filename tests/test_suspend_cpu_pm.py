@@ -78,6 +78,9 @@ static int y2_spm_finish(unsigned long arg) { return 0; }
  * restored before the normal PCM; the golden capture is read-only. */
 static int vproc_armed;
 static void y2_golden_capture(void) { }
+static void y2_golden_entry_apply(void){}
+static void y2_golden_entry_restore(void){}
+static void y2_pmic_golden_capture(void){}
 static void y2_pmic_vproc_sleep_begin(void) { assert(cirq_active); vproc_armed++; }
 static void y2_pmic_vproc_sleep_end(void) { vproc_armed = 0; }
 static int cpu_suspend(unsigned long arg,int (*fn)(unsigned long)) {

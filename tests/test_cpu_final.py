@@ -200,6 +200,8 @@ static void writew(u16 v,void *p){unsigned off=(u8 *)p-regs;
  if(off==MUSB_INTRTX || off==MUSB_INTRRX)*(u16 *)p&=~v;else *(u16 *)p=v;}
 static void writel(unsigned v,void *p){*(unsigned *)p=v;}
 static void musb_g_disconnect(struct musb *m){assert(m->lock);}
+static unsigned rearms;
+static void y2_musb_dma_rearm(struct musb *m){(void)m;rearms++;}
 ''' + '#pragma clang diagnostic ignored "-Wunused-function"\n' + (ROOT/'kernel/usb/l1.h').read_text() + function(s,'y2_musb_clear_stale') + function(s,'y2_musb_system_quiesce') + function(s,'y2_musb_system_saved') + function(s,'y2_musb_before_restore') + function(s,'y2_musb_after_restore') + r'''
 int main(void){struct musb m={regs,(void *)1,0,{0}};y2_musb=&m;
  regs[MUSB_POWER]=MUSB_POWER_SOFTCONN;regs[MUSB_INTRUSB]=7;regs[0x200]=0xff;

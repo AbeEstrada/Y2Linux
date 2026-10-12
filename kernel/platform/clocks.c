@@ -508,6 +508,21 @@ int y2_ccf_radio_protect(unsigned domain, bool protect)
 	return readl_poll_timeout(infra + 0x228, value,
 		(value & mask) == (protect ? mask : 0), 10, 10000);
 }
+/* POWER-FINAL-16: DIS bus protection, stock spm_mtcmos_ctrl_disp: INFRA
+ * TOPAXI_PROT_EN bit 1 and its PROT_STA1 acknowledgement. Atomic poll: genpd
+ * may call this from the system-suspend noirq phase. */
+int y2_ccf_disp_protect(bool protect)
+{
+	void __iomem *infra = y2_clock_bases[2];
+	unsigned value; unsigned long flags;
+	if (!infra) return -EPROBE_DEFER;
+	spin_lock_irqsave(&y2_clk_lock, flags);
+	value = readl(infra + 0x220);
+	writel(protect ? value | 0x2 : value & ~0x2U, infra + 0x220);
+	spin_unlock_irqrestore(&y2_clk_lock, flags);
+	return readl_poll_timeout_atomic(infra + 0x228, value,
+		(value & 0x2) == (protect ? 0x2 : 0), 1, 10000);
+}
 int y2_ccf_md_unconfigured(void)
 {
 	void __iomem *infra = y2_clock_bases[2];

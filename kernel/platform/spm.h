@@ -15,6 +15,11 @@ int y2_spm_unstarted_md_off(void);
 int y2_ccf_md_unconfigured(void);
 int y2_spm_radio_status(unsigned domain);
 int y2_ccf_radio_protect(unsigned domain, bool protect);
+int y2_ccf_disp_protect(bool protect);
+struct generic_pm_domain;
+struct generic_pm_domain *y2_spm_dis_genpd(void);
+bool y2_spm_disp_access_begin(unsigned long *flags);
+void y2_spm_disp_access_end(unsigned long flags);
 int y2_ccf_radio_remap(unsigned domain);
 int y2_spm_mfg_status(void);
 #if IS_ENABLED(CONFIG_Y2_POWER)

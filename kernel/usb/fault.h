@@ -26,9 +26,9 @@ static const char *const y2_usb_reason_names[Y2_USB_REASON_COUNT] = {
 struct y2_usb_fault {
     unsigned valid, reason, ms, gadget_state, irqs, dma_irqs, max_burst;
     int rc;
-    unsigned l1_status, l1_mask;
+    unsigned l1_status, l1_mask, dma_intr;
     unsigned short tx, tx_mask, rx, rx_mask;
-    unsigned char usb, usb_mask, power, devctl, faddr, index, dma_intr, endpoints;
+    unsigned char usb, usb_mask, power, devctl, faddr, index, endpoints;
     unsigned short txcsr[5], rxcsr[5], rxcount[5];
     unsigned dma_cntl[8], dma_addr[8], dma_count[8];
 };

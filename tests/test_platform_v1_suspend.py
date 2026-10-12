@@ -96,6 +96,9 @@ static void y2_spm_journal_snapshot(void){}
  * that armed it; the golden capture is read-only. */
 static unsigned vproc_begins,vproc_ends;
 static void y2_golden_capture(void){}
+static void y2_golden_entry_apply(void){}
+static void y2_golden_entry_restore(void){}
+static void y2_pmic_golden_capture(void){}
 static void y2_pmic_vproc_sleep_begin(void){vproc_begins++;}
 static void y2_pmic_vproc_sleep_end(void){vproc_ends++;}
 static u64 ktime_get_mono_fast_ns(void){static u64 n;return ++n;}

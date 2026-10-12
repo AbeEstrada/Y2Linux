@@ -75,10 +75,12 @@ static inline int y2_bc11_detect(const struct y2_bc11_io *io, enum y2_source_typ
  *   Apple 800, unknown 70 mA.
  * This is the vendor *request*. What may actually be programmed is
  * y2_source_class_ceiling_ua() and the battery/thermal limits in charge-limits.h.
- * USB's negotiated allowance applies only to SDP; DCP/CDP need no OS gadget.
- * A negative allocation means no data controller has been attached; a
- * configured host grants 500 mA, an unconfigured one 100 mA, and reset/suspend's
- * zero allowance stops charging.
+ * A negative allocation means no data controller has been attached (70 mA).
+ * POWER-FINAL-16 (Defect C, archive 109): like stock, an SDP requests 500 mA
+ * whatever the gadget negotiated. A powered-off PC keeps VBUS on a suspended
+ * bus; the USB 2.0 suspend allowance (2 mA, rounded to 0) left the Y2 neither
+ * charging nor sleeping for 6.3 h (75 % -> 32 %). The stock firmware never
+ * consulted the negotiated budget (`select_charging_curret` 0xc03a1d88).
  */
 static inline unsigned y2_source_stock_request_ua(enum y2_source_type type, int allocated_ua)
 {
@@ -88,9 +90,7 @@ static inline unsigned y2_source_stock_request_ua(enum y2_source_type type, int 
 	case Y2_SOURCE_NONSTANDARD: return 1100000;
 	case Y2_SOURCE_APPLE: return 800000;
 	case Y2_SOURCE_SDP:
-		if (allocated_ua < 0) return 70000;
-		if (allocated_ua < 100000) return 0;
-		return allocated_ua < 500000 ? (unsigned)allocated_ua : 500000;
+		return allocated_ua < 0 ? 70000 : 500000;
 	default: return 70000;
 	}
 }

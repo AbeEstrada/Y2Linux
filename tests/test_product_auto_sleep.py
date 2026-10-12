@@ -396,5 +396,26 @@ class ProductAutoSleep(unittest.TestCase):
                 self.write(path, old)
 
 
+    def test_idle_cable_without_host_admits_sleep(self):
+        """Defect C (archive 109): VBUS from a powered-off PC, charger idle."""
+        self.write('/sys/class/power_supply/y2-usb-presence/online', '1')
+        self.write('/sys/class/udc/musb-hdrc.4.auto/state', 'default')
+        for status in ('Not charging', 'Full'):
+            self.write('/sys/class/power_supply/BAT0/status', status)
+            pm.battery_and_cable(self.ctx)
+        # A configured host (SSH/MTP) or an active charge keeps the Y2 awake.
+        self.write('/sys/class/udc/musb-hdrc.4.auto/state', 'configured')
+        with self.assertRaisesRegex(pm.Refused, 'charger_or_usb_active'):
+            pm.battery_and_cable(self.ctx)
+        self.write('/sys/class/udc/musb-hdrc.4.auto/state', 'not attached')
+        self.write('/sys/class/power_supply/BAT0/status', 'Charging')
+        with self.assertRaisesRegex(pm.Refused, 'charger_or_usb_active'):
+            pm.battery_and_cable(self.ctx)
+        # Without a cable the battery must really be discharging.
+        self.write('/sys/class/power_supply/y2-usb-presence/online', '0')
+        self.write('/sys/class/power_supply/BAT0/status', 'Not charging')
+        with self.assertRaisesRegex(pm.Refused, 'battery_state_unavailable'):
+            pm.battery_and_cable(self.ctx)
+
 if __name__ == '__main__':
     unittest.main()

@@ -409,6 +409,40 @@ static int vproc_sleep_restore_locked(struct regmap *map)
 	vproc_sleep.active = 0;
 	return first;
 }
+/* POWER-FINAL-16 G5: read-only stock PMIC golden comparison at sleep entry
+ * (pmic-golden-policy.h). Same context and regmap rules as the VPROC step. */
+#include "pmic-golden-policy.h"
+static unsigned short pmic_golden_entry[Y2_PMIC_GOLDEN_ROWS];
+static unsigned pmic_golden_captures, pmic_golden_differences;
+static int pmic_golden_error = -ENODATA;
+void y2_pmic_golden_capture(void)
+{
+	unsigned i, value, differences = 0;
+	int ret = 0;
+	if (!y2_wrap) return;
+	for (i = 0; i < Y2_PMIC_GOLDEN_ROWS && !ret; i++) {
+		ret = regmap_read(y2_wrap->map, y2_pmic_golden[i].reg, &value);
+		if (ret) break;
+		pmic_golden_entry[i] = value;
+		if ((value & y2_pmic_golden[i].mask) != y2_pmic_golden[i].golden) differences++;
+	}
+	pmic_golden_error = ret;
+	if (!ret) { pmic_golden_captures++; pmic_golden_differences = differences; }
+}
+static int pmic_golden_get(char *buffer, const struct kernel_param *kp)
+{
+	unsigned i;
+	int n = sysfs_emit(buffer, "source=Y2_FM_mt6323_power_gs_suspend_data rows=%zu captures=%u entry_differences=%u error=%d\n",
+		Y2_PMIC_GOLDEN_ROWS, pmic_golden_captures, pmic_golden_differences, pmic_golden_error);
+	for (i = 0; i < Y2_PMIC_GOLDEN_ROWS && pmic_golden_captures; i++)
+		n += sysfs_emit_at(buffer, n, "%03x m=%x g=%x e=%x %u\n", y2_pmic_golden[i].reg,
+			y2_pmic_golden[i].mask, y2_pmic_golden[i].golden, pmic_golden_entry[i],
+			(pmic_golden_entry[i] & y2_pmic_golden[i].mask) == y2_pmic_golden[i].golden);
+	return n;
+}
+static const struct kernel_param_ops pmic_golden_ops = { .get = pmic_golden_get };
+module_param_cb(pmic_golden, &pmic_golden_ops, NULL, 0400);
+
 void y2_pmic_vproc_sleep_begin(void)
 {
 	unsigned control, software, actual, value, i;

@@ -83,7 +83,8 @@
         reg = <0x10006000 0x1000>, <0x10208000 4>, <0x10200000 4>;
         /* Original FM Y2 MT_SPM_IRQ_ID = GIC hwirq 149. */
         interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_LOW>;
-        #power-domain-cells = <0>; /* MFG only; CPUs/radios retain their owners. */
+        /* 0 = MFG, 1 = DIS (16 G1; MFG is its subdomain). CPUs/radios retain their owners. */
+        #power-domain-cells = <1>;
         clocks = <&y2clk Y2_CLK_MFG_SRC>;
         clock-names = "mfg";
     };
@@ -103,7 +104,7 @@
         interrupt-names = "gp", "gpmmu", "pp0", "ppmmu0", "pp1", "ppmmu1";
         clocks = <&mmsys CLK_MM_SMI_COMMON>, <&mfgclk>;
         clock-names = "bus", "core";
-        power-domains = <&spm>;
+        power-domains = <&spm 0>;
         /* Stock domain owns reset. Supply and PLL retain loader settings;
          * no per-GPU voltage control, OPP guessing or reserved-memory heap. */
     };
@@ -402,9 +403,11 @@
     };
     ovl0: ovl@14007000 { compatible = "mediatek,mt6582-disp-ovl";
         reg = <0x14007000 0x1000>; interrupts = <GIC_SPI 153 IRQ_TYPE_LEVEL_LOW>; clocks = <&mmsys CLK_MM_DISP_OVL>;
+        power-domains = <&spm 1>; /* CRTC comp[0]: runtime PM drives DIS (16 G1) */
     };
     rdma0: rdma@14008000 { compatible = "mediatek,mt6582-disp-rdma";
         reg = <0x14008000 0x1000>; interrupts = <GIC_SPI 152 IRQ_TYPE_LEVEL_LOW>; clocks = <&mmsys CLK_MM_DISP_RDMA>;
+        power-domains = <&spm 1>;
     };
     color0: color@1400b000 { compatible = "mediatek,mt6582-disp-color";
         reg = <0x1400b000 0x1000>; interrupts = <GIC_SPI 156 IRQ_TYPE_LEVEL_LOW>; clocks = <&mmsys CLK_MM_DISP_COLOR>;

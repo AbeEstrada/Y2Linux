@@ -154,8 +154,11 @@ def check(data, initrd_size, production=True):
         require(props['clocks']==cells(handle('/syscon@14000000'),0,handle('/clock-controller@13000000')), 'GPU clock owners')
         require(props['clock-names']==strings('bus','core'), 'Lima bus/core clock naming')
         require(nodes['/clock-controller@13000000']['clocks']==cells(handle('/clock-controller@10000000'),24), 'MFG source owner')
-        require(props['power-domains']==cells(handle('/power-controller@10006000')), 'GPU shared SPM domain')
-        require(nodes['/power-controller@10006000']['#power-domain-cells']==cells(0), 'MFG genpd arity')
+        require(props['power-domains']==cells(handle('/power-controller@10006000'),0), 'GPU shared SPM domain (MFG)')
+        # POWER-FINAL-16 G1: 0 = MFG, 1 = DIS; the CRTC's OVL/RDMA drive DIS.
+        require(nodes['/power-controller@10006000']['#power-domain-cells']==cells(1), 'MFG/DIS genpd arity')
+        for path in ('/ovl@14007000','/rdma@14008000'):
+            require(nodes[path].get('power-domains')==cells(handle('/power-controller@10006000'),1), 'DIS domain consumer '+path)
         require(nodes['/power-controller@10006000']['clocks']==cells(handle('/clock-controller@10000000'),24) and
                 nodes['/power-controller@10006000']['clock-names']==strings('mfg'), 'MFG source held throughout domain transition')
         require(not any(k in props for k in ('resets','mali-supply','operating-points-v2','dma-coherent','memory-region')), 'no guessed GPU resource')

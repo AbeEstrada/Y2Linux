@@ -20,17 +20,15 @@ def load_profile(ctx):
     if not isinstance(value, dict) or value.get('schema') != 1:
         return None
     points = value.get('voltage_soc')
-    if not isinstance(points, list) or not 2 <= len(points) <= 32:
+    if not ascending_table(points, 0, 100, True) or points[0][1] != 0 or points[-1][1] != 100:
         return None
-    previous = (0, -1)
-    for point in points:
-        if (not isinstance(point, list) or len(point) != 2 or
-                any(type(x) is not int for x in point) or
-                not 2500000 <= point[0] <= 4300000 or not 0 <= point[1] <= 100 or
-                point[0] <= previous[0] or point[1] <= previous[1]):
-            return None
-        previous = point
-    if points[0][1] != 0 or points[-1][1] != 100:
+    # Stock r_profile (POWER-FINAL-16): internal resistance by voltage, used
+    # with the charger-path current exactly where stock oam_run uses it.
+    resistance = value.get('voltage_resistance_milliohm')
+    if resistance is not None and not ascending_table(resistance, 20, 1000, False):
+        return None
+    capacity = value.get('design_capacity_uah')
+    if capacity is not None and (type(capacity) is not int or not 100000 <= capacity <= 5000000):
         return None
     for name, lower, upper in [('filter_seconds', 1, 300), ('rest_seconds', 10, 3600),
                                ('rest_band_uv', 1000, 100000),
@@ -43,13 +41,28 @@ def load_profile(ctx):
     return value
 
 
+def ascending_table(points, lower, upper, increasing):
+    """[[uv, value], ...]: 2..128 rows, strictly ascending voltage, bounded values."""
+    if not isinstance(points, list) or not 2 <= len(points) <= 128:
+        return False
+    previous = (0, lower - 1)
+    for point in points:
+        if (not isinstance(point, list) or len(point) != 2 or
+                any(type(x) is not int for x in point) or
+                not 2500000 <= point[0] <= 4300000 or not lower <= point[1] <= upper or
+                point[0] <= previous[0] or (increasing and point[1] <= previous[1])):
+            return False
+        previous = point
+    return True
+
+
 def interpolate(points, uv):
     if uv <= points[0][0]:
-        return 0.
+        return float(points[0][1])
     for (low, a), (high, b) in zip(points, points[1:]):
         if uv <= high:
             return a + (b - a) * (uv - low) / (high - low)
-    return 100.
+    return float(points[-1][1])
 
 
 class Soc:
@@ -67,7 +80,7 @@ class Soc:
         self.charging = None
 
     def observe(self, now, voltage, present, status, hardware_percent=None,
-                current=None, temperature=None, counter=None):
+                current=None, temperature=None, counter=None, charge_current=None):
         charging = status == 'Charging'
         result = dict(percent=None, source='unavailable', confidence='unavailable', status=status,
                       charging=charging, voltage_uv=voltage, current_ua=current,
@@ -102,6 +115,14 @@ class Soc:
         resting = (len(self.samples) > 1 and now - self.samples[0][0] >= p['rest_seconds'] - 1 and
                    max(v for _, v in self.samples) - min(v for _, v in self.samples) <= p['rest_band_uv'])
         estimate_uv = self.filtered - (p['charging_offset_uv'] if charging else 0)
+        table = p.get('voltage_resistance_milliohm')
+        oam = (charging and table is not None and type(charge_current) is int and
+               0 <= charge_current <= 1200000)
+        if oam:
+            # Stock oam_run: OCV = V - I * R(V) while the charger drives current
+            # in. The current is the charger-path sense estimate (200 mOhm basis).
+            drop = charge_current * interpolate(table, self.filtered) / 1000
+            estimate_uv = self.filtered - max(0, min(300000, drop))
         resistance = p.get('calibrated_resistance_milliohm')
         hybrid = type(current) is int and type(resistance) is int and 0 < resistance <= 1000
         if hybrid:
@@ -122,7 +143,12 @@ class Soc:
         if voltage <= p['voltage_soc'][0][0]:
             self.percent = min(self.percent, 1.)
         self.charging = charging
-        result.update(percent=int(round(self.percent)), source='hybrid' if hybrid else 'voltage_estimate',
+        capacity = p.get('design_capacity_uah')
+        if capacity is not None:
+            result.update(design_capacity_uah=capacity,
+                          remaining_uah_estimate=round(capacity * self.percent / 100))
+        result.update(percent=int(round(self.percent)),
+                      source='hybrid' if hybrid else 'stock_oam' if oam else 'voltage_estimate',
                       confidence='provisional' if p['provisional'] else 'calibrated_estimate',
                       provisional=p['provisional'], resting=resting, filtered_voltage_uv=round(self.filtered),
                       calibration_source=p['source'])
@@ -136,7 +162,9 @@ def sample(ctx, engine, now=None):
     # Read BAT0 only: PMIC/CPU temperatures and USB configured limits cannot
     # become pack sensor values. Missing hardware properties stay null.
     temp = ctx.integer(base + 'temp')
+    from .observe import charge_field
     return engine.observe(now, ctx.integer(base + 'voltage_now'), ctx.integer(base + 'present'),
                           ctx.read(base + 'status'), ctx.integer(base + 'capacity'),
                           ctx.integer(base + 'current_now'), temp * 100 if temp is not None else None,
-                          ctx.integer(base + 'charge_counter'))
+                          ctx.integer(base + 'charge_counter'),
+                          charge_field(ctx.read(base + 'charging_state'), 'sense_current_est_ua'))
