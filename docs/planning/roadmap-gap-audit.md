@@ -7656,3 +7656,34 @@ sleep-tested. Repeated before source changes; this audit builds and flashes noth
 built or breaks a test, report it and keep the newest version that works, rather than patching around it silently.
 After the owner flashes: read-only check, then the 13/14 sleep test, then display, audio, Bluetooth, Wi-Fi, MTP and SSH.
 Readiness for the next boundary: **PARTIALLY READY**.
+
+
+## POWER-FINAL-16 stock sleep-parity scope audit — 2026-10-12
+
+**Boundary:** the owner set the goal for 16: fix what is broken on 15 and reach the best possible deep sleep,
+≈0.1 points/h (stock parity, ≈1 % per night), completing the golden table, using REA for the stock analysis.
+Hardware evidence: 15 flashed 2026-10-12 00:33 (boot `e2952adf`, kernel `6.18.56-y2linux-platform-v1-power-final-15`,
+build `be1aac2`); overnight archive 108 (16/16 clean sleeps, ≈1.6 points/h voltage-derived, Defect B) and afternoon
+archive 109 (boot `bbea610d`; 6.3 h awake on a powered-off PC's port without sleeping or charging, then one clean
+14-min sleep and Defect B again; owner hold-Power restart → boot `ff5243d9`, healthy). Stock analysis:
+`docs/knowledge/stock-suspend-re-ledger.md` (REA/Ghidra on the Y2's own FM kernel). Repeated before source changes;
+this audit builds and flashes nothing.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Suspend floor | GAP, measured indirectly | ≈1.6 points/h asleep vs target ≈0.1 (≈20 mA vs ≈1.3 mA on the 1300 mAh stock model). Maintenance wakes cost 0.14 % duty (2.6 s per 1800 s), so the floor while suspended dominates. No current sensor; every figure is voltage-derived. |
+| SPM arming | MATCHES STOCK | REA F1: our `y2_spm_suspend_arm` sets the same SPM_CLK_CON/PCM bits as stock `spm_kick_pcm_to_run`. INFRA `last_lost=0x0` must come from active requesters, not the kick. |
+| Display power domain (G1) | GAP, planned | REA F2: stock powers DIS off at screen-off (`mtkfb_early_suspend` → `disp_path_clock_off` → clock manager → `spm_mtcmos_ctrl_disp`). Y2 never does; sleep rows show DIS on (`power=0x314c`). Plan: DIS genpd with the exact stock sequence, attached to the display pipeline; releases MMPLL/VENCPLL. Risk: display is the first physical risk (dark panel → hold Power, fallback 15). |
+| INFRA power-down (G2) | GAP, investigation | Identify what keeps INFRA requested after G1 (SRCLKENA requesters, MSDC/USB bus masters). Read-only first. |
+| Golden rows (G3) | GAP, staged | 26/34 SoC rows differ at entry (unchanged 14→15). One group per candidate with a runtime switch: INFRA/PERI gates + PERI MD1, DCM, CLK_CFG mux PD, MSDC/audio/thermal clocks. |
+| DRAM (G4) | GAP, last | Stock lowers MEMPLL at screen-off (`mt_h2l_dvfs_mempll`); DRAMC+0x1dc golden row. Highest risk; only after G1–G3. |
+| PMIC golden (G5) | GAP | 44 PMIC rows, VEMC3V3/VGP2, panel deep standby, BAT_L interrupt instead of timer wakes. Read-only comparison needs the probe (owner consent). |
+| Defect B (USB after wake) | DEFECT, reproduced 3× | Diagnostics first (full MUSB+0x200 and DMA channel registers), then re-arm the DMA unmask after restore; host test. |
+| Defect C (no sleep, no charge on unconfigured VBUS) | DEFECT, new | Archive 109: `udc=default`, charger `INHIBITED`, 106 refusals `charger_or_usb_active`, 75 %→32 %. Sleep policy must admit suspend when no host is configured and nothing charges. |
+| Minor | DEFECT | Python 3.15 `/dev/kmsg` flush EINVAL; power journal keeps ≈4.5 h only. |
+| Physical | NOT_RUN | Nothing above is changed or observed on hardware yet. |
+
+**Gate decision:** 16 is a staged milestone. Candidate 16a: Defect B diagnostics+fix, Defect C, minor fixes and G1
+(DIS domain) behind a runtime switch, plus read-only INFRA-requester diagnostics. Then G3 groups and G4/G5 in later
+candidates, each with an A/B night. No live register or sysfs writes without the owner's OK.
+Readiness for the next boundary: **PARTIALLY READY** (G1 and the defects are specified; G2/G4 need more analysis).
