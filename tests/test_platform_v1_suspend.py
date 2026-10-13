@@ -94,13 +94,15 @@ static unsigned spm_read(void *p,unsigned reg){return ((unsigned*)p)[reg/4];}
 static void y2_spm_journal_snapshot(void){}
 /* POWER-FINAL-13: stock VPROC sleep voltage must be restored on every path
  * that armed it; the golden capture is read-only. */
-static unsigned vproc_begins,vproc_ends;
+static unsigned vproc_begins,vproc_ends,pmic_begins,pmic_ends;
 static void y2_golden_capture(void){}
 static void y2_golden_entry_apply(void){}
 static void y2_golden_entry_restore(void){}
 static void y2_pmic_golden_capture(void){}
 static void y2_pmic_vproc_sleep_begin(void){vproc_begins++;}
 static void y2_pmic_vproc_sleep_end(void){vproc_ends++;}
+static void y2_pmic_sleep_begin(void){pmic_begins++;}
+static void y2_pmic_sleep_end(void){pmic_ends++;}
 static u64 ktime_get_mono_fast_ns(void){static u64 n;return ++n;}
 static void reset(void){
  assert(!suspend_cirq_pending);
@@ -113,7 +115,7 @@ static void reset(void){
 ''' + function(source, 'y2_spm_enter') + function(source, 'y2_spm_resume_syscore') + r'''
 int main(void){
  reset();assert(!y2_spm_enter(PM_SUSPEND_MEM));
- assert(suspend_cirq_pending && !cirq_exit && vproc_begins==1 && vproc_ends==1);
+ assert(suspend_cirq_pending && !cirq_exit && vproc_begins==1 && vproc_ends==1 && pmic_begins==1 && pmic_ends==1);
  y2_spm_resume_syscore((void *)0);
  assert(entries==1 && resumes==1 && !aborts && !spm_broken && sleeps==1);
  assert(cirq_enter==cirq_exit);
@@ -123,6 +125,7 @@ int main(void){
  reset();fail_arm=-EBUSY;assert(y2_spm_enter(PM_SUSPEND_MEM)==-EBUSY);
  y2_spm_resume_syscore((void *)0);assert(!sleeps && cirq_exit==1);
  assert(vproc_begins==vproc_ends); /* every abort after arming restores VPROC */
+ assert(pmic_begins==pmic_ends); /* and the 18 PMIC fields */
  for(unsigned fault=0;fault<4;fault++){
   reset();bad_biu=fault==0;bad_timer=fault==1;bad_cirq=fault==2;fail_restore=fault==3?-EIO:0;
   int result=y2_spm_enter(PM_SUSPEND_MEM);
