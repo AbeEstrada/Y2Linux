@@ -1,6 +1,14 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-21 quiet display power transitions sealed — 2026-10-13 (latest)
+## POWER-FINAL-22 dark DSI hand-over sealed — 2026-10-13 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-22/` (Linux `430ff11`, root `2026.08-platform-v1.52`; BOOTIMG
+`f73ba54c…402b`, Y2ROOT `d7d21d71…6a0d`), fallback 21. On 21 the shutdown is dark (fixed) but the startup still flashed
+colours: the DSI hand-over parked the bootloader's stream ≈40 ms before Linux's first modeset with the panel lit. 22
+darkens the backlight for that hand-over and relights after the first Linux frame. Suite 693, exit 0; package checks
+PASS. **Physical: not flashed yet.** Details: [22 report](validation/Y2-PLATFORM-V1-POWER-FINAL-22.md).
+
+## POWER-FINAL-21 quiet display power transitions — 2026-10-13 (shutdown fixed on hardware)
 
 `out/y2linux-platform-v1-power-final-candidate-21/` (Linux `0b3e0e1`, Reborn `217e28d` unchanged, root
 `2026.08-platform-v1.51`; BOOTIMG `ea1da0b7…908e`, Y2ROOT `9a9b99ce…7b77`), fallback 20. 20 plus fixes for the owner's

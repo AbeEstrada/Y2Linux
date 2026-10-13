@@ -1,6 +1,6 @@
 # POWER-FINAL-21 — quiet display power transitions (no colour flash, no white screen at power-off)
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-21/`
+Status: **INSTALLED; shutdown fixed, startup flash remained → 22** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-21/`
 (fallback = 20), receipts `out/deep-sleep-final/build21-receipts/`. BOOTIMG
 `ea1da0b7bccf20a846839288d811205431cfbac6f441bc7107bf74a5b542908e`, Y2ROOT
 `9a9b99ce9dbc4768485ac1c7446caef6be2e69cfb29e6e0a1a1271e075a17b77`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-21`,
@@ -41,6 +41,13 @@ Not changeable: a flash during the bootloader's (LK) own panel initialisation, b
 `test_display_quiet_power` (no DRM backlight link, sinks off at shutdown, splash modeset dark and always relit) plus
 the existing splash, backlight and idle suites. Locked-container production suite: 692 cases, exit 0. Package
 validation, ELF, installed ARM, privacy and inventory PASS.
+
+## Hardware result (owner, boot `a0c4d60e`, archive 118)
+
+The shutdown animation now ends dark (fixed). The colour flash between the logo and the splash remained: the DSI
+hand-over parks LK's stream at 0.489 s and Linux's first modeset streams at 0.532 s, before the splash runs; see the
+[22 report](Y2-PLATFORM-V1-POWER-FINAL-22.md). The first USB connection after this flash was again briefly flaky
+(SSH timeout, one slow ping), recovering by itself within seconds.
 
 ## What to check after the flash
 
