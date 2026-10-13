@@ -1,13 +1,13 @@
 # Candidate and fallback identity index
 
-## POWER-FINAL-16 — installed 2026-10-12, overnight drain running
+## POWER-FINAL-16 — installed 2026-10-12, Baseline 16 (2026-10-13)
 
 `Y2LINUX-PLATFORM-V1-POWER-FINAL-16`: compiled Linux `a4e9c3b` / Reborn `f68e088d7de9591e13ff1925590ceb419d340625`
 (unchanged); kernel `6.18.56-y2linux-platform-v1-power-final-16`, root `2026.08-platform-v1.46`, release
 `1.0.0-platform-v1-power-final-candidate.16`. BOOTIMG
 `2f1cd1c0091e2015afa2af6ffbd2f191f58090d3cbdc3b52f58a71ef5d6edebf`, Y2ROOT
 `bd4a12a07b39f21c9313d82069014891e1e1707ffee9eb532e04cece69a43d9f`. Package
-`out/y2linux-platform-v1-power-final-candidate-16/` (fallback = 15). First boot `0b0e8a77`.
+`out/y2linux-platform-v1-power-final-candidate-16/` (fallback = 15). First boot `0b0e8a77`; overnight boot `f871fd6a` (archive 110).
 
 ## POWER-FINAL-15 — sealed 2026-10-12, installed the same day (Baseline 15)
 

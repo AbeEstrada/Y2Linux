@@ -1,14 +1,11 @@
 # Y2Linux documentation
 
-**Baseline 15 (2026-10-12)** is the current published state: the POWER-FINAL-15
-image (13's stock suspend power parity, 14's persistent sleep diagnostics, every
-component on its newest release, Linux 6.18.56) that runs on the maintainer's Y2.
-Git tag `baseline-15` in both repositories.
-
-**POWER-FINAL-16 (2026-10-12)** is the newest image, on `main` of Y2Linux: stock
-sleep parity from the Y2's own stock kernel (display power domain, stock clock
-gating, golden sleep entry, stock fuel gauge, USB-after-wake and charging fixes).
-Installed on the maintainer's Y2; its overnight drain test is running. See the
+**Baseline 16 (2026-10-13)** is the current published state: the POWER-FINAL-16
+image that runs on the maintainer's Y2, git tag `baseline-16` in both repositories.
+It adds stock sleep parity from the Y2's own stock kernel (display power domain,
+stock clock gating, golden sleep entry, stock fuel gauge, USB-after-wake and
+charging fixes) to Baseline 15 (newest release of every component, Linux 6.18.56).
+First night: 16 h of clean sleep at about 8.6 mA (stock: about 1.3 mA). See the
 [16 report](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md) and the
 [stock suspend ledger](knowledge/stock-suspend-re-ledger.md).
 

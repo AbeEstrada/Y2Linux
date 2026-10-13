@@ -1,6 +1,6 @@
 # POWER-FINAL-16 — stock sleep parity from the Y2's own stock kernel (REA)
 
-Status: **INSTALLED, FIRST PHYSICAL CHECKS PASS, OVERNIGHT DRAIN RUNNING** (2026-10-12). Package
+Status: **INSTALLED, OVERNIGHT SLEEP CLEAN, ≈8.6 mA ASLEEP; tagged `baseline-16`** (2026-10-13). Package
 `out/y2linux-platform-v1-power-final-candidate-16/` (fallback = 15), receipts `out/deep-sleep-final/build16-receipts/`.
 Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-16`, kernel `6.18.56-y2linux-platform-v1-power-final-16`, root
 `2026.08-platform-v1.46`, release `1.0.0-platform-v1-power-final-candidate.16`; Linux `a4e9c3b` on `main` (later commits:
@@ -50,6 +50,24 @@ Host suite: no new failures against `main` (739 cases, same host-environment err
 - Live MD1 test (owner-authorised probe module): the AP may write PERICFG MD1_SET/CLR (0x20/0x28); gating all 26
   modem-side requests leaves the AP untouched. 17 will gate them at boot.
 
+## Overnight result (2026-10-12/13, boot `f871fd6a`)
+
+Archive `out/deep-sleep-final/evidence/20261013/110-power16-overnight-return/` (read-only capture before anything else;
+the owner had restarted with hold-Power at 18:22, so the kernel was untainted, `tainted=0`).
+
+- **Sleep: clean.** Unplugged sleep 18:27 → owner's Power press 10:24 (≈16 h). 33 entries, 33 resumes, 0 aborts,
+  0 failures; 31 maintenance wakes every 1800 s, last wake `0x20` (Power). VPROC sleep voltage, USB PHY save-current
+  and wheel sleep 33/33 without failures (wheel 2 retries per wake, as on 14/15). Display domain 35 off / 35 on.
+- **USB after the morning replug: worked** (enumerated 10:24:35, the archive itself was taken over USB SSH). Second
+  good wake on 16. `dma_unmask_lost=32` with `dma_intr_before=0000ff00` is the known false positive of 16's counter.
+- **Drain ≈8.6 mA.** 86 % → 74 % on the stock curve (≈0.75 points/h over the night). Least-squares fit of the
+  stock-curve remaining charge at the maintenance wakes, skipping the first 2 h of post-charge relaxation: 8.6 mA
+  (8.5 mA when starting 1.5 h later). 15 was ≈10 mA (archive 108), stock ≈1.3 mA: about 14 % better, still ≈6–7× stock.
+- **Why still high:** INFRA never loses power (`last_lost=0x0`, `pdn0 0x2fcffff` unchanged on all 33 restores);
+  `PERI_PDN0_MD1_STA` is 0 at every entry (stock: all 26 modem-side requests gated); SoC golden 11/34 and PMIC
+  golden 15/44 rows still differ, unchanged from the first capture.
+- Owner wake at 10:24: `kernel_resumed` 10:24:29 → `restoring_radios` 10:24:29 → `complete_result_0` 10:24:31.
+
 ## Found after the build (fixed in source for 17)
 
 - The MMSYS part of the DCM never reached 16: kernel overlays are cached by their manifest result hash, and the
@@ -58,4 +76,4 @@ Host suite: no new failures against `main` (739 cases, same host-environment err
 
 ## Not verified
 
-The overnight drain (running), Defect B over many wakes, long-term stability of the golden sleep entry.
+Defect B over many more wakes (2 of 2 good so far), long-term stability of the golden sleep entry beyond one night.

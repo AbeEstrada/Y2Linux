@@ -1,6 +1,6 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-16 stock sleep parity installed — 2026-10-12 (latest)
+## POWER-FINAL-16 stock sleep parity installed, Baseline 16 — 2026-10-13 (latest)
 
 `out/y2linux-platform-v1-power-final-candidate-16/` (Linux `a4e9c3b`, Reborn `f68e088` unchanged, root
 `2026.08-platform-v1.46`; BOOTIMG `2f1cd1c0…debf`, Y2ROOT `bd4a12a0…3d9f`), fallback 15. Built from the Y2's own stock
@@ -10,7 +10,9 @@ entry (PLLs, muxes, unused clock gates, exact restore), read-only PMIC golden ca
 Offline: container suite 676, exit 0; package checks PASS. **Physical (boot `0b0e8a77`):** display off/on 5/5, Wi-Fi,
 Bluetooth, MTP, SSH, audio up; one 36-min sleep clean and **USB worked after the wake** (first time since 13; cause not
 yet proven); golden SoC differences 26 → 11, PMIC 15/44. Live test: the AP may gate the never-used modem's clock
-requests (planned for 17). **Overnight drain: running.** Details: [16 report](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md).
+requests (planned for 17). **First night (boot `f871fd6a`, archive 110):** 16 h unplugged, 33/33 sleeps clean, USB worked
+after the morning replug, drain ≈8.6 mA on the stock curve (15: ≈10 mA; stock ≈1.3 mA); INFRA still never powers down.
+Tagged `baseline-16`. Details: [16 report](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md).
 Readiness remains **MORE_WORK_REQUIRED**.
 
 ## POWER-FINAL-15 dependency-update candidate sealed — 2026-10-12

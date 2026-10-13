@@ -6,23 +6,20 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Baseline 15 (2026-10-12), developer preview; POWER-FINAL-16 on `main`.**
-> Baseline 15 is the last tagged state; 16 (stock sleep parity) is installed on the
-> maintainer's Y2 and its overnight test is running. It runs every day on
+> **Status: Baseline 16 (2026-10-13), developer preview.** It runs every day on
 > the maintainer's Y2. There are no prebuilt images yet: you build from source
 > and flash with SP Flash Tool. Only one hardware revision has been tested (see
 > [Supported hardware](#supported-hardware)). Read [Known issues](#known-issues)
 > before you flash.
 
-| | Baseline 15 |
+| | Baseline 16 |
 | --- | --- |
-| Git tag (both repositories) | `baseline-15` (previous: `baseline-13`) |
-| Kernel | `6.18.56-y2linux-platform-v1-power-final-15` (Linux 6.18 long-term line) |
-| Root filesystem / release | `2026.08-platform-v1.45` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.15` |
+| Git tag (both repositories) | `baseline-16` (previous: `baseline-15`) |
+| Kernel | `6.18.56-y2linux-platform-v1-power-final-16` (Linux 6.18 long-term line) |
+| Root filesystem / release | `2026.08-platform-v1.46` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.16` |
 | Player | Y2Reborn 0.3.0 (Rust 1.99) |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 — every component on its newest release |
-| Maintainer's images built from | Y2Linux `be1aac2`, Y2Reborn `f68e088` (later commits: tests and docs only) |
-| Newest image (on `main`, not yet tagged) | POWER-FINAL-16: kernel `6.18.56-y2linux-platform-v1-power-final-16`, root `2026.08-platform-v1.46`, built from Y2Linux `a4e9c3b` (Reborn unchanged) |
+| Maintainer's images built from | Y2Linux `a4e9c3b`, Y2Reborn `217e28d` (later commits: two fixes for the next image, tests and docs) |
 
 ## Getting started
 
@@ -34,7 +31,7 @@ factory partitions untouched.
 
 ## What works
 
-Observed on the maintainer's device on Baseline 15 or the candidates just before it:
+Observed on the maintainer's device on Baseline 16 or the candidates just before it:
 
 - Boots from internal eMMC: stock preloader and LK, then Linux 6.18 and Buildroot. No SD card needed.
 - Display with GPU (DRM + Lima), buttons, click wheel and the Reborn player UI.
@@ -49,7 +46,7 @@ Observed on the maintainer's device on Baseline 15 or the candidates just before
 - Deep sleep when the screen times out: the SoC suspends and wakes every 30 min for
   housekeeping, with the stock suspend settings (CPU at 0.85 V, USB PHY off, wheel controller
   asleep). Sleep and USB state are written to `/data` so they survive a restart.
-- On 16: the display hardware is powered off with the screen, stock hardware clock gating is on,
+- The display hardware is powered off with the screen, stock hardware clock gating is on,
   and unused PLLs and clocks are switched off for sleep. The battery percentage uses the stock
   fuel-gauge curve. A PC port charges at the stock 450 mA even when the PC is off or asleep.
 
@@ -60,10 +57,10 @@ Observed on the maintainer's device on Baseline 15 or the candidates just before
   player off by holding Power, then start it again. Not yet investigated.
 - **USB after a wake from deep sleep.** On 13–15 the device re-enumerated and received,
   but its transmit never completed, so USB networking and MTP stayed silent until a
-  restart. On 16 the first wake worked; it is not yet confirmed over many wakes.
-- **Battery life is not stock-like yet.** Re-read with the stock fuel-gauge curve, 15
-  drew about 10 mA asleep (≈0.8 points/h); stock is about 1 mA (≈0.1 points/h). 16's
-  overnight result is being measured. The percentage is estimated from voltage; there is
+  restart. On 16 both wakes so far worked (one after a 16 h night); not yet confirmed
+  over many wakes.
+- **Battery life is not stock-like yet.** 16 draws about 8.6 mA asleep (≈0.75 points/h,
+  one 16 h night; 15: about 10 mA); stock is about 1.3 mA (≈0.1 points/h). The percentage is estimated from voltage; there is
   no current sensor.
 - Bluetooth uses SBC only. AAC/aptX/LDAC sources exist but are not enabled in
   normal builds.
