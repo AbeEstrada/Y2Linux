@@ -7687,3 +7687,27 @@ this audit builds and flashes nothing.
 (DIS domain) behind a runtime switch, plus read-only INFRA-requester diagnostics. Then G3 groups and G4/G5 in later
 candidates, each with an A/B night. No live register or sysfs writes without the owner's OK.
 Readiness for the next boundary: **PARTIALLY READY** (G1 and the defects are specified; G2/G4 need more analysis).
+
+## POWER-FINAL-17 sleep-floor and wake-latency scope audit — 2026-10-13
+
+**Boundary:** the owner set the goal for 17: stock sleep parity, ≈0.1 points/h (≈1.3 mA), with deep suspend and resume
+working every time; and on 2026-10-13 asked for a faster wake (screen first, radios restored afterwards). Hardware
+evidence: 16 installed 2026-10-12 (kernel `6.18.56-y2linux-platform-v1-power-final-16`, build `a4e9c3b`), first checks
+on boot `0b0e8a77`, overnight archive 110 (boot `f871fd6a`, taint 0): 16 h unplugged, 33/33 clean sleeps, USB worked
+after the replug, drain ≈8.6 mA on the stock curve (least-squares on the maintenance-wake estimates after 2 h of
+post-charge relaxation). Published as tag `baseline-16`. This audit builds and flashes nothing.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Suspend floor | GAP, measured indirectly | ≈8.6 mA vs ≈1.3 mA stock (15: ≈10 mA). No current sensor; voltage-derived on the stock fuel-gauge curve. |
+| MD1 requests (ledger F11) | GAP, ready | `PERI_PDN0_MD1_STA=0` at all 33 entries, stock golden all gated. AP write proven harmless live on 16. 17: gate at `application_ready` (`spm.md1_gate`, owner switch `md1_gate`), re-check at every sleep entry, readback in `state`. Main suspect for INFRA never powering down. |
+| INFRA power-down | GAP, investigation | `last_lost=0x0` on all 33 restores. Re-read after the MD1 gate; if still 0, the remaining requesters (SRCLKENA, PCM R13 bits, MD_MASK 0x38 = 3). |
+| MMSYS DCM, DMA-unmask readback | FIXED IN SOURCE (`d1953fa`), not built | Rides along in 17. |
+| PMIC golden (15/44), SoC golden (11/34) | GAP, staged | Unchanged on the night; next candidates after the MD1 night, one group per A/B night. |
+| Wake latency | GAP, measured | Archive 110 morning wake (kernel clock): SPM return 217.92 → `PM: suspend exit` 218.15 → `kernel_resumed` record 218.47 → radios 218.88–220.50 → Reborn `sleep_restore` and DSI modeset ≈220.45. The screen waited ≈1.9 s for Wi-Fi/Bluetooth firmware and calibration. 17: the helper asks Reborn to restore the screen before the radios; the completion record reuses that acknowledgement (a failed early restore is retried as before). Expected screen ≈1 s after Power. Further steps (panel deep standby, leaner resume records) after measuring 17. |
+| Defect B | WATCH | 2/2 good wakes on 16; cause of the fix still unproven. |
+| Physical | NOT_RUN | Nothing above is observed on 17 hardware yet. |
+
+**Gate decision:** 17 = MD1 gate + screen-first wake + the two 16 follow-ups, each behind a switch or with the old
+order as fallback (`{"md1_gate": false}`). Then one A/B night against 16's ≈8.6 mA. Readiness: **READY** for the
+17 build; PMIC/SoC golden writes stay planned.

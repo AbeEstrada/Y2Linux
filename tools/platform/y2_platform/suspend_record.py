@@ -14,7 +14,7 @@ import time
 DIAGNOSTIC_STAGES = {'kernel_suspend', 'kernel_resumed', 'restoring_radios', 'product_failure'}
 
 
-def record(ctx, stage, result=None, reason=None, reborn_ack=None, mode=None):
+def record(ctx, stage, result=None, reason=None, reborn_ack=None, mode=None, restore_ack=None):
     directory = private_directory(ctx.path('/data/system/platform'))
     path = directory / 'suspend-last.json'
     value = ctx.json('/data/system/platform/suspend-last.json', {})
@@ -67,7 +67,9 @@ def record(ctx, stage, result=None, reason=None, reborn_ack=None, mode=None):
     value['stages'] = value['stages'][-32:]
     if stage.startswith('complete_result_'):
         try:
-            acknowledgement = application_rpc(ctx, 'sleep_restore')
+            # An earlier successful restore (screen before radios) is reused;
+            # asking again would redraw and reset Reborn's wake gesture.
+            acknowledgement = restore_ack or application_rpc(ctx, 'sleep_restore')
             value['reborn_restore'] = acknowledgement.get('sleep_ready') is True and acknowledgement.get('screen_off') is False
         except (OSError, ValueError):
             value['reborn_restore'] = False

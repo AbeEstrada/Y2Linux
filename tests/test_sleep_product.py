@@ -208,6 +208,36 @@ class SleepProduct(unittest.TestCase):
             with self.assertRaises(ValueError):
                 prepare(self.ctx)
 
+    def test_screen_is_restored_before_the_radios(self):
+        # POWER-FINAL-17: archive 110 lit the screen ≈2.6 s after Power, 1.9 s
+        # of it waiting for Wi-Fi/Bluetooth firmware and calibration.
+        source = (ROOT / 'tools/platform/y2_platform/product_sleep.py').read_text()
+        restore = source[source.index('# Keep every operation lock held until radios and Reborn restore.'):]
+        self.assertLess(restore.index('screen = screen_first(ctx)'), restore.index("record(ctx, 'restoring_radios'"))
+        self.assertLess(restore.index("record(ctx, 'restoring_radios'"), restore.index("'on-runtime'"))
+        self.assertIn('restore_ack=screen', restore)
+
+    def test_early_screen_restore_is_reused_and_a_failed_one_retried(self):
+        from y2_platform.product_sleep import screen_first
+        with patch('y2_platform.suspend_record.socket.socket', return_value=Reply()):
+            ack = screen_first(self.ctx)
+        self.assertEqual(ack, {'sleep_ready': True, 'screen_off': False})
+        with patch('y2_platform.suspend_record.socket.socket', side_effect=OSError('down')):
+            self.assertIsNone(screen_first(self.ctx))
+        record(self.ctx, 'quiescing_radios', 0)
+        record(self.ctx, 'kernel_suspend', 0)
+        record(self.ctx, 'restoring_radios', 0)
+        with patch('y2_platform.suspend_record.socket.socket', return_value=Reply()) as rpc:
+            value = record(self.ctx, 'complete_result_0', 0, restore_ack=ack)
+        rpc.assert_not_called()
+        self.assertTrue(value['reborn_restore'])
+        record(self.ctx, 'quiescing_radios', 0)
+        record(self.ctx, 'kernel_suspend', 0)
+        with patch('y2_platform.suspend_record.socket.socket', return_value=Reply()) as rpc:
+            value = record(self.ctx, 'complete_result_0', 0, restore_ack=None)
+        rpc.assert_called_once()
+        self.assertTrue(value['reborn_restore'])
+
     def test_state_directory_symlink_is_refused(self):
         self.ctx.path('/data').mkdir()
         self.ctx.path('/data/system').symlink_to(self.tmp.name)

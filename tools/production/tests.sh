@@ -20,7 +20,7 @@ PYTHONPATH=/project/tests python3 -m unittest tests.test_power tests.test_charge
 python3 -m unittest tests.test_power_journal tests.test_sleep_diagnostics tests.test_boot_retained tests.test_power_audit tests.test_display_takeover -v
 python3 -m unittest tests.test_audio_idle tests.test_connectivity_supervisor tests.test_pm_replay_trace tests.test_suspend_cpu_pm tests.test_product_auto_sleep tests.test_pm_control_write tests.test_dpm_stall_diagnostics tests.test_pmic_lowpower tests.test_suspend_probe tests.test_usb_l1 tests.test_infra_pdn tests.test_dev_wheel tests.test_vproc_sleep tests.test_usb_savecurrent tests.test_golden_diagnostic -v
 # POWER-FINAL-16: Defect B, DIS domain, stock DCM and golden sleep entry.
-python3 -m unittest tests.test_usb_dma_unmask tests.test_display_domain tests.test_dcm tests.test_golden_apply tests.test_overlay_hashes -v
+python3 -m unittest tests.test_usb_dma_unmask tests.test_display_domain tests.test_dcm tests.test_golden_apply tests.test_md1_gate tests.test_overlay_hashes -v
 for script in /project/initramfs/production/init /project/initramfs/production/storage.sh /project/buildroot/board/y2/production-overlay/etc/init.d/* /project/buildroot/board/y2/production-overlay/usr/sbin/*; do
     qemu-arm -cpu cortex-a7 -L /build/buildroot/target /build/buildroot/target/bin/busybox sh -n "$script"
 done

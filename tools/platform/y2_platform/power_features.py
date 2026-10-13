@@ -1,10 +1,10 @@
-"""POWER-FINAL-16 runtime power features, armed once the UI has drawn its first frame.
+"""POWER-FINAL-16/17 runtime power features, armed once the UI has drawn its first frame.
 
 Each feature is a kernel parameter whose kernel default is the safe (15)
 behaviour. This module turns them on at `application_ready`, never earlier: the
 display domain must not be cut while the loader-lit panel is still being taken
 over. The owner keeps a feature off for an A/B night with
-/data/system/platform/power-features.json, e.g. {"dis_pdn": false, "golden_apply": 3}.
+/data/system/platform/power-features.json, e.g. {"dis_pdn": false, "golden_apply": 3, "md1_gate": false}.
 A failure is recorded and never blocks boot, sleep or the UI.
 """
 # SPDX-License-Identifier: GPL-2.0-only
@@ -18,6 +18,9 @@ FEATURES = {
     # G3b: golden sleep entry, bitmask: 1 PLLs, 2 mux power-down, 4 PERI
     # gates, 8 INFRA gates (golden-apply-policy.h).
     'golden_apply': ('/sys/module/spm/parameters/golden_apply', 0xf),
+    # 17: gate the never-used modem's peripheral clock requests (ledger F11);
+    # re-checked at every sleep entry.
+    'md1_gate': ('/sys/module/spm/parameters/md1_gate', True),
 }
 
 

@@ -216,6 +216,15 @@ def quiesce_radio(ctx, radio):
         time.sleep(1)
 
 
+def screen_first(ctx):
+    """Ask Reborn to light the screen before the radios are restored."""
+    from .suspend_record import application_rpc
+    try:
+        return application_rpc(ctx, 'sleep_restore')
+    except (OSError, ValueError):
+        return None
+
+
 def marker(ctx, stage):
     control_write(ctx, '/sys/firmware/y2_pm/stage', stage + '\n')
 
@@ -376,6 +385,11 @@ def execute_owned(ctx, fd, enter, locks):
     finally:
         # Keep every operation lock held until radios and Reborn restore.
         if prepared:
+            # POWER-FINAL-17: screen first. Wi-Fi/Bluetooth firmware, patches
+            # and RF calibration take ≈1.6 s (archive 110) and the UI used to
+            # wait for them; it does not depend on the radios. A failed early
+            # restore is retried by the completion record, as before.
+            screen = screen_first(ctx)
             try:
                 record(ctx, 'restoring_radios', result)
                 marker(ctx, 'RADIOS_RESTORING')
@@ -385,7 +399,7 @@ def execute_owned(ctx, fd, enter, locks):
                             command(ctx, ['/usr/sbin/y2-radio', radio, 'on-runtime'])
             except (OSError, ValueError, RuntimeError):
                 result = 1
-            value = record(ctx, 'complete_result_' + str(result), result)
+            value = record(ctx, 'complete_result_' + str(result), result, restore_ack=screen)
             if value.get('result'):
                 result = value['result']
             if result == 0:

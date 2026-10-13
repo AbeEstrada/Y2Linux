@@ -46,6 +46,7 @@
 #include "disp-policy.h"
 #include "dcm-policy.h"
 #include "golden-apply-policy.h"
+#include "md1-gate-policy.h"
 #include "cpu-dvfs.h"
 #include "charger-idle.h"
 
@@ -118,6 +119,11 @@ static unsigned golden_apply;
 module_param(golden_apply, uint, 0644);
 static struct y2_ga_state golden_state;
 static unsigned golden_entries, golden_pll_offs;
+/* POWER-FINAL-17: MD1 request gate (md1-gate-policy.h), armed by userspace
+ * like dis_pdn; parameter ops follow the write side below. */
+static bool md1_gate;
+static int md1_result = -ENODATA;
+static unsigned md1_sta, md1_regates;
 static void y2_golden_delay(unsigned us) { udelay(us); }
 
 static unsigned spm_read(void *context, unsigned reg)
@@ -888,6 +894,8 @@ static ssize_t state_show(struct device *dev, struct device_attribute *attr, cha
 	ret += sysfs_emit_at(buf, ret, "suspend_restore_failures=%u\n", suspend_restore_failures);
 	ret += sysfs_emit_at(buf, ret, "dcm=%u dcm_result=%d golden_apply=%#x golden_entries=%u golden_pll_offs=%#x\n",
 		dcm, dcm_result, READ_ONCE(golden_apply), golden_entries, golden_pll_offs);
+	ret += sysfs_emit_at(buf, ret, "md1_gate=%u md1_result=%d md1_sta=%#x md1_regates=%u\n",
+		READ_ONCE(md1_gate), md1_result, md1_sta, md1_regates);
 	ret += sysfs_emit_at(buf, ret, "dis_pdn=%u dis_broken=%u dis_offs=%u dis_ons=%u dis_refusals=%u dis_failures=%u\n",
 		READ_ONCE(dis_pdn), READ_ONCE(dis_broken), dis_offs, dis_ons, dis_refusals, dis_failures);
 	/* Full suspend runs the vendor 597-word pcm_suspend; pcm_words/pcm_origin below describe the
@@ -1004,6 +1012,10 @@ static void y2_golden_entry_apply(void)
 	int status = 0;
 	struct y2_dcm_io io = { &status, y2_dcm_read, y2_dcm_write };
 	struct y2_ga_conditions c = { .dis_off = y2_spm_disp_status() == 0 };
+	if (READ_ONCE(md1_gate) && READ_ONCE(golden_ready)) {
+		md1_regates += y2_md1_regate(&io, &md1_sta);
+		status = 0;
+	}
 	if (!groups || !READ_ONCE(golden_ready)) return;
 	y2_golden_apply(&io, groups, &c, &golden_state);
 	golden_entries++;
@@ -1016,6 +1028,26 @@ static void y2_golden_entry_restore(void)
 	if (!golden_state.applied) return;
 	y2_golden_restore(&io, &golden_state, y2_golden_delay);
 }
+static int md1_gate_set(const char *value, const struct kernel_param *kp)
+{
+	unsigned long flags;
+	int status = 0, ret;
+	bool gate;
+	struct y2_dcm_io io = { &status, y2_dcm_read, y2_dcm_write };
+	ret = kstrtobool(value, &gate);
+	if (ret) return ret;
+	if (!READ_ONCE(golden_ready)) return -EAGAIN;
+	raw_spin_lock_irqsave(&spm_lock, flags);
+	ret = y2_md1_gate(&io, gate, &md1_sta);
+	md1_result = ret;
+	WRITE_ONCE(md1_gate, gate && !ret);
+	raw_spin_unlock_irqrestore(&spm_lock, flags);
+	pr_info("Y2SPM: MD1 requests %s result=%d sta=%#x\n", gate ? "gated" : "released", ret, md1_sta);
+	return ret;
+}
+static const struct kernel_param_ops md1_gate_ops = { .set = md1_gate_set, .get = param_get_bool };
+module_param_cb(md1_gate, &md1_gate_ops, &md1_gate, 0644);
+MODULE_PARM_DESC(md1_gate, "Gate the unused modem's peripheral clock requests (17, ledger F11)");
 static ssize_t golden_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	unsigned i, now, differ = 0;
