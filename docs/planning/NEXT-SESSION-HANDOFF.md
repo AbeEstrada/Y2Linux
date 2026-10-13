@@ -6,6 +6,8 @@
 >
 > **21:19 update (archive 122):** the Y2 "woke itself" right after unplugging: no sleep happened. A `BAT0` change from the charger noticing the unplug landed during the ≈5-s radio quiesce, the `wakeup_count` store failed, and the helper refused (`wake_event_in_progress`) and restored the screen (seen twice before, both on 13). Proposed fix in the 26 report (retry the handshake with a fresh count when Power/RTC did not change); not made. AirPods reconnect failed a third time (still `Inhibited`).
 >
+> **Overnight baseline (archive 123, 21:24 UTC):** fresh boot `8943a99a` on 26 after an owner restart, taint 0, DSI hand-over normal, SPM entries 0, sleep guard not pending, power features as wanted (`golden_apply` 15, `pmic_sleep` 7, md1/pwrap/dis on), battery 4.07 V charging on USB, the usual boot lines only (`mmc_erase` -30, thermal_zone1 -61, mt6323-led). Reconnect already `Inhibited` after one failed try (AirPods not connected). Compare the morning archive against this one.
+>
 > **Work list, in this order:**
 > 1. **Read the overnight result first** (archive before anything): wake count/causes, `last_lost`, `pmic_sleep_state`, `pwrap_gate*`, drain against 16's ≈8.6 mA, USB after the first plug-in (Defect B / first-USB-after-flash flakiness).
 > 2. **Bluetooth on 26:** ask whether a manual connect worked. Then status `bluetooth.pcms[0].codec` = AAC, `codec_policy` all five `runtime_enabled`, metrics `bluetooth_disconnects` unchanged after the connect (26 is the first image to send `SelectCodec` on connect; if it drops the AirPods, skip the request when the negotiated codec already equals Auto's choice). Codec row Auto/SBC/AAC in Settings.
