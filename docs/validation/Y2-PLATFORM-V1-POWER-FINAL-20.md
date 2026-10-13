@@ -1,6 +1,6 @@
 # POWER-FINAL-20 — reclaim the never-initialised UART1 clock
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-20/`
+Status: **INSTALLED, FIRST BOOT CHECKED** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-20/`
 (fallback = 19), receipts `out/deep-sleep-final/build20-receipts/`. BOOTIMG
 `1ffdb4a2d024cf2d1c8554c518b859b2e7fe8a56186aefea4f8cbb35e4e93c55`, Y2ROOT
 `98ffdca9c2595f245c0ad94b25c9e89c99796f2234324fbd22c994c046859548`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-20`,
@@ -29,6 +29,22 @@ its clock stayed on from the bootloader for the whole uptime (UART2/3 read the i
 
 Locked-container production suite: 689 cases, exit 0 (the new assertions extend `test_cpu_idle_completion`).
 Package validation, ELF, installed ARM, privacy and inventory PASS.
+
+## Hardware results
+
+**First boot after the flash (boot `53bad0d8`), USB networking did not work.** The gadget enumerated and configured
+(stage 6, `usb0` up with 10.42.0.1), the Y2 received 36 packets but sent none (`usb0 tx_packets=0`, DMA completions
+10/10, no unmask loss); the host saw bulk-OUT transmit timeouts (`NETDEV WATCHDOG`, 83 TX errors, ARP for 10.42.0.1
+FAILED). Wi-Fi ping answered. The owner turned the player off and on (clean shutdown) and replugged; the next boot
+`6fd4d362` worked at once. A milder version occurred on 18's first check (first SSH timed out, 1 of 2 pings answered),
+so it is not attributed to 20's change; cause open (first connection after a flash). Evidence: archive
+`out/deep-sleep-final/evidence/20261013/117-power20-first-check/` (rows of boot `53bad0d8` in
+`sleep-diagnostics.jsonl`).
+
+**Working boot `6fd4d362` (archive 117):** kernel `-power-final-20`, taint 0, `application_ready` 40.4 s;
+`clocks.unused_handoff`: `UART1 ... reason=never_initialised retained=0`; `uart1_gate_now=1`; awake PERI_PDN0
+`0x2eed3fd` (bit 17 set); `uart_sleep_owner_ready=1` (the deep-idle UART owner check no longer refuses); all 16–19
+features armed; Wi-Fi, Bluetooth, USB (archive taken over it), charging.
 
 ## What to check after the flash
 

@@ -6,7 +6,7 @@
 `2026.08-platform-v1.50`; BOOTIMG `1ffdb4a2…3c55`, Y2ROOT `98ffdca9…9548`), fallback 19. The never-initialised, unowned
 UART1 kept its bootloader clock on (an all-zero register set was taken for a busy transmitter); 20 reclaims it like
 UART2/3, so the last peripheral gate also matches stock at sleep entry. Container suite 689, exit 0; package checks
-PASS. **Physical: not flashed yet.** Details: [20 report](validation/Y2-PLATFORM-V1-POWER-FINAL-20.md).
+PASS. **Physical (archive 117):** working boot healthy, UART1 gated; the first boot after the flash had dead USB networking until an off/on + replug (seen milder on 18 too; open). Details: [20 report](validation/Y2-PLATFORM-V1-POWER-FINAL-20.md).
 
 ## POWER-FINAL-19 PMIC_WRAP clock gate — 2026-10-13
 
