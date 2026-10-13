@@ -1,8 +1,10 @@
 # Y2Linux documentation
 
-**Baseline 16 (2026-10-13)** is the current published state: the POWER-FINAL-16
-image that runs on the maintainer's Y2, git tag `baseline-16` in both repositories.
-It adds stock sleep parity from the Y2's own stock kernel (display power domain,
+**Baseline 17 (2026-10-13)** is the current published state: the POWER-FINAL-17
+image that runs on the maintainer's Y2, git tag `baseline-17` in both repositories.
+17 gates the never-used modem's clock requests and lights the screen about half a
+second after Power (Wi-Fi/Bluetooth follow in the background); see the
+[17 report](validation/Y2-PLATFORM-V1-POWER-FINAL-17.md). Baseline 16 added stock sleep parity from the Y2's own stock kernel (display power domain,
 stock clock gating, golden sleep entry, stock fuel gauge, USB-after-wake and
 charging fixes) to Baseline 15 (newest release of every component, Linux 6.18.56).
 First night: 16 h of clean sleep at about 8.6 mA (stock: about 1.3 mA). See the
@@ -14,7 +16,7 @@ First night: 16 h of clean sleep at about 8.6 mA (stock: about 1.3 mA). See the
 | Build it yourself | [BUILDING.md](BUILDING.md) |
 | Flash it, connect, update, go back to stock | [INSTALL.md](INSTALL.md) |
 | What works, what doesn't, latest hardware results | [Current platform state](CURRENT_PLATFORM_STATE.md) |
-| What 16, 15, 14 and 13 changed | [16 stock sleep parity](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md), [15 dependency update](validation/Y2-PLATFORM-V1-POWER-FINAL-15.md), [14 diagnostics](validation/Y2-PLATFORM-V1-POWER-FINAL-14.md), [13 stock power parity](validation/Y2-PLATFORM-V1-POWER-FINAL-13.md) |
+| What 17, 16, 15, 14 and 13 changed | [17 modem gate and faster wake](validation/Y2-PLATFORM-V1-POWER-FINAL-17.md), [16 stock sleep parity](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md), [15 dependency update](validation/Y2-PLATFORM-V1-POWER-FINAL-15.md), [14 diagnostics](validation/Y2-PLATFORM-V1-POWER-FINAL-14.md), [13 stock power parity](validation/Y2-PLATFORM-V1-POWER-FINAL-13.md) |
 | Deep sleep history (01 to 13) | [Deep-sleep report](validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md), [suspend architecture](architecture/deep-suspend.md) |
 | Charging, storage | [Charging policy](knowledge/charging-current-policy.md), [internal storage](knowledge/internal-storage.md) |
 | Platform API and ownership | [Platform API](architecture/platform-api-v1.md), [power contract](architecture/platform-power-v1.md) |

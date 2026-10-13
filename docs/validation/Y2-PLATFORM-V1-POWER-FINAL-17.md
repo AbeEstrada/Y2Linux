@@ -1,6 +1,6 @@
 # POWER-FINAL-17 — modem request gate and screen-first wake
 
-Status: **INSTALLED, FIRST BOOT AND FIRST SLEEP CLEAN** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-17/`
+Status: **INSTALLED, FIRST BOOT AND FIRST SLEEP CLEAN; tagged `baseline-17`** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-17/`
 (fallback = 16), receipts `out/deep-sleep-final/build17-receipts/`. BOOTIMG
 `2ddd8d384cf6d9336d1a3505944f6a787764e982f7327400b5e886a41ea52d9a`, Y2ROOT
 `dc1f057a6c1d5768cbe3822893b5f71d3c3615bfbb3848e78491d9f0882a3e76`. Flash BOOTIMG + ANDROID only with

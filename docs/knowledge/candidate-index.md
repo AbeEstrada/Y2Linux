@@ -1,13 +1,13 @@
 # Candidate and fallback identity index
 
-## POWER-FINAL-17 — sealed 2026-10-13, not flashed
+## POWER-FINAL-17 — installed 2026-10-13, Baseline 17
 
 `Y2LINUX-PLATFORM-V1-POWER-FINAL-17`: compiled Linux `045911669740cbf5870795eccafb387b01db24c8` / Reborn
 `217e28dfa3a66bbae6ea5983ee3355a132a4d73d` (unchanged); kernel `6.18.56-y2linux-platform-v1-power-final-17`, root
 `2026.08-platform-v1.47`, release `1.0.0-platform-v1-power-final-candidate.17`. BOOTIMG
 `2ddd8d384cf6d9336d1a3505944f6a787764e982f7327400b5e886a41ea52d9a`, Y2ROOT
 `dc1f057a6c1d5768cbe3822893b5f71d3c3615bfbb3848e78491d9f0882a3e76`. Package
-`out/y2linux-platform-v1-power-final-candidate-17/` (fallback = 16).
+`out/y2linux-platform-v1-power-final-candidate-17/` (fallback = 16). First boot `de37f6bc` (archives 111, 112).
 
 ## POWER-FINAL-16 — installed 2026-10-12, Baseline 16 (2026-10-13)
 

@@ -1,12 +1,15 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-17 modem request gate and screen-first wake sealed — 2026-10-13 (latest)
+## POWER-FINAL-17 modem request gate and screen-first wake, Baseline 17 — 2026-10-13 (latest)
 
 `out/y2linux-platform-v1-power-final-candidate-17/` (Linux `0459116`, Reborn `217e28d` unchanged, root
 `2026.08-platform-v1.47`; BOOTIMG `2ddd8d38…0b76`, Y2ROOT `dc1f057a…3e76`), fallback 16. Gates the never-used modem's
 clock requests (stock golden; suspect for INFRA never powering down), lights the screen before Wi-Fi/Bluetooth on a
 wake (16: ≈2.6 s to the screen, 1.9 s of it waiting for the radios), and carries 16's two follow-ups (MMSYS DCM,
-DMA-unmask readback). Container suite 682, exit 0; package checks PASS. **Physical: not flashed yet.** Details:
+DMA-unmask readback). Container suite 682, exit 0; package checks PASS. **Physical (boot `de37f6bc`, archives
+111/112):** first boot healthy, audio/Wi-Fi/Bluetooth/USB/SSH up; an 18-min sleep clean, screen ≈0.5 s after the wake
+(16: ≈2.5 s), modem requests gated at entry, a real lost USB DMA unmask caught and re-armed; INFRA still never powers
+down. Overnight drain pending. Tagged `baseline-17`. Details:
 [17 report](validation/Y2-PLATFORM-V1-POWER-FINAL-17.md).
 
 ## POWER-FINAL-16 stock sleep parity installed, Baseline 16 — 2026-10-13
