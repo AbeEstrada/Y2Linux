@@ -9,7 +9,277 @@
  
  static const struct reg_default cs43130_reg_defaults[] = {
  	{CS43130_SYS_CLK_CTL_1, 0x06},
-@@ -2672,62 +2674,130 @@
+@@ -112,6 +114,9 @@
+ 	case CS43130_INT_STATUS_1 ... CS43130_INT_STATUS_5:
+ 	case CS43130_HP_DC_STAT_1 ... CS43130_HP_DC_STAT_2:
+ 	case CS43130_HP_AC_STAT_1 ... CS43130_HP_AC_STAT_2:
++	/* Read-only live status: a cached value never shows a plug. */
++	case CS43130_HP_STATUS:
++	case CS43130_HP_LOAD_STAT:
+ 		return true;
+ 	default:
+ 		return false;
+@@ -2062,16 +2067,41 @@
+ 				   ac_reg_val >> CS43130_HP_MEAS_LOAD_2_SHIFT);
+ 	}
+ 
++	if (!cs43130->has_irq_line) {
++		unsigned int stat;
++
++		/* Y2: no codec IRQ. Sticky status clears on read: drop stale
++		 * bits, start the step, then poll for its result or an error. */
++		regmap_read(cs43130->regmap, CS43130_INT_STATUS_4, &stat);
++		regmap_multi_reg_write(cs43130->regmap, seq, seq_size);
++		ret = regmap_read_poll_timeout(cs43130->regmap,
++					       CS43130_INT_STATUS_4, stat,
++					       stat & (rslt_msk |
++						       CS43130_HPLOAD_NO_DC_INT |
++						       CS43130_HPLOAD_UNPLUG_INT |
++						       CS43130_HPLOAD_OOR_INT),
++					       1000, 1000 * 1000);
++		if (ret) {
++			dev_err(cs43130->dev,
++				"Timeout polling HPLOAD status (want %x, last %x)\n",
++				rslt_msk, stat);
++			return -ETIMEDOUT;
++		}
++		cs43130->hpload_stat = stat;
++		goto check;
++	}
++
+ 	regmap_multi_reg_write(cs43130->regmap, seq,
+ 			       seq_size);
+ 
+ 	ret = wait_for_completion_timeout(&cs43130->hpload_evt,
+ 					  msecs_to_jiffies(1000));
+-	regmap_read(cs43130->regmap, CS43130_INT_MASK_4, &msk);
+ 	if (!ret) {
+ 		dev_err(cs43130->dev, "Timeout waiting for HPLOAD interrupt\n");
+ 		return -ETIMEDOUT;
+ 	}
++check:
++	regmap_read(cs43130->regmap, CS43130_INT_MASK_4, &msk);
+ 
+ 	dev_dbg(cs43130->dev, "HP load stat: %x, INT_MASK_4: %x\n",
+ 		cs43130->hpload_stat, msk);
+@@ -2116,6 +2146,12 @@
+ 	return 0;
+ }
+ 
++/* Y2 board offset subtracted from the measured DC load, in ohms (see below). */
++static unsigned int y2_hpload_offset_ohm = 102;
++module_param(y2_hpload_offset_ohm, uint, 0644);
++MODULE_PARM_DESC(y2_hpload_offset_ohm, "Y2: ohms subtracted from the measured DC load");
++static u16 y2_hp_raw_dc[2];
++
+ static void cs43130_imp_meas(struct work_struct *wk)
+ {
+ 	unsigned int reg, seq_size;
+@@ -2164,6 +2200,13 @@
+ 	i = 0;
+ 	ac_idx = 0;
+ 	while (i < seq_size) {
++		/* Y2: without cirrus,ac-measure only the DC load is wanted (it
++		 * alone selects the output level); the AC steps never complete
++		 * on this board. */
++		if (!cs43130->ac_meas && hpload_seq[i].msk == CS43130_HPLOAD_AC_INT) {
++			i++;
++			continue;
++		}
+ 		ret = cs43130_hpload_proc(cs43130, hpload_seq[i].seq,
+ 					  hpload_seq[i].size,
+ 					  hpload_seq[i].msk, ac_idx);
+@@ -2183,6 +2226,16 @@
+ 	}
+ 	cs43130->hpload_done = true;
+ 
++	/* Y2: the measured DC load reads a fixed amount high on this board
++	 * (owner calibration, 2026-10-11: 18 ohm IEM -> 121/120, 32 ohm
++	 * headphone -> 135; slope 1, offset ~102.5). Thresholds and reports
++	 * use the corrected load; the raw reading stays in y2_hp_raw_dc. */
++	for (i = 0; i < 2; i++) {
++		y2_hp_raw_dc[i] = cs43130->hpload_dc[i];
++		cs43130->hpload_dc[i] = cs43130->hpload_dc[i] > y2_hpload_offset_ohm ?
++			cs43130->hpload_dc[i] - y2_hpload_offset_ohm : 0;
++	}
++
+ 	if (cs43130->hpload_dc[HP_LEFT] >= CS43130_LINEOUT_LOAD)
+ 		snd_soc_jack_report(&cs43130->jack, CS43130_JACK_LINEOUT,
+ 				    CS43130_JACK_MASK);
+@@ -2223,6 +2276,142 @@
+ 	mutex_unlock(&cs43130->clk_mutex);
+ }
+ 
++/*
++ * Y2: headphone load measurement on demand, and the matching output level.
++ * The Y2 powers the codec only while it is used and has no codec interrupt
++ * wired, so measurement runs on request (never during playback) and polls
++ * the HPLOAD status. The result selects hv_seq exactly as on plug detection;
++ * hp_gain also lets the owner choose the level. Both persist in the regcache.
++ */
++static const char *const y2_hp_gain_names[] = { "low", "mid", "high" };
++static DEFINE_MUTEX(y2_hp_lock);
++
++static ssize_t hp_gain_show(struct device *dev, struct device_attribute *attr,
++			    char *buf)
++{
++	struct cs43130_private *cs43130 = dev_get_drvdata(dev);
++	unsigned int reg = 0;
++	int i;
++
++	regmap_read(cs43130->regmap, CS43130_HP_OUT_CTL_1, &reg);
++	for (i = 0; i < ARRAY_SIZE(hv_seq); i++)
++		if (reg == hv_seq[i][1].def)
++			return sysfs_emit(buf, "%s\n", y2_hp_gain_names[i]);
++	return sysfs_emit(buf, "raw:%02x\n", reg);
++}
++
++static ssize_t hp_gain_store(struct device *dev, struct device_attribute *attr,
++			     const char *buf, size_t count)
++{
++	struct cs43130_private *cs43130 = dev_get_drvdata(dev);
++	int i = sysfs_match_string(y2_hp_gain_names, buf);
++
++	if (i < 0)
++		return -EINVAL;
++	/* Cache-only while suspended: synced on the next power-up. */
++	mutex_lock(&y2_hp_lock);
++	regmap_multi_reg_write(cs43130->regmap, hv_seq[i], ARRAY_SIZE(hv_seq[i]));
++	mutex_unlock(&y2_hp_lock);
++	return count;
++}
++static DEVICE_ATTR_RW(hp_gain);
++
++/* Stock Y2 HP_DETECT (cs43131_hw_init writes 0x0D0000 = 0xCA); upstream 0xC4. */
++#define Y2_HP_DETECT_STOCK	0xCA
++#define Y2_HP_STATUS_PLUGGED	BIT(6)
++static char y2_hp_debug[256];
++
++static void y2_hp_snapshot(struct cs43130_private *cs43130, const char *when)
++{
++	static const unsigned int regs[] = {
++		CS43130_PWDN_CTL, CS43130_HP_DETECT, CS43130_HP_STATUS,
++		CS43130_HP_LOAD_1, CS43130_HP_LOAD_STAT, CS43130_INT_MASK_4,
++		CS43130_HP_OUT_CTL_1, CS43130_CLASS_H_CTL,
++	};
++	unsigned int v[ARRAY_SIZE(regs)] = {};
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(regs); i++)
++		regmap_read(cs43130->regmap, regs[i], &v[i]);
++	snprintf(y2_hp_debug, sizeof(y2_hp_debug),
++		 "%s pwdn=%02x det=%02x hpstat=%02x load1=%02x loadstat=%02x mask4=%02x out=%02x classh=%02x\n",
++		 when, v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
++	dev_info(cs43130->dev, "Y2 HP %s", y2_hp_debug);
++}
++
++static ssize_t hpload_measure_store(struct device *dev,
++				    struct device_attribute *attr,
++				    const char *buf, size_t count)
++{
++	struct cs43130_private *cs43130 = dev_get_drvdata(dev);
++	unsigned int status = 0;
++	int ret;
++
++	if (!cs43130->component || !cs43130->mclk)
++		return -ENODEV;
++	mutex_lock(&y2_hp_lock);
++	ret = pm_runtime_resume_and_get(dev);
++	if (ret < 0)
++		goto unlock;
++	mutex_lock(&cs43130->clk_mutex);
++	ret = cs43130->clk_req ? -EBUSY : 0; /* a stream owns the clocks */
++	mutex_unlock(&cs43130->clk_mutex);
++	if (!ret) {
++		/* The codec was powered from off: let its plug detector (stock
++		 * configuration) settle and see the jack before measuring. */
++		regmap_write(cs43130->regmap, CS43130_HP_DETECT, Y2_HP_DETECT_STOCK);
++		ret = regmap_read_poll_timeout(cs43130->regmap, CS43130_HP_STATUS,
++					       status, status & Y2_HP_STATUS_PLUGGED,
++					       10 * 1000, 1000 * 1000);
++		y2_hp_snapshot(cs43130, ret ? "no-plug" : "plugged");
++		if (ret) {
++			ret = -ENXIO; /* nothing in the jack, per the detector */
++		} else {
++			cs43130_imp_meas(&cs43130->work);
++			if (!cs43130->hpload_done) {
++				y2_hp_snapshot(cs43130, "failed");
++				ret = -EIO;
++			}
++		}
++	}
++	pm_runtime_put(dev);
++unlock:
++	mutex_unlock(&y2_hp_lock);
++	return ret < 0 ? ret : count;
++}
++static DEVICE_ATTR_WO(hpload_measure);
++
++static ssize_t hpload_dc_show(struct device *dev, struct device_attribute *attr,
++			      char *buf)
++{
++	struct cs43130_private *cs43130 = dev_get_drvdata(dev);
++
++	if (!cs43130->hpload_done)
++		return sysfs_emit(buf, "none\n");
++	return sysfs_emit(buf, "%u %u raw %u %u\n", cs43130->hpload_dc[HP_LEFT],
++			  cs43130->hpload_dc[HP_RIGHT], y2_hp_raw_dc[0], y2_hp_raw_dc[1]);
++}
++static DEVICE_ATTR_RO(hpload_dc);
++
++static ssize_t hpload_debug_show(struct device *dev,
++				 struct device_attribute *attr, char *buf)
++{
++	return sysfs_emit(buf, "%s", y2_hp_debug[0] ? y2_hp_debug : "none\n");
++}
++static DEVICE_ATTR_RO(hpload_debug);
++
++static struct attribute *y2_hp_attrs[] = {
++	&dev_attr_hp_gain.attr,
++	&dev_attr_hpload_measure.attr,
++	&dev_attr_hpload_dc.attr,
++	&dev_attr_hpload_debug.attr,
++	NULL,
++};
++static const struct attribute_group y2_hp_group = {
++	.name = "y2_hp",
++	.attrs = y2_hp_attrs,
++};
++
+ static irqreturn_t cs43130_irq_thread(int irq, void *data)
+ {
+ 	struct cs43130_private *cs43130 = (struct cs43130_private *)data;
+@@ -2475,13 +2664,16 @@
+ 	cs43130->dc_meas = device_property_read_bool(cs43130->dev, "cirrus,dc-measure");
+ 	cs43130->ac_meas = device_property_read_bool(cs43130->dev, "cirrus,ac-measure");
+ 
+-	if (!device_property_read_u16_array(cs43130->dev, "cirrus,ac-freq", cs43130->ac_freq,
++	/* Fall back to the defaults when the property is absent (the read
++	 * fails). Upstream tested the opposite, so without these properties
++	 * both arrays stayed zero and every load selected the highest level. */
++	if (device_property_read_u16_array(cs43130->dev, "cirrus,ac-freq", cs43130->ac_freq,
+ 					CS43130_AC_FREQ)) {
+ 		for (i = 0; i < CS43130_AC_FREQ; i++)
+ 			cs43130->ac_freq[i] = cs43130_ac_freq[i];
+ 	}
+ 
+-	if (!device_property_read_u16_array(cs43130->dev, "cirrus,dc-threshold",
++	if (device_property_read_u16_array(cs43130->dev, "cirrus,dc-threshold",
+ 				       cs43130->dc_threshold,
+ 				       CS43130_DC_THRESHOLD)) {
+ 		for (i = 0; i < CS43130_DC_THRESHOLD; i++)
+@@ -2608,6 +2800,10 @@
+ 	pm_runtime_set_active(cs43130->dev);
+ 	pm_runtime_enable(cs43130->dev);
+ 
++	ret = devm_device_add_group(cs43130->dev, &y2_hp_group);
++	if (ret)
++		dev_warn(cs43130->dev, "y2_hp sysfs unavailable: %d\n", ret);
++
+ 	switch (cs43130->dev_id) {
+ 	case CS43130_CHIP_ID:
+ 	case CS43131_CHIP_ID:
+@@ -2672,62 +2868,130 @@
  	regulator_bulk_disable(CS43130_NUM_SUPPLIES, cs43130->supplies);
  }
  
@@ -53,11 +323,10 @@
  static int cs43130_runtime_suspend(struct device *dev)
  {
  	struct cs43130_private *cs43130 = dev_get_drvdata(dev);
--
++	int ret, restore;
+ 
 -	if (cs43130->xtal_ibias != CS43130_XTAL_UNUSED)
 -		regmap_update_bits(cs43130->regmap, CS43130_INT_MASK_1,
-+	int ret, restore;
-+
 +	if (cs43130->xtal_ibias != CS43130_XTAL_UNUSED) {
 +		ret = regmap_update_bits(cs43130->regmap, CS43130_INT_MASK_1,
  				   CS43130_XTAL_ERR_INT,
@@ -94,9 +363,8 @@
  {
  	struct cs43130_private *cs43130 = dev_get_drvdata(dev);
 -	int ret;
--
 +	int ret, cleanup;
-+
+ 
 +	/* jiffies stamps separate slow rail enables from a stalled timer tick. */
 +	cs43130_pm_note("cs_jiffies_begin", (int)jiffies);
 +	cs43130_pm_note("cs_rails_begin", 0);
@@ -114,40 +382,36 @@
 -	gpiod_set_value_cansleep(cs43130->reset_gpio, 1);
 -
 -	usleep_range(2000, 2050);
--
++	ret = cs43130_restore_cache(cs43130);
++	if (!ret)
++		return 0;
+ 
 -	ret = regcache_sync(cs43130->regmap);
 -	if (ret != 0) {
 -		dev_err(dev, "Failed to restore register cache\n");
 -		goto err;
--	}
--
--	if (cs43130->xtal_ibias != CS43130_XTAL_UNUSED)
--		regmap_update_bits(cs43130->regmap, CS43130_INT_MASK_1,
--				   CS43130_XTAL_ERR_INT, 0);
--
--	return 0;
--err:
-+	ret = cs43130_restore_cache(cs43130);
-+	if (!ret)
-+		return 0;
-+
 +	dev_err(dev, "Failed to restore codec state: %d\n", ret);
- 	regcache_cache_only(cs43130->regmap, true);
--	regulator_bulk_disable(CS43130_NUM_SUPPLIES, cs43130->supplies);
--
++	regcache_cache_only(cs43130->regmap, true);
 +	gpiod_set_value_cansleep(cs43130->reset_gpio, 0);
 +	cleanup = regulator_bulk_disable(CS43130_NUM_SUPPLIES, cs43130->supplies);
 +	if (cleanup) {
 +		cs43130_pm_note("cs_cleanup_fail", cleanup);
 +		dev_err(dev, "Failed to disable supplies after restore error: %d\n", cleanup);
-+	}
+ 	}
 +	return ret;
 +}
-+
+ 
+-	if (cs43130->xtal_ibias != CS43130_XTAL_UNUSED)
+-		regmap_update_bits(cs43130->regmap, CS43130_INT_MASK_1,
+-				   CS43130_XTAL_ERR_INT, 0);
 +static int cs43130_system_suspend(struct device *dev)
 +{
 +	int ret;
-+
+ 
+-	return 0;
+-err:
+-	regcache_cache_only(cs43130->regmap, true);
+-	regulator_bulk_disable(CS43130_NUM_SUPPLIES, cs43130->supplies);
 +	cs43130_pm_note("cs_sleep_begin", 0);
 +	ret = pm_runtime_force_suspend(dev);
 +	cs43130_pm_note("cs_sleep_done", ret);
@@ -157,7 +421,7 @@
 +static int cs43130_system_resume(struct device *dev)
 +{
 +	int ret;
-+
+ 
 +	cs43130_pm_note("cs_force_begin", 0);
 +	ret = pm_runtime_force_resume(dev);
 +	cs43130_pm_note("cs_force_done", ret);
