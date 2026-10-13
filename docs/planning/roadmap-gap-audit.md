@@ -7734,3 +7734,20 @@ overnight drain is not measured yet, so 18 is not an A/B against 17 alone. This 
 **Gate decision:** 18 = PMIC groups 1/2/4 behind `pwrap.pmic_sleep` (owner switch `pmic_sleep`, default 7) +
 journal reason. Readiness: **READY** for the build; physical risk is low (every write is restored before any device
 resumes; a failed write undoes itself and sleep continues unchanged).
+
+## POWER-FINAL-19 PMIC_WRAP clock gate scope audit — 2026-10-13
+
+**Boundary:** after 18's 1-h sleep (archive 114: PMIC fields applied/restored 3/3, PMIC golden 15 → 7, INFRA still
+retained) the only INFRA gate still different at sleep entry is bit 23, the AP's PMIC_WRAP clock (ledger F17). Stock
+gates it in suspend (and in awake video playback). Owner-authorised live test on 18 (boot `69ef8c26`): gating it makes
+the AP-side wrapper read as 0 (WACS2 -EIO), no bus hang, fully reversible. The owner asked for 19 right away; 18's
+overnight drain is postponed. This audit builds and flashes nothing.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| PMIC_WRAP clock in sleep | GAP, ready | Gate INFRA_PDN_SET bit 23 after the last AP PMIC access in `y2_spm_enter` (after VPROC/PMIC steps and the PMIC capture), right before `y2_spm_suspend_arm`; ungate (CLR, verified, 3 tries) as the very first statement after `cpu_suspend` returns and again on the arm-failure path, both before any PMIC/VPROC restore. Switch `spm.pwrap_gate`, owner switch `pwrap_gate` (default on). Never takes over a gate it did not set. |
+| Risk | ACCEPTED (owner) | If the PCM itself needed the AP-gated wrapper, a sleep could stall; the 30-s RGU backstop resets, the night's persistent rows record it, `{"pwrap_gate": false}` or the 18 fallback recover. Stock sleeps with the same PCM and this clock gated. |
+| INFRA power-down | GAP | The key read after 19's first sleep: `last_lost`. |
+| Physical | NOT_RUN | 18's boot is tainted by the probe; hold-Power restart before any sleep. |
+
+**Gate decision:** 19 = PMIC_WRAP clock gate for the PCM sleep only. Readiness: **READY** for the build.

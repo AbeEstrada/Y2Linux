@@ -94,15 +94,18 @@ static unsigned spm_read(void *p,unsigned reg){return ((unsigned*)p)[reg/4];}
 static void y2_spm_journal_snapshot(void){}
 /* POWER-FINAL-13: stock VPROC sleep voltage must be restored on every path
  * that armed it; the golden capture is read-only. */
-static unsigned vproc_begins,vproc_ends,pmic_begins,pmic_ends;
+static unsigned vproc_begins,vproc_ends,pmic_begins,pmic_ends,wrap_gated,wrap_gates;
 static void y2_golden_capture(void){}
 static void y2_golden_entry_apply(void){}
 static void y2_golden_entry_restore(void){}
-static void y2_pmic_golden_capture(void){}
-static void y2_pmic_vproc_sleep_begin(void){vproc_begins++;}
-static void y2_pmic_vproc_sleep_end(void){vproc_ends++;}
-static void y2_pmic_sleep_begin(void){pmic_begins++;}
-static void y2_pmic_sleep_end(void){pmic_ends++;}
+static void y2_pmic_golden_capture(void){assert(!wrap_gated);}
+static void y2_pmic_vproc_sleep_begin(void){assert(!wrap_gated);vproc_begins++;}
+static void y2_pmic_vproc_sleep_end(void){assert(!wrap_gated);vproc_ends++;}
+static void y2_pmic_sleep_begin(void){assert(!wrap_gated);pmic_begins++;}
+static void y2_pmic_sleep_end(void){assert(!wrap_gated);pmic_ends++;}
+/* 19: the AP PMIC wrapper is unusable while its clock is gated. */
+static void y2_pwrap_clock_gate(void){wrap_gated=1;wrap_gates++;}
+static void y2_pwrap_clock_ungate(void){wrap_gated=0;}
 static u64 ktime_get_mono_fast_ns(void){static u64 n;return ++n;}
 static void reset(void){
  assert(!suspend_cirq_pending);
@@ -126,6 +129,7 @@ int main(void){
  y2_spm_resume_syscore((void *)0);assert(!sleeps && cirq_exit==1);
  assert(vproc_begins==vproc_ends); /* every abort after arming restores VPROC */
  assert(pmic_begins==pmic_ends); /* and the 18 PMIC fields */
+ assert(!wrap_gated); /* 19: never left gated */
  for(unsigned fault=0;fault<4;fault++){
   reset();bad_biu=fault==0;bad_timer=fault==1;bad_cirq=fault==2;fail_restore=fault==3?-EIO:0;
   int result=y2_spm_enter(PM_SUSPEND_MEM);

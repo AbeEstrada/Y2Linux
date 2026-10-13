@@ -124,6 +124,15 @@ static unsigned golden_entries, golden_pll_offs;
 static bool md1_gate;
 static int md1_result = -ENODATA;
 static unsigned md1_sta, md1_regates;
+/* POWER-FINAL-19: the AP's PMIC_WRAP clock (INFRA_PDN bit 23, ledger F17) is
+ * gated in stock suspend. Gating it makes the whole AP-side wrapper read as 0
+ * (live test 2026-10-13), so it is gated only after the last AP PMIC access
+ * before the PCM kick and ungated as the very first write after the CPU
+ * returns, before any PMIC/VPROC restore. Armed by userspace like dis_pdn. */
+static bool pwrap_gate;
+module_param(pwrap_gate, bool, 0644);
+static bool pwrap_gated;
+static unsigned pwrap_gates, pwrap_ungates, pwrap_gate_failures, pwrap_gate_sta;
 static void y2_golden_delay(unsigned us) { udelay(us); }
 
 static unsigned spm_read(void *context, unsigned reg)
@@ -563,6 +572,8 @@ static unsigned y2_dcm_read(void *context, unsigned phys)
 static void y2_dcm_write(void *context, unsigned phys, unsigned value);
 static void y2_golden_entry_apply(void);
 static void y2_golden_entry_restore(void);
+static void y2_pwrap_clock_gate(void);
+static void y2_pwrap_clock_ungate(void);
 static unsigned golden_entry[Y2_GOLDEN_ROWS], golden_captures;
 static unsigned y2_golden_read(unsigned row)
 {
@@ -625,6 +636,8 @@ static int y2_spm_enter(suspend_state_t state)
 	y2_pmic_sleep_begin();
 	/* Read-only; after both steps so it records what really enters sleep. */
 	y2_pmic_golden_capture();
+	/* 19: no AP PMIC access may follow until y2_pwrap_clock_ungate(). */
+	y2_pwrap_clock_gate();
 	ret = y2_spm_suspend_arm(&spm_io, pcm_address, infra);
 	y2_spm_journal_snapshot();
 	if (!ret) {
@@ -633,6 +646,7 @@ static int y2_spm_enter(suspend_state_t state)
 		y2_pm_mark(Y2_PM_CPU_CONTEXT_SAVING, 0);
 		if (infra) infra_pdn_entries++;
 		ret = cpu_suspend(0, y2_spm_finish);
+		y2_pwrap_clock_ungate(); /* first: every restore below may need the PMIC */
 		y2_pm_backstop_pause(false);
 		if (infra) {
 			/* Before anything else touches a peripheral. A refused or
@@ -662,6 +676,7 @@ static int y2_spm_enter(suspend_state_t state)
 		y2_spm_journal_snapshot();
 		if (last_debug) { WRITE_ONCE(spm_broken, true); ret = -EIO; }
 	}
+	y2_pwrap_clock_ungate(); /* arm failure path; no-op after a real sleep */
 	y2_pmic_sleep_end();
 	y2_pmic_vproc_sleep_end();
 	y2_golden_entry_restore();
@@ -900,6 +915,8 @@ static ssize_t state_show(struct device *dev, struct device_attribute *attr, cha
 		dcm, dcm_result, READ_ONCE(golden_apply), golden_entries, golden_pll_offs);
 	ret += sysfs_emit_at(buf, ret, "md1_gate=%u md1_result=%d md1_sta=%#x md1_regates=%u\n",
 		READ_ONCE(md1_gate), md1_result, md1_sta, md1_regates);
+	ret += sysfs_emit_at(buf, ret, "pwrap_gate=%u pwrap_gates=%u pwrap_ungates=%u pwrap_gate_failures=%u pwrap_gate_sta=%#x pwrap_gated=%u\n",
+		READ_ONCE(pwrap_gate), pwrap_gates, pwrap_ungates, pwrap_gate_failures, pwrap_gate_sta, pwrap_gated);
 	ret += sysfs_emit_at(buf, ret, "dis_pdn=%u dis_broken=%u dis_offs=%u dis_ons=%u dis_refusals=%u dis_failures=%u\n",
 		READ_ONCE(dis_pdn), READ_ONCE(dis_broken), dis_offs, dis_ons, dis_refusals, dis_failures);
 	/* Full suspend runs the vendor 597-word pcm_suspend; pcm_words/pcm_origin below describe the
@@ -1031,6 +1048,40 @@ static void y2_golden_entry_restore(void)
 	struct y2_dcm_io io = { &status, y2_dcm_read, y2_dcm_write };
 	if (!golden_state.applied) return;
 	y2_golden_restore(&io, &golden_state, y2_golden_delay);
+}
+#define Y2_INFRA_PDN_SET 0x10001040U
+#define Y2_INFRA_PDN_CLR 0x10001044U
+#define Y2_INFRA_PDN_STA 0x10001048U
+#define Y2_INFRA_PMIC_WRAP (1U << 23)
+static void y2_pwrap_clock_gate(void)
+{
+	int status = 0;
+	unsigned sta;
+	if (!READ_ONCE(pwrap_gate) || !READ_ONCE(golden_ready) || pwrap_gated) return;
+	sta = y2_dcm_read(&status, Y2_INFRA_PDN_STA);
+	if (status || (sta & Y2_INFRA_PMIC_WRAP)) return; /* already gated: not ours */
+	y2_dcm_write(&status, Y2_INFRA_PDN_SET, Y2_INFRA_PMIC_WRAP);
+	pwrap_gated = true; /* ungate even if the readback below fails */
+	pwrap_gate_sta = y2_dcm_read(&status, Y2_INFRA_PDN_STA);
+	if (status || !(pwrap_gate_sta & Y2_INFRA_PMIC_WRAP)) pwrap_gate_failures++;
+	else pwrap_gates++;
+}
+static void y2_pwrap_clock_ungate(void)
+{
+	int status = 0;
+	unsigned n;
+	if (!pwrap_gated) return;
+	for (n = 0; n < 3; n++) {
+		y2_dcm_write(&status, Y2_INFRA_PDN_CLR, Y2_INFRA_PMIC_WRAP);
+		if (!status && !(y2_dcm_read(&status, Y2_INFRA_PDN_STA) & Y2_INFRA_PMIC_WRAP)) break;
+	}
+	if (n == 3) {
+		pwrap_gate_failures++;
+		y2_pm_note("pwrap_ungate", -EIO);
+		return; /* keep pwrap_gated: the next call retries */
+	}
+	pwrap_gated = false;
+	pwrap_ungates++;
 }
 static int md1_gate_set(const char *value, const struct kernel_param *kp)
 {

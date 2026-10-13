@@ -81,11 +81,14 @@ static void y2_golden_capture(void) { }
 static void y2_golden_entry_apply(void){}
 static void y2_golden_entry_restore(void){}
 static void y2_pmic_golden_capture(void){}
+static unsigned wrap_gated;
 static void y2_pmic_vproc_sleep_begin(void) { assert(cirq_active); vproc_armed++; }
-static void y2_pmic_vproc_sleep_end(void) { vproc_armed = 0; }
+static void y2_pmic_vproc_sleep_end(void) { assert(!wrap_gated); vproc_armed = 0; }
 static unsigned pmic_armed;
-static void y2_pmic_sleep_begin(void) { assert(cirq_active && vproc_armed); pmic_armed++; }
-static void y2_pmic_sleep_end(void) { assert(vproc_armed); pmic_armed = 0; }
+static void y2_pmic_sleep_begin(void) { assert(cirq_active && vproc_armed && !wrap_gated); pmic_armed++; }
+static void y2_pmic_sleep_end(void) { assert(vproc_armed && !wrap_gated); pmic_armed = 0; }
+static void y2_pwrap_clock_gate(void) { assert(pmic_armed); wrap_gated = 1; }
+static void y2_pwrap_clock_ungate(void) { wrap_gated = 0; }
 static int cpu_suspend(unsigned long arg,int (*fn)(unsigned long)) {
  assert(cirq_active && live_mask==0x200000); live_mask=0; return return_error;
 }

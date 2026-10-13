@@ -1,4 +1,4 @@
-"""POWER-FINAL-16/17/18 runtime power features, armed once the UI has drawn its first frame.
+"""POWER-FINAL-16/17/18/19 runtime power features, armed once the UI has drawn its first frame.
 
 Each feature is a kernel parameter whose kernel default is the safe (15)
 behaviour. This module turns them on at `application_ready`, never earlier: the
@@ -24,6 +24,8 @@ FEATURES = {
     # 18: stock PMIC suspend fields, bitmask: 1 audio clocks, 2 unused PMIC
     # clocks, 4 VREF18 (pmic-sleep-policy.h).
     'pmic_sleep': ('/sys/module/pwrap/parameters/pmic_sleep', 0x7),
+    # 19: gate the AP's PMIC_WRAP clock (INFRA bit 23) for the PCM sleep only.
+    'pwrap_gate': ('/sys/module/spm/parameters/pwrap_gate', True),
 }
 
 
