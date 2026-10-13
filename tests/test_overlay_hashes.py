@@ -26,6 +26,12 @@ class OverlayHashes(unittest.TestCase):
             for spec in specs:
                 work = Path(temp) / 'file'
                 shutil.copyfile(source / spec['path'], work)
+                # The build container's /src already carries the overlays:
+                # reverse the patch first, then check both directions.
+                if hashlib.sha256(work.read_bytes()).hexdigest() == spec['result_sha256']:
+                    subprocess.run(['patch', '--batch', '--fuzz=0', '-R', str(work)],
+                                   input=(ROOT / 'kernel/patches' / spec['patch']).read_bytes(),
+                                   check=True, capture_output=True)
                 self.assertEqual(hashlib.sha256(work.read_bytes()).hexdigest(), spec['base_sha256'], spec['path'])
                 subprocess.run(['patch', '--batch', '--fuzz=0', str(work)],
                                input=(ROOT / 'kernel/patches' / spec['patch']).read_bytes(),
