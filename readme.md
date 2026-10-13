@@ -6,20 +6,20 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Baseline 17 (2026-10-13), developer preview.** It runs every day on
+> **Status: Baseline 18 (2026-10-13), developer preview.** It runs every day on
 > the maintainer's Y2. There are no prebuilt images yet: you build from source
 > and flash with SP Flash Tool. Only one hardware revision has been tested (see
 > [Supported hardware](#supported-hardware)). Read [Known issues](#known-issues)
 > before you flash.
 
-| | Baseline 17 |
+| | Baseline 18 |
 | --- | --- |
-| Git tag (both repositories) | `baseline-17` (previous: `baseline-16`) |
-| Kernel | `6.18.56-y2linux-platform-v1-power-final-17` (Linux 6.18 long-term line) |
-| Root filesystem / release | `2026.08-platform-v1.47` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.17` |
+| Git tag (both repositories) | `baseline-18` (previous: `baseline-17`) |
+| Kernel | `6.18.56-y2linux-platform-v1-power-final-18` (Linux 6.18 long-term line) |
+| Root filesystem / release | `2026.08-platform-v1.48` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.18` |
 | Player | Y2Reborn 0.3.0 (Rust 1.99) |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 — every component on its newest release |
-| Maintainer's images built from | Y2Linux `0459116`, Y2Reborn `217e28d` (later commits: tests and docs only) |
+| Maintainer's images built from | Y2Linux `d2fff53`, Y2Reborn `217e28d` (later commits: tests and docs only) |
 
 ## Getting started
 
@@ -31,7 +31,7 @@ factory partitions untouched.
 
 ## What works
 
-Observed on the maintainer's device on Baseline 17 or the candidates just before it:
+Observed on the maintainer's device on Baseline 18 or the candidates just before it:
 
 - Boots from internal eMMC: stock preloader and LK, then Linux 6.18 and Buildroot. No SD card needed.
 - Display with GPU (DRM + Lima), buttons, click wheel and the Reborn player UI.
@@ -49,6 +49,8 @@ Observed on the maintainer's device on Baseline 17 or the candidates just before
 - The display hardware is powered off with the screen, stock hardware clock gating is on,
   and unused PLLs and clocks are switched off for sleep. The battery percentage uses the stock
   fuel-gauge curve. A PC port charges at the stock 450 mA even when the PC is off or asleep.
+- In sleep the power-management chip is set to the stock suspend values (audio and unused
+  clocks off, references off) and restored on wake.
 - Waking with Power lights the screen in about half a second; Wi-Fi and Bluetooth come back
   in the background.
 
@@ -63,7 +65,8 @@ Observed on the maintainer's device on Baseline 17 or the candidates just before
   caught and repaired a lost USB interrupt setting after a sleep; not yet confirmed over many wakes.
 - **Battery life is not stock-like yet.** 16 draws about 8.6 mA asleep (≈0.75 points/h,
   one 16 h night; 15: about 10 mA); stock is about 1.3 mA (≈0.1 points/h). The SoC's
-  infrastructure power domain still never switches off in sleep; 17's night is being measured. The percentage is estimated from voltage; there is
+  infrastructure power domain still never switches off in sleep (the SoC side now matches stock;
+  18 adds the stock power-chip sleep settings, its sleep result is being measured). The percentage is estimated from voltage; there is
   no current sensor.
 - Bluetooth uses SBC only. AAC/aptX/LDAC sources exist but are not enabled in
   normal builds.
@@ -71,7 +74,8 @@ Observed on the maintainer's device on Baseline 17 or the candidates just before
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for [17](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-17.md) (modem gate, faster wake),
+reports for [18](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-18.md) (stock PMIC sleep settings),
+[17](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-17.md) (modem gate, faster wake),
 [16](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-16.md) (stock sleep parity),
 [15](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-15.md) (newest versions),
 [14](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-14.md) (persistent sleep diagnostics) and

@@ -1,6 +1,6 @@
 # POWER-FINAL-18 — stock PMIC suspend fields
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-18/`
+Status: **INSTALLED, FIRST BOOT HEALTHY; tagged `baseline-18`** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-18/`
 (fallback = 17 = `baseline-17`), receipts `out/deep-sleep-final/build18-receipts/`. BOOTIMG
 `5d4052282f37f224c4328ffdd1a2e167c0213596f2ba90c147a9574219042ace`, Y2ROOT
 `718528695cdd681fe093fc895c1c4c0285ab0c5c4a616246d1548ea36b32c612`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-18`,
@@ -51,6 +51,14 @@ closed), wiring order and switch, journal reason.
 Locked-container production suite: 685 cases, exit 0 (17: 682). Two existing harnesses that compile the real
 `y2_spm_enter()` needed stubs for the new step (they now also check it is balanced on every abort and runs inside the
 VPROC window). Package validation, ELF closure, installed ARM, privacy and inventory PASS.
+
+## Hardware results
+
+**First boot (2026-10-13, boot `69ef8c26`, archive `out/deep-sleep-final/evidence/20261013/113-power18-first-check/`,
+captured at 27 s uptime; state re-read at 55 s):** kernel `-power-final-18`, taint 0, `application_ready` 44.3 s;
+`pmic_sleep=7`, `pmic_sleep_state groups=0x7 entries=0 failures=0`; `md1_gate=1 md1_sta=0x3ffffff`, `dcm_result=0`,
+`golden_apply=0xf`, `dis_pdn=1`; Wi-Fi (`wlan0`), Bluetooth (`hci0`), USB/SSH up, charging. Known lines only (eMMC
+erase, splash `Errno 22`). The first SSH attempt timed out during boot. Sleep test (1 h) next.
 
 ## What to check after the flash
 

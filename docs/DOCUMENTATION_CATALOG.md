@@ -305,8 +305,8 @@ Indexed pages: **307**. Explicit scope notices: **220**.
 
 | Page | Scope |
 | --- | --- |
-| [POWER-FINAL-18 — stock PMIC suspend fields](validation/Y2-PLATFORM-V1-POWER-FINAL-18.md) | Sealed candidate report |
-| [POWER-FINAL-17 — modem request gate and screen-first wake](validation/Y2-PLATFORM-V1-POWER-FINAL-17.md) | Installed candidate report (Baseline 17) with first physical results |
+| [POWER-FINAL-18 — stock PMIC suspend fields](validation/Y2-PLATFORM-V1-POWER-FINAL-18.md) | Installed candidate report (Baseline 18) |
+| [POWER-FINAL-17 — modem request gate and screen-first wake](validation/Y2-PLATFORM-V1-POWER-FINAL-17.md) | Installed candidate report (Baseline 17) with first boot and a short sleep |
 | [POWER-FINAL-16 — stock sleep parity from the stock kernel (REA)](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md) | Installed candidate report (Baseline 16) with overnight result |
 | [POWER-FINAL-15 — newest release of every component](validation/Y2-PLATFORM-V1-POWER-FINAL-15.md) | Sealed candidate report |
 | [POWER-FINAL-14 — persistent sleep and USB diagnostics](validation/Y2-PLATFORM-V1-POWER-FINAL-14.md) | Sealed candidate report |

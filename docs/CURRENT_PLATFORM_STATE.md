@@ -1,13 +1,15 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-18 stock PMIC suspend fields sealed — 2026-10-13 (latest)
+## POWER-FINAL-18 stock PMIC suspend fields, Baseline 18 — 2026-10-13 (latest)
 
 `out/y2linux-platform-v1-power-final-candidate-18/` (Linux `d2fff53`, Reborn `217e28d` unchanged, root
 `2026.08-platform-v1.48`; BOOTIMG `5d405228…2ace`, Y2ROOT `71852869…2c612`), fallback 17. REA showed the SoC sleep side
 is stock-identical; 18 brings the PMIC to its stock suspend values inside the sleep entry and restores them exactly:
 the audio 26 MHz clock-square request and audio DAC clock (Linux never released them), unused PMIC clocks, VREF18.
 VEMC3V3 (eMMC supply) stays on: the root eMMC is retained across suspend by design. Container suite 685, exit 0;
-package checks PASS. **Physical: not flashed yet.** Details: [18 report](validation/Y2-PLATFORM-V1-POWER-FINAL-18.md).
+package checks PASS. **Physical (boot `69ef8c26`, archive 113):** first boot healthy (taint 0, player ready 44 s, Wi-Fi,
+Bluetooth, USB/SSH, charging; `pmic_sleep=7` armed, modem gate active). Sleep test pending. Tagged `baseline-18`.
+Details: [18 report](validation/Y2-PLATFORM-V1-POWER-FINAL-18.md).
 
 ## POWER-FINAL-17 modem request gate and screen-first wake, Baseline 17 — 2026-10-13
 

@@ -1,8 +1,10 @@
 # Y2Linux documentation
 
-**Baseline 17 (2026-10-13)** is the current published state: the POWER-FINAL-17
-image that runs on the maintainer's Y2, git tag `baseline-17` in both repositories.
-17 gates the never-used modem's clock requests and lights the screen about half a
+**Baseline 18 (2026-10-13)** is the current published state: the POWER-FINAL-18
+image that runs on the maintainer's Y2, git tag `baseline-18` in both repositories.
+18 sets the power-management chip to its stock suspend values while asleep (the
+audio 26 MHz clock request Linux never released, unused clocks, VREF18); see the
+[18 report](validation/Y2-PLATFORM-V1-POWER-FINAL-18.md). Baseline 17 gated the never-used modem's clock requests and lights the screen about half a
 second after Power (Wi-Fi/Bluetooth follow in the background); see the
 [17 report](validation/Y2-PLATFORM-V1-POWER-FINAL-17.md). Baseline 16 added stock sleep parity from the Y2's own stock kernel (display power domain,
 stock clock gating, golden sleep entry, stock fuel gauge, USB-after-wake and
@@ -16,7 +18,7 @@ First night: 16 h of clean sleep at about 8.6 mA (stock: about 1.3 mA). See the
 | Build it yourself | [BUILDING.md](BUILDING.md) |
 | Flash it, connect, update, go back to stock | [INSTALL.md](INSTALL.md) |
 | What works, what doesn't, latest hardware results | [Current platform state](CURRENT_PLATFORM_STATE.md) |
-| What 17, 16, 15, 14 and 13 changed | [17 modem gate and faster wake](validation/Y2-PLATFORM-V1-POWER-FINAL-17.md), [16 stock sleep parity](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md), [15 dependency update](validation/Y2-PLATFORM-V1-POWER-FINAL-15.md), [14 diagnostics](validation/Y2-PLATFORM-V1-POWER-FINAL-14.md), [13 stock power parity](validation/Y2-PLATFORM-V1-POWER-FINAL-13.md) |
+| What 18, 17, 16, 15, 14 and 13 changed | [18 stock PMIC sleep settings](validation/Y2-PLATFORM-V1-POWER-FINAL-18.md), [17 modem gate and faster wake](validation/Y2-PLATFORM-V1-POWER-FINAL-17.md), [16 stock sleep parity](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md), [15 dependency update](validation/Y2-PLATFORM-V1-POWER-FINAL-15.md), [14 diagnostics](validation/Y2-PLATFORM-V1-POWER-FINAL-14.md), [13 stock power parity](validation/Y2-PLATFORM-V1-POWER-FINAL-13.md) |
 | Deep sleep history (01 to 13) | [Deep-sleep report](validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md), [suspend architecture](architecture/deep-suspend.md) |
 | Charging, storage | [Charging policy](knowledge/charging-current-policy.md), [internal storage](knowledge/internal-storage.md) |
 | Platform API and ownership | [Platform API](architecture/platform-api-v1.md), [power contract](architecture/platform-power-v1.md) |
