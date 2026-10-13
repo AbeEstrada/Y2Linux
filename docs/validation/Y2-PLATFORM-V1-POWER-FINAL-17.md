@@ -1,6 +1,6 @@
 # POWER-FINAL-17 — modem request gate and screen-first wake
 
-Status: **INSTALLED, FIRST BOOT HEALTHY** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-17/`
+Status: **INSTALLED, FIRST BOOT AND FIRST SLEEP CLEAN** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-17/`
 (fallback = 16), receipts `out/deep-sleep-final/build17-receipts/`. BOOTIMG
 `2ddd8d384cf6d9336d1a3505944f6a787764e982f7327400b5e886a41ea52d9a`, Y2ROOT
 `dc1f057a6c1d5768cbe3822893b5f71d3c3615bfbb3848e78491d9f0882a3e76`. Flash BOOTIMG + ANDROID only with
@@ -40,6 +40,23 @@ kernel `-power-final-17`, build `0459116`, taint 0. First frame at 24 s, `applic
 `golden_apply=0xf`, `dis_pdn=1`. Wi-Fi (`wlan0`) and Bluetooth (`hci0`) up, USB gadget configured (stage 6) and SSH
 working, charging from a PC port. Known and unchanged from 16: reborn-splash `/dev/kmsg` EINVAL at 25 s, `mmc_erase`
 group start error, `thermal_zone1` -61. Not yet seen: a sleep, the wake time, audio.
+
+**First sleep (2026-10-13, archive `out/deep-sleep-final/evidence/20261013/112-power17-short-sleep/`):** owner reports
+audio works and the wake feels faster. Unplugged sleep 11:08:39 → Power 11:26:32 (18 min), 1 entry / 1 resume /
+0 aborts, wake `0x20`; USB worked after the replug.
+- **Wake: screen ≈0.5 s after the SPM return** (SPM 373.19 s → DSI modeset 373.70–373.72 s; radios after it, WMT
+  374.06–375.40 s, `wlan0` 376.41 s). 16: ≈2.5 s (archive 110).
+- **MD1 gated at entry:** golden `PERI_PDN0_MD1_STA e=3ffffff 1`, `md1_regates=0`; SoC golden differences 11 → 10,
+  PMIC 15/44 unchanged.
+- **INFRA still never powers down:** `last_lost=0x0`, `pdn0 0x2fcffff` unchanged. The modem requests were not the (only)
+  blocker; next: SRCLKENA, PCM R13 `0xe8060000` bits, MD_MASK 0x38 = 3.
+- **USB unmask really lost once:** with the readback fixed, `dma_unmask_rearms` 1 → 4 and `dma_unmask_lost` 0 → 1
+  across the unplug/sleep/restore (journal 11:03 vs 11:26). The re-arm restored it and USB worked: first direct support
+  for the Defect B theory (which of the three re-arms found it lost is not recorded).
+- Two automatic sleep requests right after the unplug (11:08:12, 11:08:20) were refused after the radio quiesce
+  (`complete_result_2`); the third (11:08:36) entered. The refusal reason is not persisted (journal rows have no
+  reason field and `suspend-last.json` is overwritten): diagnostics gap for 18.
+- 18 min is too short for a drain figure.
 
 ## What to check after the flash
 
