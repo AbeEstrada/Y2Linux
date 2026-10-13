@@ -251,10 +251,11 @@ static int gc9503v_probe(struct mipi_dsi_device *dsi)
 	 * the panel asks for that order itself (upstream panel-driver idiom). */
 	ctx->panel.prepare_prev_first = true;
 
-	ret = drm_panel_of_backlight(&ctx->panel);
-	if (ret)
-		return ret;
-
+	/* POWER-FINAL-20: no drm_panel_of_backlight(). Reborn and the platform own
+	 * the backlight explicitly (bl_power). Linked, every pipeline enable called
+	 * backlight_enable(): at shutdown, when Reborn exits and DRM restores the
+	 * stale fbdev buffer, the panel lit up white or with colours after the
+	 * shutdown animation. */
 	drm_panel_add(&ctx->panel);
 
 	ret = mipi_dsi_attach(dsi);

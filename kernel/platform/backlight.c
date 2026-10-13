@@ -126,12 +126,27 @@ static int y2_bl_probe(struct platform_device *pdev)
 	bl = devm_backlight_device_register(dev, "y2-backlight", dev, b, &y2_bl_ops, &props);
 	if (IS_ERR(bl))
 		return PTR_ERR(bl);
+	platform_set_drvdata(pdev, bl);
 	dev_info(dev, "four ISINK PWM; max duty=%u/32 inherited current step=%u unchanged\n",
 		 b->ceiling, step >> 12);
 	return 0; /* No startup write or implicit maximum-current request. */
 }
+/* POWER-FINAL-20: power-off/reboot never leaves a lit panel while the display
+ * pipeline stops (white or colour noise after the shutdown animation). */
+static void y2_bl_shutdown(struct platform_device *pdev)
+{
+	struct backlight_device *bl = platform_get_drvdata(pdev);
+	struct y2_bl *b = bl ? bl_get_data(bl) : NULL;
+	if (!b) return;
+	mutex_lock(&b->lock);
+	if (regmap_update_bits(b->map, 0x356, 15, 0))
+		dev_err(&pdev->dev, "shutdown: backlight sinks still on\n");
+	else WRITE_ONCE(screen_dark, true);
+	mutex_unlock(&b->lock);
+}
 static const struct of_device_id y2_bl_match[] = {{.compatible = "innioasis,y2-backlight"}, {}};
 static struct platform_driver y2_bl_driver = {
-    .probe = y2_bl_probe, .driver = {.name = "y2-backlight", .of_match_table = y2_bl_match}};
+    .probe = y2_bl_probe, .shutdown = y2_bl_shutdown,
+    .driver = {.name = "y2-backlight", .of_match_table = y2_bl_match}};
 module_platform_driver(y2_bl_driver);
 MODULE_LICENSE("GPL");

@@ -275,8 +275,24 @@ static void draw(Display *d, const Progress *p, bool failure) {
         status(d, p->phase);
     }
 }
+/* POWER-FINAL-20: the first SetCrtc re-initialises the DSI link while LK's
+ * picture is still lit; the panel briefly shows colour noise. Keep the light
+ * off across that modeset and restore it once the drawn frame is scanned out. */
+static void light(const char *value) {
+    int fd=open("/sys/class/backlight/y2-backlight/bl_power",O_WRONLY|O_CLOEXEC);
+    if (fd<0) return;
+    if (write(fd,value,2)!=2) event("backlight_write_failed",errno);
+    close(fd);
+}
 static int show(Display *d) {
-    return drmModeSetCrtc(d->fd,d->crtc,d->fb,0,0,&d->connector,1,&d->mode);
+    light("4\n");
+    int ret=drmModeSetCrtc(d->fd,d->crtc,d->fb,0,0,&d->connector,1,&d->mode);
+    if (!ret) {
+        drmVBlank vbl={.request={.type=DRM_VBLANK_RELATIVE,.sequence=2}};
+        if (drmWaitVBlank(d->fd,&vbl)) poll(NULL,0,40);
+    }
+    light("0\n"); /* always: a failed modeset must never leave the panel dark */
+    return ret;
 }
 #ifdef RB_SPLASH_TEST
 /* Protocol test builds never open devices; not included in the shipped binary. */

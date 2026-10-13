@@ -7766,3 +7766,24 @@ the next tests. This audit builds and flashes nothing.
 | INFRA power-down | GAP | Read `last_lost` after the first 20 sleep. If still 0 with every SoC clock gate at stock, question the premise (stock restores only the UART after INFRA power-down) and rely on the measured drain. |
 
 **Gate decision:** 20 = UART1 reclaim. Readiness: **READY** for the build.
+
+## POWER-FINAL-21 quiet display power transitions scope audit — 2026-10-13
+
+**Boundary:** owner report on 20: the startup sometimes flashes colours; after the shutdown animation the panel turns
+white or shows colours. Analysis (no device writes): the panel driver linked the backlight to DRM
+(`drm_panel_of_backlight`), so every pipeline enable called `backlight_enable()` and reset `bl_power` to on. At
+shutdown Reborn ends on a black frame with the light off and is killed; when its DRM file closes, the core restores
+the stale fbdev buffer and enables the pipeline, which re-lit the panel over white/console content (the platform's
+`bl_power=4` can land before that close: a race, hence "sometimes"). At boot the splash's first `SetCrtc` fully
+re-initialises the DSI link (`modeset: PHY/clocks ready, initialize DSI`, ≈0.48 s) while LK's picture is lit. Reborn
+already owns the backlight explicitly (screen sleep/wake, shutdown), the offline charger writes `brightness` itself.
+This audit builds and flashes nothing.
+
+| Row | Classification | Plan |
+| --- | --- | --- |
+| DRM-coupled backlight | DEFECT | Drop `drm_panel_of_backlight`; the backlight is owned only by explicit `bl_power`/`brightness` writers. |
+| Lit panel during power-off | DEFECT | `y2-backlight` `.shutdown` switches all four ISINKs off (`0x356[3:0]=0`) in `device_shutdown`. |
+| Boot modeset with lit panel | DEFECT (probable) | Splash: `bl_power=4` immediately before its `SetCrtc`, `bl_power=0` after two vblanks, unconditionally (a failed modeset never stays dark). LK's own panel init cannot be changed. |
+| Sleep/power | UNCHANGED | 21 = 20 + these three; sleep tests can run on 21. |
+
+**Gate decision:** READY for the build.
