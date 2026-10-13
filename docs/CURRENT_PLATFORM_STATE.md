@@ -1,6 +1,14 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-19 PMIC_WRAP clock gate sealed — 2026-10-13 (latest)
+## POWER-FINAL-20 UART1 clock reclaim sealed — 2026-10-13 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-20/` (Linux `c853915`, Reborn `217e28d` unchanged, root
+`2026.08-platform-v1.50`; BOOTIMG `1ffdb4a2…3c55`, Y2ROOT `98ffdca9…9548`), fallback 19. The never-initialised, unowned
+UART1 kept its bootloader clock on (an all-zero register set was taken for a busy transmitter); 20 reclaims it like
+UART2/3, so the last peripheral gate also matches stock at sleep entry. Container suite 689, exit 0; package checks
+PASS. **Physical: not flashed yet.** Details: [20 report](validation/Y2-PLATFORM-V1-POWER-FINAL-20.md).
+
+## POWER-FINAL-19 PMIC_WRAP clock gate — 2026-10-13
 
 `out/y2linux-platform-v1-power-final-candidate-19/` (Linux `0fa5135`, Reborn `217e28d` unchanged, root
 `2026.08-platform-v1.49`; BOOTIMG `49494899…44ed`, Y2ROOT `1e6a61fc…f4d5`), fallback 18. Gates the AP's PMIC_WRAP
