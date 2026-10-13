@@ -7802,3 +7802,20 @@ not help. This audit builds and flashes nothing.
 | Splash darkening (21) | KEPT | Harmless; covers a splash-first modeset. |
 
 **Gate decision:** READY for the build (overlay hash regenerated with `refresh-overlays.py`).
+
+## POWER-FINAL-23 Reborn Cover Flow and Genres scope audit — 2026-10-13
+
+**Boundary:** owner request: Cover Flow for albums ("people really want a cover flow"), highly optimised (smooth
+scrolling, an animation opening the album), and Genre in the main list. Owner decisions: Albums opens Cover Flow with a
+Grid option in Settings → Display; Genre → Albums (headed by All Songs) → Songs. Reborn-only change; the platform image
+is 22 unchanged. This audit builds and flashes nothing.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Genre data | NEW | `reborn-media` already parsed the genre tag; the library now stores it (additive column, `METADATA_REVISION` 3 → every older row re-reads its tags once on the next scan, no rebuild). |
+| Navigation | NEW | Home/Music: Genres (seven home rows; spacing follows the count). Genre → Albums (`genre:` filter, All Songs first) → Album/Songs; untagged songs as No Genre. |
+| Renderer | EXTENDED | `Quad.warp`: perspective-correct quadrilaterals with per-corner tints (`texture2DProj`, q from the diagonal intersection). Boxes render bit-identically to 22 (host GLES harness, max difference 0); all 77 preview screens match the reference rasteriser. |
+| Cover Flow | NEW | Projected 3D covers with reflections, time-based glide (≈0.4 s to rest), centre cover at 160 px from the artwork worker once at rest, flight into/out of the album page (300 ms). |
+| Device performance | NOT_RUN | Frame times on the Mali-400 must be measured (graphics_frame_time_ms gauges, screen capture). |
+
+**Gate decision:** READY for the build.
