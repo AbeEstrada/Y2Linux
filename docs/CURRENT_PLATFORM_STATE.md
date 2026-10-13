@@ -6,7 +6,7 @@
 `2026.08-platform-v1.49`; BOOTIMG `49494899…44ed`, Y2ROOT `1e6a61fc…f4d5`), fallback 18. Gates the AP's PMIC_WRAP
 clock (the only INFRA clock still differing from stock at sleep entry) for the PCM sleep only, after the last PMIC
 access and before every restore; an owner-authorised live test on 18 showed the gate is safe and fully reversible
-while awake. Container suite 689, exit 0; package checks PASS. **Physical: not flashed yet.** Details:
+while awake. Container suite 689, exit 0; package checks PASS. **Physical (boot `d4f9a0f1`, archives 115/116):** first boot healthy; a 47-min sleep clean, the PMIC_WRAP gate worked 2/2 (INFRA gates at sleep entry now exactly stock), INFRA still retained. Details:
 [19 report](validation/Y2-PLATFORM-V1-POWER-FINAL-19.md).
 
 ## POWER-FINAL-18 stock PMIC suspend fields, Baseline 18 — 2026-10-13

@@ -1,6 +1,6 @@
 # POWER-FINAL-19 — PMIC_WRAP clock gated for the PCM sleep
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-19/`
+Status: **INSTALLED, FIRST BOOT AND A 47-MIN SLEEP CLEAN** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-19/`
 (fallback = 18 = `baseline-18`), receipts `out/deep-sleep-final/build19-receipts/`. BOOTIMG
 `494948998c45326501945b7ff00f782f1ff3c7264a4bdea70ef938e111ef44ed`, Y2ROOT
 `1e6a61fcc1f61345a1e5f79ae40540e3566bba060a13594c3732272d31c2f4d5`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-19`,
@@ -42,6 +42,22 @@ first; fixed in `0fa5135` and rebuilt.)
 If the PCM itself needed the AP-gated wrapper during sleep, a sleep could stall: the 30-s RGU backstop resets the
 device and the persistent rows record it. Recovery: `{"pwrap_gate": false}` after a hold-Power restart, or flash
 `fallback/` (18). Stock sleeps with the same PCM and this clock gated.
+
+## Hardware results
+
+**First boot (boot `d4f9a0f1`, archive 115):** kernel `-power-final-19`, taint 0, `application_ready` 44.3 s,
+`pwrap_gate=1`, all 16–18 features armed, Wi-Fi/Bluetooth/USB/SSH up, charging; known log lines only.
+
+**47-min sleep (archive `out/deep-sleep-final/evidence/20261013/116-power19-short-sleep/`):** 14:05:04 → Power 14:52:26,
+2 entries / 2 resumes / 0 aborts (one maintenance wake), USB fine after the replug.
+- **PMIC_WRAP gate works:** `pwrap_gates=2 pwrap_ungates=2 pwrap_gate_failures=0`; `pwrap_gate_sta=0x80bfe6` —
+  INFRA_PDN_STA at the kick is now **exactly the stock golden value**. PMIC step 2/2 restored.
+- **INFRA still retained:** `last_lost=0x0`, PERICFG PDN0 `0x2fcffff` kept on both restores. So no INFRA clock gate
+  was the blocker.
+- Remaining PERI gate difference at entry: PDN0 `0x2fcffff` vs stock `0x2feffff` = **bit 17, UART1**. UART1 has no
+  Linux owner (LK leaves its clock on; the idle path only defers it); stock gates it in every scenario checklist
+  (idle, deep idle and suspend). Next candidate.
+- Audio after the wake: no playback logged before the capture.
 
 ## What to check after the flash
 
