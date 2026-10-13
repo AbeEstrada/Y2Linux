@@ -60,6 +60,21 @@ captured at 27 s uptime; state re-read at 55 s):** kernel `-power-final-18`, tai
 `golden_apply=0xf`, `dis_pdn=1`; Wi-Fi (`wlan0`), Bluetooth (`hci0`), USB/SSH up, charging. Known lines only (eMMC
 erase, splash `Errno 22`). The first SSH attempt timed out during boot. Sleep test (1 h) next.
 
+**1-hour sleep (2026-10-13, archive `out/deep-sleep-final/evidence/20261013/114-power18-hour-sleep/`):** unplugged
+sleep 12:20:56 → Power 13:23:47 (63 min), 3 entries / 3 resumes / 0 aborts, two 1800-s maintenance wakes, wake `0x20`;
+USB worked after the replug.
+- **PMIC step:** `pmic_sleep_state entries=3 restores=3 failures=0 last_changed=0x3f pending=0x0` — all six fields
+  applied and restored on every cycle. PMIC golden differences **15 → 7** (left: 0x04e/0x120 AUXADC modes, 0x108[9]
+  accdet (Linux gates more than stock), 0x256 VSYS sleep, 0x310 VPA, 0x508 VEMC3V3, 0x70c[9] depop VCM). SoC golden 10/34.
+- **INFRA still retained:** `last_lost=0x0`, `pdn0 0x2fcffff` on all 3 restores. The PMIC audio clock request was not
+  the (only) INFRA blocker.
+- Wake: SPM return 95.13 s → DSI modeset 95.66 s (≈0.5 s, as 17).
+- USB: `dma_unmask_rearms=8`, `dma_unmask_lost=3` (real losses, re-armed, USB fine).
+- Audio after the wake: no playback logged before the capture (owner check pending). The Bluetooth
+  `SelectCodec ... no_eligible_codec` warning after reconnect also appears on 16/17 (SBC-only gate), not new.
+- No drain figure: the sleep started 18 s after unplugging from the charger (4.06 V charging → 4.02 V), relaxation
+  dominates an hour.
+
 ## What to check after the flash
 
 1. Display, audio (headphones and Bluetooth), Wi-Fi, USB, charging as on 17.

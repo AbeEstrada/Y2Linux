@@ -66,7 +66,7 @@ Observed on the maintainer's device on Baseline 18 or the candidates just before
 - **Battery life is not stock-like yet.** 16 draws about 8.6 mA asleep (≈0.75 points/h,
   one 16 h night; 15: about 10 mA); stock is about 1.3 mA (≈0.1 points/h). The SoC's
   infrastructure power domain still never switches off in sleep (the SoC side now matches stock;
-  18 adds the stock power-chip sleep settings, its sleep result is being measured). The percentage is estimated from voltage; there is
+  18 adds the stock power-chip sleep settings; a first hour asleep was clean, the overnight drain is next). The percentage is estimated from voltage; there is
   no current sensor.
 - Bluetooth uses SBC only. AAC/aptX/LDAC sources exist but are not enabled in
   normal builds.
