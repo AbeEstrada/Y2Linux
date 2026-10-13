@@ -1,6 +1,15 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-20 UART1 clock reclaim sealed — 2026-10-13 (latest)
+## POWER-FINAL-21 quiet display power transitions sealed — 2026-10-13 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-21/` (Linux `0b3e0e1`, Reborn `217e28d` unchanged, root
+`2026.08-platform-v1.51`; BOOTIMG `ea1da0b7…908e`, Y2ROOT `9a9b99ce…7b77`), fallback 20. 20 plus fixes for the owner's
+display report: DRM no longer switches the backlight on (it re-lit the panel over a stale white/colour buffer after
+the shutdown animation), the backlight is switched off at power-off, and the boot splash keeps the light off across
+its DSI re-initialising modeset (colour flash). Container suite 692, exit 0; package checks PASS. **Physical: not
+flashed yet.** Details: [21 report](validation/Y2-PLATFORM-V1-POWER-FINAL-21.md).
+
+## POWER-FINAL-20 UART1 clock reclaim — 2026-10-13
 
 `out/y2linux-platform-v1-power-final-candidate-20/` (Linux `c853915`, Reborn `217e28d` unchanged, root
 `2026.08-platform-v1.50`; BOOTIMG `1ffdb4a2…3c55`, Y2ROOT `98ffdca9…9548`), fallback 19. The never-initialised, unowned
