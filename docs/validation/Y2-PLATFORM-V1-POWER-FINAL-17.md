@@ -1,6 +1,6 @@
 # POWER-FINAL-17 — modem request gate and screen-first wake
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-17/`
+Status: **INSTALLED, FIRST BOOT HEALTHY** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-17/`
 (fallback = 16), receipts `out/deep-sleep-final/build17-receipts/`. BOOTIMG
 `2ddd8d384cf6d9336d1a3505944f6a787764e982f7327400b5e886a41ea52d9a`, Y2ROOT
 `dc1f057a6c1d5768cbe3822893b5f71d3c3615bfbb3848e78491d9f0882a3e76`. Flash BOOTIMG + ANDROID only with
@@ -31,6 +31,15 @@ restore reuse). The overlay-hash test added after 16 failed on its first contain
 already carries the overlays (the kernel was fine: it contains the 0011 MMSYS DCM hook); the test now reverses each
 patch first (`ebdfcf8`). Package validation, ELF closure (354 files), installed ARM (40 modules), privacy and inventory
 PASS.
+
+## Hardware results
+
+**First boot (2026-10-13, boot `de37f6bc`, archive `out/deep-sleep-final/evidence/20261013/111-power17-first-check/`):**
+kernel `-power-final-17`, build `0459116`, taint 0. First frame at 24 s, `application_ready` at 44.7 s (16: 40.9 s).
+`md1_gate=1 md1_result=0 md1_sta=0x3ffffff` (dmesg `Y2SPM: MD1 requests gated result=0`), `dcm_result=0`,
+`golden_apply=0xf`, `dis_pdn=1`. Wi-Fi (`wlan0`) and Bluetooth (`hci0`) up, USB gadget configured (stage 6) and SSH
+working, charging from a PC port. Known and unchanged from 16: reborn-splash `/dev/kmsg` EINVAL at 25 s, `mmc_erase`
+group start error, `thermal_zone1` -61. Not yet seen: a sleep, the wake time, audio.
 
 ## What to check after the flash
 
