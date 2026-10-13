@@ -1,6 +1,6 @@
 # POWER-FINAL-23 — Reborn Cover Flow and Genres
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-23/`
+Status: **INSTALLED; Cover Flow looks right but ran at ≈10 fps → 24** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-23/`
 (fallback = 22), receipts `out/deep-sleep-final/build23-receipts/`. BOOTIMG
 `9ea7a94377b0f63977a8732569c357a837112b69f321f8f501424b2a72a475cb`, Y2ROOT
 `8fff0f839836ca5583ac9bdd76eb71d82840a45a0df347ecf6e75468fae0d297`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-23`,

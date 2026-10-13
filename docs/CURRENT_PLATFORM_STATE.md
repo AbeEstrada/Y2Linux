@@ -1,6 +1,13 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-23 Reborn Cover Flow and Genres sealed — 2026-10-13 (latest)
+## POWER-FINAL-24 animation frame pacing sealed — 2026-10-13 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-24/` (Linux `d2b38e8`, **Reborn `ced5199`**; BOOTIMG `653c7d85…dda7`,
+Y2ROOT `21f21e47…860b`), fallback 23. On 23 Cover Flow looked right but ran at ≈10 fps although frames cost only 3–17 ms:
+the main loop slept its idle wait between wheel events. 24 paces animation frames at the panel rate. Suite 693; package
+checks PASS. **Physical: not flashed yet.** Details: [24 report](validation/Y2-PLATFORM-V1-POWER-FINAL-24.md).
+
+## POWER-FINAL-23 Reborn Cover Flow and Genres — 2026-10-13 (installed; ≈10 fps → 24)
 
 `out/y2linux-platform-v1-power-final-candidate-23/` (Linux `7f5445d`, **Reborn `83c9127`**, root `2026.08-platform-v1.53`;
 BOOTIMG `9ea7a943…75cb`, Y2ROOT `8fff0f83…d297`), fallback 22. Albums opens a perspective Cover Flow (smooth glide,
