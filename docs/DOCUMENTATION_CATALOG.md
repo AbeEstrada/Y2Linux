@@ -305,6 +305,8 @@ Indexed pages: **307**. Explicit scope notices: **220**.
 
 | Page | Scope |
 | --- | --- |
+| [POWER-FINAL-26 — Bluetooth codec auto-selection](validation/Y2-PLATFORM-V1-POWER-FINAL-26.md) | Installed candidate report |
+| [POWER-FINAL-25 — Cover Flow frame gate, card hygiene](validation/Y2-PLATFORM-V1-POWER-FINAL-25.md) | Installed candidate report |
 | [POWER-FINAL-24 — animation frame pacing](validation/Y2-PLATFORM-V1-POWER-FINAL-24.md) | Installed candidate report (Baseline 24) |
 | [POWER-FINAL-23 — Reborn Cover Flow and Genres](validation/Y2-PLATFORM-V1-POWER-FINAL-23.md) | Installed candidate report |
 | [POWER-FINAL-22 — dark DSI hand-over](validation/Y2-PLATFORM-V1-POWER-FINAL-22.md) | Sealed candidate report |

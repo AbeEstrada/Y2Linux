@@ -1,6 +1,6 @@
 # POWER-FINAL-26 — Bluetooth codec auto-selection
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-26/`
+Status: **INSTALLED, BLUETOOTH CODEC CHECK OPEN** (2026-10-13; archive 121). Package `out/y2linux-platform-v1-power-final-candidate-26/`
 (fallback = 25), receipts `out/deep-sleep-final/build26-receipts/`. BOOTIMG
 `f4ca442b185a6a8561ef12901d68c9662c630a5be65f554776fbe885fe1d585a`, Y2ROOT
 `66efd3ed0d4f727edeffa9dd6571f3d9c3e4ebe02647d8074b04c7cf09c2405f`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-26`,
@@ -43,3 +43,24 @@ PASS, privacy clean, inventory 108 packages, container suite 693 OK.
 2. Status `bluetooth.codec_policy`: `runtime_enabled` true for all five, `selected`/`pcms[0].codec` AAC after a
    reconnect with playback stopped.
 3. aptX / aptX-HD / LDAC need headphones that offer them (NOT_RUN).
+
+## 26 on the device (archive 121, boot `9f7fe545`)
+
+Kernel `…power-final-26`, taint 0, Reborn running with the new session (`codec_preference` Auto, `codec_revision` 1:
+the SBC → Auto migration worked). **The owner could not play music:** Reborn's output was still the AirPods Pro
+(`14:14:7D:AA:34:47`) and every play press failed with `operation_failed "connected A2DP peer required"`. The AirPods
+were paired, bonded and trusted but never connected this boot: the platform reconnect (`/run/y2/bt-reconnect.json`)
+made two `ConnectProfile` calls, both ended without a reply (`completion_unknown_user_retry_required`), so automatic
+reconnect is `Inhibited` until a manual connect (`tools/connectivity/reconnect.c`, unchanged since 25). Reborn
+metrics: 0 Bluetooth connects, 0 disconnects; `pcms` empty, `codec_policy` none; codec history unchanged since 25
+(last negotiated AAC). So 26's codec code never ran; the likely cause is the AirPods being in their case, out of
+range or held by the phone at boot.
+
+Still open (device was unplugged for the overnight test before a manual connect was checked):
+
+- Manual connect (Settings → Bluetooth → AirPods Pro → Connect) works and lifts the inhibit.
+- Auto then requests AAC (26 is the first image that actually issues `SelectCodec` on connect) **without dropping the
+  link**; watch `metrics.bluetooth_disconnects` and the log right after the connect. If the request drops the link:
+  skip `SelectCodec` when the negotiated codec already equals Auto's choice.
+- Design gap regardless of 26: when the saved Bluetooth output is not connected, Reborn only reports "connected A2DP
+  peer required"; it neither retries the connect on play nor falls back to the Y2's own output.

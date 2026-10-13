@@ -1,6 +1,6 @@
 # POWER-FINAL-25 — Cover Flow at the panel's rate, short album lengths, macOS card metadata
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-25/`
+Status: **INSTALLED** (2026-10-13; first check archive 119, superseded by 26). Package `out/y2linux-platform-v1-power-final-candidate-25/`
 (fallback = 24 = `baseline-24`), receipts `out/deep-sleep-final/build25-receipts/`. BOOTIMG
 `44a9c3cfcffb28538bb748d7a5923a7574c87b77223ffc0b360b662d38563cf7`, Y2ROOT
 `6f629a895e41ae9c75ccadada4a22e39752a39011b31bb84c02ea33f9eba8f67`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-25`,

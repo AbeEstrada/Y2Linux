@@ -1,6 +1,26 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-24 animation frame pacing, Baseline 24 — 2026-10-13 (latest)
+## POWER-FINAL-26 Bluetooth codec auto-selection — 2026-10-13 (latest, installed)
+
+`out/y2linux-platform-v1-power-final-candidate-26/` (Linux `64b3cc4`, **Reborn `1c9edd4`**; BOOTIMG `f4ca442b…585a`,
+Y2ROOT `66efd3ed…405f`), fallback 25. Reborn matched BlueALSA 5.0's `A2DP-source:` codec prefix only in lower case, so
+no codec counted as available and the codec choice was hidden (BlueZ still negotiated AAC by itself); 26 matches it
+case-insensitively, defaults to Auto (LDAC → aptX-HD → aptX → AAC → SBC) and moves the old SBC default to Auto once.
+Suite 693. **Physical:** installed; the first boot could not play because the AirPods never connected (the platform
+reconnect timed out twice and is inhibited until a manual connect; unchanged code). Manual connect, Auto → AAC
+without a link drop, and the overnight sleep test are pending. Details:
+[26 report](validation/Y2-PLATFORM-V1-POWER-FINAL-26.md).
+
+## POWER-FINAL-25 Cover Flow frame gate, card hygiene — 2026-10-13 (installed)
+
+`out/y2linux-platform-v1-power-final-candidate-25/` (Linux `f7eb741`, **Reborn `ed6a8cb`**; BOOTIMG `44a9c3cf…3cf7`,
+Y2ROOT `6f629a89…8f67`), fallback 24. 24's 27 fps came from the render gate still requiring 34 ms between frames; 25
+uses 12 ms while Cover Flow glides and holds the Interactive CPU lease, caches album detail, shows sub-minute albums
+as m:ss and skips macOS `._*` files and system folders. **Physical:** healthy; the owner's card scans complete (311
+files, 0 failures); Cover Flow frame rate not yet measured. Details:
+[25 report](validation/Y2-PLATFORM-V1-POWER-FINAL-25.md).
+
+## POWER-FINAL-24 animation frame pacing, Baseline 24 — 2026-10-13
 
 `out/y2linux-platform-v1-power-final-candidate-24/` (Linux `d2b38e8`, **Reborn `ced5199`**; BOOTIMG `653c7d85…dda7`,
 Y2ROOT `21f21e47…860b`), fallback 23. On 23 Cover Flow looked right but ran at ≈10 fps although frames cost only 3–17 ms:
