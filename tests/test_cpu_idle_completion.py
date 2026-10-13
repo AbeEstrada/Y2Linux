@@ -94,6 +94,11 @@ int main(void) {
  assert(y2_unused_uart_busy(0,1,0x60,0));
  assert(y2_unused_uart_busy(0,0,0x61,0));
  assert(y2_unused_uart_busy(0,0,0x40,0));
+ /* 20: all-zero = never initialised (Y2 UART1 at boot), reclaimed; any one
+  * non-zero field keeps the old rule. */
+ assert(!y2_unused_uart_busy(0,0,0,0) && y2_unused_uart_never_initialised(0,0,0,0));
+ assert(y2_unused_uart_busy(0,1,0,0) && y2_unused_uart_busy(0,0,0,1) && y2_unused_uart_busy(3,0,0,0));
+ assert(y2_unused_uart_busy(0x80,0,0,0) && y2_unused_uart_busy(0,0,0x01,0) && y2_unused_uart_busy(0,0,0x20,0));
  assert(y2_unused_uart_busy(0,0,0x60,1));
  assert(!y2_unused_uart_busy(3,0,0x60,4)); /* timeout counter metadata */
  for(unsigned bit=0;bit<32;bit++) {

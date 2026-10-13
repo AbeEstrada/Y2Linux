@@ -7751,3 +7751,18 @@ overnight drain is postponed. This audit builds and flashes nothing.
 | Physical | NOT_RUN | 18's boot is tainted by the probe; hold-Power restart before any sleep. |
 
 **Gate decision:** 19 = PMIC_WRAP clock gate for the PCM sleep only. Readiness: **READY** for the build.
+
+## POWER-FINAL-20 UART1 clock reclaim scope audit — 2026-10-13
+
+**Boundary:** 19's 47-min sleep (archive 116): the PMIC_WRAP gate worked 2/2 and INFRA_PDN_STA at the kick equals
+the stock golden exactly, yet INFRA stays retained (`last_lost=0x0`). The only peripheral gate still different from
+stock at sleep entry is PERI_PDN0 bit 17, UART1 (ours 0x2fcffff vs 0x2feffff). The owner asked for 20 with this before
+the next tests. This audit builds and flashes nothing.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| UART1 clock | GAP, ready | No Linux owner (no DT node). Boot handoff (`clocks.unused_handoff`, 19): `lcr=0 ier=0 lsr=0x0 dma=0 reason=tx_not_drained retained=1` — the all-zero register set of a never-initialised UART failed the THRE/TEMT check; UART2/3 read the normal 0x60 and were gated. Stock gates UART1 in every scenario checklist (idle, deep idle, suspend). 20: an all-zero LCR/IER/DMA/LSR set counts as never initialised and the clock is reclaimed by CCF unused-clock handling like UART2/3; any non-zero field keeps the old rule. Every UART1 register read in the kernel is already conditional on its clock being on. |
+| Side effect | EXPECTED | The deep-idle owner check reported `UART1_sleep_unknown` for the same reason; with UART1 gated it no longer applies. |
+| INFRA power-down | GAP | Read `last_lost` after the first 20 sleep. If still 0 with every SoC clock gate at stock, question the premise (stock restores only the UART after INFRA power-down) and rely on the measured drain. |
+
+**Gate decision:** 20 = UART1 reclaim. Readiness: **READY** for the build.

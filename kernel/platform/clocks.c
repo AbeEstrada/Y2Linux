@@ -378,7 +378,9 @@ static int unused_handoff_get(char *buf, const struct kernel_param *kp)
 				"UART%u sampled=1 lcr=%#x ier=%#x lsr=%#x dma=%#x reason=%s retained=%d\n",
 				i + 1, h->lcr, h->ier, h->lsr, h->dma,
 				h->ier ? "irq_enabled" : h->dma & 3 ? "dma_enabled" :
-				h->dma & ~7U ? "unknown_dma_bits" : h->lsr & 1 ? "rx_data" :
+				h->dma & ~7U ? "unknown_dma_bits" :
+				y2_unused_uart_never_initialised(h->lcr, h->ier, h->lsr, h->dma) ? "never_initialised" :
+				h->lsr & 1 ? "rx_data" :
 				(h->lsr & 0x60) != 0x60 ? "tx_not_drained" :
 				h->lsr != 0x60 ? "line_or_unknown_status" : "quiet", h->busy);
 		else

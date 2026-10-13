@@ -23,9 +23,20 @@ static inline int y2_bus_dcm_baseline(unsigned value)
 /* Exact MT6582 platform_uart.h: DMA_EN[1:0] enables RX/TX DMA;
  * bit2 only resets its timeout counter. Keep every other unknown bit busy.
  * IER, DLAB, RX data, incomplete TX and line/FIFO errors remain blockers. */
+/* POWER-FINAL-20: a UART whose LCR, IER, DMA and LSR all read 0 was never
+ * initialised (no line format, no IRQ, no DMA, not even THRE/TEMT): the Y2's
+ * UART1 at boot (archive 116 handoff). A configured transmitter always shows
+ * THRE/TEMT once drained, so this cannot be a frame in flight. Stock gates
+ * UART1 in every scenario checklist; reclaim it like an idle UART. */
+static inline int y2_unused_uart_never_initialised(unsigned lcr, unsigned ier,
+		unsigned lsr, unsigned dma)
+{
+	return !lcr && !ier && !lsr && !dma;
+}
 static inline int y2_unused_uart_busy(unsigned lcr, unsigned ier,
 		unsigned lsr, unsigned dma)
 {
+	if (y2_unused_uart_never_initialised(lcr, ier, lsr, dma)) return 0;
 	return (lcr & 0x80) || ier || (dma & ~4U) || lsr != 0x60;
 }
 static inline int y2_unused_nfi_busy(unsigned control, unsigned status,
