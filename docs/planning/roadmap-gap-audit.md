@@ -7787,3 +7787,18 @@ This audit builds and flashes nothing.
 | Sleep/power | UNCHANGED | 21 = 20 + these three; sleep tests can run on 21. |
 
 **Gate decision:** READY for the build.
+
+## POWER-FINAL-22 DSI hand-over backlight scope audit — 2026-10-13
+
+**Boundary:** owner on 21: the white/colour screen after shutdown is gone; the colour flash between the bootloader
+logo and the Reborn splash remains. 21's boot log (archive 118, boot `a0c4d60e`): DSI hand-over "park video" at
+0.489 s (LK's stream stops), Linux's first DSI modeset from the fbdev client at 0.532 s, the splash's first frame at
+0.642 s. The lit panel has no video stream for ≈40 ms; 21's splash-side darkening came after the modeset and could
+not help. This audit builds and flashes nothing.
+
+| Row | Classification | Plan |
+| --- | --- | --- |
+| Hand-over with lit panel | DEFECT | `mtk_dsi` overlay 0017: before "park video", switch the panel's backlight (DT `backlight` phandle) off; relight 50 ms after the first Linux `atomic_enable`, with a 3-s fallback and a devm release that relights on unbind/probe failure. Only if it was lit. |
+| Splash darkening (21) | KEPT | Harmless; covers a splash-first modeset. |
+
+**Gate decision:** READY for the build (overlay hash regenerated with `refresh-overlays.py`).

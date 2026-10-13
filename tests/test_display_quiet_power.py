@@ -36,6 +36,23 @@ class QuietDisplayPower(unittest.TestCase):
         self.assertLess(relit, show.index('return ret;'))
         self.assertNotIn('return', show[show.index('drmModeSetCrtc('):relit])
 
+    def test_dsi_handoff_is_dark_until_the_first_linux_frame(self):
+        # 21's boot log: "park video" at 0.489 s, Linux DSI modeset at 0.532 s,
+        # splash frame at 0.642 s; the lit panel had no stream in between.
+        patch = (ROOT / 'kernel/patches/0017-mt6582-dsi.patch').read_text()
+        park = patch[patch.index('+static int mt6582_dsi_park(struct mtk_dsi *dsi)'):]
+        self.assertLess(park.index('y2_handoff_dark(dsi);'), park.index('park video'))
+        dark = patch[patch.index('+static void y2_handoff_dark('):]
+        dark = dark[:dark.index('\n+}\n')]
+        self.assertIn('BACKLIGHT_POWER_OFF', dark)
+        self.assertIn('msecs_to_jiffies(3000)', dark)          # never stays dark
+        self.assertIn('props.power != BACKLIGHT_POWER_ON) return;', dark)
+        enable = patch[patch.index('mtk_output_dsi_enable(dsi);\n+    if (dsi->driver_data->mt6582) {'):]
+        self.assertIn('mod_delayed_work(system_wq, &dsi->y2_relight, msecs_to_jiffies(50))', enable[:400])
+        release = patch[patch.index('+static void y2_relight_release('):]
+        release = release[:release.index('\n+}\n')]
+        self.assertIn('BACKLIGHT_POWER_ON', release)            # unbind/probe failure relights
+
 
 if __name__ == '__main__':
     unittest.main()
