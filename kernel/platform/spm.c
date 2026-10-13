@@ -646,8 +646,8 @@ static int y2_spm_enter(suspend_state_t state)
 		y2_pm_mark(Y2_PM_CPU_CONTEXT_SAVING, 0);
 		if (infra) infra_pdn_entries++;
 		ret = cpu_suspend(0, y2_spm_finish);
-		y2_pwrap_clock_ungate(); /* first: every restore below may need the PMIC */
 		y2_pm_backstop_pause(false);
+		y2_pwrap_clock_ungate(); /* before every restore: they may need the PMIC */
 		if (infra) {
 			/* Before anything else touches a peripheral. A refused or
 			 * unverifiable restore also pins this boot to retained mode. */

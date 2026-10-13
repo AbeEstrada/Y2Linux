@@ -30,7 +30,10 @@ class PwrapGate(unittest.TestCase):
     def test_ungate_is_first_after_the_cpu_returns_and_precedes_every_restore(self):
         e = self.enter
         after = e[e.index('cpu_suspend(0, y2_spm_finish);'):]
-        self.assertTrue(after.split('\n')[1].strip().startswith('y2_pwrap_clock_ungate();'))
+        # Right after the backstop re-arm (pinned first by test_cpu_fix02), before any restore.
+        self.assertEqual(after.split('\n')[1].strip(), 'y2_pm_backstop_pause(false);')
+        self.assertTrue(after.split('\n')[2].strip().startswith('y2_pwrap_clock_ungate();'))
+        self.assertLess(after.index('y2_pwrap_clock_ungate();'), after.index('y2_infra_pdn_restore()'))
         # The abort path (arm failure) also ungates before the PMIC restores.
         tail = e[e.rindex('y2_pwrap_clock_ungate();'):]
         self.assertLess(tail.index('y2_pwrap_clock_ungate();'), tail.index('y2_pmic_sleep_end();'))
