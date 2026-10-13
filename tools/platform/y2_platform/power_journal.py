@@ -117,7 +117,9 @@ class PowerJournal:
                    # suspend-last.json. This shares the existing event cadence.
                    'suspend': {key: receipt.get(key) for key in
                                ('mode', 'stage', 'first_entry', 'resume', 'cycles',
-                                'suspended_seconds', 'maintenance_wakes')},
+                                'suspended_seconds', 'maintenance_wakes', 'error')} | {
+                       # POWER-FINAL-18: 17 lost why two requests were refused.
+                       'reason': (receipt.get('product') or {}).get('reason')},
                    'kernel_pm': ctx.read('/sys/firmware/y2_pm/state', limit=8192)}
             self.append(row, durable=bool(event or safety))
             return True

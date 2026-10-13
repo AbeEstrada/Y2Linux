@@ -618,10 +618,13 @@ static int y2_spm_enter(suspend_state_t state)
 	 * saved enable bitmap with only the SPM interrupt enabled. The subsequent
 	 * outer restore then masks storage/GPT IRQs and stalls ext4 thaw I/O. */
 	y2_golden_capture();
-	y2_pmic_golden_capture(); /* read-only, before the VPROC sleep step */
 	/* Stock VPROC sleep voltage (vproc-sleep-policy.h), only around this
 	 * PCM sleep; restored below before anything else can run. Non-fatal. */
 	y2_pmic_vproc_sleep_begin();
+	/* 18: stock PMIC suspend fields (pmic-sleep-policy.h), same rules. */
+	y2_pmic_sleep_begin();
+	/* Read-only; after both steps so it records what really enters sleep. */
+	y2_pmic_golden_capture();
 	ret = y2_spm_suspend_arm(&spm_io, pcm_address, infra);
 	y2_spm_journal_snapshot();
 	if (!ret) {
@@ -659,6 +662,7 @@ static int y2_spm_enter(suspend_state_t state)
 		y2_spm_journal_snapshot();
 		if (last_debug) { WRITE_ONCE(spm_broken, true); ret = -EIO; }
 	}
+	y2_pmic_sleep_end();
 	y2_pmic_vproc_sleep_end();
 	y2_golden_entry_restore();
 	restore = y2_spm_suspend_restore(&spm_io, normal_address);

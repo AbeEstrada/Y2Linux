@@ -82,8 +82,13 @@ class Journal(unittest.TestCase):
         self.journal.observe('Suspend', {}, event='suspend_complete_result_0', now=1)
         receipt.write_text(json.dumps({'stage': 'refused_charger_active'}))
         self.journal.observe('Suspend', {}, event='suspend_refused_charger_active', now=2)
-        self.assertEqual(self.rows()[-2]['suspend'], completed)
+        self.assertEqual(self.rows()[-2]['suspend'], completed | {'error': None, 'reason': None})
         self.assertIsNone(self.rows()[-1]['suspend']['first_entry'])
+        # POWER-FINAL-18: a refusal after the radio quiesce keeps its reason.
+        receipt.write_text(json.dumps({'stage': 'product_refused',
+                                       'product': {'state': 'refused', 'reason': 'wake_event_in_progress'}}))
+        self.journal.observe('Suspend', {}, event='suspend_product_refused', now=3)
+        self.assertEqual(self.rows()[-1]['suspend']['reason'], 'wake_event_in_progress')
 
     def test_overnight_retention_at_maximum_row_size_and_real_sleep_receipt(self):
         # An eight-hour night plus eight hours before/after must survive even

@@ -98,7 +98,13 @@ static inline unsigned y2_pmic_write_mask(unsigned reg)
 		return 0x000f;
 	/* Stock connectivity clock/rail fields. No charger, VPROC, RTC spare or
 	 * calibration trim write is added for M5. Regulator selectors stay 3.3V. */
-	case 0x102: return 0x8840;
+	case 0x102: return 0x8841; /* + 18 rg_clksq_en_aud (pmic-sleep-policy.h) */
+	/* POWER-FINAL-18 stock suspend fields (pmic-sleep-policy.h), written only
+	 * inside the SPM enter callback and restored exactly before any resume. */
+	case 0x108: return 0x1440; /* drv_2m, rtc_mclk, efuse clock PDN */
+	case 0x10e: return 0x0020; /* auxadc_ctl clock PDN */
+	case 0x70c: return 0x0010; /* rg_adacck_en */
+	case 0x776: case 0x778: return 0x8000; /* rg_vref18_enb(_md) */
 	case 0x120: return 0x0030;
 	case 0x148: return 0x000a;
 	case 0x402: return 0x0801;

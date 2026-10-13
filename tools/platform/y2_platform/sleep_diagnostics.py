@@ -106,6 +106,7 @@ def features(ctx, golden=False):
     """The 13 sleep-parity switches and counters, the INFRA and SPM state."""
     value = {'vproc_sleep': ctx.read('/sys/module/pwrap/parameters/vproc_sleep', limit=16),
              'vproc_sleep_state': ctx.read('/sys/module/pwrap/parameters/vproc_sleep_state', limit=4096),
+             'pmic_sleep_state': ctx.read('/sys/module/pwrap/parameters/pmic_sleep_state', limit=4096),
              'lp_sel': ctx.read('/sys/firmware/y2_pmic/lp_sel', limit=4096),
              'phy_savecurrent': {p.parent.name: read(p, limit=4096)
                                  for p in ctx.glob('/sys/bus/platform/drivers/y2-usb/*/phy_savecurrent')},

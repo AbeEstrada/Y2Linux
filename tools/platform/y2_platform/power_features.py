@@ -1,4 +1,4 @@
-"""POWER-FINAL-16/17 runtime power features, armed once the UI has drawn its first frame.
+"""POWER-FINAL-16/17/18 runtime power features, armed once the UI has drawn its first frame.
 
 Each feature is a kernel parameter whose kernel default is the safe (15)
 behaviour. This module turns them on at `application_ready`, never earlier: the
@@ -21,6 +21,9 @@ FEATURES = {
     # 17: gate the never-used modem's peripheral clock requests (ledger F11);
     # re-checked at every sleep entry.
     'md1_gate': ('/sys/module/spm/parameters/md1_gate', True),
+    # 18: stock PMIC suspend fields, bitmask: 1 audio clocks, 2 unused PMIC
+    # clocks, 4 VREF18 (pmic-sleep-policy.h).
+    'pmic_sleep': ('/sys/module/pwrap/parameters/pmic_sleep', 0x7),
 }
 
 

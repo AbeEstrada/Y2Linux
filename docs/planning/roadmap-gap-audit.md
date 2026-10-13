@@ -7711,3 +7711,26 @@ post-charge relaxation). Published as tag `baseline-16`. This audit builds and f
 **Gate decision:** 17 = MD1 gate + screen-first wake + the two 16 follow-ups, each behind a switch or with the old
 order as fallback (`{"md1_gate": false}`). Then one A/B night against 16's ≈8.6 mA. Readiness: **READY** for the
 17 build; PMIC/SoC golden writes stay planned.
+
+## POWER-FINAL-18 PMIC suspend-field scope audit — 2026-10-13
+
+**Boundary:** the owner asked for 18 with every PMIC change proposed after the INFRA requester analysis (ledger
+F14–F16). Hardware evidence: 17 installed (boot `de37f6bc`, archives 111/112): first boot healthy, an 18-min sleep
+clean, modem requests gated, INFRA still retained (`last_lost=0x0`); 16's night ≈8.6 mA (archive 110). REA on the
+stock kernel: the SoC/SPM side is stock-identical; all 15 differing PMIC golden rows are mapped to stock fields. 17's
+overnight drain is not measured yet, so 18 is not an A/B against 17 alone. This audit builds and flashes nothing.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| PMIC audio clocks | GAP, ready | `rg_clksq_en_aud` (0x102[0]) stays 1 in Linux (bootloader value, never written); stock clears it with no analog audio user and in `AudDrv_Suspend_Clk_Off`. `rg_adacck_en` (0x70c[4]) 1 vs stock 0. 18: stock value inside the SPM enter, exact restore before resume (group 1). Audio uses the external CS43131 over I2S; check playback after every wake. |
+| Unused PMIC clocks | GAP, ready | 0x108 drv_2m/rtc_mclk/efuse clock PDN, 0x10e auxadc_ctl clock PDN: gated in stock suspend (group 2). |
+| VREF18 | GAP, ready | 0x776/0x778 `rg_vref18_enb(_md)` 1 in stock (pmic_early_suspend). Group 4. |
+| Headset-detect clock | NOT A GAP | 0x108[9]: Linux already gates it; stock keeps it running. Not changed. |
+| VEMC3V3 off | BLOCKED | Overlay 0029 retains the root eMMC powered in TRAN state across suspend (no CMD5, no re-initialisation; the storage firewall blocks the commands a re-init needs). Cutting its supply would break the next root access. Needs an eMMC suspend-model change first; separate storage work with data risk. |
+| VPROC sleep rows | ALREADY DONE | 0x212/0x216/0x21c/0x230 are set by 13's VPROC step after the capture; 18 moves the PMIC capture after both steps so the golden comparison shows the real sleep state. |
+| AUXADC hw modes, VSYS/VPA sleep, depop VCM | NOT ADOPTED | Battery readings / unclear benefit; kept for later. |
+| Refusal reason | DIAGNOSTICS GAP | 17 lost the reason of two refused requests; the journal now keeps `suspend.reason`/`error`. |
+
+**Gate decision:** 18 = PMIC groups 1/2/4 behind `pwrap.pmic_sleep` (owner switch `pmic_sleep`, default 7) +
+journal reason. Readiness: **READY** for the build; physical risk is low (every write is restored before any device
+resumes; a failed write undoes itself and sleep continues unchanged).

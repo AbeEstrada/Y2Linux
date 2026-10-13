@@ -11,4 +11,6 @@ int y2_pmic_spm_prepare(void);
 void y2_pmic_golden_capture(void);
 void y2_pmic_vproc_sleep_begin(void);
 void y2_pmic_vproc_sleep_end(void);
+void y2_pmic_sleep_begin(void);
+void y2_pmic_sleep_end(void);
 #endif

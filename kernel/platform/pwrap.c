@@ -505,6 +505,63 @@ void y2_pmic_vproc_sleep_end(void)
 		}
 	}
 }
+/* POWER-FINAL-18: stock PMIC suspend fields (pmic-sleep-policy.h), same
+ * context and regmap rules as the VPROC step. `pmic_sleep` is a group bitmask
+ * armed by userspace (power_features); 0 keeps 17's behaviour. */
+#include "pmic-sleep-policy.h"
+static unsigned pmic_sleep_groups;
+module_param_named(pmic_sleep, pmic_sleep_groups, uint, 0644);
+static struct y2_ps_state pmic_sleep;
+static unsigned pmic_sleep_entries, pmic_sleep_restores, pmic_sleep_failures, pmic_sleep_last_changed;
+static int pmic_sleep_error;
+static int pmic_sleep_read(void *context, unsigned reg, unsigned *value)
+{
+	return regmap_read(context, reg, value);
+}
+static int pmic_sleep_update(void *context, unsigned reg, unsigned mask, unsigned value)
+{
+	return regmap_update_bits(context, reg, mask, value);
+}
+void y2_pmic_sleep_begin(void)
+{
+	unsigned groups = READ_ONCE(pmic_sleep_groups) & Y2_PS_ALL;
+	struct y2_ps_io io;
+	int ret;
+	if (!y2_wrap || !groups) return;
+	io = (struct y2_ps_io){ y2_wrap->map, pmic_sleep_read, pmic_sleep_update };
+	ret = y2_ps_apply(&io, groups, &pmic_sleep);
+	if (ret) {
+		pmic_sleep_failures++;
+		pmic_sleep_error = ret;
+		return;
+	}
+	pmic_sleep_entries++;
+	pmic_sleep_last_changed = pmic_sleep.changed;
+}
+void y2_pmic_sleep_end(void)
+{
+	struct y2_ps_io io;
+	int ret;
+	if (!y2_wrap || !pmic_sleep.changed) return;
+	io = (struct y2_ps_io){ y2_wrap->map, pmic_sleep_read, pmic_sleep_update };
+	ret = y2_ps_restore(&io, &pmic_sleep);
+	if (ret) {
+		pmic_sleep_failures++;
+		pmic_sleep_error = ret;
+		pr_err("Y2PMIC: sleep field restore failed: %d changed=%#x\n", ret, pmic_sleep.changed);
+	} else {
+		pmic_sleep_restores++;
+	}
+}
+static int pmic_sleep_state_get(char *buffer, const struct kernel_param *kp)
+{
+	return sysfs_emit(buffer, "groups=%#x entries=%u restores=%u failures=%u last_error=%d last_changed=%#x pending=%#x\n",
+		READ_ONCE(pmic_sleep_groups), pmic_sleep_entries, pmic_sleep_restores,
+		pmic_sleep_failures, pmic_sleep_error, pmic_sleep_last_changed, pmic_sleep.changed);
+}
+static const struct kernel_param_ops pmic_sleep_state_ops = { .get = pmic_sleep_state_get };
+module_param_cb(pmic_sleep_state, &pmic_sleep_state_ops, NULL, 0400);
+
 static int vproc_sleep_state_get(char *buffer, const struct kernel_param *kp)
 {
 	return sysfs_emit(buffer, "enabled=%u active=%d stage=%s entries=%u restores=%u failures=%u last_error=%d sleep_uv=%u\n",
