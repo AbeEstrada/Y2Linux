@@ -1,6 +1,15 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-18 stock PMIC suspend fields, Baseline 18 — 2026-10-13 (latest)
+## POWER-FINAL-19 PMIC_WRAP clock gate sealed — 2026-10-13 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-19/` (Linux `0fa5135`, Reborn `217e28d` unchanged, root
+`2026.08-platform-v1.49`; BOOTIMG `49494899…44ed`, Y2ROOT `1e6a61fc…f4d5`), fallback 18. Gates the AP's PMIC_WRAP
+clock (the only INFRA clock still differing from stock at sleep entry) for the PCM sleep only, after the last PMIC
+access and before every restore; an owner-authorised live test on 18 showed the gate is safe and fully reversible
+while awake. Container suite 689, exit 0; package checks PASS. **Physical: not flashed yet.** Details:
+[19 report](validation/Y2-PLATFORM-V1-POWER-FINAL-19.md).
+
+## POWER-FINAL-18 stock PMIC suspend fields, Baseline 18 — 2026-10-13
 
 `out/y2linux-platform-v1-power-final-candidate-18/` (Linux `d2fff53`, Reborn `217e28d` unchanged, root
 `2026.08-platform-v1.48`; BOOTIMG `5d405228…2ace`, Y2ROOT `71852869…2c612`), fallback 17. REA showed the SoC sleep side
