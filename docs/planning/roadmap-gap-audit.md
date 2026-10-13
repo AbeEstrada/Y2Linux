@@ -7836,3 +7836,19 @@ from the release identity. This audit builds nothing and flashes nothing.
 | Device performance | NOT_RUN | Re-measure with the 40-s `metrics` sampler and a capture after the flash. |
 
 **Gate decision:** READY for the build.
+
+## POWER-FINAL-26 Reborn Bluetooth codec auto-selection scope audit — 2026-10-13
+
+**Boundary:** owner request: enable every implemented Bluetooth codec so automatic negotiation selects the best one.
+Reborn-only change (`1c9edd4`); the platform image is 25 unchanged apart from the release identity. The platform
+already starts BlueALSA with AAC, aptX, aptX-HD and LDAC (`/run/y2/codec-runtime.json`, owner-private integration
+profile). This audit builds nothing and flashes nothing.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Runtime codec discovery | CORRECTED | Live on 25: `org.bluealsa.Manager1.Codecs` = `A2DP-source:SBC/AAC/aptX/aptX-HD/LDAC`; Reborn stripped only `a2dp-source:`, so every codec (SBC included) was `runtime_enabled=false`, policy `Failed: no_eligible_codec…`, codec row hidden. Prefix now case-insensitive. |
+| Default preference | CHANGED | Auto (ranking LDAC → aptX-HD → aptX → AAC, SBC fallback, only mutually usable codecs, only while the PCM is idle). Saved SBC from before codec revision 1 migrates to Auto once. |
+| Peer evidence | OBSERVED | AirPods Pro: mutual SBC and AAC; BlueZ had negotiated AAC by itself. Auto should request AAC. |
+| aptX / aptX-HD / LDAC on a real peer | NOT_RUN | Needs headphones that advertise them. |
+
+**Gate decision:** READY for the build.
