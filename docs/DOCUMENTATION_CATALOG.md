@@ -305,6 +305,7 @@ Indexed pages: **307**. Explicit scope notices: **220**.
 
 | Page | Scope |
 | --- | --- |
+| [POWER-FINAL-23 — Reborn Cover Flow and Genres](validation/Y2-PLATFORM-V1-POWER-FINAL-23.md) | Sealed candidate report |
 | [POWER-FINAL-22 — dark DSI hand-over](validation/Y2-PLATFORM-V1-POWER-FINAL-22.md) | Sealed candidate report |
 | [POWER-FINAL-21 — quiet display power transitions](validation/Y2-PLATFORM-V1-POWER-FINAL-21.md) | Installed candidate report (shutdown fixed) |
 | [POWER-FINAL-20 — reclaim the never-initialised UART1 clock](validation/Y2-PLATFORM-V1-POWER-FINAL-20.md) | Installed candidate report |

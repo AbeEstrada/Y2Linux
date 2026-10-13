@@ -1,6 +1,15 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-22 dark DSI hand-over sealed — 2026-10-13 (latest)
+## POWER-FINAL-23 Reborn Cover Flow and Genres sealed — 2026-10-13 (latest)
+
+`out/y2linux-platform-v1-power-final-candidate-23/` (Linux `7f5445d`, **Reborn `83c9127`**, root `2026.08-platform-v1.53`;
+BOOTIMG `9ea7a943…75cb`, Y2ROOT `8fff0f83…d297`), fallback 22. Albums opens a perspective Cover Flow (smooth glide,
+cover flight into the album page; Grid stays available in Settings → Display), and Genres joins the main list (genre →
+All Songs + albums). Reborn 370 tests, clippy clean; host GLES matches the reference on all 77 screens; container
+suite 693; package checks PASS. **Physical: not flashed yet; Mali-400 frame times to measure.** Details:
+[23 report](validation/Y2-PLATFORM-V1-POWER-FINAL-23.md).
+
+## POWER-FINAL-22 dark DSI hand-over — 2026-10-13
 
 `out/y2linux-platform-v1-power-final-candidate-22/` (Linux `430ff11`, root `2026.08-platform-v1.52`; BOOTIMG
 `f73ba54c…402b`, Y2ROOT `d7d21d71…6a0d`), fallback 21. On 21 the shutdown is dark (fixed) but the startup still flashed
