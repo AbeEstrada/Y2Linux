@@ -1,6 +1,6 @@
 # Candidate and fallback identity index
 
-## POWER-FINAL-24 — sealed 2026-10-13, not flashed
+## POWER-FINAL-24 — installed 2026-10-13, Baseline 24
 
 `Y2LINUX-PLATFORM-V1-POWER-FINAL-24`: compiled Linux `d2b38e8` / Reborn `ced5199295e275a0c4fc2e939e47786423e2920d`;
 kernel `6.18.56-y2linux-platform-v1-power-final-24`, root `2026.08-platform-v1.54`, release

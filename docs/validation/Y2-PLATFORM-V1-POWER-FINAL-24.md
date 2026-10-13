@@ -1,6 +1,6 @@
 # POWER-FINAL-24 — animation frame pacing (smooth Cover Flow)
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-24/`
+Status: **INSTALLED; Cover Flow ≈27 fps (was ≈10); tagged `baseline-24`** (2026-10-13). Package `out/y2linux-platform-v1-power-final-candidate-24/`
 (fallback = 23), receipts `out/deep-sleep-final/build24-receipts/`. BOOTIMG
 `653c7d85b7659f5dae6172f2d07dae8802a91ca3afc83c5adb8f97f176dbdda7`, Y2ROOT
 `21f21e4770b150c96b1947acc1ef29de8d05b0c4054afe31575a7bf90c99860b`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-24`,
@@ -29,6 +29,24 @@ screen-off (1 s) waits are unchanged. Test extended.
 ## Tests
 
 Reborn clippy clean, workspace tests pass; container suite 693, exit 0; package checks PASS.
+
+## Hardware result (owner scrolling, 40-s live sample + screen capture)
+
+| | 23 | 24 |
+| --- | --- | --- |
+| frames per second while drawing | ≈10 | **27 median, 31 max** |
+| `graphics_frame_time_ms` | 3–17 ms | 3–18 ms |
+| `graphics_cpu_ms` | 1–2 ms | 1–4 ms |
+| Reborn main thread CPU | 5.5 % | **45 %** |
+| CPU clock | 598–747 MHz | 598–747 MHz (rarely 1.3 GHz) |
+
+31 fps is half the panel's ≈63 Hz: a frame usually misses one page flip. GPU work is cheap; building a frame on the
+CPU (UI draw + loop work) takes ≈15 ms at the low clock. Next: an animation CPU workload lease (the platform's
+`workload` QoS, as artwork decoding already uses) and less per-frame work (e.g. `album_detail` filters every track
+each frame); measure `ui.draw` on the host first. Video for the community:
+`~/Videos/y2linux-cover-flow-24.mp4` (40 s, the capture itself reaches only ≈10–15 fps over USB, so it looks
+choppier than the panel). Seen in the video: "3 songs · 0 min" for sub-minute albums (show m:ss); the centre shows
+the placeholder during very fast first passes until thumbnails are cached (expected).
 
 ## What to check
 

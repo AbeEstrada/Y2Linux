@@ -6,20 +6,20 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Baseline 18 (2026-10-13), developer preview.** It runs every day on
+> **Status: Baseline 24 (2026-10-13), developer preview.** It runs every day on
 > the maintainer's Y2. There are no prebuilt images yet: you build from source
 > and flash with SP Flash Tool. Only one hardware revision has been tested (see
 > [Supported hardware](#supported-hardware)). Read [Known issues](#known-issues)
 > before you flash.
 
-| | Baseline 18 |
+| | Baseline 24 |
 | --- | --- |
-| Git tag (both repositories) | `baseline-18` (previous: `baseline-17`) |
-| Kernel | `6.18.56-y2linux-platform-v1-power-final-18` (Linux 6.18 long-term line) |
-| Root filesystem / release | `2026.08-platform-v1.48` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.18` |
-| Player | Y2Reborn 0.3.0 (Rust 1.99) |
+| Git tag (both repositories) | `baseline-24` (previous: `baseline-18`) |
+| Kernel | `6.18.56-y2linux-platform-v1-power-final-24` (Linux 6.18 long-term line) |
+| Root filesystem / release | `2026.08-platform-v1.54` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.24` |
+| Player | Y2Reborn 0.3.0 (Rust 1.99) with Cover Flow and Genres |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 — every component on its newest release |
-| Maintainer's images built from | Y2Linux `d2fff53`, Y2Reborn `217e28d` (later commits: tests and docs only) |
+| Maintainer's images built from | Y2Linux `d2b38e8`, Y2Reborn `ced5199` (later commits: docs only) |
 
 ## Getting started
 
@@ -35,6 +35,9 @@ Observed on the maintainer's device on Baseline 18 or the candidates just before
 
 - Boots from internal eMMC: stock preloader and LK, then Linux 6.18 and Buildroot. No SD card needed.
 - Display with GPU (DRM + Lima), buttons, click wheel and the Reborn player UI.
+- Albums in **Cover Flow** (perspective covers with reflections, the cover flies into the
+  album page; the grid stays available in Settings → Display), and **Genres** in the main list
+  (genre → All Songs and its albums).
 - Wired headphone audio (CS43131 DAC), S16 stereo at 44.1/48 kHz; higher-rate files are converted.
 - Bluetooth audio (SBC).
 - Wi-Fi (2.4 GHz).
@@ -53,6 +56,8 @@ Observed on the maintainer's device on Baseline 18 or the candidates just before
   clocks off, references off) and restored on wake.
 - Waking with Power lights the screen in about half a second; Wi-Fi and Bluetooth come back
   in the background.
+- A dark screen after the shutdown animation (no white or colour noise). The start-up colour
+  flash fix (the backlight is off while the display is handed over) is in, but not yet confirmed.
 
 ## Known issues
 
@@ -66,15 +71,24 @@ Observed on the maintainer's device on Baseline 18 or the candidates just before
 - **Battery life is not stock-like yet.** 16 draws about 8.6 mA asleep (≈0.75 points/h,
   one 16 h night; 15: about 10 mA); stock is about 1.3 mA (≈0.1 points/h). The SoC's
   infrastructure power domain still never switches off in sleep (the SoC side now matches stock;
-  18 adds the stock power-chip sleep settings; a first hour asleep was clean, the overnight drain is next). The percentage is estimated from voltage; there is
+  17–20 gate the remaining modem, PMIC, PMIC-wrapper and UART1 clocks like stock; their overnight
+  drain has not been measured yet). The percentage is estimated from voltage; there is
   no current sensor.
+- Cover Flow runs at about 27 frames per second (half the panel's 63 Hz); it is CPU-bound
+  at the low clock and is being optimised.
+- An SD card written by macOS carries `._*` files that Reborn tries to read; the library scan
+  then reports itself incomplete. Delete them or wait for the scanner fix.
 - Bluetooth uses SBC only. AAC/aptX/LDAC sources exist but are not enabled in
   normal builds.
 - No public update channel or release signing. You flash or copy updates by hand.
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for [18](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-18.md) (stock PMIC sleep settings),
+reports for [24](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-24.md) (frame pacing),
+[23](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-23.md) (Cover Flow and Genres),
+[21](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-21.md)/[22](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-22.md) (display power transitions),
+[19](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-19.md)/[20](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-20.md) (PMIC_WRAP and UART1 clocks),
+[18](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-18.md) (stock PMIC sleep settings),
 [17](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-17.md) (modem gate, faster wake),
 [16](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-16.md) (stock sleep parity),
 [15](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-15.md) (newest versions),

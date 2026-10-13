@@ -1,11 +1,13 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-24 animation frame pacing sealed — 2026-10-13 (latest)
+## POWER-FINAL-24 animation frame pacing, Baseline 24 — 2026-10-13 (latest)
 
 `out/y2linux-platform-v1-power-final-candidate-24/` (Linux `d2b38e8`, **Reborn `ced5199`**; BOOTIMG `653c7d85…dda7`,
 Y2ROOT `21f21e47…860b`), fallback 23. On 23 Cover Flow looked right but ran at ≈10 fps although frames cost only 3–17 ms:
 the main loop slept its idle wait between wheel events. 24 paces animation frames at the panel rate. Suite 693; package
-checks PASS. **Physical: not flashed yet.** Details: [24 report](validation/Y2-PLATFORM-V1-POWER-FINAL-24.md).
+checks PASS. **Physical:** installed; Cover Flow 27 fps median (31 max, half the panel rate; CPU-bound at the low clock);
+the white shutdown screen is gone (21); the start-up flash fix (22) is not yet confirmed by the owner. Sleep tests on 19–24 still pending. Tagged
+`baseline-24`. Details: [24 report](validation/Y2-PLATFORM-V1-POWER-FINAL-24.md).
 
 ## POWER-FINAL-23 Reborn Cover Flow and Genres — 2026-10-13 (installed; ≈10 fps → 24)
 
