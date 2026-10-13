@@ -64,3 +64,17 @@ Still open (device was unplugged for the overnight test before a manual connect 
   skip `SelectCodec` when the negotiated codec already equals Auto's choice.
 - Design gap regardless of 26: when the saved Bluetooth output is not connected, Reborn only reports "connected A2DP
   peer required"; it neither retries the connect on play nor falls back to the Y2's own output.
+
+## Overnight test start: refused sleep looked like a self-wake (archive 122)
+
+From 20:16 to 21:17 every sleep request was refused because the cable was attached (`suspend_refused_charger_or_usb_active`,
+once a minute). The owner unplugged at ≈21:18:38; the next attempt read `/sys/power/wakeup_count`, quiesced the radios
+(≈4–5 s), and at 21:18:42 the charger noticed the missing source (`status=2`, `NO_SOURCE`) and published a `BAT0` change
+(the only wakeup source with `wakeup_count` 1). At 21:18:44 the count store failed, so the helper refused
+(`product_refused`, `wake_event_in_progress`, no kernel entry) and restored the screen and radios: the "self-wake". The
+same refusal appears twice in the archived journals, both on 13; none on 14–25. The platform reconnect also tried the
+AirPods a third time after the radio restore and failed again (`failures` 3, still `Inhibited`).
+
+Proposed platform fix (not made; needs the owner's OK and a 27 build): when the count store fails and neither the
+Power nor the RTC interrupt count changed, start a new handshake with a fresh count (bounded, e.g. 3 tries), as the
+maintenance-wake path already does after its `BAT0` tick, instead of restoring the screen.
