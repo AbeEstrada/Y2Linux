@@ -7819,3 +7819,20 @@ is 22 unchanged. This audit builds and flashes nothing.
 | Device performance | NOT_RUN | Frame times on the Mali-400 must be measured (graphics_frame_time_ms gauges, screen capture). |
 
 **Gate decision:** READY for the build.
+
+## POWER-FINAL-25 Reborn Cover Flow frame rate and card hygiene scope audit — 2026-10-13
+
+**Boundary:** handoff items 1 and 2, owner-approved: Cover Flow toward the panel's rate, sub-minute album lengths, and
+a scanner that ignores macOS card metadata. Reborn-only change (`ed6a8cb`); the platform image is 24 unchanged apart
+from the release identity. This audit builds nothing and flashes nothing.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Frame pacing | CORRECTED | 24 measured 27 fps median / 31 max: the render gate still required 34 ms between frame starts, so presentation (synchronous page flip) landed on every 2nd/3rd vblank. While Cover Flow glides or the cover flies, the gap is 12 ms and the vblank paces frames; spinners and fades keep 34 ms. |
+| CPU during the glide | EXTENDED | The existing Interactive lease (750 MHz floor, 250 ms) is renewed while gliding. No kernel workload policy change. |
+| Per-frame work | REDUCED | Host profile, 3000 tracks: `ui.draw` 0.033 ms/frame, two thirds the album detail line (all-track scan); now cached per album and library. |
+| Album length | CORRECTED | Albums under a minute show m:ss instead of "0 min". |
+| Scanner | CORRECTED | `._*` AppleDouble files and `.Spotlight-V100`/`.fseventsd`/`.Trashes`/`.TemporaryItems` are skipped; 11 such files on the owner's card made every scan incomplete and blocked pruning. Test covers an unreadable `.Spotlight-V100`. |
+| Device performance | NOT_RUN | Re-measure with the 40-s `metrics` sampler and a capture after the flash. |
+
+**Gate decision:** READY for the build.
