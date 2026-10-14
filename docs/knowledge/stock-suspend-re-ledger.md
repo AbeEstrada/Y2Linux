@@ -88,3 +88,17 @@ A fair stock comparison needs a start ≥4 h after charging and a ≥12 h run, o
 **Ranked candidates for the next image:** C panel suspend sequence (stock table + reset high), A VGP2 off when
 the DAC is idle (stock order), B VSYS sleep mode (stock init fields, inside the SPM enter like VPROC),
 D VEMC3V3 off (separate storage milestone). Each behind its own switch, one night per change if possible.
+
+## Battery percentage: stock UI SOC vs Y2 (2026-10-14, 27 boot `5919b4fe`)
+
+Owner report: on the charger the Y2 shows 100 %, after a restart about 80 %. Wanted: 100 % when really full,
+then 99, 98, 97 …
+
+| # | Question | Stock (address, Evidence) | Y2 27 | Status |
+| --- | --- | --- | --- | --- |
+| F28 | Displayed vs estimated SOC | `mt_battery_update_status` 0xc039ff3c (`ev_f1c32855…`): `BMT_status.UI_SOC` (+0x54) is separate from `SOC` (+0x50). Charging, not full: UI capped at 99. Full: UI +1 per thread tick to 100, then `battery_meter_reset` 0xc039d14c (`ev_47e859a0…`) re-anchors the gauge at full (`reset_parameter_dod_full(UI)`, Qmax aging update). Discharging: UI follows SOC only downward, −1 per 7 ticks (counter +0x178 == 6), never below 1. Every update `set_rtc_spare_fg_value(UI)`. | One value: voltage curve, rate-limited (60 s/%), forced to 100 while the kernel says Full. | **Gap: no separate display value, no full re-anchor.** |
+| F29 | Across a restart | `dod_init` 0xc039be10 (`ev_07f4108c…`): `get_rtc_spare_fg_value` (MT6323 RTC spare, `ev_f83a7385…`, written by `set_rtc_spare_fg_value` ≤100, `ev_e0428c86…`) is reused when it differs from the boot voltage SOC by < 40 points (charger/low-SOC cases aside). | Nothing persisted; first sample decides. | **Gap (main cause of "≈80 % after restart").** |
+| F30 | Boot voltage | `oam_init` 0xc039c114 (`ev_5d947fb9…`): command 9 = `read_hw_ocv` → `get_hw_ocv` 0xc04cae90 (`ev_944044ab…`): PMIC 0x724[14:0] (`rg_adc_out_wakeup_pchr`, latched at power-on before load) × 7200/32768 + 8 mV; if on a charger and far from the 5-s sample, the 5-s sample wins. | First sample under boot load. Live 27: 0x724 = 0xc813 → **4062 mV** OCV, first sample **4002 mV → 87 %** (OCV → ≈92 %). | **Gap: boot sag ≈60–120 mV ≈ 5–15 points.** |
+| F31 | Full / top-off | `BAT_ConstantCurrentModeAction`/`BAT_TopOffModeAction` 0xc03a2208 (`ev_f1442296…`), `batt_cust_data` 0xc09d2d68 = {1, 4050, 150, …}: top-off above 4050 mV with hardware CV (stock CV request 4.2 V), Full after 6 × 10 s at ≤150 mA charging current or 10800 s; `BAT_BatteryFullAction` (`ev_1e37b9de…`); recharge below 4110 mV. | Stops at the first 4.175 V loaded sample (no taper; 4.2 V treated as fault since POWER-02), Full when the hold rests ≥4.07 V, recharge only below 4.00 V. Rests ≈4.09 V = 95 % on the stock curve; on the charger the Y2 runs from the battery down to 4.00 V (87 %) while showing 100 (live: Full, 4.04–4.05 V, 100 %). | **Gap: never really full; 100 shown across an 87–95 % band.** Changing CV/termination is a charger-safety milestone (valid charge-current measurement needed for the 150 mA taper). |
+| F32 | Thread cadence | `battery_kthread_hrtimer_init` (`ev_95907b4b…`) 1 s timer; BAT thread period 10 s (top-off/CC add 10 s per call). | Platform sampling. | Display step ≈ −1 % per 70 s at most. |
+| F33 | Current sense | `fgauge_read_current/columb` stubs (F27); stock OAM integrates a model current (OCV(DOD) − V)/R (`oam_run` 0xc039c37c, `ev_eae29d1b…`). | Same voltage model family (OAM while charging). | No coulomb counter on either. |
