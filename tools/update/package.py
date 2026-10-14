@@ -158,6 +158,15 @@ def main():
         package.add_argument('--' + arg, type=Path, required=True)
     package.add_argument('--recovery', type=Path)
     package.add_argument('--notes', default='')
+    candidate = sub.add_parser('candidate', help='sign the OTA package of a sealed SPFT candidate folder')
+    candidate.add_argument('folder', type=Path)
+    candidate.add_argument('--output', type=Path, required=True)
+    candidate.add_argument('--private', type=Path, required=True)
+    candidate.add_argument('--key-id', required=True)
+    candidate.add_argument('--notes', default='')
+    candidate.add_argument('--rollback-allowed', action='store_true')
+    candidate.add_argument('--development-reinstall', action='store_true',
+                           help='development key only: allow installing the same release again (device test)')
     package.add_argument('--key-id', required=True)
     package.add_argument('--sequence', type=int, required=True)
     package.add_argument('--minimum-sequence', type=int, default=0)
@@ -166,6 +175,20 @@ def main():
     args = parser.parse_args()
     if args.command == 'keygen':
         print(json.dumps({'public_key_hex': keygen(args.private)}))
+    elif args.command == 'candidate':
+        # The exact bytes that were flashed and checked with a computer.
+        folder = args.folder
+        versions = json.loads((folder / 'metadata/versions.json').read_text())
+        sums = dict(reversed(line.split('  ', 1)) for line in (folder / 'SHA256SUMS').read_text().splitlines())
+        for name in ('BOOTIMG.img', 'Y2ROOT.img', 'recovery-install/RECOVERY.img'):
+            with (folder / name).open('rb') as stream:
+                if hashlib.file_digest(stream, 'sha256').hexdigest() != sums.get(name):
+                    raise ValueError('candidate file changed since sealing: ' + name)
+        print(json.dumps(build(folder / 'Y2ROOT.img', versions, args.output, args.private, args.key_id,
+                               versions['update_sequence'], allow_downgrade=args.development_reinstall,
+                               rollback_allowed=args.rollback_allowed,
+                               bootimg=folder / 'BOOTIMG.img', recovery=folder / 'recovery-install/RECOVERY.img',
+                               notes=args.notes), indent=2))
     else:
         print(json.dumps(build(args.image, json.loads(args.versions.read_text()), args.output,
                                args.private, args.key_id, args.sequence, args.minimum_sequence,

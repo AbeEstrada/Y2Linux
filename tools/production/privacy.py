@@ -88,6 +88,8 @@ def release_tree(root, manifest):
     root = Path(root)
     images = {p['raw']['file'] for p in manifest['payloads']}
     images.update(p['file'] for p in manifest['fallback']['images'])
+    if 'recovery_install' in manifest:   # OTA-35 one-row SPFT folder
+        images.add('recovery-install/' + manifest['recovery_install']['raw']['file'])
     for path in root.rglob('*'):
         name = path.relative_to(root).as_posix()
         if path.is_symlink():

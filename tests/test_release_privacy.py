@@ -65,6 +65,17 @@ class Privacy(unittest.TestCase):
             (root/'linked').symlink_to(root/'BOOTIMG.img')
             with self.assertRaisesRegex(ValueError,'release_symlink'):p.release_tree(root,manifest)
 
+    def test_recovery_install_image_is_listed_only_through_its_receipt(self):
+        manifest={'payloads':[{'raw':{'file':'BOOTIMG.img'}}],'fallback':{'images':[]}}
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary);(root/'recovery-install').mkdir()
+            (root/'recovery-install/RECOVERY.img').write_bytes(b'fixture')
+            with self.assertRaisesRegex(ValueError,'unexpected_image'):p.release_tree(root,manifest)
+            manifest['recovery_install']={'raw':{'file':'RECOVERY.img'}}
+            p.release_tree(root,manifest)
+            (root/'recovery-install/OTHER.img').write_bytes(b'fixture')
+            with self.assertRaisesRegex(ValueError,'unexpected_image'):p.release_tree(root,manifest)
+
     def test_structured_credentials_and_public_certificates(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary)
