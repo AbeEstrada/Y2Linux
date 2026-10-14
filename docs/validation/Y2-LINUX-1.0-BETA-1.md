@@ -42,4 +42,5 @@ confirmed; full install from stock run on one player only.
 
 ## Device results
 
-Pending: the owner installs Beta 1 over Wi-Fi from the release.
+- Owner installed Beta 1 over Wi-Fi from the release: **"works"** (owner, 2026-10-15). On-device check (version,
+  health, firmware, radios) pending; the player was not connected when the handoff was written.
