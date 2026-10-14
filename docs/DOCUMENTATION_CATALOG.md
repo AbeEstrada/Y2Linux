@@ -320,6 +320,7 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [POWER-FINAL-45 — over-the-air test package for 44's recovery screen](validation/Y2-PLATFORM-V1-POWER-FINAL-45.md) | Installed over the air, PASSED (archive 149) |
 | [POWER-FINAL-46 — space for every update, restart by default; first public release](validation/Y2-PLATFORM-V1-POWER-FINAL-46.md) | Published release baseline-46; installed over Wi-Fi (archive 150), recovery screen dark |
 | [POWER-FINAL-47 — DSI register read lag: keep DCM off for DSI/DPI](validation/Y2-PLATFORM-V1-POWER-FINAL-47.md) | Published release baseline-47 (awaiting the install and probes) |
+| [POWER-FINAL-48 — download screen with progress, speed and time left](validation/Y2-PLATFORM-V1-POWER-FINAL-48.md) | Sealed candidate report (not published) |
 | [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |
 | [POWER-FINAL-32 — deep idle during screen-off playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) | Sealed candidate report (in 33) |
 | [POWER-FINAL-31 — folder-first artwork and metadata formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) | Sealed candidate report (in 33) |
