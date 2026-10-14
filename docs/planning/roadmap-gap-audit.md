@@ -7922,4 +7922,8 @@ change; Reborn unchanged (`1c9edd4`). Builds the image; the owner flashes.
 | Access-time writes | CHANGED | SD (all formats) and the internal Y2Media partition mounted `relatime`: the first read of each song per day wrote an access time to the card. Now `noatime`. |
 | Pre-mount read-only check | NO_CHANGE | `fsck.exfat -n` on the owner's card: 315 ms cold (exfatprogs reads in large blocks). |
 
+| FFmpeg decode pipeline | MEASURED | Owner follow-up: decoding performance. Stage benchmark built with the product toolchain against the image's FFmpeg (decode → canonical FLTP → `aformat`+`alimiter` graph → S16 output; wired output negotiates the source rate, S16, period 512 / buffer 4096), at 1.2–1.3 GHz, % of one core: 320k MP3 decode 1.3 / full pipeline 2.5; CD FLAC 0.9 / 2.1; 24/96 FLAC 2.1 / 4.6; AAC 256k 0.9 / 2.0. `alimiter` alone ≈ half of the pipeline; 3 EQ bands +0.8–1.7; resampling to 48 kHz +1.1–2.0. Decoders need no change. |
+| Always-on limiter | CHANGED (Reborn `f08cf93`) | The player decodes at neutral user gain; the graph can only raise a peak with an active EQ band or a positive net gain (ReplayGain without a peak tag; with one the headroom already caps it at −0.1 dBFS). The limiter is now built only then: pipeline 2.5 → 1.5 % (MP3), 4.6 → 2.4 % (24/96), and loud masters are no longer limited above −0.18 dBFS. The output conversion saturates (tested). |
+| ALSA period | NO_CHANGE | 512 frames (≈86 wakeups/s); user volume is applied at write time, so a larger buffer would delay volume changes. |
+
 **Gate decision:** READY for the build.
