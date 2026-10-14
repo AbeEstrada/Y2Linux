@@ -8101,3 +8101,25 @@ No hardware or memory scope change.
 | Reborn | CHANGED | Download screen: step, percentage, gliding bar, MB of MB, speed, time left; check step with its own bar; at the end the page turns to Ready to Install and a notice says so wherever the owner is. |
 
 **Gate decision:** READY for candidate 48. The new screen first shows when 48 downloads the next release.
+
+## RELEASE-49 firmware-free public images, one-time radio firmware from the owner's copy scope audit — 2026-10-16
+
+**Boundary:** owner: "for release 49 … provide all the images in the release, so other developers have the one time
+flash setup", plus a written explanation of the recovery and why RECOVERY must be flashed once. Found while
+preparing it: `Y2ROOT` (and the OTA `rootfs.ext4.gz` of releases 46–48) contained the proprietary MediaTek radio
+firmware in `/lib/firmware/mediatek/mt6582` (Wi-Fi RAM code, Bluetooth patches, modem image, WMT config, two derived
+defaults); the readme forbids redistributing images that contain it, the build records
+`redistribution_permission_established: false`, and the owner has no permission. Owner decision 2026-10-16: remove
+those assets (done: 46–48 now carry no system image, notes added; firmware was never in Git) and make releases
+firmware-free with this install flow: flash the public images, then copy `system.img` from the Innioasis package into
+the player's `Firmware` folder over USB; the player extracts and checks the five files itself.
+
+| Row | Classification | Plan |
+| --- | --- | --- |
+| Root image | CHANGED | No owner firmware in any image; `/lib/firmware/mediatek/mt6582` is a link to `/data/firmware/mt6582` (Y2DATA). Seal check: no firmware file in root or initramfs. |
+| Existing players | NEW | The 49+ recovery copies the reviewed files from the old root to Y2DATA before it writes the new root (hash-checked); nothing for the owner to do. |
+| New players | NEW | The platform watches `Firmware/system.img` on the MTP storages, reads the Android sparse ext4 image itself, checks the five files against the reviewed inventory (SHA-256), derives the two defaults like `provision.py`, installs them, deletes the copy and starts the radios. Reborn says what to do while the firmware is missing. |
+| Public package | NEW | First-install package without the owner's SSH key (developers personalize Y2DATA with `first_owner.py`); release 49 carries it plus the OTA files. |
+| Contributions | CHANGED | Merge Y2Linux #38 (cs43130 on-demand load measurement, two driver fixes; reviewed, builds, 718 OK) and Y2Reborn #6–#8. |
+
+**Gate decision:** READY for candidate 49; publish only after the firmware migration and the copy flow work on the owner's player.
