@@ -7871,3 +7871,22 @@ image; it does not flash it (the owner flashes).
 | Effect on drain | NOT_RUN | No coulomb counter on this board (stock `fgauge_read_*` stubs). Night test should start ≥4 h after charging and run ≥12 h; per-gap A/B nights with the switches if the owner wants attribution. |
 
 **Gate decision:** READY for the build.
+
+## POWER-FINAL-28 stock battery percentage and top-off scope audit — 2026-10-14
+
+**Boundary:** owner report on 27: on the charger the Y2 shows 100 %, after a restart about 80 %; wanted 100 % when
+really full, then 99, 98, 97 …, with REA. Owner chose the full scope including stock-style charging (2026-10-14).
+Analysis: ledger F28–F33 (`docs/knowledge/stock-suspend-re-ledger.md`), live 27 boot `5919b4fe` (read-only). Platform
+only; Reborn unchanged (`1c9edd4`). This audit builds the image; the owner flashes. **Charging change: materially
+changes charging behaviour (hardware scope) — the voltage ceiling, 4.2 V guard and every protection are unchanged.**
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Top-off (finish stage) | CHANGED (`charger-policy.h`, `mt6323-charger.c`) | Stock: top-off at hardware CV until `(ISENSE − BATSNS + offset) × 1000 / 68 ≤ 150 mA` for 6 × 10 s (a 10.2-mV net sense drop) or 3 h. Y2 26: stops at the first 4.175 V sample (POWER-02 tripped the 4.2 V guard while charging on at full current against CV), rests ≈4.09 V (95 % on the stock curve). 28: the first 4.175 V sample at the normal current steps the cycle to the existing 70 mA selector; at 70 mA the cycle completes at 4.175 V or on the stock 10.2-mV taper rule (raw drop minus the measured zero-current offset). Target 4.175 V, hardware CV selector 30, 4.2 V fault guard, 3 h CV / 24 h / precharge timers, watchdog, OVP, thermal ladder: unchanged. Unknown current keeps 26 behaviour. |
+| Recharge | CHANGED | Stock 4.110 V. 28: below min(4.110 V, last Full rest − 30 mV), never below 26's 4.00 V, so the 70-s loop (rest below 4.11 V) cannot return. |
+| Boot OCV | NEW, read-only | BAT0 `voltage_ocv` = PMIC 0x724 latched at power-on (stock `get_hw_ocv`: raw × 7200/32768 + 8 mV, bit 15 ready), read once at probe. Live 27: 4062 mV vs 4002 mV first loaded sample. |
+| Displayed percentage | CHANGED (`battery.py`, `power.py`) | Stock UI SOC: separate display value; charging shows at most 99 until Full; Full counts up 1 per 10 s to 100 and re-anchors (100 = the Full rest voltage's curve value); after Full 100 is held through maintenance holds/recharges until unplug; unplugged it only follows the estimate down (existing 60 s/point limit). The estimate itself (and `remaining_uah_estimate`) is unchanged; the display is `estimate × 100 / anchor`. |
+| Restart | NEW | Stock keeps UI SOC in an RTC spare register and reuses it within 40 points (`dod_init`). 28: `/data/system/platform/battery-ui.json` (written durably on change), reused within 40 points of the boot estimate, which uses the power-on OCV unless a charger moved it by 31+ points (`oam_init`). |
+| Effect | NOT_RUN | Needs one full charge on the device (charging_state `finish`/`taper_samples`/`full_rest_uv`, rest voltage after Full), then unplug/restart observations. |
+
+**Gate decision:** READY for the build.
