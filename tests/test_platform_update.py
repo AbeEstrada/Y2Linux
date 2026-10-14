@@ -236,6 +236,24 @@ class UpdateTests(unittest.TestCase):
         self.write('etc/y2linux/update-trust.json', trust)
         self.run_core('queue', expected=1)
 
+    def test_recovery_of_the_new_release_installs_its_own_release(self):
+        # Found on the device (35 -> 36): the recovery image written by prepare
+        # is the new release's, so its compat file names the package's sequence.
+        trust = json.loads((self.root/'etc/y2linux/update-trust.json').read_text())
+        trust['keys'][0].update(purpose='release', allow_downgrade=False)
+        self.write('etc/y2linux/update-trust.json', trust)
+        self.run_core('queue')
+        self.run_core('prepare')
+        compat = json.loads((self.root/'etc/y2linux/update-compat.json').read_text())
+        self.write('etc/y2linux/update-compat.json', dict(compat, sequence=1))   # the recovery's own files
+        self.assertEqual(self.run_core('recovery', recovery=True)['outcome'], 'installed')
+        self.assertEqual((self.root/'root.img').read_bytes(), self.new)
+        # A replay is still refused where it belongs: in the normal system.
+        self.boot('new-1')
+        self.write('run/y2/application-ready.json', {'boot_id': 'new-1'})
+        self.run_core('ack')
+        self.assertIn('replay', self.run_core('queue', expected=1)['failure'])
+
     def test_an_unchanged_recovery_image_is_not_rewritten(self):
         with (self.root/'disk.img').open('r+b') as disk:
             disk.seek(RECOVERY); disk.write(self.new_recovery)

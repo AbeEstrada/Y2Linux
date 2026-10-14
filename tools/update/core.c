@@ -479,7 +479,10 @@ static unsigned char *image_buffer(void) {
     }
     return p;
 }
-static json_object *verify(int package, bool payload_check) {
+/* installed < 0: the running system's compat sequence. The recovery image
+ * passes the sequence the normal system recorded when it queued the package:
+ * its own compat file names the recovery's release, which may be this one. */
+static json_object *verify(int package, bool payload_check, int64_t installed_sequence) {
     if (!crypto_ready())
         return NULL;
     size_t length, siglen;
@@ -552,7 +555,7 @@ static json_object *verify(int package, bool payload_check) {
         failure("source identity");
         goto fail;
     }
-    int64_t installed = num(compat, "sequence");
+    int64_t installed = installed_sequence >= 0 ? installed_sequence : num(compat, "sequence");
     bool downgrade = num(m, "sequence") <= installed;
     json_object *water = load(basefd, "accepted.json");
     if (water) {
@@ -1135,7 +1138,7 @@ static bool recover(json_object *j) {
     }
     progress(2, "verify");
     int pkg = openat(basefd, "pending", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-    json_object *m = pkg >= 0 ? verify(pkg, true) : NULL;
+    json_object *m = pkg >= 0 ? verify(pkg, true, num(j, "previous_sequence")) : NULL;
     if (!m || strcmp(str(m, "y2linux_commit"), str(j, "y2linux_commit")) ||
         num(m, "sequence") != num(j, "sequence") ||
         strcmp(str(m, "_manifest_sha256"), str(j, "manifest_sha256"))) {
@@ -1227,7 +1230,7 @@ static bool prepare(json_object *j, const char *operation) {
     bool ok = mem != NULL;
     if (ok && !strcmp(s, "Queued") && !strcmp(operation, "y2-update")) {
         int pkg = openat(basefd, "pending", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-        json_object *m = pkg >= 0 ? verify(pkg, false) : NULL;
+        json_object *m = pkg >= 0 ? verify(pkg, false, -1) : NULL;
         ok = m && !strcmp(str(m, "_manifest_sha256"), str(j, "manifest_sha256"));
         if (!ok && m)
             failure("queued identity changed");
@@ -1382,7 +1385,7 @@ int main(int argc, char **argv) {
     }
     if ((!strcmp(argv[1], "check") || !strcmp(argv[1], "check-manifest")) && argc == 3) {
         int pkg = open(path(argv[2]), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-        json_object *m = pkg >= 0 ? verify(pkg, strcmp(argv[1], "check-manifest") != 0) : NULL;
+        json_object *m = pkg >= 0 ? verify(pkg, strcmp(argv[1], "check-manifest") != 0, -1) : NULL;
         if (pkg >= 0)
             close(pkg);
         if (m) {
@@ -1398,7 +1401,7 @@ int main(int argc, char **argv) {
             failure("update already pending");
         else {
             int pkg = openat(basefd, "pending", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-            json_object *m = pkg >= 0 ? verify(pkg, true) : NULL;
+            json_object *m = pkg >= 0 ? verify(pkg, true, -1) : NULL;
             if (pkg >= 0)
                 close(pkg);
             if (m) {
