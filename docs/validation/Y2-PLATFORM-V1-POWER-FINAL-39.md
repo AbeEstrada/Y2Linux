@@ -22,6 +22,21 @@ committed. On a cold start the same full FIFO clears with Linux's first frame (0
 | Mutex handover | First mutex prepare per boot pulses `MUTEX_RST` for all six mutexes and clears `INTSTA` (vendor register map), logging `Y2SCAN mutex reset: intsta … commit …`. |
 | Recovery screen | Double-buffered with page flips at vblank (owner: flicker); activity as dots after the step name instead of a moving mark in the bar (owner: looked like a second bar). |
 
+## Device results
+
+- **Flashed 2026-10-15** (archive `20261015/136`): cold start healthy; the handover reset logged
+  `intsta 10000001->10000000 commit 00000000->00000000`.
+- **Software restart, screen on: still dark** (archive 137). The mutex was clean at handover, so the stale mutex
+  seen on 38 is a consequence. New decisive difference: **SMI larb0 status (`0x14010000`) 1 = busy after the
+  restart, 0 after a cold start**; overlay FIFO full, RDMA not done, DSI idle follow from it.
+- **Software restart with the screen off (CRTC disabled, nothing fetching): still dark, larb0 busy again**
+  (archive 138). So it is not a reset during a memory fetch. The display power domain was not powered down at
+  screen-off (`dis_offs=0`), so "domain off before restart" is untested.
+- Restart boots reach the display handover about 0.4 s later than cold boots, and DVFS admits 1.3 GHz at once
+  (`result=0`, cold: deferred). Not yet linked to larb0.
+- Next diagnostic: snapshot at the moment of handover (before Linux parks LK's pipeline) on a cold and a restart
+  boot, to see whether larb0 is already busy when Linux takes over.
+
 ## Owner steps
 
 1. Flash 39 (BOOTIMG + ANDROID; the kernel changed). The agent checks the `mutex reset` line on the cold boot.
