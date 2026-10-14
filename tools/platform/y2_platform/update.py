@@ -108,7 +108,7 @@ def base_url(url):
     return url[:-len('manifest.json')]
 
 
-def copy_stream(source, destination, maximum, exact=None, seconds=900):
+def copy_stream(source, destination, maximum, exact=None, seconds=900, report=None):
     digest = hashlib.sha256()
     fd = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     count = 0
@@ -127,6 +127,8 @@ def copy_stream(source, destination, maximum, exact=None, seconds=900):
                 free(stream.fileno(), len(chunk))
                 stream.write(chunk)
                 digest.update(chunk)
+                if report is not None:
+                    report(count)
             if exact is not None and count != exact:
                 raise ValueError('incomplete_download')
             stream.flush()
@@ -208,7 +210,17 @@ def stage(ctx, source=None, url=None, check_only=False):
         for name, maximum in [('manifest.json', 16384), ('manifest.sig', 64)]:
             with get(name) as stream:
                 copy_stream(stream, incoming/name, maximum, exact=64 if name.endswith('.sig') else None, seconds=30)
-        manifest = core(ctx, 'check-manifest', '/data/updates/' + token)
+        try:
+            manifest = core(ctx, 'check-manifest', '/data/updates/' + token)
+        except ValueError as error:
+            if not check_only or 'downgrade/replay' not in str(error):
+                raise
+            # The channel offers this release (or an older one): up to date.
+            remove_package(incoming)
+            installed = ctx.json('/etc/y2linux/versions.json', {}).get('release_version')
+            atomic_json(root/'download.json', {'schema': 1, 'state': 'Checked', 'up_to_date': True,
+                                               'release_version': installed})
+            return {'state': 'UpToDate', 'release_version': installed}
         payloads = manifest['payloads']
         total = sum(item['bytes'] for item in payloads.values())
         if check_only:
@@ -221,10 +233,19 @@ def stage(ctx, source=None, url=None, check_only=False):
         # Root payload plus its backup during installation; refuse early, not in recovery.
         free(fd, total + payloads['rootfs']['raw_bytes'] // 4)
         count = 0
+        shown = [0]
+
+        def report(done):
+            # Progress for the Software Update page, about once per megabyte.
+            if count + done - shown[0] >= 1024**2:
+                shown[0] = count + done
+                atomic_json(root/'download.json', {'schema': 1, 'state': 'Staging', 'id': token,
+                            'bytes_done': shown[0], 'bytes_total': total})
         for key, item in payloads.items():
             name = PAYLOADS[key]
             with get(name) as stream:
-                got, digest = copy_stream(stream, incoming/name, item['bytes'], exact=item['bytes'])
+                got, digest = copy_stream(stream, incoming/name, item['bytes'], exact=item['bytes'],
+                                          report=report)
             if digest != item['sha256']:
                 raise ValueError('download_hash_mismatch')
             count += got

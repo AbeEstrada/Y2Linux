@@ -376,7 +376,23 @@ class UpdateTests(unittest.TestCase):
                 self.assertFalse((self.base/'state.json').exists())
                 payload.write_bytes(original)
             self.assertEqual(stage(ctx,source)['state'],'Queued')
+            progress=json.loads((self.base/'download.json').read_text())
+            self.assertEqual(progress['state'],'Verified')
         self.assertEqual((self.root/'root.img').read_bytes(),self.old)
+        # The installed release offered again: a check says up to date, not a failure.
+        self.write('etc/y2linux/versions.json', dict(self.versions, release_version='test-v1'))
+        trust=json.loads((self.root/'etc/y2linux/update-trust.json').read_text())
+        trust['keys'][0]['purpose']='release'
+        self.write('etc/y2linux/update-trust.json', trust)
+        compat=json.loads((self.root/'etc/y2linux/update-compat.json').read_text())
+        compat['sequence']=1
+        self.write('etc/y2linux/update-compat.json', compat)
+        (self.base/'state.json').write_text(json.dumps({'schema':2,'state':'Acknowledged'}))
+        with patch('y2_platform.transfer.storage',return_value={'volumes':[volume]}):
+            self.assertEqual(stage(ctx,source,check_only=True)['state'],'UpToDate')
+        checked=json.loads((self.base/'download.json').read_text())
+        self.assertTrue(checked['up_to_date'])
+        self.assertEqual(checked['release_version'],'test-v1')
         for url in ('http://example.com/manifest.json','https://u:p@example.com/manifest.json',
                     'https://example.com/manifest.json?redirect=other','https://example.com/other'):
             with self.assertRaises(ValueError): base_url(url)
