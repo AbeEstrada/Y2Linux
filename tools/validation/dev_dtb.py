@@ -214,7 +214,8 @@ def check(data, initrd_size, production=True):
     rail='/pwrap@1000d000/pmic/regulators/ldo_vgp2'
     require(nodes[rail]['regulator-min-microvolt']==cells(1800000) and
             nodes[rail]['regulator-max-microvolt']==cells(1800000) and
-            'regulator-always-on' in nodes[rail], 'VGP2 1.8V/shared retention')
+            'regulator-always-on' not in nodes[rail] and 'regulator-boot-on' not in nodes[rail] and
+            nodes['/sound']['vgp2-supply']==cells(handle(rail)), 'VGP2 1.8V, owned by the codec and the card hold (27)')
     parent=rail
     for pin in (20,18,15):
         path='/regulator-dac'+str(pin); v=nodes[path]

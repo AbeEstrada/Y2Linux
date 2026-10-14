@@ -3,6 +3,7 @@
  * GC9503V LK command table and 480x360 sync-pulse mode. The historical
  * 368-line claim was retracted in the September 2026 recovery notes.
  * Panel power remains inherited; reset is owned by MMSYS, routed on GPIO112.
+ * Screen-off can use the stock power-down sequence (POWER-FINAL-27, stock_suspend).
  */
 #include <linux/delay.h>
 #include <linux/module.h>
@@ -91,6 +92,58 @@ static const struct gc9503v_cmd gc9503v_init_cmds[] = {
     {0xd6, 52, {GAMMA}},
 };
 
+/*
+ * POWER-FINAL-27: the Y2 FM kernel's GC9503V lcm_suspend (0xc04a24f4, table
+ * 0xc09ff464, ledger F22): display off and sleep-in framed by the vendor's
+ * analog power-down block, then reset left HIGH (SET_RESET_PIN(1)) for 50 ms.
+ * stock_suspend=N (kernel default) keeps 26's display-off, sleep-in, reset-low.
+ * prepare() pulses reset and replays the full init either way.
+ */
+struct gc9503v_suspend_cmd {
+	u8 cmd;
+	u8 len;
+	u8 delay_ms; /* after this command */
+	u8 data[5];
+};
+static const struct gc9503v_suspend_cmd gc9503v_stock_suspend_cmds[] = {
+    {0xf0, 5, 0, {0x55, 0xaa, 0x52, 0x08, 0x00}},
+    {0xc1, 1, 0, {0x3f}},
+    {0x6c, 1, 20, {0x60}},
+    {0xb1, 1, 0, {0x00}},
+    {0xfa, 4, 20, {0x7f, 0x00, 0x00, 0x00}},
+    {0x6c, 1, 10, {0x50}},
+    {MIPI_DCS_SET_DISPLAY_OFF, 0, 50, {}},
+    {MIPI_DCS_ENTER_SLEEP_MODE, 0, 20, {}},
+    {0xf0, 5, 0, {0x55, 0xaa, 0x52, 0x08, 0x00}},
+    {0xc2, 1, 0, {0xce}},
+    {0xc3, 1, 0, {0xcd}},
+    {0xc6, 1, 0, {0xfc}},
+    {0xc5, 1, 0, {0x03}},
+    {0xcd, 1, 0, {0x64}},
+    {0xc4, 1, 0, {0xff}},
+    {0xc9, 1, 0, {0xcd}},
+    {0xf6, 2, 0, {0x5a, 0x87}},
+    {0xfd, 3, 0, {0xaa, 0xaa, 0x0a}},
+    {0xfe, 2, 0, {0x6a, 0x0a}},
+    {0x78, 2, 0, {0x2a, 0xaa}},
+    {0x92, 2, 0, {0x17, 0x08}},
+    {0x77, 2, 0, {0xaa, 0x2a}},
+    {0x76, 2, 0, {0xaa, 0xaa}},
+    {0x84, 1, 0, {0x00}},
+    {0x78, 2, 0, {0x2b, 0xba}},
+    {0x89, 1, 0, {0x73}},
+    {0x88, 1, 0, {0x3a}},
+    {0x85, 1, 0, {0xb0}},
+    {0x76, 2, 0, {0xeb, 0xaa}},
+    {0x94, 1, 0, {0x80}},
+    {0x87, 3, 0, {0x04, 0x07, 0x30}},
+    {0x93, 1, 0, {0x27}},
+    {0xaf, 1, 0, {0x02}},
+};
+static bool stock_suspend;
+module_param(stock_suspend, bool, 0644);
+MODULE_PARM_DESC(stock_suspend, "screen-off uses the stock GC9503V power-down sequence (reset high)");
+
 static inline struct gc9503v *to_gc9503v(struct drm_panel *panel)
 {
 	return container_of(panel, struct gc9503v, panel);
@@ -156,10 +209,37 @@ disable_supply:
 	return ret;
 }
 
+static int gc9503v_stock_unprepare(struct gc9503v *ctx)
+{
+	unsigned int i;
+	int ret;
+
+	for (i = 0; i < ARRAY_SIZE(gc9503v_stock_suspend_cmds); i++) {
+		const struct gc9503v_suspend_cmd *c = &gc9503v_stock_suspend_cmds[i];
+
+		ret = mipi_dsi_dcs_write(ctx->dsi, c->cmd, c->data, c->len);
+		if (ret < 0) {
+			dev_err(&ctx->dsi->dev, "stock power-down cmd 0x%02x failed: %d\n", c->cmd, ret);
+			return ret;
+		}
+		if (c->delay_ms)
+			msleep(c->delay_ms);
+	}
+	ret = reset_control_deassert(ctx->reset);
+	if (ret)
+		return ret;
+	msleep(50);
+	return 0;
+}
+
 static int gc9503v_unprepare(struct drm_panel *panel)
 {
 	struct gc9503v *ctx = to_gc9503v(panel);
 	int ret, sleep_ret, reset_ret;
+
+	/* A failed stock sequence falls back to 26's reset-low quiescent state. */
+	if (READ_ONCE(stock_suspend) && !gc9503v_stock_unprepare(ctx))
+		return 0;
 
 	ret = mipi_dsi_dcs_set_display_off(ctx->dsi);
 	sleep_ret = mipi_dsi_dcs_enter_sleep_mode(ctx->dsi);

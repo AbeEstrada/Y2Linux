@@ -161,6 +161,7 @@
     };
     sound { compatible = "innioasis,y2-audio";
         mediatek,platform = <&afe>; audio-codec = <&dac>;
+        vgp2-supply = <&vgp2>; /* 27: held unless vgp2_idle_off=Y */
     };
     navigation-keys {
         pinctrl-names = "default"; pinctrl-0 = <&nav_state>;
@@ -341,8 +342,9 @@
                     regulator-min-microvolt = <1800000>;
                     regulator-max-microvolt = <1800000>;
                     regulator-enable-ramp-delay = <216>;
-                    /* Shared ownership is not fully qualified: keep the rail on. */
-                    regulator-always-on;
+                    /* POWER-FINAL-27: no longer always on. Stock's only VGP2 user
+                     * is the CS43131 (ledger F20): the codec's runtime PM and the
+                     * card's vgp2_idle_off switch own it; off while the DAC is idle. */
                 };
             };
         };

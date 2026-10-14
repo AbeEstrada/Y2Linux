@@ -23,8 +23,9 @@ int main(void) {
  assert(y2_pmic_write_mask(0x504) == 0x1001 && y2_pmic_write_mask(0x506) == 0x4001);
  assert(y2_pmic_write_mask(0x508) == 0x0001);
  assert(y2_pmic_write_mask(0x50c) == 0x8000 && y2_pmic_write_mask(0x532) == 0x00e0);
- /* VSYS sleep fields and both buck enables stay closed (VPROC: test_vproc_sleep.py). */
- assert(y2_pmic_write_mask(0x256) == 0 && y2_pmic_write_mask(0x23c) == 0);
+ /* 27: VSYS mode fields only (test_pmic_sleep.py); selectors and both buck enables stay closed. */
+ assert(y2_pmic_write_mask(0x256) == 0x0133 && y2_pmic_write_mask(0x23c) == 0x0002);
+ assert(y2_pmic_write_mask(0x244) == 0 && y2_pmic_write_mask(0x246) == 0 && y2_pmic_write_mask(0x248) == 0);
  assert(y2_pmic_write_mask(0x21a) == 0 && y2_pmic_write_mask(0x240) == 0);   /* buck enables */
  return 0;
 }

@@ -513,6 +513,7 @@ static unsigned pmic_sleep_groups;
 module_param_named(pmic_sleep, pmic_sleep_groups, uint, 0644);
 static struct y2_ps_state pmic_sleep;
 static unsigned pmic_sleep_entries, pmic_sleep_restores, pmic_sleep_failures, pmic_sleep_last_changed;
+static unsigned pmic_sleep_vsys_refusals;
 static int pmic_sleep_error;
 static int pmic_sleep_read(void *context, unsigned reg, unsigned *value)
 {
@@ -528,6 +529,19 @@ void y2_pmic_sleep_begin(void)
 	struct y2_ps_io io;
 	int ret;
 	if (!y2_wrap || !groups) return;
+	if (groups & Y2_PS_VSYS) {
+		/* 27: hardware mode must select the voltage VSYS already has. */
+		unsigned control, vosel, on, sleep, actual;
+		if (regmap_read(y2_wrap->map, 0x23c, &control) ||
+		    regmap_read(y2_wrap->map, 0x244, &vosel) ||
+		    regmap_read(y2_wrap->map, 0x246, &on) ||
+		    regmap_read(y2_wrap->map, 0x248, &sleep) ||
+		    regmap_read(y2_wrap->map, 0x24a, &actual) ||
+		    !y2_ps_vsys_ready(control, vosel, on, sleep, actual)) {
+			groups &= ~Y2_PS_VSYS;
+			pmic_sleep_vsys_refusals++;
+		}
+	}
 	io = (struct y2_ps_io){ y2_wrap->map, pmic_sleep_read, pmic_sleep_update };
 	ret = y2_ps_apply(&io, groups, &pmic_sleep);
 	if (ret) {
@@ -555,9 +569,10 @@ void y2_pmic_sleep_end(void)
 }
 static int pmic_sleep_state_get(char *buffer, const struct kernel_param *kp)
 {
-	return sysfs_emit(buffer, "groups=%#x entries=%u restores=%u failures=%u last_error=%d last_changed=%#x pending=%#x\n",
+	return sysfs_emit(buffer, "groups=%#x entries=%u restores=%u failures=%u last_error=%d last_changed=%#x pending=%#x vsys_refusals=%u\n",
 		READ_ONCE(pmic_sleep_groups), pmic_sleep_entries, pmic_sleep_restores,
-		pmic_sleep_failures, pmic_sleep_error, pmic_sleep_last_changed, pmic_sleep.changed);
+		pmic_sleep_failures, pmic_sleep_error, pmic_sleep_last_changed, pmic_sleep.changed,
+		pmic_sleep_vsys_refusals);
 }
 static const struct kernel_param_ops pmic_sleep_state_ops = { .get = pmic_sleep_state_get };
 module_param_cb(pmic_sleep_state, &pmic_sleep_state_ops, NULL, 0400);

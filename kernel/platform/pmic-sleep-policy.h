@@ -14,6 +14,16 @@
  *   0x108[12] rg_efuse_ck_pdn, 0x10e[5] rg_auxadc_ctl_ck_pdn   0 -> 1
  * group 4, the 1.8 V references (stock pmic_early_suspend, ledger F5):
  *   0x776[15] rg_vref18_enb, 0x778[15] rg_vref18_enb_md        0 -> 1
+ * group 8, POWER-FINAL-27 VSYS buck sleep state (stock PMIC_INIT_SETTING_V1,
+ *   vendor pmic_mt6323.c 3417-3424, ledger F21), apply order, mode bit last:
+ *   0x242 VSYS_SFCHG_FRATE 0x23 / RRATE 0x11 / REN 1
+ *   0x256 VSYS_TRANSTD 3, VSYS_VOSEL_TRANS_EN 1, VSYS_VSLEEP_EN 1
+ *   0x238[5:4] QI_VSYS_VSLEEP 2, 0x23c[1] VSYS_VOSEL_CTRL 1 (hardware)
+ *   The voltage never changes: VOSEL (0x244), VOSEL_ON (0x246), VOSEL_SLEEP
+ *   (0x248) and the bank readback (0x24a) stay unwritable, and the group is
+ *   only applied while VSYS is in software mode with all four equal
+ *   (y2_ps_vsys_ready), so hardware mode selects the same 2.2 V awake and
+ *   asleep; only the buck's own sleep state follows SRCLKEN as in stock.
  *
  * Deliberately not here: VEMC_3V3 off (0x508[14]) — overlay 0029 keeps the root
  * eMMC powered and in TRAN state across suspend without re-initialisation;
@@ -31,7 +41,8 @@
 #define Y2_PS_AUDIO   0x1U
 #define Y2_PS_CLOCKS  0x2U
 #define Y2_PS_VREF    0x4U
-#define Y2_PS_ALL     0x7U
+#define Y2_PS_VSYS    0x8U
+#define Y2_PS_ALL     0xfU
 
 struct y2_ps_field { unsigned short reg, mask, value, group; };
 static const struct y2_ps_field y2_ps_fields[] = {
@@ -41,7 +52,19 @@ static const struct y2_ps_field y2_ps_fields[] = {
 	{ 0x10e, 0x0020, 0x0020, Y2_PS_CLOCKS },
 	{ 0x776, 0x8000, 0x8000, Y2_PS_VREF },
 	{ 0x778, 0x8000, 0x8000, Y2_PS_VREF },
+	{ 0x242, 0xff7f, 0x9123, Y2_PS_VSYS },
+	{ 0x256, 0x0133, 0x0113, Y2_PS_VSYS },
+	{ 0x238, 0x0030, 0x0020, Y2_PS_VSYS },
+	{ 0x23c, 0x0002, 0x0002, Y2_PS_VSYS },
 };
+/* VSYS precondition: software mode and one selector everywhere. */
+static inline int y2_ps_vsys_ready(unsigned control, unsigned vosel, unsigned on,
+				   unsigned sleep, unsigned actual)
+{
+	vosel &= 0x7f;
+	return !(control & 0x2) && (on & 0x7f) == vosel &&
+	       (sleep & 0x7f) == vosel && (actual & 0x7f) == vosel;
+}
 #define Y2_PS_FIELDS (sizeof(y2_ps_fields) / sizeof(y2_ps_fields[0]))
 
 struct y2_ps_io {

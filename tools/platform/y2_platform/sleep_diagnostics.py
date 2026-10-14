@@ -113,7 +113,10 @@ def features(ctx, golden=False):
              'wheel_sleep': {p.parent.name: read(p, limit=4096)
                              for p in ctx.glob('/sys/bus/i2c/devices/*-0051/sleep')},
              'infra': ctx.read('/sys/firmware/y2_infra/state', limit=4096),
-             'spm': ctx.read(SPM + 'state', limit=8192)}
+             'spm': ctx.read(SPM + 'state', limit=8192),
+             # 27: stock panel power-down and the idle VGP2 rail (ledger F20/F22).
+             'panel_stock_suspend': ctx.read('/sys/module/panel/parameters/stock_suspend', limit=16),
+             'vgp2_idle_off': ctx.read('/sys/module/y2_cs43131/parameters/vgp2_idle_off', limit=16)}
     if golden:
         # Read-only always-on/INFRA registers; the entry column is the last
         # suspend-entry capture, so read it once Linux has returned.

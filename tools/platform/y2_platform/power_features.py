@@ -1,4 +1,4 @@
-"""POWER-FINAL-16/17/18/19 runtime power features, armed once the UI has drawn its first frame.
+"""POWER-FINAL-16/17/18/19/27 runtime power features, armed once the UI has drawn its first frame.
 
 Each feature is a kernel parameter whose kernel default is the safe (15)
 behaviour. This module turns them on at `application_ready`, never earlier: the
@@ -22,10 +22,16 @@ FEATURES = {
     # re-checked at every sleep entry.
     'md1_gate': ('/sys/module/spm/parameters/md1_gate', True),
     # 18: stock PMIC suspend fields, bitmask: 1 audio clocks, 2 unused PMIC
-    # clocks, 4 VREF18 (pmic-sleep-policy.h).
-    'pmic_sleep': ('/sys/module/pwrap/parameters/pmic_sleep', 0x7),
+    # clocks, 4 VREF18, 8 VSYS buck sleep state (27) (pmic-sleep-policy.h).
+    'pmic_sleep': ('/sys/module/pwrap/parameters/pmic_sleep', 0xf),
     # 19: gate the AP's PMIC_WRAP clock (INFRA bit 23) for the PCM sleep only.
     'pwrap_gate': ('/sys/module/spm/parameters/pwrap_gate', True),
+    # 27 (ledger F22): screen-off sends the stock GC9503V power-down sequence
+    # and leaves reset high (panel.c); N keeps 26's reset-low sequence.
+    'panel_stock_suspend': ('/sys/module/panel/parameters/stock_suspend', True),
+    # 27 (ledger F20): the CS43131's VGP2 rail turns off while the DAC is
+    # idle, as in stock; N keeps 26's always-on rail (y2-cs43131.c).
+    'vgp2_idle_off': ('/sys/module/y2_cs43131/parameters/vgp2_idle_off', True),
 }
 
 

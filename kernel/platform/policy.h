@@ -76,7 +76,8 @@ static inline unsigned y2_pmic_write_mask(unsigned reg)
 	case 0x508: return 0x0001;
 	/* POWER-FINAL-13 stock VPROC sleep fields (vproc-sleep-policy.h), set only
 	 * inside platform prepare_late..wake and restored exactly afterwards. The
-	 * buck enables (0x21a/0x240), software VOSEL 0x21e and VSYS stay unwritable. */
+	 * buck enables (0x21a/0x240) and software VOSEL 0x21e stay unwritable; VSYS
+	 * mode fields follow below (27), its selectors never. */
 	case 0x212: return 0x0030; /* QI_VPROC_VSLEEP */
 	case 0x216: return 0x0002; /* VPROC_VOSEL_CTRL only */
 	case 0x21c: return 0x80ff; /* VPROC_SFCHG_FRATE/FEN/REN */
@@ -105,6 +106,12 @@ static inline unsigned y2_pmic_write_mask(unsigned reg)
 	case 0x10e: return 0x0020; /* auxadc_ctl clock PDN */
 	case 0x70c: return 0x0010; /* rg_adacck_en */
 	case 0x776: case 0x778: return 0x8000; /* rg_vref18_enb(_md) */
+	/* POWER-FINAL-27 VSYS buck sleep state (pmic-sleep-policy.h group 8); the
+	 * VSYS enable and every VSYS voltage selector (0x244..0x24a) stay closed. */
+	case 0x238: return 0x0030; /* QI_VSYS_VSLEEP */
+	case 0x23c: return 0x0002; /* VSYS_VOSEL_CTRL only */
+	case 0x242: return 0xff7f; /* VSYS_SFCHG_FRATE/RRATE/REN */
+	case 0x256: return 0x0133; /* VSYS_TRANSTD/VOSEL_TRANS_EN/VSLEEP_EN */
 	case 0x120: return 0x0030;
 	case 0x148: return 0x000a;
 	case 0x402: return 0x0801;

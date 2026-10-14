@@ -70,10 +70,11 @@ int main(void) {
  assert(y2_pmic_write_mask(0x212) == 0x0030 && y2_pmic_write_mask(0x216) == 0x0002);
  assert(y2_pmic_write_mask(0x21c) == 0x80ff && y2_pmic_write_mask(0x220) == 0x007f);
  assert(y2_pmic_write_mask(0x222) == 0x007f && y2_pmic_write_mask(0x230) == 0x0103);
- /* Buck enables, the software VOSEL Y2 DVFS owns, the readback bank and VSYS stay closed. */
+ /* Buck enables, the software VOSEL Y2 DVFS owns, the readback bank and every
+  * VSYS selector stay closed; 27 admits only VSYS mode/slew bits (test_pmic_sleep.py). */
  assert(!y2_pmic_write_mask(0x21a) && !y2_pmic_write_mask(0x240) && !y2_pmic_write_mask(0x21e));
- assert(!y2_pmic_write_mask(0x224) && !y2_pmic_write_mask(0x23c) && !y2_pmic_write_mask(0x256));
- assert(!y2_pmic_write_mask(0x248) && !y2_pmic_write_mask(0x246));
+ assert(!y2_pmic_write_mask(0x224) && y2_pmic_write_mask(0x23c) == 0x0002 && y2_pmic_write_mask(0x256) == 0x0133);
+ assert(!y2_pmic_write_mask(0x244) && !y2_pmic_write_mask(0x248) && !y2_pmic_write_mask(0x246) && !y2_pmic_write_mask(0x24a));
  /* VOSEL_ON only at Y2's three DVFS selectors; sleep voltage 0.85..1.25 V. */
  assert(y2_pmic_value_allowed(0x220, 72) && y2_pmic_value_allowed(0x220, 80) && y2_pmic_value_allowed(0x220, 88));
  assert(!y2_pmic_value_allowed(0x220, 0) && !y2_pmic_value_allowed(0x220, 0x18) && !y2_pmic_value_allowed(0x220, 96));
