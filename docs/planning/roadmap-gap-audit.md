@@ -7890,3 +7890,17 @@ changes charging behaviour (hardware scope) — the voltage ceiling, 4.2 V guard
 | Effect | NOT_RUN | Needs one full charge on the device (charging_state `finish`/`taper_samples`/`full_rest_uv`, rest voltage after Full), then unplug/restart observations. |
 
 **Gate decision:** READY for the build.
+
+## POWER-FINAL-29 finish-stage and discharge-estimate corrections scope audit — 2026-10-14
+
+**Boundary:** first device run of 28 (archive `20261014/126`, boots `8f43c71e`, `129e5611`). Owner-approved battery
+milestone continues (full scope chosen 2026-10-14). Platform only; Reborn unchanged (`1c9edd4`). Builds the image; the
+owner flashes.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| 28 works | OBSERVED | Power-on OCV start (89 % vs ≈81 % from the loaded sample); restart restored the saved display; finish stage entered at 4.175 V after 15 min at 450 mA, no fault; VSYS/pmic_sleep (27) 1/1 with `last_changed` 0x3ff. |
+| 70 mA finish stalls | DEFECT → CORRECTED | At 70 mA the pack fell back to 4.09 V and stayed flat (ISENSE est. ≈90 mA; screen off, idle, awake on USB): the awake Y2 consumes about what 70 mA supplies; the 3-h top-off budget would have ended the cycle as a timeout fault. 29: steps 450/650 → 200 → 70 mA at successive 4.175 V samples; at 70 mA no 5 mV rise in 10 min completes the cycle (Full still needs the ≥4.07 V rest); the 3-h top-off budget completes a finishing cycle as stock `BAT_TopOffModeAction` does (total 24 h and precharge timeouts stay faults). 200 mA is a stock CS_VTH selector already admitted; target, guard and protections unchanged. |
+| Display drift on battery | DEFECT → CORRECTED | 28 showed 89 → 85 within 3.5 min awake: the estimate moved toward the loaded-voltage SOC (≈50 mV, 4–5 points low under load). 29: on battery with continuous samples (≤60 s apart) the estimate follows stock `oam_run`: model current (OCV(SOC) − V)/R(V) integrated against Q_MAX 1300 mAh; after longer gaps (suspend; stock integrates raw-monotonic time) the rested voltage is used as before. The display stays down-only on battery. |
+
+**Gate decision:** READY for the build.
