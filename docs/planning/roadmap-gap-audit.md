@@ -7977,3 +7977,18 @@ release identity. Builds the image; the owner flashes and tests. Steps 3 (web ed
 | Risk | OPEN, device test | Load time and memory on the Y2 (atlas ≤4 MiB RAM + texture), Lima texture upload, MTP folder copy, SD-hosted skin, live switch from the picker, sleep/wake with a skin active. |
 
 **Gate decision:** READY for the build.
+
+## POWER-FINAL-34 shipped skins, battery level, skin engine additions scope audit — 2026-10-14
+
+**Boundary:** owner: "ship them all" (the 14 example skins tried on 33) and the battery-level fix. Reborn `116f942`
+(battery), `9a9c250` (font `charset`, `case: lower`, example skins), `5b69ef5` (all skins in `skins/`); platform as 33
+plus the release identity. Builds the image; the owner flashes.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Battery level in Reborn | FIXED | Since 29 the platform reports `source: stock_oam`; Reborn accepted only fuel_gauge/hybrid/voltage_estimate and showed no level (empty battery in Classic, no number in Reborn's look). Seen on the 33 device capture. |
+| Shipped skins | CHANGED | `/usr/share/reborn/skins`: Classic + Nano Glass, Walkman, Terminal, Winamp, Paper, Big Type, Cassette, Neon Night, Zune, Mini Silver/Pink/Blue/Green/Gold (3.1 MB; Latin subsets of Open Sans/Noto, OFL texts in each skin and in legal-info). 13 of them loaded on the 33 device in 87–119 ms; Zune needs the 34 engine. |
+| Skin engine | CHANGED | Font `charset: ascii` (large display fonts fit the atlas), text `case: lower`. Default look unchanged. |
+| User copies | NOTE | The 13 trial copies in Internal Storage `Themes/` are hidden by the shipped skins of the same name; the owner may delete them. |
+
+**Gate decision:** READY for the build.
