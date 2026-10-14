@@ -299,6 +299,18 @@
       "patch": "0068-exfat-dir-readahead-plug.patch",
       "base_sha256": "a6fd5c83ebf83b42a89b5ee92daf8b7d25842dfc66ac9694bd78ecfe93961979",
       "result_sha256": "41be4f88b930b7b366b03ebfcce20a0432535d0ba7e5c00b1373f7a19a909149"
+    },
+    {
+      "path": "fs/fat/dir.c",
+      "patch": "0069-fat-dir-readahead-plug.patch",
+      "base_sha256": "0650b329ad265be51f22de2839115a5b93b0af956743cd109abd427c1c525e84",
+      "result_sha256": "dc4803793f0974602c1dc44b9ca71e5cecb164d96b20c7af2a8c0e221defc838"
+    },
+    {
+      "path": "fs/ext4/inode.c",
+      "patch": "0070-ext4-bread-batch-plug.patch",
+      "base_sha256": "497bb7ca8da1da0a39bcb14110d6fe5ae8016e74ad0b1a640f1bb9ecc2e02257",
+      "result_sha256": "3b188e6f471c3e4fcd47e5afaff961b6e5f46b45bcc1a89d53fab8c7414efa39"
     }
   ]
 }

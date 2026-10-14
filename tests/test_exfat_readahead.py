@@ -27,6 +27,23 @@ class ExfatDirReadahead(unittest.TestCase):
         spec = [o for o in manifest['overlays'] if o['path'] == 'fs/exfat/dir.c']
         self.assertEqual([s['patch'] for s in spec], ['0068-exfat-dir-readahead-plug.patch'])
 
+    def test_fat_and_ext4_batches_are_plugged_too(self):
+        for name, loop in (('0069-fat-dir-readahead-plug.patch', 'sb_breadahead(sb, phys + sec);'),
+                           ('0070-ext4-bread-batch-plug.patch', 'ext4_read_bh_lock(bhs[i], REQ_META | REQ_PRIO, false);')):
+            patch = (ROOT / 'kernel/patches' / name).read_text()
+            lines = patch.splitlines()
+            start = next(i for i, l in enumerate(lines) if l == '+\tblk_start_plug(&plug);' or l == '+\t\tblk_start_plug(&plug);')
+            finish = next(i for i, l in enumerate(lines) if l.endswith('blk_finish_plug(&plug);'))
+            body = [l for l in lines[start:finish] if loop in l]
+            self.assertTrue(body and all(not l.startswith(('+', '-')) for l in body), name)
+        self.assertIn('+#include <linux/blkdev.h>', (ROOT / 'kernel/patches/0069-fat-dir-readahead-plug.patch').read_text())
+
+    def test_every_card_format_mounts_noatime(self):
+        media = (ROOT / 'tools/platform/y2_platform/media.py').read_text()
+        self.assertIn("options = 'rw,nosuid,nodev,noexec,noatime'", media)
+        internal = (ROOT / 'tools/platform/y2_platform/internal_media.py').read_text()
+        self.assertIn("OPTIONS = 'rw,nosuid,nodev,noexec,noatime'", internal)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -182,7 +182,10 @@ def operation(ctx, action):
                     if target.is_symlink():
                         raise ValueError('mountpoint_symlink')
                     target.mkdir(parents=True, exist_ok=True)
-                    options = 'rw,nosuid,nodev,noexec'
+                    # POWER-FINAL-30: noatime on every card format. relatime still
+                    # wrote an access time the first time each song was read every
+                    # day: a metadata write to the card during playback.
+                    options = 'rw,nosuid,nodev,noexec,noatime'
                     if card['filesystem'] in ('vfat', 'exfat'):
                         options += ',fmask=0177,dmask=0077'
                     if card['filesystem'] == 'vfat':

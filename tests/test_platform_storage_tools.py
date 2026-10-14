@@ -260,7 +260,7 @@ class StorageTools(unittest.TestCase):
         self.ctx.runner = fat
         self.assertEqual(operation(self.ctx, 'mount')['state'], 'Ready')
         args = next(c for c in calls if c[0] == 'mount')
-        self.assertEqual(args[args.index('-o') + 1], 'rw,nosuid,nodev,noexec,fmask=0177,dmask=0077,utf8=1')
+        self.assertEqual(args[args.index('-o') + 1], 'rw,nosuid,nodev,noexec,noatime,fmask=0177,dmask=0077,utf8=1')
 
     def test_fsck_is_read_only_and_never_checks_mounted_media(self):
         calls = self.card_fixture()

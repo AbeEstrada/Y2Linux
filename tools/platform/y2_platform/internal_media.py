@@ -25,7 +25,7 @@ START = '3742720'
 SIZE = '11460608'
 CONTROLLER = '/11230000.mmc/'
 MARKER = '/run/y2/internal-media.json'
-OPTIONS = 'rw,nosuid,nodev,noexec,relatime'
+OPTIONS = 'rw,nosuid,nodev,noexec,noatime'  # 30: no access-time writes during playback
 CHUNK = 1 << 20
 RESERVE = 64 << 20         # keep this much free after a migration
 
