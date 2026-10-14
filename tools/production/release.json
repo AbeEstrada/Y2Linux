@@ -1,10 +1,10 @@
 {
-  "release_version": "1.0.0-platform-v1-power-final-candidate.40",
-  "rootfs_version": "2026.08-platform-v1.70",
-  "build_id": "Y2LINUX-PLATFORM-V1-POWER-FINAL-40",
+  "release_version": "1.0.0-platform-v1-power-final-candidate.41",
+  "rootfs_version": "2026.08-platform-v1.71",
+  "build_id": "Y2LINUX-PLATFORM-V1-POWER-FINAL-41",
   "platform_api_version": 1,
   "feature_contract_version": 2,
   "battery_profile_schema": 1,
   "low_battery_policy_schema": 2,
-  "update_sequence": 4000
+  "update_sequence": 4100
 }

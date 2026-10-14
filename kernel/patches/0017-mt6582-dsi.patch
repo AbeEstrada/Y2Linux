@@ -368,7 +368,7 @@
  static int mtk_dsi_probe(struct platform_device *pdev)
  {
  	struct mtk_dsi *dsi;
-@@ -1230,26 +1475,58 @@
+@@ -1230,26 +1475,78 @@
  	if (irq_num < 0)
  		return irq_num;
  
@@ -424,6 +424,26 @@
 +            readl(dsi->y2_larb), readl(dsi->y2_larb + 0x450), readl(dsi->y2_ovl),
 +            readl(dsi->y2_ovl + 0xc0), readl(dsi->y2_rdma + 4));
 +  }
++  {
++   /* A software (watchdog) restart keeps MMSYS_CG_CON0, so the SMI common
++    * and larb0 gates Linux closed at shutdown stay closed. LK assumes the
++    * cold default (open), shows its logo, and its first fetch through larb0
++    * waits forever: larb0 busy with GREQ pending, no frames for Linux
++    * (POWER-FINAL-40, archives 139/140). Open the two shared bus gates
++    * before Linux takes over and let the pending request drain. CCF
++    * reads the gates from hardware; mutex/Lima keep owning them. */
++   u32 gates = readl(dsi->y2_mm + 0x100) & 0x3;
++   if (gates) {
++    unsigned waited = 0;
++    writel(gates, dsi->y2_mm + 0x108);
++    while (dsi->y2_larb && (readl(dsi->y2_larb) & 1) && waited < 10000) {
++     udelay(10);
++     waited += 10;
++    }
++    dev_info(dev, "handoff: SMI gates %x left closed by a restart, opened; larb0 stat=%08x after %u us\n",
++             gates, dsi->y2_larb ? readl(dsi->y2_larb) : 0, waited);
++   }
++  }
 +  ret = mt6582_dsi_park(dsi);
 +  if (dsi->y2_larb && dsi->y2_smi && dsi->y2_infra && dsi->y2_top && dsi->y2_spm && dsi->y2_apmixed) {
 +   y2_snapshot(dsi, 3, 0);
@@ -447,7 +467,7 @@
  
  	return 0;
  }
-@@ -1258,6 +1535,11 @@
+@@ -1258,6 +1555,11 @@
  {
  	struct mtk_dsi *dsi = platform_get_drvdata(pdev);
  
@@ -459,7 +479,7 @@
  	mtk_output_dsi_disable(dsi);
  	mipi_dsi_host_unregister(&dsi->host);
  }
-@@ -1272,6 +1554,11 @@
+@@ -1272,6 +1574,11 @@
  	.reg_cmdq_off = 0x180,
  	.reg_vm_cmd_off = 0x130,
  	.reg_shadow_dbg_off = 0x190
@@ -471,7 +491,7 @@
  };
  
  static const struct mtk_dsi_driver_data mt8183_dsi_driver_data = {
-@@ -1301,6 +1588,7 @@
+@@ -1301,6 +1608,7 @@
  };
  
  static const struct of_device_id mtk_dsi_of_match[] = {
