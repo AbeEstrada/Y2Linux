@@ -40,7 +40,9 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [Network, clock and entropy contract v1](architecture/platform-network-time-v1.md) | Source contract |
 | [Platform power contract v1](architecture/platform-power-v1.md) | Source contract |
 | [Storage lifecycle, space and measurements](architecture/platform-storage-v1.md) | Source contract |
-| [Signed root-only update contract v1](architecture/platform-update-v1.md) | Source contract |
+| [Over-the-air updates through a Y2 recovery image (OTA-35)](architecture/platform-ota-v2.md) | Source contract |
+| [Installing the Y2 recovery image (one time)](architecture/ota-recovery-install.md) | Owner runbook |
+| [Signed root-only update contract v1](architecture/platform-update-v1.md) | Source contract (superseded by OTA-35) |
 | [USB device and owner file transfer v1](architecture/platform-usb-v1.md) | Source contract |
 | [Manual first installation — Production Storage v1](architecture/production-install.md) | Historical design / runbook |
 | [Production v1 restoration](architecture/production-recovery.md) | Historical design / runbook |
@@ -306,6 +308,7 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | Page | Scope |
 | --- | --- |
 | [POWER-FINAL-34 — all skins shipped, battery level fixed](validation/Y2-PLATFORM-V1-POWER-FINAL-34.md) | Sealed candidate report (Baseline 34) |
+| [POWER-FINAL-35 — over-the-air updates through a Y2 recovery image](validation/Y2-PLATFORM-V1-POWER-FINAL-35.md) | Sealed candidate report (awaiting flash) |
 | [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |
 | [POWER-FINAL-32 — deep idle during screen-off playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) | Sealed candidate report (in 33) |
 | [POWER-FINAL-31 — folder-first artwork and metadata formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) | Sealed candidate report (in 33) |
