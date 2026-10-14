@@ -1,6 +1,6 @@
 # POWER-FINAL-29 — finish-stage and discharge-estimate corrections
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-14). Package `out/y2linux-platform-v1-power-final-candidate-29/`
+Status: **INSTALLED, FULL CHARGE QUALIFIED** (2026-10-14, archive 127, boot `cac3e209`). Package `out/y2linux-platform-v1-power-final-candidate-29/`
 (fallback = 28), receipts `out/deep-sleep-final/build29-receipts/`. BOOTIMG
 `3f82ae593a936067730cd735c780cf42d483457ab8f2591590748448cc6efc07`, Y2ROOT
 `5d9f298bb8432a0bcf13acb1ae2498e9d95252764f4f461003d9a0bc2b717f52`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-29`,
@@ -37,3 +37,12 @@ inventory 108, container suite **708 OK**.
 1. A full charge on the PC with SSH: `finish` 200000 → 70000 → Full, `full_rest_uv`, no fault.
 2. After Full: 100 on the charger; unplug: 100 → 99 → 98 without a quick sag while using it.
 3. Restart: the percentage stays.
+
+## On the device (archive `20261014/127`, `charge-log.jsonl`)
+
+Boot restored the saved 94 % (power-on OCV 4.094 V). Charge with SSH, no fault at any point: 450 mA → 4.175 V →
+200 mA (28 min, sense drop ≈46 mV, voltage rising) → 4.175 V → 70 mA → voltage flat 4.13–4.15 V → plateau completion
+after 10 min (`status=3`) → rest ≥4.07 V for 60 s → **Full** (`status=4`). The owner unplugged once 1 s after the first
+plateau hold (cycle reset by design), the replugged cycle completed at 3676 s: `full_rest_uv` **4128442** (26/27:
+≈4.09 V), `recharge_uv` 4098442, display **100**, `anchor_percent` 97.68, `full_latched` true. Owner observation: while
+charging the display stayed at 97–98 until Full (stock 99 cap / estimate), then 100.
