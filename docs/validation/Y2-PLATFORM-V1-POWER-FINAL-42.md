@@ -16,6 +16,13 @@ handler (priority 255, before the watchdog handler, after all drivers have shut 
 SMI common and larb0 (`MMSYS_CG_CLR0` = 3) when the DIS domain is powered, so LK starts from the cold-start state.
 41's handover opener and the snapshots stay.
 
+## Device results
+
+- First boot after the flash dark with larb0 idle (archive `20261016/143`, stale state after the stuck 41 restart and
+  the flash); the next cold start was healthy.
+- **Restart still dark** (archive 144), also with `dis_pdn` off (145): `SMI gates 1 left closed` at handover again.
+  The gate is closed during the next boot (Lima runtime idle), not left over. Fix: [43](Y2-PLATFORM-V1-POWER-FINAL-43.md).
+
 ## Owner steps
 
 1. Flash 42 (BOOTIMG + ANDROID).
