@@ -1,6 +1,8 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-16): 40 SEALED (handover snapshot), AWAITING FLASH.** 39 on the device: restart still dark with screen on and off (archives 137/138); SMI larb0 busy after every restart. 40 snapshots LK's pipeline at handover/parked. Next: flash 40, cold + one restart, diff slots 2/3. OTA works (two Power presses); automatic restart waits for this.
+> **START HERE (2026-10-16, later): ROOT CAUSE OF THE DARK PANEL AFTER A SOFTWARE RESTART FOUND (40); 41 SEALED WITH THE FIX.** At handover after a restart MMSYS_CG_CON0=1: Linux closed the SMI common gate at shutdown, the watchdog restart keeps it, LK's first fetch hangs (larb0 busy, GREQ 1). 41 opens the gates at handover. Next: flash 41, restart test, then `restart.json` and a no-press install.
+
+> Previous entry: **START HERE (2026-10-16): 40 SEALED (handover snapshot), AWAITING FLASH.** 39 on the device: restart still dark with screen on and off (archives 137/138); SMI larb0 busy after every restart. 40 snapshots LK's pipeline at handover/parked. Next: flash 40, cold + one restart, diff slots 2/3. OTA works (two Power presses); automatic restart waits for this.
 
 > Previous entry: **START HERE (2026-10-15, late night): 39 SEALED (display mutex reset), AWAITING FLASH.** Restart on 38 stayed dark (archive 135): stale mutex grant → `could not acquire mutex 0`; 39 resets all display mutexes once at handover. Next: flash 39, check `Y2SCAN mutex reset` line, restart test (owner OK), then `restart.json` on.
 

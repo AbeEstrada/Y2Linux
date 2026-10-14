@@ -18,6 +18,23 @@ the restart. Unknown: is larb0 already busy when Linux takes over LK's pipeline,
 | Handover snapshots | `/sys/kernel/debug/y2_display_snapshot` slots 2 (`handover`, DSI probe before Linux touches LK's live pipeline) and 3 (`parked`), first probe of the boot only; larb0 0x400–0x4fc added. |
 | Log | `handoff: snapshot …` and `handoff: parked …` with larb0 stat/greq, OVL status, OVL RDMA0, RDMA irq. |
 
+## Device results — root cause found
+
+Cold start (archive `20261016/139`) and one software restart (archive 140, panel dark). At **handover, before Linux
+touches anything** (slot 2), the restart differs from the cold start in exactly the way that explains the defect:
+
+| Register | Cold | Restart |
+| --- | --- | --- |
+| `MMSYS_CG_CON0` (0x14000100) | 0 | **1 — SMI common clock gated** |
+| SMI common config (0x14011200/228/230/234/300/404) | configured | 0 (gated block reads zero) |
+| larb0 status / GREQ (0x14010000 / 0x450) | 0 / 0 | **1 / 1 — request pending** |
+| OVL status | 0x1e | 0x1f (still running) |
+
+Linux gates SMI common when the display and GPU release it at shutdown; the watchdog restart keeps
+`MMSYS_CG_CON0`; LK assumes the cold default, shows its logo, and its first fetch through larb0 never completes.
+Every later symptom (full OVL FIFO, no RDMA frame, no vblank, mutex timeout) follows. 38's external reset and 39's
+mutex reset could not help. Fix: [POWER-FINAL-41](Y2-PLATFORM-V1-POWER-FINAL-41.md).
+
 ## Owner steps
 
 1. Flash 40 (BOOTIMG + ANDROID). Cold start: the agent saves the snapshots.
