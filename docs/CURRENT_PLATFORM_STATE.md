@@ -1,6 +1,16 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-47 DSI clock gating off, Baseline 47 — 2026-10-16 (latest, published)
+## POWER-FINAL-48 download screen, Baseline 48 — 2026-10-16 (latest, published)
+
+`out/y2linux-platform-v1-power-final-candidate-48/` (Linux `d5cc381`, Reborn `62af097`; BOOTIMG `5a1fa90e…d74b`,
+Y2ROOT `1d7c4bca…e047`, RECOVERY `6c14a2f7…0a3f`), fallback 47; git tag and GitHub release `baseline-48`. The update
+download shows its step, percentage, a gliding bar, MB, speed and time left (live progress in `/run/y2`), checks the
+package once instead of twice (about 12 s less), runs at low priority, and turns to Ready to Install with a notice when
+done. Contains 47 (DSI DCM off). Suite 718. **Physical:** pending (47's recovery screen and probes, 48's Wi-Fi install;
+the new screen shows from the following download).
+Details: [48 report](validation/Y2-PLATFORM-V1-POWER-FINAL-48.md).
+
+## POWER-FINAL-47 DSI clock gating off, Baseline 47 — 2026-10-16 (published)
 
 `out/y2linux-platform-v1-power-final-candidate-47/` (Linux `ba7a003`, Reborn `850687d`; BOOTIMG `97f2ef87…e280`,
 Y2ROOT `efb3f4e6…0bce`, RECOVERY `4293cfca…ce35`), fallback 46; git tag and GitHub release `baseline-47`. 46 installed

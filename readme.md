@@ -6,7 +6,7 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Baseline 47 (2026-10-16), developer preview.** It runs every day on
+> **Status: Baseline 48 (2026-10-16), developer preview.** It runs every day on
 > the maintainer's Y2. The first install is built from source and flashed with
 > SP Flash Tool; after that, the player installs new releases over Wi-Fi from
 > this repository's [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases).
@@ -14,14 +14,14 @@ factory partitions untouched.
 > [Supported hardware](#supported-hardware)). Read [Known issues](#known-issues)
 > before you flash.
 
-| | Baseline 47 |
+| | Baseline 48 |
 | --- | --- |
-| Git tag (both repositories) | `baseline-47` (previous: `baseline-46`); GitHub release `baseline-47` carries the signed over-the-air update |
-| Kernel | `6.18.56-y2linux-platform-v1-power-final-47` (Linux 6.18 long-term line) |
-| Root filesystem / release | `2026.08-platform-v1.77` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.47` |
+| Git tag (both repositories) | `baseline-48` (previous: `baseline-47`); GitHub release `baseline-48` carries the signed over-the-air update |
+| Kernel | `6.18.56-y2linux-platform-v1-power-final-48` (Linux 6.18 long-term line) |
+| Root filesystem / release | `2026.08-platform-v1.78` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.48` |
 | Player | Y2Reborn 0.3.0 (Rust 1.99) with Cover Flow, Genres and 15 themes |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 — every component on its newest release |
-| Maintainer's images built from | Y2Linux `ba7a003`, Y2Reborn `850687d` (later commits: docs only) |
+| Maintainer's images built from | Y2Linux `d5cc381`, Y2Reborn `62af097` (later commits: docs only) |
 
 ## Getting started
 
@@ -37,7 +37,8 @@ Observed on the maintainer's device on the candidates up to 46 (46 was the first
 update channel and installed over Wi-Fi):
 
 - **Over-the-air updates:** Settings → About & Updates checks once a day on Wi-Fi (or on demand),
-  downloads a signed release and, with **Restart and Install**, restarts into a Y2 recovery image
+  downloads a signed release (showing progress, speed and time left) and, with **Restart and
+  Install**, restarts into a Y2 recovery image
   that backs up, installs and verifies kernel, rescue and system, then restarts into the new
   version (about a minute; the old version is restored on any failure). It makes room on its own
   by removing old logs; music and settings are never touched. Needs the Y2 recovery image flashed
@@ -109,7 +110,8 @@ update channel and installed over Wi-Fi):
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for [47](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-47.md) (DSI clock gating),
+reports for [48](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-48.md) (download screen),
+[47](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-47.md) (DSI clock gating),
 [46](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-46.md) (update space, restart by default, first release),
 [44](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-44.md)/[45](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-45.md) (display read lag, installer screen),
 [43](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-43.md) (software restart fixed),

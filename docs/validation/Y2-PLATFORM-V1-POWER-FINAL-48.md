@@ -1,6 +1,6 @@
 # POWER-FINAL-48 — download screen with progress, speed and time left
 
-Status: **SEALED, not published** (2026-10-16). Package `out/y2linux-platform-v1-power-final-candidate-48/` (fallback =
+Status: **PUBLISHED** as GitHub release `baseline-48` (2026-10-16, owner: "publish 48"). Package `out/y2linux-platform-v1-power-final-candidate-48/` (fallback =
 47), receipts `out/deep-sleep-final/build48-receipts/`. BOOTIMG
 `5a1fa90e26a9a890ed6c2bca0fb201ccfa26920ea11936460fbfdb26fba8d74b`, Y2ROOT
 `1d7c4bcae8b4bae1e2068beeb54f1960a271accb07ffc73ca3c5649ba23ae047`, RECOVERY
@@ -27,5 +27,5 @@ Previews: Reborn `reborn-preview` states `34-update-downloading`, `34b-update-do
 ## Owner steps
 
 1. First 47's test (installed from the queue, five recovery probes).
-2. Publish 48; install it over Wi-Fi. That download still uses 47's screen; 48's screen shows from the next
+2. Install 48 over Wi-Fi. That download still uses 47's screen; 48's screen shows from the next
    download on (or a development reinstall published for the test).
