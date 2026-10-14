@@ -171,7 +171,7 @@ class RadioFirmware(unittest.TestCase):
         self.assertEqual(radiofw.scan(ctx)['state'], 'Missing')   # the time changed
         self.assertEqual(radiofw.scan(ctx)['state'], 'Ready')
         self.assertFalse(source.exists())
-        self.assertEqual(calls, [['/etc/init.d/S41y2-connectivity', 'restart']])
+        self.assertEqual(calls, [['/etc/init.d/S41y2-connectivity', 'stop'], ['/etc/init.d/S41y2-connectivity', 'start']])
         target = ctx.path(radiofw.TARGET)
         self.assertEqual({p.name for p in target.iterdir()}, set(radiofw.ALL))
         self.assertEqual(oct(target.stat().st_mode & 0o777), '0o700')
@@ -199,6 +199,29 @@ class RadioFirmware(unittest.TestCase):
         patch.stopall()
         got = radiofw.from_system_image(STOCK)
         self.assertEqual({n: (len(d), sha(d)) for n, d in got.items()}, radiofw.ALL)
+
+
+class Watcher(unittest.TestCase):
+    """service.radio_firmware notices firmware removed while running."""
+    def test_removed_firmware_is_noticed_at_the_next_maintenance_pass(self):
+        from y2_platform import service
+        spawned = []
+
+        class Child:
+            def poll(self):
+                return 0
+        ctx = Context(Path(tempfile.mkdtemp(prefix='y2-watch-')), lambda argv, **kw: {'ok': True})
+        self.addCleanup(shutil.rmtree, ctx.root, True)
+        with patch('y2_platform.radiofw.present', return_value=False), \
+             patch('subprocess.Popen', side_effect=lambda *a, **k: spawned.append(a[0]) or Child()):
+            child, ready = service.radio_firmware(ctx, None, True, False)
+            self.assertTrue(ready)                       # between passes: no work
+            self.assertEqual(spawned, [])
+            child, ready = service.radio_firmware(ctx, None, True, True)
+            self.assertFalse(ready)                      # maintenance: re-checked
+            self.assertEqual(spawned, [['/usr/sbin/y2-platform', 'firmware', 'scan']])
+        with patch('y2_platform.radiofw.present', return_value=True):
+            self.assertEqual(service.radio_firmware(ctx, None, False, False), (None, True))
 
 
 class Tables(unittest.TestCase):

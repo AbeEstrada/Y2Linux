@@ -81,13 +81,15 @@ def radio_firmware(ctx, child, ready, maintenance):
     """While the player has no radio firmware, look for the owner's
     Firmware/system.img (and keep the folder visible) in its own process: the
     extraction reads a 518 MB image and must never stall this loop."""
-    if ready:
+    from .radiofw import candidates, present
+    # Re-checked every maintenance pass: firmware removed while running is
+    # noticed too (found by the owner test of 49, archive 154).
+    if ready and not (maintenance and not present(ctx)):
         return child, True
     if child is not None:
         if child.poll() is None:
             return child, False
         child = None
-    from .radiofw import candidates, present
     if present(ctx):
         return None, True
     waiting = any(path.exists() for path in candidates(ctx))

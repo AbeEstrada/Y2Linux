@@ -51,8 +51,8 @@ STATE = '/run/y2/radio-firmware.json'
 FOLDER = 'Firmware'
 SOURCE = 'system.img'
 README = ('Wi-Fi and Bluetooth need the radio firmware from the Innioasis Y2 firmware package.\n'
-          'Copy the file system.img from that package into this folder. The player checks it,\n'
-          'keeps the five small radio files and deletes the copy.\n')
+          'Copy (do not move) the file system.img from that package into this folder. The player\n'
+          'checks it, keeps the five small radio files and deletes the copy.\n')
 
 
 def digest(data):
@@ -436,12 +436,20 @@ def scan(ctx, start_radios=True):
             pass
         atomic_json(ctx.path(STATE), {'schema': 1, 'state': 'Ready', 'installed_from': 'system.img'}, mode=0o644)
         if start_radios:
-            ctx.command(['/etc/init.d/S41y2-connectivity', 'restart'], timeout=10)
+            start(ctx)
         return {'state': 'Ready'}
     if previous.get('state') == 'Failed':
         # The rejected copy is gone: back to asking for it.
         atomic_json(ctx.path(STATE), {'schema': 1, 'state': 'Missing'}, mode=0o644)
     return {'state': 'Missing'}
+
+
+def start(ctx):
+    """(Re)start the radios with the installed firmware. Stopping running
+    radios can take longer than a short command limit, which on 49 cut the
+    combined restart off after its stop half (archive 154)."""
+    ctx.command(['/etc/init.d/S41y2-connectivity', 'stop'], timeout=90)
+    ctx.command(['/etc/init.d/S41y2-connectivity', 'start'], timeout=30)
 
 
 def main(ctx, action, path=None):
@@ -453,7 +461,7 @@ def main(ctx, action, path=None):
         source = Path(path)
         files = from_directory(source) if source.is_dir() else from_system_image(source)
         install(ctx, files)
-        ctx.command(['/etc/init.d/S41y2-connectivity', 'restart'], timeout=10)
+        start(ctx)
         return {'state': 'Ready'}
     raise ValueError('unknown_firmware_action')
 

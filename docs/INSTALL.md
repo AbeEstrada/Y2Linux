@@ -68,7 +68,8 @@ Stock Android and its user data are erased. The internal FAT music storage is le
 6. **Connect the Y2 to the computer again.** It appears like a USB stick (MTP) with a drive
    called **Firmware** (next to *SD Card* if a card is in).
 7. **From the Innioasis package, copy the file `system.img` to that Firmware drive** (about
-   520 MB).
+   520 MB). Copy, don't move: the player deletes its copy afterwards, and you need the
+   original to go back to stock. (If it was moved, unpack it again from the Innioasis zip.)
 8. **Wait a few seconds.** The player checks the file, keeps the five radio files, deletes the
    big copy and starts Wi-Fi and Bluetooth; Reborn says *Wi-Fi and Bluetooth are ready*. The
    Firmware drive disappears. That's it.
