@@ -1,17 +1,19 @@
 {
   "fdk-aac": {
     "version": "2.0.3",
-    "url": "https://downloads.sourceforge.net/project/opencore-amr/fdk-aac/fdk-aac-2.0.3.tar.gz",
-    "sha256": "829b6b89eef382409cda6857fd82af84fabb63417b08ede9ea7a553f811cb79e",
+    "variant": "fdk-aac-free (Red Hat stripped FDK: AAC-LC only, HE-AAC SBR/PS removed)",
+    "upstream": "https://gitlab.freedesktop.org/wtaymans/fdk-aac-stripped (branch stripped5, 9896ddc0d08b)",
+    "url": "https://archive.ubuntu.com/ubuntu/pool/universe/f/fdk-aac-free/fdk-aac-free_2.0.3.orig.tar.gz",
+    "sha256": "2dc6952b70283888994ae6e551a79039781f0a64c67fb637bffd5a8f483c34c5",
     "license": "FDK-AAC license",
     "license_files": {
       "NOTICE": "95ec80da40b4af12ad4c4f3158c9cfb80f2479f3246e4260cb600827cc8c7836"
     },
-    "distribution_limit": "Copyright license requires notice and corresponding source; no patent license granted. Public product approval not established.",
-    "reviewed_license_source": "https://github.com/mstorsjo/fdk-aac/blob/v2.0.3/NOTICE",
-    "reviewed_at": "2026-10-02",
-    "public_distribution_state": "OWNER_LEGAL_REVIEW_REQUIRED",
-    "private_integration_state": "compiled_and_experimentally_enabled_not_physically_qualified"
+    "distribution_limit": "Copyright license requires notice and corresponding source and forbids copyright fees; no patent license granted. Fedora Legal: this stripped implementation is no longer encumbered by AAC patents.",
+    "reviewed_license_source": "fdk-aac-free_2.0.3.orig.tar.gz NOTICE (identical to fdk-aac v2.0.3 NOTICE)",
+    "reviewed_at": "2026-10-16",
+    "public_distribution_state": "APPROVED_BY_OWNER_2026-10-16",
+    "private_integration_state": "compiled_and_enabled_not_physically_qualified"
   },
   "libfreeaptx": {
     "version": "0.2.2",
@@ -25,7 +27,7 @@
     "distribution_limit": "Use shared library and retain corresponding source/license. Codec trademark/patent product clearance not established; no Adaptive or Lossless claim.",
     "reviewed_license_source": "https://github.com/regularhunter/libfreeaptx/blob/0.2.2/COPYING",
     "reviewed_at": "2026-10-02",
-    "public_distribution_state": "OWNER_LEGAL_REVIEW_REQUIRED",
+    "public_distribution_state": "NOT_PUBLIC_OWNER_PRIVATE_ONLY_2026-10-16",
     "private_integration_state": "compiled_and_experimentally_enabled_not_physically_qualified"
   },
   "libldac": {
@@ -42,8 +44,8 @@
     },
     "distribution_limit": "AOSP NOTICE requires certification for product use. Product certification and public distribution approval not established.",
     "reviewed_license_source": "https://android.googlesource.com/platform/external/libldac/+/master/NOTICE",
-    "reviewed_at": "2026-10-02",
-    "public_distribution_state": "OWNER_LEGAL_REVIEW_REQUIRED",
+    "reviewed_at": "2026-10-16",
+    "public_distribution_state": "APPROVED_BY_OWNER_2026-10-16",
     "private_integration_state": "compiled_and_experimentally_enabled_not_physically_qualified"
   }
 }

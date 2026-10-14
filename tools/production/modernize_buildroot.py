@@ -64,9 +64,6 @@ BUMPS = (
     ("exfatprogs", (("EXFATPROGS_VERSION = 1.2.9", "EXFATPROGS_VERSION = 1.4.3"),),
      "exfatprogs-1.2.9.tar.xz", "exfatprogs-1.4.3.tar.xz",
      "57226a8ec1bfbce06d68a42cde8cd980414a9457882e691fbce4a4f86c8d5f08", ()),
-    ("fdk-aac", (("FDK_AAC_VERSION = 2.0.3", "FDK_AAC_VERSION = 3.0.0"),),
-     "fdk-aac-2.0.3.tar.gz", "fdk-aac-3.0.0.tar.gz",
-     "70b95857b958fb8f794489307a87845dde4cc1fcea060f3f29f40e4b2fe16c82", ()),
     ("iperf3", (("IPERF3_VERSION = 3.21", "IPERF3_VERSION = 3.22"),),
      "iperf-3.21.tar.gz", "iperf-3.22.tar.gz",
      "1c0d0fb02c52626111d6e132db80edfbf27bbaff8bd9245df2a371dcb0b35a92", ()),
@@ -170,6 +167,36 @@ def bump_pypi(buildroot_source: Path, name, version, source, site, md5, sha256) 
     hashes.write_text("\n".join(lines) + "\n")
 
 
+# RELEASE-49 (owner decision 2026-10-16): AAC from fdk-aac-free, Red Hat's
+# stripped FDK library (AAC-LC only; the patented HE-AAC SBR/PS parts removed)
+# that Fedora ships after legal review and Debian/Ubuntu package. This is
+# upstream gitlab.freedesktop.org/wtaymans/fdk-aac-stripped branch stripped5
+# (9896ddc0d08b, version 2.0.3) as Ubuntu's release tarball with generated
+# autotools files; same NOTICE as the full library. A2DP uses AAC-LC.
+FDK_AAC_FREE_SOURCE = "fdk-aac-free_2.0.3.orig.tar.gz"
+FDK_AAC_FREE_SHA256 = "2dc6952b70283888994ae6e551a79039781f0a64c67fb637bffd5a8f483c34c5"
+FDK_AAC_NOTICE_SHA256 = "95ec80da40b4af12ad4c4f3158c9cfb80f2479f3246e4260cb600827cc8c7836"
+
+
+def fdk_aac_free(buildroot_source: Path) -> None:
+    package = buildroot_source / "package/fdk-aac"
+    (package / "fdk-aac.mk").write_text(
+        "################################################################################\n"
+        "#\n# fdk-aac (Y2: fdk-aac-free, AAC-LC only)\n#\n"
+        "################################################################################\n\n"
+        "FDK_AAC_VERSION = 2.0.3\n"
+        f"FDK_AAC_SOURCE = {FDK_AAC_FREE_SOURCE}\n"
+        "FDK_AAC_SITE = https://archive.ubuntu.com/ubuntu/pool/universe/f/fdk-aac-free\n"
+        "FDK_AAC_LICENSE = fdk-aac license\n"
+        "FDK_AAC_LICENSE_FILES = NOTICE\n\n"
+        "FDK_AAC_INSTALL_STAGING = YES\n\n"
+        "$(eval $(autotools-package))\n")
+    (package / "fdk-aac.hash").write_text(
+        "# fdk-aac-free (Ubuntu orig tarball = freedesktop wtaymans/fdk-aac-stripped stripped5)\n"
+        f"sha256  {FDK_AAC_NOTICE_SHA256}  NOTICE\n"
+        f"sha256  {FDK_AAC_FREE_SHA256}  {FDK_AAC_FREE_SOURCE}\n")
+
+
 def ca_certificates(buildroot_source: Path) -> None:
     """OpenSSL 4.0 has no c_rehash script; "openssl rehash" does the same."""
     recipe = buildroot_source / "package/ca-certificates/ca-certificates.mk"
@@ -206,22 +233,32 @@ def bluez_alsa(buildroot_source: Path) -> None:
     # option branches: independently selecting another library must never enable
     # an unreviewed encoder or mix GPL-3 libopenaptx with FDK-AAC.
     text = recipe.read_text()
+    # RELEASE-49: aptX/aptX HD only in owner-private builds (Y2_CODEC_APTX);
+    # public releases carry SBC, AAC (fdk-aac-free) and LDAC.
     experiment_options = """# Y2 owner-private optional encoder profile
 ifeq ($(BR2_PACKAGE_Y2_CODEC_EXPERIMENTS),y)
 ifeq ($(BR2_PACKAGE_LIBOPENAPTX),y)
 $(error Y2 codec profile requires libfreeaptx, not libopenaptx)
 endif
-BLUEZ_ALSA_DEPENDENCIES += fdk-aac libfreeaptx libldac
+BLUEZ_ALSA_DEPENDENCIES += fdk-aac libldac
 BLUEZ_ALSA_CONF_OPTS := $(filter-out --disable-aac --disable-aptx --disable-aptx-hd --disable-ldac,$(BLUEZ_ALSA_CONF_OPTS))
-BLUEZ_ALSA_CONF_OPTS += --enable-aac --with-libfreeaptx --enable-aptx --enable-aptx-hd --enable-ldac
+BLUEZ_ALSA_CONF_OPTS += --enable-aac --enable-ldac
+ifeq ($(BR2_PACKAGE_Y2_CODEC_APTX),y)
+BLUEZ_ALSA_DEPENDENCIES += libfreeaptx
+BLUEZ_ALSA_CONF_OPTS += --with-libfreeaptx --enable-aptx --enable-aptx-hd
+else
+BLUEZ_ALSA_CONF_OPTS += --disable-aptx --disable-aptx-hd
+endif
 endif
 
 """
-    if "# Y2 owner-private optional encoder profile" not in text:
-        anchor = "$(eval $(autotools-package))"
-        if anchor not in text:
-            raise ValueError("BlueALSA package evaluation anchor missing")
-        recipe.write_text(text.replace(anchor, experiment_options + anchor, 1))
+    anchor = "$(eval $(autotools-package))"
+    if "# Y2 owner-private optional encoder profile" in text:
+        start = text.index("# Y2 owner-private optional encoder profile")
+        text = text[:start] + text[text.index(anchor, start):]
+    if anchor not in text:
+        raise ValueError("BlueALSA package evaluation anchor missing")
+    recipe.write_text(text.replace(anchor, experiment_options + anchor, 1))
     # BlueALSA 5.0.0 places -static in AM_CFLAGS. With Buildroot's normal
     # shared D-Bus/ALSA/BlueZ stack that flag reaches the bluealsad link and
     # makes the ARM build reject dynamic libraries. Keep the stack dynamic and
@@ -285,6 +322,7 @@ def apply(buildroot_source: Path) -> None:
         bump(buildroot_source, *row)
     for row in PYPI_BUMPS:
         bump_pypi(buildroot_source, *row)
+    fdk_aac_free(buildroot_source)
     bluez_alsa(buildroot_source)
     ca_certificates(buildroot_source)
     bootlin_toolchain(buildroot_source)

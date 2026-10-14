@@ -44,6 +44,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output',default='out/y2linux-platform-v1-build')
     p.add_argument('--resume',choices=['kernel','buildroot','artifacts'])
+    p.add_argument('--public',action='store_true',help='RELEASE-49 public image: no aptX/aptX HD (owner decision 2026-10-16)')
     p.add_argument('--reuse-userspace',type=Path,help='verified production package whose root/data and rescue binaries are retained')
     p.add_argument('--owner-firmware',type=Path,help='ignored since RELEASE-49 (images carry no radio firmware)')
     a=p.parse_args();out=(PROJECT/a.output).resolve()
@@ -112,17 +113,24 @@ def main():
             from tools.production.rescue_tools import rebuild
             rebuild(PROJECT, out, run)
         else:
-            build_userspace(PROJECT,out,source,run)
+            build_userspace(PROJECT,out,source,run,a.public)
     if stage<=2:
         run(builder+['sh','-c','cd /project && python3 -m tools.build.dev_initramfs --production && Y2_DTS=innioasis-y2-production.dts sh tools/build/dtb.sh && Y2_DTS=innioasis-y2-production.dts Y2_DTB_OUT=/build/y2-recovery.dtb Y2_DTS_DEFINES=-DY2_RECOVERY sh tools/build/dtb.sh && python3 -m tools.validation.dev_artifacts /build --package --production'],'artifact-validation.log')
     print('Built production candidate:',out,flush=True)
 
-def build_userspace(PROJECT,out,source,run):
+def build_userspace(PROJECT,out,source,run,public=False):
     br=['make','-C',str(source),'O='+str(out/'buildroot'),'BR2_EXTERNAL='+str(PROJECT/'buildroot')]
     run(br+['y2_production_defconfig'],'buildroot-configure.log')
+    if public:
+        # Public codec set: SBC, AAC (fdk-aac-free), LDAC; no aptX/aptX HD.
+        run([str(source/'utils/config'),'--file',str(out/'buildroot/.config'),'--disable','BR2_PACKAGE_Y2_CODEC_APTX'],'buildroot-public-codecs.log')
+        run(br+['olddefconfig'],'buildroot-public-codecs.log')
+    (out/'codec-variant').write_text(('public' if public else 'private')+'\n')
     # Buildroot's local-package stamps do not track edits in this repository.
-    # Rebuild these small native helpers when resuming an existing workspace.
-    run(br+['y2-connectivity-dirclean','y2-gpu-check-dirclean','y2-update-dirclean','y2-mtp-dirclean','reborn-dirclean'],'local-package-rebuild.log')
+    # Rebuild these small native helpers when resuming an existing workspace;
+    # the codec packages follow the public/private variant and the AAC source.
+    run(br+['y2-connectivity-dirclean','y2-gpu-check-dirclean','y2-update-dirclean','y2-mtp-dirclean','reborn-dirclean',
+            'fdk-aac-dirclean','bluez-alsa-dirclean'],'local-package-rebuild.log')
     run(br+['-j12','toolchain'],'buildroot-toolchain.log')
     cc=str(out/'buildroot/host/bin/arm-linux-gcc')
     for name,extra in [('fbtest',[]),('abi-check',['-mcpu=cortex-a7','-mfpu=neon-vfpv4','-mfloat-abi=hard','-marm','-pthread'])]:

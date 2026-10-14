@@ -25,4 +25,4 @@ all: $(Y2_RADIO_OUTPUT)/y2-codec-software-contract
 endif
 $(Y2_RADIO_OUTPUT)/y2-codec-software-contract: $(Y2_RADIO_SOURCE)/codec-software-contract.c
 	# FDK headers define unused static helpers; all project warnings stay errors.
-	$(CC) $(CFLAGS) -Wno-unused-function $(shell $(PKG_CONFIG) --cflags sbc fdk-aac libfreeaptx ldacBT-enc ldacBT-abr) $< $(LDFLAGS) $(shell $(PKG_CONFIG) --libs sbc fdk-aac libfreeaptx ldacBT-enc ldacBT-abr) -o $@
+	$(CC) $(CFLAGS) -Wno-unused-function -DY2_CODEC_APTX=$(if $(filter 1,$(Y2_CODEC_APTX)),1,0) $(shell $(PKG_CONFIG) --cflags sbc fdk-aac $(if $(filter 1,$(Y2_CODEC_APTX)),libfreeaptx) ldacBT-enc ldacBT-abr) $< $(LDFLAGS) $(shell $(PKG_CONFIG) --libs sbc fdk-aac $(if $(filter 1,$(Y2_CODEC_APTX)),libfreeaptx) ldacBT-enc ldacBT-abr) -o $@

@@ -112,7 +112,7 @@ def write(build, out, manifest, privacy):
              'release': manifest['release_version'], 'platform_api_version': manifest['platform_api_version'],
              'buildroot': json.loads((out/'metadata/buildroot-inputs.lock.json').read_text())['version'],
              'payloads': {p['target_partition']:p['raw'] for p in manifest['payloads']},
-             'fallback': manifest['fallback'], 'firmware_expectations': manifest['owner_firmware'],
+             'fallback': manifest['fallback'], 'firmware_expectations': manifest.get('radio_firmware', manifest.get('owner_firmware')),
              'capabilities_sha256': digest(path), 'private_state_check': privacy,
              'distribution': caps['distribution'], 'distribution_intent': manifest.get('distribution_intent', 'owner-local'),
              'byte_reproducibility_proven': False,
@@ -140,7 +140,7 @@ def validate(out, manifest):
                 'rootfs': manifest['rootfs_version'], 'release': manifest['release_version'],
                 'platform_api_version': manifest['platform_api_version'],
                 'payloads': {p['target_partition']: p['raw'] for p in manifest['payloads']},
-                'fallback': manifest['fallback'], 'firmware_expectations': manifest['owner_firmware'],
+                'fallback': manifest['fallback'], 'firmware_expectations': manifest.get('radio_firmware', manifest.get('owner_firmware')),
                 'capabilities_sha256': digest(capabilities),
                 'distribution_intent': manifest.get('distribution_intent', 'owner-local'),
                 'buildroot': json.loads((out/'metadata/buildroot-inputs.lock.json').read_text())['version']}

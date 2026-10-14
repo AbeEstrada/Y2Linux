@@ -100,6 +100,13 @@ def make_recovery_scatter(stock):
         blocks[i]=re.sub(r'(?m)^  is_download: .*$', '  is_download: '+('true' if recovery else 'false'),blocks[i])
     return ''.join(blocks)
 
+# RELEASE-49: no image carries the MediaTek radio firmware; each player takes
+# it from its owner's copy of the Innioasis package (y2_platform.radiofw).
+RADIO_FIRMWARE = {'schema': 'org.schulzcode.y2linux.radio-firmware/v1', 'included': False,
+                  'source': "owner's Innioasis Y2 system.img, installed on the player into /data/firmware/mt6582",
+                  'redistribution_permission_established': False}
+
+
 def make_public_scatter(stock):
     """RELEASE-49 one-time setup from the public images: BOOTIMG, ANDROID,
     USRDATA and the Y2 recovery image in RECOVERY, in one SP Flash Tool pass."""

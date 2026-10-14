@@ -8,11 +8,18 @@ import re
 import sys
 
 
+PROFILES = ('sbc-only', 'owner-private-experiments', 'owner-private-integration', 'public')
+# Owner decision 2026-10-16 (RELEASE-49): AAC (fdk-aac-free, AAC-LC only) and
+# LDAC may be distributed publicly; aptX/aptX HD stay in owner-private builds.
+APPROVED = {'SBC', 'AAC', 'LDAC'}
+
+
 def manifest(build, profile='sbc-only'):
-    if profile not in ('sbc-only', 'owner-private-experiments', 'owner-private-integration'):
+    if profile not in PROFILES:
         raise ValueError('unknown_codec_profile')
     experiments = profile != 'sbc-only'
-    integration = profile == 'owner-private-integration'
+    integration = profile in ('owner-private-integration', 'public')
+    public = profile == 'public'
     config = (build / 'config.h').read_text()
     if '#define PACKAGE_VERSION "v5.0.0"' not in config:
         raise ValueError('unexpected_bluealsa_api_version')
@@ -23,20 +30,20 @@ def manifest(build, profile='sbc-only'):
     codecs = {}
     for name, flag in [('SBC', None), ('AAC', 'AAC'), ('aptX', 'APTX'), ('aptX-HD', 'APTX_HD'), ('LDAC', 'LDAC')]:
         compiled = flag is None or bool(re.search(r'^#define ENABLE_' + flag + r' 1$', config, re.M))
-        codecs[name] = {'compiled_locally': compiled, 'distribution_approved': name == 'SBC',
+        codecs[name] = {'compiled_locally': compiled, 'distribution_approved': name in APPROVED,
                         'platform_qualified': False,
                         'owner_private_experiment': experiments and compiled and name != 'SBC',
                         'default_runtime_enabled': name == 'SBC' or (integration and compiled),
                         'experimental': integration and name != 'SBC',
-                        'gate': 'PHYSICAL_GATE' if name == 'SBC' else 'PUBLIC_DISTRIBUTION_AND_PHYSICAL_GATE'}
+                        'gate': 'PHYSICAL_GATE' if name in APPROVED else 'PUBLIC_DISTRIBUTION_AND_PHYSICAL_GATE'}
     unexpected = re.findall(r'^#define ENABLE_(AAC|APTX|APTX_HD|LDAC|LHDC|MPEG|OPUS|LC3PLUS|FASTSTREAM|ASHA) 1$', config, re.M)
-    allowed = {'AAC', 'APTX', 'APTX_HD', 'LDAC'} if experiments else set()
+    allowed = ({'AAC', 'LDAC'} if public else {'AAC', 'APTX', 'APTX_HD', 'LDAC'}) if experiments else set()
     if set(unexpected) - allowed:
         raise ValueError('production_optional_codec_not_approved:' + ','.join(unexpected))
     if experiments and set(unexpected) != allowed:
         raise ValueError('owner_private_codec_profile_incomplete')
-    if experiments and ('#define WITH_LIBFREEAPTX 1' not in config or
-                        '#define WITH_LIBOPENAPTX 1' in config):
+    if experiments and not public and ('#define WITH_LIBFREEAPTX 1' not in config or
+                                       '#define WITH_LIBOPENAPTX 1' in config):
         raise ValueError('owner_private_codec_library_mismatch')
     return {'schema': 1, 'profile': profile, 'private_integration_enabled': integration, 'bluealsa_version': '5.0.0', 'sbc_version': '2.2',
             'bluealsa_source_sha256': 'e1249cbebd24925c977814f62adab71f2ebd771e28e6a4ac58bb1ac97ce3beb5',
@@ -53,7 +60,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('build', type=Path)
-    parser.add_argument('--profile', choices=('sbc-only', 'owner-private-experiments', 'owner-private-integration'), default='sbc-only')
+    parser.add_argument('--profile', choices=PROFILES, default='sbc-only')
     parser.add_argument('--daemon-args', type=Path)
     args = parser.parse_args()
     result = manifest(args.build, args.profile)

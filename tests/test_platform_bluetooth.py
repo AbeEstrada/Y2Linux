@@ -105,7 +105,27 @@ class BluetoothObservation(unittest.TestCase):
         for name, codec in result['codecs'].items():
             self.assertTrue(codec['default_runtime_enabled'])
             self.assertFalse(codec['platform_qualified'])
-            self.assertEqual(codec['distribution_approved'], name == 'SBC')
+            self.assertEqual(codec['distribution_approved'], name in ('SBC', 'AAC', 'LDAC'))
+
+    def test_public_profile_is_sbc_aac_ldac_without_aptx(self):
+        # RELEASE-49 owner decision: aptX/aptX HD never in a public image.
+        root = Path(self.temp.name)
+        (root/'src').mkdir(); (root/'src/bluealsad').touch()
+        config = '#define PACKAGE_VERSION "v5.0.0"\n#define ENABLE_AAC 1\n#define ENABLE_LDAC 1\n'
+        (root/'config.h').write_text(config)
+        result = manifest(root, 'public')
+        compiled = {n for n, c in result['codecs'].items() if c['compiled_locally']}
+        self.assertEqual(compiled, {'SBC', 'AAC', 'LDAC'})
+        self.assertTrue(all(c['distribution_approved'] for n, c in result['codecs'].items() if n in compiled))
+        from tools.production.privacy import public_distribution
+        self.assertTrue(public_distribution({'radio_firmware': {'included': False}}, result)['public_distribution_ready'])
+        for extra in ('#define ENABLE_APTX 1\n#define WITH_LIBFREEAPTX 1\n', '#define ENABLE_OPUS 1\n'):
+            (root/'config.h').write_text(config + extra)
+            with self.assertRaisesRegex(ValueError, 'not_approved'):
+                manifest(root, 'public')
+        (root/'config.h').write_text(config.replace('#define ENABLE_LDAC 1\n', ''))
+        with self.assertRaisesRegex(ValueError, 'incomplete'):
+            manifest(root, 'public')
 
     def test_private_profile_requires_complete_encoder_set_and_keeps_auto_closed(self):
         root = Path(self.temp.name)
@@ -120,7 +140,7 @@ class BluetoothObservation(unittest.TestCase):
             self.assertTrue(codec['compiled_locally'])
             self.assertFalse(codec['platform_qualified'])
             self.assertEqual(codec['default_runtime_enabled'], name == 'SBC')
-            self.assertEqual(codec['distribution_approved'], name == 'SBC')
+            self.assertEqual(codec['distribution_approved'], name in ('SBC', 'AAC', 'LDAC'))
         args = root/'daemon.args'
         subprocess.run([sys.executable, str(ROOT/'tools/platform/codec_manifest.py'), str(root),
                         '--profile', 'owner-private-experiments', '--daemon-args', str(args)],

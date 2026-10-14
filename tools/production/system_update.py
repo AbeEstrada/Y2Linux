@@ -14,7 +14,7 @@ import sys
 PROJECT = Path(__file__).resolve().parents[2]
 REBORN = PROJECT.parent / 'Y2Reborn'
 sys.path.insert(0, str(PROJECT))
-from tools.production.layout import TARGETS, RECOVERY_TARGET, digest, require, make_scatter, make_recovery_scatter
+from tools.production.layout import TARGETS, RECOVERY_TARGET, RADIO_FIRMWARE, digest, require, make_scatter, make_recovery_scatter
 from tools.production.boot_update import installed_components
 
 BUILDROOT_SOURCE = PROJECT/'.cache/sources' / ('buildroot-' + json.loads((PROJECT/'buildroot/inputs.lock.json').read_text())['version'])
@@ -93,7 +93,6 @@ def overlay_fallback(previous, overlay, image):
 
 
 def validate_preservation(out, manifest):
-    from tools.connectivity.provision import DEFAULTS, INVENTORY
     previous = json.loads((out/'metadata/base-manifest.json').read_text())
     require(digest(out/'metadata/base-manifest.json') == manifest['base_manifest_sha256'], 'base identity')
     require(manifest['profiles'].keys() == {'MT6582_preserve_data_scatter.txt'}, 'only preserving update profile')
@@ -125,13 +124,8 @@ def validate_preservation(out, manifest):
         {'file':'fallback/'+p['raw']['file'],'size_bytes':p['raw']['size_bytes'],'sha256':p['raw']['sha256']}
         for p in (oldboot,oldroot)], 'fallback identity receipt')
     require((out/'fallback/MT6582_preserve_data_scatter.txt').read_text()==preserving_scatter(stock), 'fallback preserves data')
-    require(manifest['owner_firmware']['redistribution_permission_established'] is False, 'owner-only provisioning')
-    files={x['filename']:{'size_bytes':x['bytes'],'sha256':x['sha256']}
-           for x in json.loads(INVENTORY.read_text())['files']}
-    files.update({name:{'size_bytes':v[0],'sha256':v[1]} for name,v in DEFAULTS.items()})
-    require(manifest['owner_firmware']==json.loads((out/'metadata/owner-firmware.json').read_text())==
-            {'schema':'org.schulzcode.y2linux.owner-firmware/v1',
-             'redistribution_permission_established':False,'files':files}, 'reviewed firmware receipt')
+    require(manifest['radio_firmware']==json.loads((out/'metadata/radio-firmware.json').read_text())==RADIO_FIRMWARE,
+            'no radio firmware in the images (RELEASE-49)')
     if manifest.get('feature_contract_version') == 2:
         configuration = manifest['hardware_configuration']
         require(configuration == json.loads((out/'metadata/hardware-configuration.json').read_text()),
@@ -146,7 +140,7 @@ def validate_preservation(out, manifest):
 def distribution_gate(build, public):
     from tools.production.privacy import public_distribution
     build = Path(build)
-    manifest = {'owner_firmware': json.loads((build/'owner-firmware.json').read_text())}
+    manifest = {'radio_firmware': RADIO_FIRMWARE}
     codecs = json.loads((build/'buildroot/target/etc/y2linux/bluetooth-codecs.json').read_text())
     state = public_distribution(manifest, codecs)
     if public:
@@ -239,8 +233,9 @@ def package(build, base, fallback_root, out, fallback_overlay=None, public=False
         shutil.copyfile(fallback_overlay,out/'metadata/fallback-overlay-manifest.json')
     for name in ('partitions.json','storage-addressing.json','readback-plan.json','kernel-COPYING','Buildroot-COPYING'):
         shutil.copyfile(base/'metadata'/name,out/'metadata'/name)
-    for name in ('versions.json','layout.json','rescue-manifest.json','kernel-source-commit','owner-firmware.json'):
+    for name in ('versions.json','layout.json','rescue-manifest.json','kernel-source-commit'):
         shutil.copyfile(build/name,out/'metadata'/name)
+    (out/'metadata/radio-firmware.json').write_text(json.dumps(RADIO_FIRMWARE,indent=2)+'\n')
     for source,name in [(build/'kernel/.config','kernel.config'),(build/'buildroot/.config','buildroot.config'),
                         (PROJECT/'tools/build/inputs.lock.json','kernel-inputs.lock.json'),
                         (PROJECT/'tools/build/connectivity-host.lock.json','connectivity-host.lock.json'),
@@ -284,7 +279,7 @@ def package(build, base, fallback_root, out, fallback_overlay=None, public=False
     manifest['base_manifest_sha256']=digest(out/'metadata/base-manifest.json')
     manifest['status']='Y2Linux Platform v1 software candidate; all current-candidate physical/endurance qualification pending' if versions.get('platform_api_version')==1 else f'Reborn FFmpeg {ffmpeg_version} audio production candidate; physical audio qualification pending'
     manifest['data_policy']='Preserve existing Y2DATA in place. New private directories are created on first normal boot. No data payload.'
-    manifest['owner_firmware']=json.loads((build/'owner-firmware.json').read_text())
+    manifest['radio_firmware']=RADIO_FIRMWARE
     if versions.get('feature_contract_version') == 2:
         manifest['hardware_configuration'] = configuration_inventory(build/'buildroot/target')
         directory = out/'metadata/hardware-configuration'

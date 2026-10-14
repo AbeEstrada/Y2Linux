@@ -91,7 +91,7 @@ def inventory(project,reborn,build):
     return {'schema':'org.y2linux.release-inventory/v1','versions':versions,'inputs':inputs,'packages':packages,
             'rust_vendor':{'packages':len(checksums),'checksum_manifest_set_sha256':vendor.hexdigest(),
                            'authority':'Cargo.lock plus checked-in vendor/.cargo-checksum.json; cargo --locked --offline'},
-            'owner_provision':json.loads((build/'owner-firmware.json').read_text()),
+            'radio_firmware':__import__('tools.production.layout',fromlist=['RADIO_FIRMWARE']).RADIO_FIRMWARE,
             'host_tools':host,'byte_reproducibility_proven':False,
             'footprint':{'regular_file_bytes':sum(x['bytes'] for x in files),'regular_files':len(files),
                          'elf_files':elf_count,'largest_files':sorted(files,key=lambda x:x['bytes'],reverse=True)[:40],

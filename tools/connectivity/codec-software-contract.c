@@ -7,7 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <sbc/sbc.h>
+#if Y2_CODEC_APTX
 #include <freeaptx.h>
+#endif
 #include <fdk-aac/aacenc_lib.h>
 #include <ldac/ldacBT.h>
 #include <ldac/ldacBT_abr.h>
@@ -35,6 +37,7 @@ static void sbc_contract(void)
     sbc_finish(&codec);
 }
 
+#if Y2_CODEC_APTX
 static void aptx_contract(int hd)
 {
     struct aptx_context *encoder = aptx_init(hd);
@@ -46,6 +49,7 @@ static void aptx_contract(int hd)
     printf("aptX%s: PCM24_frames=512 encoded_bytes=%zu\n", hd ? "-HD" : "", written);
     aptx_finish(encoder);
 }
+#endif
 
 static void aac_contract(unsigned rate)
 {
@@ -114,8 +118,10 @@ static void ldac_contract(unsigned rate, unsigned eqmid)
 int main(void)
 {
     sbc_contract();
+#if Y2_CODEC_APTX
     aptx_contract(0);
     aptx_contract(1);
+#endif
     for (unsigned rate = 44100; rate <= 48000; rate += 3900) {
         aac_contract(rate);
         for (unsigned quality = 0; quality < 3; quality++) ldac_contract(rate, quality);

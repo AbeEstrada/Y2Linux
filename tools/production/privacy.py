@@ -142,7 +142,9 @@ def image_digest(image):
 
 def public_distribution(manifest, codecs):
     blockers = []
-    if manifest.get('owner_firmware', {}).get('redistribution_permission_established') is not True:
+    # RELEASE-49: images without the radio firmware need no permission for it.
+    firmware = manifest.get('radio_firmware') or manifest.get('owner_firmware', {})
+    if firmware.get('included') is not False and firmware.get('redistribution_permission_established') is not True:
         blockers.append('firmware_redistribution_unresolved')
     records = codecs.get('codecs') if isinstance(codecs, dict) else None
     if (not isinstance(codecs, dict) or codecs.get('schema') != 1 or

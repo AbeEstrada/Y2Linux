@@ -17,6 +17,8 @@ def main():
     if a.public:
         # Nobody can log in until the owner personalizes Y2DATA (first_owner.py).
         require(not a.data_template,'public package builds its own empty data image')
+        from tools.production.system_update import distribution_gate
+        distribution_gate(a.build,True)  # no radio firmware, only approved codecs
         key=b''
     else:
         key=public_key(a.public_key)
