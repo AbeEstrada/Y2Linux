@@ -19,6 +19,20 @@
 #define Y2_FULL_REST_UV 4070000
 #define Y2_RECHARGE_UV 4000000
 #define Y2_TOPOFF_UV 4050000
+/* POWER-FINAL-28 (ledger F31): stock tops off at hardware CV until the
+ * charging current is at most 150 mA for six 10-s samples (BAT_TopOffModeAction
+ * 0xc03a2208, batt_cust_data 0xc09d2d68), computed as (ISENSE - BATSNS +
+ * offset) * 1000 / 68 (battery_meter_get_charging_current): a 10.2-mV net
+ * sense drop, whatever the true sense resistance. Y2 keeps its 4.175 V target
+ * and 4.2 V guard: the first 4.175 V sample at a higher current only steps the
+ * cycle down to the 70 mA selector (finish stage); at 70 mA the cycle completes
+ * on 4.175 V or on the stock taper rule. Stock recharges below 4.110 V; Y2 does
+ * so too, but never within 30 mV of the voltage the last Full rested at (the
+ * 70-s restart loop seen when the rest was below 4.11 V). */
+#define Y2_FINISH_UA 70000U
+#define Y2_TAPER_DROP_UV 10200
+#define Y2_STOCK_RECHARGE_UV 4110000
+#define Y2_RECHARGE_MARGIN_UV 30000
 /* Actual Y2 LK uses 3.2 V for ordinary boot, and modes 8/9 for charging
  * below that threshold. Stock Linux leaves precharge above 3.4 V. The
  * inherited PMIC UVLO/ULC and pack-presence protections remain mandatory;
@@ -173,10 +187,23 @@ static inline int y2_charge_start(const struct y2_charge_io *io, unsigned select
  * budget changes, manual inhibit and transient pauses cannot reset budgets. */
 struct y2_charge_cycle {
 	unsigned long long total, cv, precharge;
-	unsigned long long confirm_at;
-	unsigned confirmations;
+	unsigned long long confirm_at, taper_at;
+	unsigned confirmations, taper_samples;
 	int topoff, hold, full, timed_out, completing, confirm_low;
+	/* 28: inputs set by the caller each run (0 = unknown, 26 behaviour) and
+	 * the finish stage / last Full rest voltage they drive. */
+	unsigned charge_ua;
+	int net_drop_uv, finish, full_rest_uv;
 };
+
+static inline int y2_recharge_uv(const struct y2_charge_cycle *c)
+{
+	int uv = Y2_STOCK_RECHARGE_UV;
+	if (!c->full_rest_uv) return Y2_RECHARGE_UV;
+	if (c->full_rest_uv - Y2_RECHARGE_MARGIN_UV < uv)
+		uv = c->full_rest_uv - Y2_RECHARGE_MARGIN_UV;
+	return uv < Y2_RECHARGE_UV ? Y2_RECHARGE_UV : uv;
+}
 
 static inline void y2_charge_account(struct y2_charge_cycle *c,
 				    unsigned long long elapsed, int uv)
@@ -193,7 +220,7 @@ static inline void y2_charge_account(struct y2_charge_cycle *c,
 static inline int y2_charge_termination(struct y2_charge_cycle *c,
 				      unsigned long long now, int uv, int active)
 {
-	int low = uv < Y2_RECHARGE_UV, resume;
+	int low = uv < y2_recharge_uv(c), resume;
 	/* Voltage-limited termination: stop at the target on the FIRST sample.
 	 * POWER-02 waited for CV confirmations while still feeding the battery,
 	 * then hit the independent 4.2V fault. Never wait above the target or
@@ -201,7 +228,23 @@ static inline int y2_charge_termination(struct y2_charge_cycle *c,
 	 * Full denotes completion of this conservative cycle, not measured SOC
 	 * or a taper-current claim. CV status remains observable separately. */
 	if (!c->hold) {
-		if (uv < Y2_CHARGE_UV) return 0;
+		int finishing = c->finish && active && c->charge_ua && c->charge_ua <= Y2_FINISH_UA;
+		if (uv < Y2_CHARGE_UV) {
+			/* Stock taper rule, only in the 70 mA finish stage. */
+			if (!finishing || c->net_drop_uv > Y2_TAPER_DROP_UV) {
+				c->taper_samples = 0;
+				return 0;
+			}
+			if (c->taper_samples && now < c->taper_at + 10) return 0;
+			c->taper_at = now;
+			if (++c->taper_samples < 6) return 0;
+		} else if (active && !c->finish && c->charge_ua > Y2_FINISH_UA) {
+			/* First target sample at the normal current: finish at 70 mA. */
+			c->finish = 1;
+			c->taper_samples = 0;
+			return 1;
+		}
+		c->taper_samples = 0;
 		c->hold = 1;
 		c->full = 0;
 		c->completing = active;
@@ -233,7 +276,8 @@ static inline int y2_charge_termination(struct y2_charge_cycle *c,
 	c->hold = !resume;
 	c->full = !resume;
 	c->completing = 0;
-	if (resume) { c->cv = 0; c->topoff = 0; }
+	if (c->full) c->full_rest_uv = uv;
+	if (resume) { c->cv = 0; c->topoff = 0; c->finish = 0; }
 	return 1;
 }
 #endif

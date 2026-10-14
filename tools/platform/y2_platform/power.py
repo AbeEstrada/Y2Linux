@@ -251,8 +251,9 @@ def serve(ctx):
     from .power_journal import PowerJournal
     journal = PowerJournal(ctx)
     battery = LowBattery()
-    from .battery import Soc, load_profile, sample
-    soc = Soc(load_profile(ctx))
+    from .battery import UI_STATE, Soc, load_profile, sample
+    soc = Soc(load_profile(ctx), ctx.json(UI_STATE, None))
+    ui_saved = None
     policy, reason = load_policy(ctx)
     running = [True]
     signal.signal(signal.SIGTERM, lambda *_: running.__setitem__(0, False))
@@ -269,6 +270,15 @@ def serve(ctx):
                 # shutdown grace/sampling scheduler on its existing clock.
                 battery_status = sample(ctx, soc)
                 voltage = battery_status['voltage_uv']
+                # 28: keep the displayed percentage across a restart (stock
+                # RTC spare register); written only when it changes.
+                ui_state = soc.state()
+                if ui_state is not None and ui_state != ui_saved:
+                    try:
+                        atomic_json(ctx.path(UI_STATE), ui_state, durable=True)
+                        ui_saved = ui_state
+                    except OSError:
+                        pass
                 state = battery.observe(policy, voltage, ctx.integer('/sys/class/power_supply/BAT0/present'), battery_status)
                 if state == 'ShutdownPending' and not coordinator.intent:
                     coordinator.request('poweroff', 'low_battery', policy['grace_seconds'])

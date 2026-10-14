@@ -56,14 +56,19 @@ class BatterySoc(unittest.TestCase):
         self.assertGreaterEqual(low, first - 1)
         charging = soc.observe(180, 4175000, 1, 'Charging')['percent']
         self.assertLessEqual(charging, rebound + 1)
-        self.assertEqual(soc.observe(181, 4175000, 1, 'Full')['percent'], 100)
+        # 28 (stock 100Percent tracking): Full counts up one point per 10 s.
+        self.assertEqual(soc.observe(181, 4175000, 1, 'Full')['percent'], charging + 1)
+        self.assertEqual(soc.observe(185, 4175000, 1, 'Full')['percent'], charging + 1)
+        now = 191
+        while soc.observe(now, 4090000, 1, 'Full')['percent'] < 100:
+            now += 10
         # Resting full pack of this charger (measured 4.09 V) is 100%, not 94%.
-        self.assertEqual(soc.observe(182, 4090000, 1, 'Full')['percent'], 100)
+        self.assertEqual(soc.observe(now + 1, 4090000, 1, 'Full')['percent'], 100)
         # An implausible Full at a low voltage never forces 100%.
         self.assertLess(Soc(load_profile(self.ctx)).observe(0, 3900000, 1, 'Full')['percent'], 100)
-        self.assertLessEqual(soc.observe(183, 3390000, 1, 'Discharging')['percent'], 1)
-        self.assertIsNone(soc.observe(184, 3390000, 0, 'Unknown')['percent'])
-        self.assertEqual(soc.observe(185, 3800000, 1, 'Discharging')['percent'], 54)
+        self.assertLessEqual(soc.observe(now + 2, 3390000, 1, 'Discharging')['percent'], 1)
+        self.assertIsNone(soc.observe(now + 3, 3390000, 0, 'Unknown')['percent'])
+        self.assertEqual(soc.observe(now + 4, 3800000, 1, 'Discharging')['percent'], 54)
 
     def test_rest_and_hybrid_require_actual_calibration(self):
         p = load_profile(self.ctx)
@@ -151,6 +156,84 @@ class BatterySoc(unittest.TestCase):
         # Discharging never uses the charger-path current.
         self.assertEqual(Soc(p).observe(0, 3800000, 1, 'Discharging', charge_current=450000)['source'],
                          'voltage_estimate')
+
+    # POWER-FINAL-28: the owner's case. On the charger 100 %, after a restart
+    # about 80 %; wanted 100 % when full, then 99, 98, 97 ... (ledger F28-F30).
+    def full_soc(self, rest_uv=4150000):
+        soc = Soc(load_profile(self.ctx))
+        now = 0
+        soc.observe(now, 4100000, 1, 'Charging', charge_current=70000)
+        while soc.observe(now, rest_uv, 1, 'Full')['percent'] < 100:
+            now += 10
+        return soc, now
+
+    def test_charging_shows_at_most_99_until_full(self):
+        soc = Soc(load_profile(self.ctx))
+        for now in range(0, 3600, 10):
+            value = soc.observe(now, 4170000, 1, 'Charging')
+            self.assertLessEqual(value['percent'], 99)
+        # 28 finish stage at the target, 70 mA: the estimate reaches 100, shown 99.
+        for now in range(3600, 7200, 10):
+            value = soc.observe(now, 4175000, 1, 'Charging', charge_current=10000)
+        self.assertEqual((value['estimate_percent'], value['percent']), (100, 99))
+        self.assertEqual(soc.observe(7200, 4150000, 1, 'Full')['percent'], 100)
+
+    def test_full_stays_100_on_the_charger_then_counts_down_one_by_one(self):
+        soc, now = self.full_soc()
+        anchor = soc.anchor
+        self.assertTrue(98 <= anchor <= 99.5, anchor)
+        # Maintenance hold drains and recharges on the charger: still 100.
+        for uv, status in ((4120000, 'Full'), (4105000, 'Not charging'), (4140000, 'Charging')):
+            now += 600
+            self.assertEqual(soc.observe(now, uv, 1, status)['percent'], 100)
+        # Unplugged: 100, then single steps as the pack really discharges.
+        shown = []
+        uv = 4150000
+        for _ in range(400):
+            now += 30
+            uv -= 1000
+            shown.append(soc.observe(now, uv, 1, 'Discharging')['percent'])
+        self.assertEqual(shown[0], 100)
+        steps = [a - b for a, b in zip(shown, shown[1:])]
+        self.assertTrue(all(step in (0, 1) for step in steps), steps)
+        self.assertIn(99, shown)
+        self.assertIn(98, shown)
+        self.assertIn(97, shown)
+
+    def test_restart_keeps_the_display_instead_of_the_boot_sag(self):
+        soc, now = self.full_soc()
+        state = soc.state()
+        self.assertEqual(state['ui_percent'], 100)
+        # 27 boot 5919b4fe: first sample 4.002 V under boot load (87 % raw).
+        cold = Soc(load_profile(self.ctx)).observe(0, 4002000, 1, 'Discharging')
+        self.assertEqual(cold['percent'], 87)
+        # Power-on OCV alone (4.062 V latched before load) already says ~92 %.
+        ocv = Soc(load_profile(self.ctx)).observe(0, 4002000, 1, 'Discharging', boot_ocv=4062000)
+        self.assertEqual(ocv['percent'], 92)
+        # With the saved display value (stock RTC spare) the restart shows 100.
+        again = Soc(load_profile(self.ctx), state).observe(0, 4002000, 1, 'Discharging', boot_ocv=4150000)
+        self.assertEqual(again['percent'], 100)
+        self.assertEqual(again['anchor_percent'], state['anchor_percent'])
+
+    def test_saved_value_is_refused_beyond_40_points_and_charger_moved_ocv(self):
+        state = {'schema': 1, 'ui_percent': 100, 'anchor_percent': 98.8}
+        stale = Soc(load_profile(self.ctx), state).observe(0, 3700000, 1, 'Discharging', boot_ocv=3700000)
+        self.assertLess(stale['percent'], 60)                     # 40-point rule
+        # Booted on a charger: an OCV 31+ points away from the live sample loses.
+        p = load_profile(self.ctx)
+        moved = Soc(p).observe(0, 3800000, 1, 'Charging', boot_ocv=4150000)
+        self.assertLess(moved['percent'], 70)
+        # Garbage in the saved file is ignored.
+        junk = Soc(p, {'ui_percent': 'x', 'anchor_percent': 7}).observe(0, 3779000, 1, 'Discharging')
+        self.assertEqual((junk['percent'], junk['anchor_percent']), (50, None))
+
+    def test_service_persists_the_display_value(self):
+        source = (ROOT / 'tools/platform/y2_platform/power.py').read_text()
+        self.assertIn("soc = Soc(load_profile(ctx), ctx.json(UI_STATE, None))", source)
+        self.assertIn("atomic_json(ctx.path(UI_STATE), ui_state, durable=True)", source)
+        battery = (ROOT / 'tools/platform/y2_platform/battery.py').read_text()
+        self.assertIn("ctx.integer(base + 'voltage_ocv')", battery)
+
 
 if __name__ == '__main__':
     unittest.main()

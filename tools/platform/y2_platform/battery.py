@@ -6,10 +6,19 @@ import time
 
 PROFILE = '/etc/y2linux/battery-profile.json'
 OVERRIDE = '/data/system/platform/battery-profile.json'
-# The charger stops at 4.175 V under load and rests near 4.09 V, so the curve's
-# top point is never seen at rest. The kernel reports Full only after a hold
-# that rests at or above 4.07 V; 4.0 V is the plausibility floor for that claim
-# (it is also the charger's maintenance-recharge level).
+# POWER-FINAL-28: the displayed percentage survives a restart, as stock keeps
+# UI_SOC in an MT6323 RTC spare register (set_rtc_spare_fg_value, ledger F29).
+UI_STATE = '/data/system/platform/battery-ui.json'
+# Stock dod_init reuses the saved value only within 40 points of the boot
+# estimate; oam_init prefers the power-on OCV unless a charger moved it 31+.
+UI_RESTORE_POINTS = 40
+OCV_CHARGER_POINTS = 31
+# Stock mt_battery_update_status: at Full the display counts up one point per
+# 10-s battery-thread tick to 100 (100Percent tracking).
+FULL_STEP_SECONDS = 10
+# The charger tops off at 4.175 V (28: 70 mA finish stage), so the curve's top
+# point is never seen at rest. The kernel reports Full only after a hold that
+# rests at or above 4.07 V; 4.0 V is the plausibility floor for that claim.
 FULL_FLOOR_UV = 4000000
 
 
@@ -72,15 +81,51 @@ class Soc:
     not proof of open-circuit voltage. Current compensation is used only when
     a real battery current and separately calibrated resistance are supplied.
     """
-    def __init__(self, profile):
+    def __init__(self, profile, saved=None):
         self.profile = profile
         self.filtered = self.percent = self.last = None
         self.samples = deque(maxlen=3601)
         self.rest_since = None
         self.charging = None
+        # Displayed value (stock UI_SOC), separate from the curve estimate.
+        # `anchor` is the curve estimate at the last Full: that is 100 % of
+        # what this charger fills (stock reset_parameter_dod_full, F28).
+        self.ui = self.anchor = None
+        self.full_latched = False
+        self.full_step_at = None
+        self.saved = saved if isinstance(saved, dict) else None
+
+    def state(self):
+        """What survives a restart (stock RTC spare register), or None."""
+        if self.ui is None:
+            return None
+        return {'schema': 1, 'ui_percent': int(self.ui),
+                'anchor_percent': None if self.anchor is None else round(self.anchor, 2)}
+
+    def display(self, estimate):
+        if not self.anchor:
+            return estimate
+        return max(0., min(100., estimate * 100 / self.anchor))
+
+    def restore(self, estimate):
+        """First sample: reuse the saved display value within 40 points."""
+        saved = self.saved or {}
+        anchor = saved.get('anchor_percent')
+        if type(anchor) in (int, float) and 80 <= anchor <= 100:
+            self.anchor = float(anchor)
+        ui = saved.get('ui_percent')
+        shown = self.display(estimate)
+        if type(ui) is int and 1 <= ui <= 100 and abs(ui - shown) < UI_RESTORE_POINTS:
+            self.ui = ui
+            # The estimate restarts there too (stock dod_init sets the gauge).
+            self.percent = min(100., ui * (self.anchor or 100.) / 100)
+        else:
+            self.ui = int(round(shown))
+        self.saved = None
 
     def observe(self, now, voltage, present, status, hardware_percent=None,
-                current=None, temperature=None, counter=None, charge_current=None):
+                current=None, temperature=None, counter=None, charge_current=None,
+                boot_ocv=None):
         charging = status == 'Charging'
         result = dict(percent=None, source='unavailable', confidence='unavailable', status=status,
                       charging=charging, voltage_uv=voltage, current_ua=current,
@@ -89,6 +134,8 @@ class Soc:
         valid_voltage = type(voltage) is int and 2500000 <= voltage <= 4400000
         if present != 1 or not valid_voltage or not math.isfinite(now):
             self.filtered = self.percent = self.last = None
+            self.ui = self.anchor = None
+            self.full_latched = False
             self.samples.clear()
             return result
         # Real elapsed time includes suspend. Capping a ten-minute observation
@@ -129,8 +176,16 @@ class Soc:
             # power_supply convention: positive current flows into the battery.
             estimate_uv -= max(-150000, min(150000, current * resistance / 1000))
         target = interpolate(p['voltage_soc'], estimate_uv)
-        if self.percent is None:
+        first = self.percent is None
+        if first:
+            # Stock oam_init: the PMIC's power-on OCV predates the boot load;
+            # a charger that moved it by 31+ points leaves the live sample.
+            if type(boot_ocv) is int and 3000000 <= boot_ocv <= 4400000:
+                ocv = interpolate(p['voltage_soc'], boot_ocv)
+                if status in ('Discharging', 'Unknown') or abs(ocv - target) < OCV_CHARGER_POINTS:
+                    target = ocv
             self.percent = target
+            self.restore(target)
         else:
             # Positive net current is unknown unless measured. A charging state
             # permits recovery but never itself proves a full battery.
@@ -138,21 +193,61 @@ class Soc:
                 target = min(target, self.percent)
             change = dt / p['seconds_per_percent']
             self.percent += max(-change, min(change, target - self.percent))
-        if status == 'Full' and voltage >= FULL_FLOOR_UV:
-            self.percent = 100.
+        full = status == 'Full' and voltage >= FULL_FLOOR_UV
         if voltage <= p['voltage_soc'][0][0]:
             self.percent = min(self.percent, 1.)
+        self.track(now, status, full, target)
+        if voltage <= p['voltage_soc'][0][0]:
+            self.ui = min(self.ui, 1)
         self.charging = charging
         capacity = p.get('design_capacity_uah')
         if capacity is not None:
             result.update(design_capacity_uah=capacity,
                           remaining_uah_estimate=round(capacity * self.percent / 100))
-        result.update(percent=int(round(self.percent)),
+        result.update(percent=int(self.ui), estimate_percent=int(round(self.display(self.percent))),
+                      anchor_percent=None if self.anchor is None else round(self.anchor, 2),
+                      full_latched=self.full_latched,
                       source='hybrid' if hybrid else 'stock_oam' if oam else 'voltage_estimate',
                       confidence='provisional' if p['provisional'] else 'calibrated_estimate',
                       provisional=p['provisional'], resting=resting, filtered_voltage_uv=round(self.filtered),
                       calibration_source=p['source'])
         return result
+
+
+    def track(self, now, status, full, target):
+        """Stock mt_battery_update_status, on the display value only."""
+        shown = self.display(self.percent)
+        if status == 'Discharging':
+            # Charger gone: the display only follows the estimate down.
+            self.full_latched = False
+            self.full_step_at = None
+            self.ui = min(self.ui, int(round(shown)))
+            return
+        if full and not self.full_latched:
+            # Count up one point per tick, then re-anchor at this Full.
+            if self.ui < 100:
+                if self.full_step_at is None or now >= self.full_step_at + FULL_STEP_SECONDS:
+                    self.ui += 1
+                    self.full_step_at = now
+                if self.ui < 100:
+                    return
+            self.full_latched = True
+            self.full_step_at = None
+            # The kernel says Full only after a rest: anchor on that voltage,
+            # not on the rate-limited estimate that may still be catching up.
+            self.anchor = max(80., min(100., target))
+            self.percent = self.anchor
+            return
+        if self.full_latched:
+            # Maintenance holds and recharges after Full stay at 100 until the
+            # charger is removed (stock bat_in_recharging_state); the estimate
+            # stays at the Full anchor as stock's gauge does after its reset.
+            # Unplugged, it falls from there at the normal rate (stock Sync).
+            self.percent = self.anchor
+            self.ui = 100
+            return
+        # Charging or holding, not yet Full: follow the estimate up, at most 99.
+        self.ui = min(99, max(self.ui, int(round(shown))))
 
 
 def sample(ctx, engine, now=None):
@@ -167,4 +262,5 @@ def sample(ctx, engine, now=None):
                           ctx.read(base + 'status'), ctx.integer(base + 'capacity'),
                           ctx.integer(base + 'current_now'), temp * 100 if temp is not None else None,
                           ctx.integer(base + 'charge_counter'),
-                          charge_field(ctx.read(base + 'charging_state'), 'sense_current_est_ua'))
+                          charge_field(ctx.read(base + 'charging_state'), 'sense_current_est_ua'),
+                          ctx.integer(base + 'voltage_ocv'))

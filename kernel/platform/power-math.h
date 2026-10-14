@@ -66,6 +66,17 @@ static inline unsigned y2_cpu_pcw(unsigned long hz)
 	default: return 0;
 	}
 }
+/* POWER-FINAL-28: the battery voltage the MT6323 latched at power-on, before
+ * any boot load (rg_adc_out_wakeup_pchr 0x724[14:0], bit 15 ready). Stock
+ * get_hw_ocv 0xc04cae90 (oam_init command 9): raw * 7200 / 32768 + 8 mV
+ * (offset at 0xc0a01d28). 0 when not ready or implausible. */
+static inline int y2_hw_ocv_uv(unsigned reg)
+{
+	int mv;
+	if (!(reg & 0x8000)) return 0;
+	mv = (int)(((reg & 0x7fff) * 7200U) >> 15) + 8;
+	return mv < 3000 || mv > 4400 ? 0 : mv * 1000;
+}
 /* ISENSE-BATSNS drop to charger-path current. The BSP uses CUST_R_SENSE 200 mOhm
  * for the internal MT6323 linear charger (68 mOhm only with an external
  * FAN5405/BQ24158), and the Y2 drop is 98.3 mV at the 450 mA and 139.6 mV at the

@@ -197,19 +197,23 @@ int main(void){
  for(unsigned t=101;t<160;t++)assert(!y2_charge_termination(&c,t,4140000,0));
  assert(y2_charge_termination(&c,160,4140000,0) && c.full);
  c.total=1234;c.precharge=10;
- /* Full stays latched through the measured 4.09 V rest and the old 4.11 V
-  * stock threshold; only a sustained fall below the maintenance level refills. */
- for(unsigned t=170;t<=300;t+=10)assert(!y2_charge_termination(&c,t,4090000,0));
- for(unsigned t=301;t<=400;t+=10)assert(!y2_charge_termination(&c,t,4000000,0));
- for(unsigned t=401;t<461;t++)assert(!y2_charge_termination(&c,t,3999999,0));
- assert(y2_charge_termination(&c,461,3999999,0) && !c.hold && !c.full);
- assert(c.total==0 && c.precharge==0 && c.cv==0);
+ /* 28: a Full that rests at 4.14 V refills below the stock 4.110 V (26: 4.00 V). */
+ assert(c.full_rest_uv==4140000 && y2_recharge_uv(&c)==4110000);
+ for(unsigned t=170;t<=300;t+=10)assert(!y2_charge_termination(&c,t,4110000,0));
+ for(unsigned t=301;t<361;t++)assert(!y2_charge_termination(&c,t,4109999,0));
+ assert(y2_charge_termination(&c,361,4109999,0) && !c.hold && !c.full);
+ assert(c.total==0 && c.precharge==0 && c.cv==0 && !c.finish);
  /* The measured field loop: the pack stops at 4.175 V under load and rests at
-  * 4.09 V. That is Full (it used to restart forever against the 4.11 V rule). */
+  * 4.09 V. That is Full (it used to restart forever against the 4.11 V rule),
+  * and its refill level keeps 30 mV below that rest, never the 4.11 V loop. */
  c=(struct y2_charge_cycle){0};
+ assert(y2_recharge_uv(&c)==4000000);                     /* no Full yet: 26 level */
  assert(y2_charge_termination(&c,0,4178759,1) && c.hold && !c.full && c.completing);
  for(unsigned t=1;t<60;t++)assert(!y2_charge_termination(&c,t,4090209,0));
  assert(y2_charge_termination(&c,60,4090209,0) && c.hold && c.full);
+ assert(y2_recharge_uv(&c)==4060209);
+ for(unsigned t=70;t<=400;t+=10)assert(!y2_charge_termination(&c,t,4070000,0));
+ c.full_rest_uv=4020000; assert(y2_recharge_uv(&c)==4000000); /* never below 26's floor */
  /* A hold that rests below the full level is an unfinished charge: it resumes
   * after a sustained window and never reports Full. */
  c=(struct y2_charge_cycle){0};
@@ -234,6 +238,41 @@ int main(void){
  assert(!y2_charge_termination(&c,152,3999999,0));
  for(unsigned t=153;t<212;t++)assert(!y2_charge_termination(&c,t,3999999,0));
  assert(y2_charge_termination(&c,212,3999999,0) && !c.hold);
+ /* 28 finish stage: the first 4.175 V sample at 450 mA steps to 70 mA, no hold. */
+ c=(struct y2_charge_cycle){0};
+ c.charge_ua=450000;
+ assert(y2_charge_termination(&c,0,4175000,1) && c.finish && !c.hold);
+ /* At 70 mA the 4.175 V target completes the cycle exactly as before. */
+ c=(struct y2_charge_cycle){0}; c.finish=1; c.charge_ua=70000;
+ assert(y2_charge_termination(&c,0,4175000,1) && c.hold && c.completing && !c.full);
+ for(unsigned t=1;t<60;t++)assert(!y2_charge_termination(&c,t,4150000,0));
+ assert(y2_charge_termination(&c,60,4150000,0) && c.full && c.full_rest_uv==4150000);
+ assert(y2_recharge_uv(&c)==4110000);
+ /* Stock taper rule at 70 mA under hardware CV: net drop <= 10.2 mV for six
+  * samples at least 10 s apart (BAT_TopOffModeAction: 150 mA * 68 mOhm). */
+ c=(struct y2_charge_cycle){0}; c.finish=1; c.charge_ua=70000;
+ c.net_drop_uv=15000;
+ for(unsigned t=0;t<100;t+=10)assert(!y2_charge_termination(&c,t,4170000,1) && !c.hold);
+ c.net_drop_uv=10200;
+ for(unsigned t=100;t<150;t+=10)assert(!y2_charge_termination(&c,t,4170000,1));
+ assert(!y2_charge_termination(&c,145,4170000,1));          /* too soon after the 5th */
+ assert(y2_charge_termination(&c,150,4170000,1) && c.hold && c.completing);
+ /* One higher-drop sample restarts the six-sample window. */
+ c=(struct y2_charge_cycle){0}; c.finish=1; c.charge_ua=70000; c.net_drop_uv=9000;
+ for(unsigned t=0;t<50;t+=10)assert(!y2_charge_termination(&c,t,4170000,1));
+ c.net_drop_uv=10201; assert(!y2_charge_termination(&c,50,4170000,1) && !c.taper_samples);
+ /* The taper rule never applies at a normal current or without a finish stage. */
+ c=(struct y2_charge_cycle){0}; c.charge_ua=450000; c.net_drop_uv=0;
+ for(unsigned t=0;t<200;t+=10)assert(!y2_charge_termination(&c,t,4100000,1) && !c.hold);
+ c=(struct y2_charge_cycle){0}; c.charge_ua=70000; c.net_drop_uv=0;
+ for(unsigned t=0;t<200;t+=10)assert(!y2_charge_termination(&c,t,4100000,1) && !c.hold);
+ /* Unknown current (0): 26 behaviour, the first target sample holds. */
+ c=(struct y2_charge_cycle){0}; c.finish=1;
+ assert(y2_charge_termination(&c,0,4175000,1) && c.hold && c.completing);
+ /* A resumed maintenance cycle starts without the finish stage. */
+ c.full=1; c.full_rest_uv=4150000; c.completing=0;
+ for(unsigned t=1;t<61;t++)assert(!y2_charge_termination(&c,t,4100000,0));
+ assert(y2_charge_termination(&c,61,4100000,0) && !c.hold && !c.finish);
  reset(); /* reference fixture functions under -Werror */
  assert(!io.read(io.context,0,&operations));
 }
@@ -442,3 +481,22 @@ int main(void){
  c.stopping=true;y2_charger_complete_pm(&d);assert(queued==1);
 }
 ''')
+
+
+class BootOcv(unittest.TestCase):
+    def test_power_on_ocv_matches_stock_get_hw_ocv(self):
+        # 28, ledger F30: live 27 boot 5919b4fe read 0x724 = 0xc813 -> 4062 mV.
+        run_c(r'''
+#include <assert.h>
+#include "power-math.h"
+int main(void){
+ assert(y2_hw_ocv_uv(0xc813)==4062000);
+ assert(y2_hw_ocv_uv(0x4813)==0);          /* bit 15: not latched */
+ assert(y2_hw_ocv_uv(0x8000)==0);          /* 8 mV: implausible */
+ assert(y2_hw_ocv_uv(0xffff)==0);          /* 7208 mV: implausible */
+ return 0;
+}
+''')
+        driver = (Path(__file__).resolve().parents[1] / 'kernel/platform/mt6323-charger.c').read_text()
+        self.assertIn('regmap_read(c->map, 0x724, &ocv)', driver)
+        self.assertIn('POWER_SUPPLY_PROP_VOLTAGE_OCV', driver)

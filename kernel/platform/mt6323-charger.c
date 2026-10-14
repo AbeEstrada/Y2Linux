@@ -63,7 +63,7 @@ struct y2_charger {
 	unsigned charge_ua, selector, charge_ceiling_ua, thermal_level;
 	struct y2_charge_decision decision;
 	enum y2_source_type source;
-	int sense_drop_uv, sense_offset_uv;
+	int sense_drop_uv, sense_offset_uv, boot_ocv_uv;
 	bool sense_offset_valid;
 	int uv, baton_raw, isense_raw, die_mc, input_ua, sample_error, stop_error, last_error;
 	int status, behaviour;
@@ -227,8 +227,11 @@ static unsigned y2_charger_target(struct y2_charger *c)
 	 * 70 mA below LK's 3.2 V boot threshold; the source allowance, class,
 	 * thermal and owner limits all still apply. Full userspace stays out until
 	 * an explicit, adequately powered boot. */
-	return y2_charge_decide(&c->decision, c->source, c->input_ua, c->uv,
-				c->thermal_level, c->charge_ceiling_ua);
+	unsigned target = y2_charge_decide(&c->decision, c->source, c->input_ua, c->uv,
+					   c->thermal_level, c->charge_ceiling_ua);
+	/* 28: the finish stage tops off at the 70 mA selector (charger-policy.h). */
+	if (target > Y2_FINISH_UA && c->cycle.finish) target = Y2_FINISH_UA;
+	return target;
 }
 
 static unsigned y2_charger_sample_fault(struct y2_charger *c)
@@ -309,6 +312,8 @@ static void y2_charger_run(struct y2_charger *c)
 		if (c->fault || !c->online) goto inhibit;
 	}
 	/* Evaluate completion before changing the current or losing active state. */
+	c->cycle.charge_ua = c->active ? c->charge_ua : 0;
+	c->cycle.net_drop_uv = c->sense_drop_uv - c->sense_offset_uv;
 	y2_charge_termination(&c->cycle, ktime_get_boottime_seconds(), c->uv, c->active);
 	if (c->cycle.hold) goto inhibit;
 	target = y2_charger_target(c);
@@ -339,7 +344,10 @@ static void y2_charger_run(struct y2_charger *c)
 		if (c->fault) goto inhibit;
 		if (!ret && y2_charger_target(c) != c->charge_ua) goto inhibit;
 		if (!ret && c->uv >= Y2_CHARGE_UV) {
-			y2_charge_termination(&c->cycle, ktime_get_boottime_seconds(), c->uv, 0);
+			/* At the target with no current: a finishing cycle is complete. */
+			c->cycle.charge_ua = 0;
+			y2_charge_termination(&c->cycle, ktime_get_boottime_seconds(), c->uv,
+					      c->cycle.finish);
 			goto inhibit;
 		}
 		if (!ret && ktime_to_ms(ktime_get_boottime()) - c->last_pet_ms >= Y2_PET_LATE_MS)
@@ -444,7 +452,7 @@ static enum power_supply_property y2_bat_props[] = {
 	POWER_SUPPLY_PROP_PRESENT, POWER_SUPPLY_PROP_STATUS, POWER_SUPPLY_PROP_HEALTH,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW, POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT,
 	POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE, POWER_SUPPLY_PROP_CHARGE_BEHAVIOUR,
-	POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX,
+	POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, POWER_SUPPLY_PROP_VOLTAGE_OCV,
 };
 static enum power_supply_property y2_usb_props[] = {
 	POWER_SUPPLY_PROP_ONLINE, POWER_SUPPLY_PROP_USB_TYPE,
@@ -489,6 +497,10 @@ static int y2_bat_get(struct power_supply *psy, enum power_supply_property p,
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_BEHAVIOUR: v->intval = c->behaviour; break;
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX: v->intval = c->charge_ceiling_ua; break;
+	case POWER_SUPPLY_PROP_VOLTAGE_OCV:
+		/* 28: power-on OCV latched before boot load (stock oam_init). */
+		if (c->boot_ocv_uv) v->intval = c->boot_ocv_uv; else ret = -ENODATA;
+		break;
 	default: ret = -EINVAL;
 	}
 	mutex_unlock(&c->lock);
@@ -594,6 +606,7 @@ static ssize_t charging_state_show(struct device *dev, struct device_attribute *
 		"battery_uv=%d baton_raw=%d isense_raw=%d pmic_die_mc=%d input_budget_ua=%d\n"
 		"chr_con0=0x%04x cv_status=0x%04x battery_ovp=0x%04x baton=0x%04x watchdog=0x%04x thermal=0x%04x\n"
 		"watchdog_pets=%llu last_pet_ms=%llu total_seconds=%llu cv_seconds=%llu precharge_seconds=%llu hold=%d full=%d timeout=%d\n"
+		"finish=%d taper_samples=%u full_rest_uv=%d recharge_uv=%d\n"
 		"first_fault=0x%x at_ms=%llu battery_uv=%d sample_error=%d chr=0x%x cv=0x%x ovp=0x%x watchdog=0x%x thermal=0x%x\n"
 		"dormant_blocked=%u check_reg=%#x check_mask=%#x check_expected=%#x check_actual=%#x check_error=%d\n"
 		"selector=%u stock_request_ua=%u class_ceiling_ua=%u thermal_level=%u thermal_cap_ua=%u owner_ceiling_ua=%u vendor_max_ua=%u\n"
@@ -603,6 +616,7 @@ static ssize_t charging_state_show(struct device *dev, struct device_attribute *
 		c->uv, c->baton_raw, c->isense_raw, c->die_mc, c->input_ua,
 		c->con0, c->con4, c->ov, c->baton_con, c->wdt, c->thr,
 		c->pets, c->last_pet_ms, c->cycle.total, c->cycle.cv, c->cycle.precharge, c->cycle.hold, c->cycle.full, c->cycle.timed_out,
+		c->cycle.finish, c->cycle.taper_samples, c->cycle.full_rest_uv, y2_recharge_uv(&c->cycle),
 		c->first_fault, c->first_fault_ms, c->first_uv, c->first_sample_error,
 		c->first_con0, c->first_cv, c->first_ov, c->first_wdt, c->first_thr,
 		y2_charger_dormant_blocked(), c->mismatch_reg, c->mismatch_mask,
@@ -709,6 +723,7 @@ static int y2_charger_probe(struct platform_device *pdev)
 	struct mt6397_chip *chip = dev_get_drvdata(dev->parent);
 	struct power_supply_config cfg = {};
 	struct y2_charger *c;
+	unsigned ocv;
 	int ret, irq;
 
 	if (!chip || !chip->regmap) return -EPROBE_DEFER;
@@ -719,6 +734,7 @@ static int y2_charger_probe(struct platform_device *pdev)
 	mutex_init(&c->lock);
 	c->status = POWER_SUPPLY_STATUS_UNKNOWN;
 	c->stopping = true; /* notifier cannot queue work until all devres are ready */
+	if (!regmap_read(c->map, 0x724, &ocv)) c->boot_ocv_uv = y2_hw_ocv_uv(ocv);
 	c->sample_error = -EAGAIN;
 	/* No dependency can defer leaving an inherited charger enabled. */
 	ret = y2_charge_stop(&c->io);
