@@ -1,6 +1,8 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-15, night): 38 INSTALLED OVER THE AIR FROM 37 (release key), 52 s in recovery (37: 136 s), health acknowledged.** Next: one software restart on 38 (owner OK) to test the stock external-reset sequence; if the panel survives, `/data/updates/restart.json` `{"mode": "reboot"}` and an install without Power presses. Possible further speed-up: back up only the chunks that change (backup is now 31 of 52 s).
+> **START HERE (2026-10-15, late night): 39 SEALED (display mutex reset), AWAITING FLASH.** Restart on 38 stayed dark (archive 135): stale mutex grant → `could not acquire mutex 0`; 39 resets all display mutexes once at handover. Next: flash 39, check `Y2SCAN mutex reset` line, restart test (owner OK), then `restart.json` on.
+
+> Previous entry: **START HERE (2026-10-15, night): 38 INSTALLED OVER THE AIR FROM 37 (release key), 52 s in recovery (37: 136 s), health acknowledged.** Next: one software restart on 38 (owner OK) to test the stock external-reset sequence; if the panel survives, `/data/updates/restart.json` `{"mode": "reboot"}` and an install without Power presses. Possible further speed-up: back up only the chunks that change (backup is now 31 of 52 s).
 
 > Previous entry: **START HERE (2026-10-15, evening): 37 FLASHED (cold snapshot archive 133; 37 reinstall test staged), 38 SEALED.** REA: stock `wdt_arch_reset` sets WDT external reset + auto-restart before WDT_SWRST; ours did not → 38 uses the stock sequence (`docs/validation/Y2-PLATFORM-V1-POWER-FINAL-38.md`). Opt-in automatic restart for updates: `/data/updates/restart.json` `{"mode": "reboot"}`. Next: owner's 37 install test (Turn Off and Install), then 38 (SPFT or OTA `…-38-ota-release`), one restart test, then restart.json on.
 

@@ -32,6 +32,9 @@ only wrote `WDT_SWRST`, so display-path state survived and Linux got no frames a
   kernel 0.7 s. New system: kernel `…-power-final-38`, taint 0, health acknowledged at 47 s uptime,
   `accepted.json` 3800, package removed. Automatic restart not yet switched on (restart test pending).
 
+- **Software restart on 38: panel still dark** (archive `20261015/135`); the stock reset sequence alone is not the
+  fix. Cause and fix: [POWER-FINAL-39](Y2-PLATFORM-V1-POWER-FINAL-39.md).
+
 ## Owner steps
 
 1. Install 38 (SP Flash Tool BOOTIMG + ANDROID, or over the air from 37 with the signed package — this also measures the new install time).
