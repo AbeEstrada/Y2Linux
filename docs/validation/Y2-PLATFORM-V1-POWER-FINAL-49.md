@@ -47,4 +47,13 @@ removed (notes added; never in Git). The public-distribution gate also blocked A
   release a later check had found (journal `Failed: owner cancelled` won over everything). Fixed in Reborn `476e281`
   (a cancel is no failure; a later check supersedes a failure), ships with the next release. Owner unblocked by staging
   the release over the player's Wi-Fi via SSH.
-- Still to do: AAC playback with the owner's headphones; the Firmware-drive path for new players (owner OK needed).
+- **Firmware drive (new-player path), owner test (archive `20261016/154`): works, two bugs found.** Firmware backed up
+  and removed at runtime → `Missing`; the **Firmware** MTP drive appeared after ~5 s (README only). The owner copied
+  the stock `system.img` (518,590,232 bytes); the installation took ~2 s on the player, all seven hashes identical to
+  the original, the copy deleted, space freed, the drive removed. Bugs: (1) the watcher had seen the firmware at
+  service start and never re-checked, so the copy was taken only by a manual `firmware scan` (a fresh install is not
+  affected); (2) the combined connectivity restart was cut off by a 10 s limit after its stop half, so the radios
+  stayed off until started by hand (then Wi-Fi Online, Bluetooth powered). Both fixed in Linux `d1f1195` (next
+  release). The owner's file manager moved instead of copied: `system.img` restored from the Innioasis zip (hash
+  verified); INSTALL and the drive's README now say copy, don't move.
+- Still to do: AAC playback with the owner's headphones.
