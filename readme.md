@@ -6,20 +6,22 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Baseline 34 (2026-10-14), developer preview.** It runs every day on
-> the maintainer's Y2. There are no prebuilt images yet: you build from source
-> and flash with SP Flash Tool. Only one hardware revision has been tested (see
+> **Status: Baseline 46 (2026-10-16), developer preview.** It runs every day on
+> the maintainer's Y2. The first install is built from source and flashed with
+> SP Flash Tool; after that, the player installs new releases over Wi-Fi from
+> this repository's [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases).
+> Only one hardware revision has been tested (see
 > [Supported hardware](#supported-hardware)). Read [Known issues](#known-issues)
 > before you flash.
 
-| | Baseline 34 |
+| | Baseline 46 |
 | --- | --- |
-| Git tag (both repositories) | `baseline-34` (previous: `baseline-24`) |
-| Kernel | `6.18.56-y2linux-platform-v1-power-final-34` (Linux 6.18 long-term line) |
-| Root filesystem / release | `2026.08-platform-v1.64` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.34` |
+| Git tag (both repositories) | `baseline-46` (previous: `baseline-34`); GitHub release `baseline-46` carries the signed over-the-air update |
+| Kernel | `6.18.56-y2linux-platform-v1-power-final-46` (Linux 6.18 long-term line) |
+| Root filesystem / release | `2026.08-platform-v1.76` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.46` |
 | Player | Y2Reborn 0.3.0 (Rust 1.99) with Cover Flow, Genres and 15 themes |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 — every component on its newest release |
-| Maintainer's images built from | Y2Linux `de62fa9`, Y2Reborn `5b69ef5` (later commits: docs only) |
+| Maintainer's images built from | Y2Linux `d03ab29`, Y2Reborn `850687d` (later commits: docs only) |
 
 ## Getting started
 
@@ -31,8 +33,16 @@ factory partitions untouched.
 
 ## What works
 
-Observed on the maintainer's device on the candidates up to 33 (34 adds the shipped themes and a
-battery-display fix on top of 33):
+Observed on the maintainer's device on the candidates up to 45 (46 is the first release on the
+update channel):
+
+- **Over-the-air updates:** Settings → About & Updates checks once a day on Wi-Fi (or on demand),
+  downloads a signed release and, with **Restart and Install**, restarts into a Y2 recovery image
+  that backs up, installs and verifies kernel, rescue and system, then restarts into the new
+  version (about a minute; the old version is restored on any failure). It makes room on its own
+  by removing old logs; music and settings are never touched. Needs the Y2 recovery image flashed
+  once ([recovery install](docs/architecture/ota-recovery-install.md)).
+- Software restart works (since 43).
 
 - Boots from internal eMMC: stock preloader and LK, then Linux 6.18 and Buildroot. No SD card needed.
 - Display with GPU (DRM + Lima), buttons, click wheel and the Reborn player UI.
@@ -71,9 +81,10 @@ battery-display fix on top of 33):
 
 ## Known issues
 
-- **Never use a software restart.** A warm reboot (the menu's Restart, update
-  reboots, `reboot`) can leave the panel dark (`flip_done timed out`). Turn the
-  player off by holding Power, then start it again. Not yet investigated.
+- **Rarely a dark screen at start.** Twice the display controller answered every register read one
+  register late, so the first picture never started (a cold start with USB plugged in on 42, and the
+  installer screen once). Since 44 the driver detects this and restarts the display; the retry
+  has not been needed on the device yet. Hold Power for 10 s and start again if it happens.
 - **USB after a wake from deep sleep.** On 13–15 the device re-enumerated and received,
   but its transmit never completed, so USB networking and MTP stayed silent until a
   restart. Since 16 every wake has worked (one after a 16 h night), and 17's diagnostics
@@ -92,11 +103,16 @@ battery-display fix on top of 33):
   reconnect can end `Inhibited`; connect them once from Settings → Bluetooth). AAC with
   AirPods has not been confirmed on the device yet.
 - Playing to a saved but disconnected Bluetooth output fails instead of connecting it.
-- No public update channel or release signing. You flash or copy updates by hand.
+- Over-the-air updates need the Y2 recovery image in RECOVERY (flashed once with SP Flash Tool).
+  A kernel that hangs before its rescue system runs can only be fixed with SP Flash Tool.
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for [34](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-34.md) (shipped themes, battery display),
+reports for [46](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-46.md) (update space, restart by default, first release),
+[44](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-44.md)/[45](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-45.md) (display read lag, installer screen),
+[43](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-43.md) (software restart fixed),
+[35](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-35.md)–[38](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-38.md) (over-the-air updates),
+[34](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-34.md) (shipped themes, battery display),
 [33](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) (themes),
 [32](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) (deep idle during playback),
 [31](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) (artwork and formats),

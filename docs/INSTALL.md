@@ -12,7 +12,8 @@ USB cable. Read the whole page once before you start.
 | ANDROID (`/system`) | Y2Linux root filesystem | replaced |
 | USRDATA (`/data`) | Y2Linux data: settings, library, logs, your SSH key | **kept** |
 | FAT (internal music storage) | untouched | untouched |
-| Preloader, LK, NVRAM, calibration, PROTECT, SECCFG, RECOVERY, tables | **never written** | never written |
+| RECOVERY | stock Android recovery kept; flash the Y2 recovery image once to enable over-the-air updates ([how](architecture/ota-recovery-install.md)) | replaced by each over-the-air update |
+| Preloader, LK, NVRAM, calibration, PROTECT, SECCFG, tables | **never written** | never written |
 
 Stock Android and its user data are erased. The internal FAT music storage is
 left as it is, but Y2Linux does not use it until you convert it to ext4 (see
@@ -104,20 +105,24 @@ cat /etc/y2linux/versions.json
   y2-platform internal-media provision --confirm-serial XXXX-XXXX
   ```
 
-  Then power off and on (not a software restart, see below).
+  Then restart the player.
 
 ## Updating to a newer build
 
-Build a new first-install package from the newer source, then flash it with
+**Over Wi-Fi (Baseline 46 and later, with the Y2 recovery image in RECOVERY):** Settings → About &
+Updates → Check for Updates → Download Update → **Restart and Install**. Use the charger or at
+least half a battery. The player restarts, installs (about a minute), restarts into the new
+version and confirms it; on any failure it restores the previous one.
+
+**With a computer:** build a new first-install package from the newer source, then flash it with
 **`MT6582_preserve_data_scatter.txt`**. Only **BOOTIMG** and **ANDROID** are ticked;
 **never tick USRDATA**, which would wipe your settings, library and SSH key.
 Your data partition is kept and upgraded on boot.
 
 ## Known issues to plan around
 
-- **Do not software-restart.** A warm reboot (menu Restart, `reboot`, update reboots)
-  can leave the display dark. Power off with a long Power press, then power on.
-  If the panel is already dark, hold Power for 10 s and start again.
+- **Dark screen at start (rare).** If the panel stays dark, hold Power for 10 s and start
+  again. Software restarts work since 43.
 - **USB networking after deep sleep.** After a wake the USB connection can enumerate
   but pass no traffic. Power off and on to recover.
 - More, with evidence: [current platform state](CURRENT_PLATFORM_STATE.md).

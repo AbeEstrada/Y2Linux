@@ -1,6 +1,19 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-34 shipped themes, battery display, Baseline 34 — 2026-10-14 (latest, published)
+## POWER-FINAL-46 update space, restart by default, Baseline 46 — 2026-10-16 (latest, published)
+
+`out/y2linux-platform-v1-power-final-candidate-46/` (Linux `d03ab29`, Reborn `850687d`; BOOTIMG `d5bacc9e…583f`,
+Y2ROOT `e8dde2d1…d87a`, RECOVERY `476567c5…e1e2`), fallback 45; git tag `baseline-46` in both repositories and the
+first GitHub release on the update channel (signed with `platform-v1-release-20261015`). Since Baseline 34:
+over-the-air updates through a Y2 recovery image (35–38: install in about a minute, verified readback, automatic
+rollback), software restart fixed (43: SMI hold for the loader's display), display read-lag retry (44), the
+installer screen visible on a restart entry (45), and in 46 space for every update (stale package and disposable
+logs removed before a download, rollback copies counted as free, refusal names the MB) and restart into the
+installer and back by default. Suite 718. **Physical:** 45 installed over the air without a cable or Power press
+(archive `20261016/149`); 46 awaits its Wi-Fi install from the release.
+Details: [46 report](validation/Y2-PLATFORM-V1-POWER-FINAL-46.md).
+
+## POWER-FINAL-34 shipped themes, battery display, Baseline 34 — 2026-10-14 (published)
 
 `out/y2linux-platform-v1-power-final-candidate-34/` (Linux `de62fa9`, **Reborn `5b69ef5`**; BOOTIMG `ee80a82c…c30c`,
 Y2ROOT `9d3e93c1…ff6c`), fallback 33; git tag `baseline-34` in both repositories. 15 Reborn themes shipped in
