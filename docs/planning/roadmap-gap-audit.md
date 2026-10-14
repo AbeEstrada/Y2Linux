@@ -7904,3 +7904,18 @@ owner flashes.
 | Display drift on battery | DEFECT → CORRECTED | 28 showed 89 → 85 within 3.5 min awake: the estimate moved toward the loaded-voltage SOC (≈50 mV, 4–5 points low under load). 29: on battery with continuous samples (≤60 s apart) the estimate follows stock `oam_run`: model current (OCV(SOC) − V)/R(V) integrated against Q_MAX 1300 mAh; after longer gaps (suspend; stock integrates raw-monotonic time) the rested voltage is used as before. The display stays down-only on battery. |
 
 **Gate decision:** READY for the build.
+
+## POWER-FINAL-30 database and file I/O performance pass scope audit — 2026-10-14
+
+**Boundary:** owner request: a performance pass on the database and file reads/writes. Measured read-only on 29 (boot
+`cac3e209`) plus scratch-file timings under `/data/perf-probe` (removed) and page-cache drops. Platform-only kernel
+change; Reborn unchanged (`1c9edd4`). Builds the image; the owner flashes.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Library database | NO_CHANGE | 317 tracks, 393 KB, WAL + `synchronous=NORMAL`, keyset pages and covering indexes: query latency 2.7 ms; open+migrations+quick_check ≈56 ms, initial catalog ≈70 ms at start-up. |
+| Warm rescan | NO_CHANGE | 311 reused files in ≈200 ms (`db_us` ≈120 ms in 5 probe transactions). Small absolute cost. |
+| Session saves | NO_CHANGE | `session.json` (9 KB) atomic write with file + directory fsync: median 7.9 ms (1.0 ms without fsync) on the eMMC, only on user actions; durability kept. |
+| Cold SD directory reads | DEFECT → CORRECTED | Start-up scan 6975 ms for 311 unchanged files (`db_us` 176 ms, no decoding); reproduced without boot load after a page-cache drop (7011 ms). `find /media/sd -type d` cold 7955 ms (118 dirs), warm 38 ms; raw card 85 MB/s sequential, 0.4 ms per scattered 4 KiB. One cold `listdir` = ~200 read requests of one 512-byte sector, 0 merged, ~50 ms. Cause: `exfat_dir_readahead()` (fs/exfat/dir.c) submits the 128 KiB cluster's 256 sectors unplugged; `exfat_load_bitmap()` already plugs its readahead. Fix: overlay `0068-exfat-dir-readahead-plug.patch` adds `blk_start_plug`/`blk_finish_plug` around the loop (read path only; no format, write or mount-option change). Also helps MTP and folder browsing on the SD card. |
+
+**Gate decision:** READY for the build.
