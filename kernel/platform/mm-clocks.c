@@ -17,7 +17,6 @@
 #include <linux/of_address.h>
 #include <linux/pm_domain.h>
 #include <linux/pm_runtime.h>
-#include <linux/reboot.h>
 #include "clocks.h"
 #include "spm.h"
 
@@ -247,25 +246,31 @@ static void y2_mm_reclaim_powered(void)
 		else reclaimed++;
 	}
 }
-/* POWER-FINAL-42: a software restart (watchdog reset) keeps MMSYS_CG_CON0.
- * Linux closes the SMI common/larb0 gates when the display and GPU release
- * them at shutdown; LK then starts with SMI common gated, its first display
- * fetch wedges larb0 and Linux never gets a frame (40/41: opening the gates
- * at the next handover is too late, the request stays stuck). As the last
- * step before the watchdog handler, after every driver has shut down,
- * reopen both gates so LK finds the cold-start state. Only with the DIS
- * domain powered (read from SPM, no lock: other CPUs are stopped); a
- * powered-down domain comes back with its gates open anyway. */
-static int y2_mm_restart(struct notifier_block *nb, unsigned long mode, void *cmd)
+/* POWER-FINAL-43: LK's display is still fetching through SMI common and
+ * larb0 when Linux boots, but no Linux driver owns them yet. Lima also uses
+ * SMI common and goes runtime idle 200 ms after its probe; if the display
+ * handover is later than that (restart boots, and power-on from charging
+ * with USB plugged in: about 0.9 s), the last reference drops, CCF closes the
+ * SMI common gate under LK's running fetch and larb0 wedges: no Linux frame
+ * (archives 137-145). Hold both gates for LK's display from probe until the
+ * display mutex has taken its own references. */
+static bool loader_hold;
+void y2_mm_release_loader_hold(void)
 {
-	if (mm_idle_base && y2_spm_disp_status() == 1)
-		writel(0x3, mm_idle_base + 0x108); /* MMSYS_CG_CLR0: SMI common, larb0 */
-	return NOTIFY_DONE;
+	if (!xchg(&loader_hold, false)) return;
+	clk_disable_unprepare(mm_idle_clocks[CLK_MM_SMI_LARB0]);
+	clk_disable_unprepare(mm_idle_clocks[CLK_MM_SMI_COMMON]);
 }
-static struct notifier_block y2_mm_restart_nb = {
-	.notifier_call = y2_mm_restart,
-	.priority = 255, /* before the watchdog restart handler (128) */
-};
+EXPORT_SYMBOL_GPL(y2_mm_release_loader_hold);
+static void y2_mm_take_loader_hold(struct device *dev)
+{
+	struct clk *smi = mm_idle_clocks[CLK_MM_SMI_COMMON], *larb = mm_idle_clocks[CLK_MM_SMI_LARB0];
+	if (!smi || !larb || !__clk_is_enabled(smi)) return; /* LK left no display path */
+	if (clk_prepare_enable(smi)) return;
+	if (clk_prepare_enable(larb)) { clk_disable_unprepare(smi); return; }
+	loader_hold = true;
+	dev_info(dev, "holding SMI common/larb0 for the loader display until the display takes over\n");
+}
 static int y2_mm_probe(struct platform_device *pdev)
 {
 	struct clk_hw_onecell_data *data;
@@ -285,11 +290,7 @@ static int y2_mm_probe(struct platform_device *pdev)
 	mm_idle_base = devm_ioremap(&pdev->dev, resource.start, 0x12000);
 	if (!mm_idle_base) ret = -ENOMEM;
 	else ret = mtk_clk_pdev_probe(pdev);
-	if (!ret) {
-		static bool restart_registered;
-		if (!restart_registered && !register_restart_handler(&y2_mm_restart_nb))
-			restart_registered = true;
-	}
+
 	if (ret) {
 		mm_idle_base = NULL;
 		if (mm_dev) { pm_genpd_remove_device(&pdev->dev); mm_dev = NULL; }
@@ -303,6 +304,7 @@ static int y2_mm_probe(struct platform_device *pdev)
 			dev_warn(&pdev->dev, "idle handoff clock%u unavailable: %d\n", i, ret);
 		}
 	}
+	y2_mm_take_loader_hold(&pdev->dev);
 	return 0;
 }
 

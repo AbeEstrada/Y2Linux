@@ -32,7 +32,7 @@
  static const struct mtk_mutex_data mt2712_mutex_driver_data = {
  	.mutex_mod = mt2712_mutex_mod,
  	.mutex_sof = mt2712_mutex_sof,
-@@ -875,7 +886,44 @@
+@@ -875,7 +886,45 @@
  {
  	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
  						 mutex[mutex->id]);
@@ -43,6 +43,7 @@
 +    ret = clk_prepare_enable(mtx->clk);
 +    if (ret) { clk_bulk_disable_unprepare(ARRAY_SIZE(mtx->y2_clks), mtx->y2_clks); return ret; }
 +    y2_mm_dcm_apply(); /* stock dcm_enable SMI/DIS groups; DIS powered, SMI clocked */
++    y2_mm_release_loader_hold(); /* mutex now owns SMI common/larb0 (POWER-FINAL-43) */
 +    if (!ret && mtx->data == &mt6582_mutex_driver_data) {
 +        /* Y2 DSI has parked LK before DRM binds. Replace inherited membership
 +         * rather than ORing Linux's route into stale BLS/WDMA/RDMA bits. */
@@ -78,7 +79,7 @@
  }
  EXPORT_SYMBOL_GPL(mtk_mutex_prepare);
  
-@@ -883,7 +931,11 @@
+@@ -883,7 +932,11 @@
  {
  	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
  						 mutex[mutex->id]);
@@ -90,7 +91,7 @@
  }
  EXPORT_SYMBOL_GPL(mtk_mutex_unprepare);
  
-@@ -1107,7 +1159,14 @@
+@@ -1107,7 +1160,14 @@
  	mtx->data = of_device_get_match_data(dev);
  
  	if (!mtx->data->no_clk) {
@@ -106,7 +107,7 @@
  		if (IS_ERR(mtx->clk))
  			return dev_err_probe(dev, PTR_ERR(mtx->clk), "Failed to get clock\n");
  	}
-@@ -1131,6 +1190,7 @@
+@@ -1131,6 +1191,7 @@
  
  static const struct of_device_id mutex_driver_dt_match[] = {
  	{ .compatible = "mediatek,mt2701-disp-mutex", .data = &mt2701_mutex_driver_data },
