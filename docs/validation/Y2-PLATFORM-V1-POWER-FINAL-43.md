@@ -23,6 +23,14 @@ hands over late.
 | mutex (patch 0011) | Releases the hold in the first prepare, after enabling its own references. |
 | 42's restart handler | Removed. 41's handover opener and the snapshots stay. |
 
+## Device results — FIXED
+
+- Cold start (archive `20261016/146`): hold taken at 0.40 s (before Lima at 0.41 s) and handed to the display mutex
+  (enable counts 1/1 afterwards); display lit, taint 0.
+- **Software restart (archive 147): display lit** (owner: "it worked"). Handover at 0.89 s as on every restart boot,
+  but larb0 idle (`stat=0 greq=0`), no `SMI gates` line, vblank 17 → 219, taint 0. The dark panel after a software
+  restart, open since candidate 11, is fixed.
+
 ## Owner steps
 
 1. Flash 43 (BOOTIMG + ANDROID). Check: `holding SMI common/larb0` at boot, no `SMI gates` line, display lit.

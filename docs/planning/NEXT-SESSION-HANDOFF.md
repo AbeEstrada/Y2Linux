@@ -1,6 +1,8 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-16, night): 43 SEALED.** The dark panel after a restart (and after power-on from charging with USB, owner's observation) is a boot-time race: Lima's runtime idle (200 ms after probe) drops the last SMI common reference before a late display handover (~0.9 s on restart boots vs ~0.47 s cold), CCF closes the gate under LK's fetch, larb0 wedges. 43 holds SMI common/larb0 until the display mutex takes over. Next: flash 43, restart + USB power-on tests, then `restart.json`.
+> **START HERE (2026-10-16, night): 43 FLASHED — SOFTWARE RESTART KEEPS THE DISPLAY (fixed, archive 147).** Remaining checks: power-on from charging with USB plugged in, then `restart.json` on and an install with no Power presses.
+
+> Previous entry: **START HERE (2026-10-16, night): 43 SEALED.** The dark panel after a restart (and after power-on from charging with USB, owner's observation) is a boot-time race: Lima's runtime idle (200 ms after probe) drops the last SMI common reference before a late display handover (~0.9 s on restart boots vs ~0.47 s cold), CCF closes the gate under LK's fetch, larb0 wedges. 43 holds SMI common/larb0 until the display mutex takes over. Next: flash 43, restart + USB power-on tests, then `restart.json`.
 
 > Previous entry: **START HERE (2026-10-16, evening): 42 SEALED.** 41 on the device confirmed the closed SMI gate after a restart but opening it at handover is too late (archive 142); 42 reopens the gates in a restart handler before the watchdog reset. Next: flash 42, restart test, then `restart.json`.
 
