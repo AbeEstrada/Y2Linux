@@ -484,6 +484,73 @@ class UpdateTests(unittest.TestCase):
             with self.assertRaises(ValueError): base_url(url)
         self.assertEqual(base_url('https://example.com/release/manifest.json'),'https://example.com/release/')
 
+    def test_space_cleanup_stale_package_and_cancel_free_the_data_volume(self):
+        # OTA-46: disposable data goes before the download is refused; music,
+        # settings, live logs and the rollback copies stay.
+        from types import SimpleNamespace
+        from y2_platform.common import Context
+        from y2_platform import update
+        source = self.root/'package'
+        (self.base/'pending').rename(source)
+        volume = {'path':'/data','state':'Ready','generation':'boot:1:179:7'}
+        def runner(argv, **kw):
+            result = subprocess.run([*self.prefix,str(self.executable),*argv[1:]],
+                env=os.environ|{'Y2_TEST_ROOT':str(self.root)},capture_output=True,timeout=30)
+            return {'ok':result.returncode==0,'output':result.stdout.decode(),'reason':None if result.returncode==0 else 'command_failed'}
+        ctx = Context(self.root, runner)
+        logs = self.root/'data/logs'; logs.mkdir()
+        platform = self.root/'data/system/platform'; platform.mkdir(parents=True)
+        kept = [logs/'system.log', logs/'recovery-last.log', platform/'power-journal.jsonl',
+                self.root/'data/settings.json']
+        for path in kept:
+            path.write_text('keep')
+        backup = self.base/'previous.ext4.gz'
+        backup.write_bytes(b'b'*5000)
+        def disposable():
+            (logs/'deepsleep-old').mkdir(exist_ok=True)
+            (logs/'deepsleep-old'/'rows').write_bytes(b'x'*1000)
+            (logs/'system.log.0').write_text('rotated')
+            (platform/'power-journal.previous.jsonl').write_text('rotated')
+            (platform/'fix02-abc').mkdir(exist_ok=True)
+        disposable()
+        # A package left by an earlier cancelled/failed update is replaced first.
+        shutil.copytree(source, self.base/'pending')
+        def fits_once_cleaned(fd):
+            space = 0 if (logs/'deepsleep-old').exists() else 1 << 40
+            return SimpleNamespace(f_flag=0, f_frsize=1, f_bavail=space, f_files=0, f_favail=0)
+        with patch('y2_platform.transfer.storage',return_value={'volumes':[volume]}), \
+             patch('y2_platform.update.os.fstatvfs', side_effect=fits_once_cleaned):
+            self.assertEqual(update.stage(ctx, source)['state'], 'Queued')
+        # Only as much as needed: the first entry was enough.
+        self.assertFalse((logs/'deepsleep-old').exists())
+        self.assertTrue((logs/'system.log.0').exists())
+        self.assertGreaterEqual(json.loads((self.base/'download.json').read_text())['cleaned_bytes'], 1000)
+        # Cancel frees the package at once.
+        self.assertEqual(update.cancel(ctx)['state'], 'Failed')
+        self.assertFalse((self.base/'pending').exists())
+        # Still too little space: everything disposable goes, then a clear refusal
+        # that names the total the update needs (the rollback copy counts as free).
+        disposable()
+        manifest = json.loads((source/'manifest.json').read_text())
+        payloads = manifest['payloads']
+        need = (sum(item['bytes'] for item in payloads.values()) + payloads['rootfs']['raw_bytes']//4 +
+                update.RESERVE - 5000)
+        # Room for the manifest, not for the payloads.
+        never = lambda fd: SimpleNamespace(f_flag=0, f_frsize=1, f_bavail=update.RESERVE + (1 << 20),
+                                           f_files=0, f_favail=0)
+        with patch('y2_platform.transfer.storage',return_value={'volumes':[volume]}), \
+             patch('y2_platform.update.os.fstatvfs', side_effect=never):
+            with self.assertRaises(update.NoSpace):
+                update.stage(ctx, source)
+        failed = json.loads((self.base/'download.json').read_text())
+        self.assertEqual((failed['failure'], failed['needed_bytes']), ('update_data_space_reserve', need))
+        for path in (logs/'deepsleep-old', logs/'system.log.0', platform/'power-journal.previous.jsonl',
+                     platform/'fix02-abc'):
+            self.assertFalse(path.exists(), path)
+        for path in kept + [backup]:
+            self.assertTrue(path.exists(), path)
+        self.assertFalse(any(self.base.glob('.incoming-*')))
+
     def test_key_revocation_journal_corruption_and_symlinks(self):
         trust = json.loads((self.root / 'etc/y2linux/update-trust.json').read_text())
         trust['keys'][0]['status'] = 'revoked'
@@ -543,13 +610,13 @@ class PlatformPolicyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             battery_gate(self.ctx)
 
-    def test_install_restarts_only_with_the_owner_switch(self):
+    def test_install_restarts_unless_the_owner_chose_power_off(self):
         from y2_platform import update
-        self.assertEqual(update.restart_mode(self.ctx), 'poweroff')
-        (self.root/'data/updates/restart.json').write_text(json.dumps({'mode': 'reboot'}))
         self.assertEqual(update.restart_mode(self.ctx), 'reboot')
-        (self.root/'data/updates/restart.json').write_text(json.dumps({'mode': 'anything'}))
+        (self.root/'data/updates/restart.json').write_text(json.dumps({'mode': 'poweroff'}))
         self.assertEqual(update.restart_mode(self.ctx), 'poweroff')
+        (self.root/'data/updates/restart.json').write_text(json.dumps({'mode': 'anything'}))
+        self.assertEqual(update.restart_mode(self.ctx), 'reboot')
 
     def test_channel_override_and_redirect_allowlist(self):
         from y2_platform.update import AllowlistedRedirect, channel

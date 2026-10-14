@@ -1112,6 +1112,12 @@ static bool backup(int root, int disk, unsigned char *mem, json_object *journal)
     uint64_t bytes = root_bytes(header);
     if (!bytes)
         return failure("old root identity/extent");
+    /* OTA-46: the rollback copies of the release being replaced go first, so
+     * the new copies fit where they were (the platform counts them as free).
+     * A failed backup ends in Failed, which never restores. */
+    json_object_object_del(journal, "backup");
+    unlinkat(basefd, "previous.ext4.gz", 0);
+    unlinkat(basefd, "previous-bootimg.gz", 0);
     if (!state(journal, "BackingUp", NULL))
         return false;
     json_object *saved = json_object_new_object(), *r = json_object_new_object(),

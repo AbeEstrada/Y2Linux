@@ -195,7 +195,7 @@ def main():
             elif args.action in ('apply', 'rollback'):
                 result = update.apply(ctx, args.action == 'rollback')
             elif args.action == 'cancel':
-                result = update.core(ctx, 'cancel')
+                result = update.cancel(ctx)
             else:
                 result = update.health_ack(ctx) if args.action == 'health-ack' else update.status(ctx)
             print(json.dumps(result, sort_keys=True))

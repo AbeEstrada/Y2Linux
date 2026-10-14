@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import stat
 import time
 import urllib.error
@@ -82,6 +83,77 @@ def free(fd, size):
     if (info.f_flag & os.ST_RDONLY or info.f_bavail * info.f_frsize < size + RESERVE or
             info.f_files and info.f_favail < 128):
         raise ValueError('update_data_space_reserve')
+
+
+class NoSpace(ValueError):
+    """Y2DATA cannot hold the download even after the cleanup."""
+    def __init__(self, needed):
+        super().__init__('update_data_space_reserve')
+        self.needed = needed
+
+
+# Rollback copies of the running system. The recovery deletes them right
+# before it writes the new ones, so they count as space the update can use.
+BACKUPS = ('previous.ext4.gz', 'previous-bootimg.gz')
+# Kept in /data/logs: the live system log and the last installer run.
+KEPT_LOGS = ('system.log', 'recovery-last.log', 'recovery-display.txt')
+
+
+def disposable(ctx):
+    """Data the player can lose without losing anything a user sees: rotated
+    and diagnostic logs, rotated platform journals and finished qualification
+    runs. Never music, settings, the library or the rollback copies."""
+    logs = ctx.path('/data/logs')
+    if logs.is_dir():
+        yield from sorted(p for p in logs.iterdir() if p.name not in KEPT_LOGS)
+    platform = ctx.path('/data/system/platform')
+    if platform.is_dir():
+        yield from sorted(p for p in platform.iterdir()
+                          if p.name.endswith('.previous.jsonl') or p.name == 'cpu-idle-qualification' or
+                          p.name.startswith(('fix01-', 'fix02-')))
+    system = ctx.path('/data/system')
+    if system.is_dir():
+        yield from sorted(system.glob('cpu-final-qualification-*'))
+
+
+def remove_disposable(path):
+    """Remove one entry without following links; returns the bytes freed."""
+    info = path.lstat()
+    if stat.S_ISDIR(info.st_mode):
+        size = sum(f.lstat().st_size for f in path.rglob('*') if not f.is_symlink() and f.is_file())
+        shutil.rmtree(path)
+        return size
+    path.unlink()
+    return info.st_size if stat.S_ISREG(info.st_mode) else 0
+
+
+def make_room(ctx, fd, size):
+    """Make sure Y2DATA holds `size` bytes plus the reserve (OTA-46): count the
+    rollback copies the recovery replaces, then remove disposable data until the
+    download fits. Returns the bytes removed; raises NoSpace with the total the
+    update needs when even that is not enough."""
+    root = ctx.path('/data/updates')
+    reclaimable = 0
+    for name in BACKUPS:
+        with contextlib.suppress(OSError):
+            info = (root / name).lstat()
+            if stat.S_ISREG(info.st_mode):
+                reclaimable += info.st_size
+    need = size + RESERVE - reclaimable
+
+    def fits():
+        info = os.fstatvfs(fd)
+        return (not info.f_flag & os.ST_RDONLY and info.f_bavail * info.f_frsize >= need and
+                not (info.f_files and info.f_favail < 128))
+    removed = 0
+    if fits():
+        return removed
+    for path in list(disposable(ctx)):
+        with contextlib.suppress(OSError):
+            removed += remove_disposable(path)
+        if fits():
+            return removed
+    raise NoSpace(need)
 
 
 class AllowlistedRedirect(urllib.request.HTTPRedirectHandler):
@@ -179,6 +251,13 @@ def stage(ctx, source=None, url=None, check_only=False):
             raise ValueError('excess_staging_owner_inspection_required')
         for item in old:
             remove_package(item)
+        # A cancelled or failed package is never installed; free its space
+        # before this download is measured (OTA-46).
+        if not check_only:
+            remove_package(root/'pending')
+        # Even the manifest needs the reserve: a nearly full volume is cleaned
+        # first, so a check can still find the release (OTA-46).
+        cleaned = make_room(ctx, fd, 64 * 1024)
         incoming.mkdir(mode=0o700)
         # A check only reads the signed manifest; it never shows as a download.
         atomic_json(root/'download.json', {'schema': 1, 'state': 'Checking' if check_only else 'Staging',
@@ -243,7 +322,7 @@ def stage(ctx, source=None, url=None, check_only=False):
             atomic_json(root/'download.json', summary)
             return manifest
         # Root payload plus its backup during installation; refuse early, not in recovery.
-        free(fd, total + payloads['rootfs']['raw_bytes'] // 4)
+        cleaned += make_room(ctx, fd, total + payloads['rootfs']['raw_bytes'] // 4)
         count = 0
         shown = [0]
 
@@ -278,21 +357,26 @@ def stage(ctx, source=None, url=None, check_only=False):
         atomic_json(root/'download.json', {'schema': 1, 'state': 'Verified', 'bytes': count,
                     'release_version': manifest['release_version'], 'notes': manifest.get('notes', ''),
                     'backup_budget': 'recovery captures the compressed previous root and BOOTIMG before any write',
-                    'reserve_bytes': RESERVE}, durable=True)
+                    'reserve_bytes': RESERVE, 'cleaned_bytes': cleaned}, durable=True)
         return result
     except (OSError, ValueError, TimeoutError) as error:
-        atomic_json(root/'download.json', {'schema': 1, 'state': 'Failed', 'failure': str(error)}, durable=True)
+        record = {'schema': 1, 'state': 'Failed', 'failure': str(error)}
+        if isinstance(error, NoSpace):
+            record['needed_bytes'] = error.needed
+            with contextlib.suppress(OSError, ValueError):
+                remove_package(incoming)
+        atomic_json(root/'download.json', record, durable=True)
         raise
     finally:
         os.close(fd)
 
 
 def restart_mode(ctx):
-    """'reboot' once a software restart is proven on this player (the stock
-    external-reset sequence, 38); otherwise power off and the owner presses
-    Power. Owner switch: /data/updates/restart.json {"mode": "reboot"}."""
+    """Restart into the installer and back (proven on 43 and 45). Owner
+    override: /data/updates/restart.json {"mode": "poweroff"} turns off instead,
+    and Power starts the installer and the new system."""
     value = ctx.json('/data/updates/restart.json', {}) or {}
-    return 'reboot' if isinstance(value, dict) and value.get('mode') == 'reboot' else 'poweroff'
+    return 'poweroff' if isinstance(value, dict) and value.get('mode') == 'poweroff' else 'reboot'
 
 
 def battery_gate(ctx):
@@ -310,9 +394,9 @@ def battery_gate(ctx):
 
 @workload("Maintenance")
 def apply(ctx, rollback=False):
-    """Install (or restore) in the Y2 recovery image. The software restart
-    leaves the panel dark (open defect), so the device powers off and the owner
-    presses Power; LK then starts RECOVERY from the MISC request."""
+    """Install (or restore) in the Y2 recovery image: LK starts RECOVERY from
+    the MISC request on the restart (or, with the owner's override, on the
+    next Power press)."""
     if rollback:
         core(ctx, 'rollback')
     elif status(ctx)['state'] != 'Queued':
@@ -329,6 +413,14 @@ def probe(ctx):
     core(ctx, 'probe', timeout=60)
     from .power import rpc
     return rpc(ctx, {'action': 'poweroff', 'reason': 'update'})
+
+
+def cancel(ctx):
+    """Cancel a queued update and free its package right away (OTA-46)."""
+    result = core(ctx, 'cancel')
+    with contextlib.suppress(OSError, ValueError):
+        remove_package(ctx.path('/data/updates/pending'))
+    return result
 
 
 def automatic_check(ctx, now=None):

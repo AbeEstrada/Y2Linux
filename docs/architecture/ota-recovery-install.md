@@ -34,8 +34,9 @@ y2-platform update recovery-status     # misc_request "none", recovery_image_val
 y2-platform update probe-recovery      # the player turns off
 ```
 
-Press Power. The player shows **Recovery works**, turns off after a few seconds; press Power again and
-the normal system starts. `/data/updates/recovery-probe.json` records the recovery boot
+Press Power. The player shows **Recovery works** and restarts into the normal system after a few seconds
+(with the owner's `{"mode": "poweroff"}` override in `/data/updates/restart.json` it turns off; press Power
+again). `/data/updates/recovery-probe.json` records the recovery boot
 (`boot_mode=2` from LK, `recovery_image=1` from the kernel).
 
 ## Undo

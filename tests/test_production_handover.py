@@ -34,8 +34,8 @@ class Handover(unittest.TestCase):
             (p/'newdata/updates').mkdir()
             if failure.startswith('update-') or cmdline.endswith('y2.recovery=1'):
                 (p/'newdata/updates/state.json').write_text('{"schema":2,"state":"PendingHealth"}')
-            if failure == 'restart-mode':
-                (p/'newdata/updates/restart.json').write_text('{"mode": "reboot"}')
+            if failure == 'poweroff-mode':
+                (p/'newdata/updates/restart.json').write_text('{"mode": "poweroff"}')
             script=(ROOT/'initramfs/production/init').read_text()
             # Replace the terminal rescue loop with a finite test exit, keeping
             # every call site and root handover branch as production implements it.
@@ -149,22 +149,26 @@ exit 0
         self.assertNotIn('mount -t ext4 -o rw /dev/mmcblk0p5',events)
         self.assertNotIn('poweroff',events)
 
-    def test_recovery_image_installs_and_powers_off_without_starting_the_system(self):
+    def test_recovery_image_installs_and_restarts_without_starting_the_system(self):
+        # OTA-46: restart into the new system by default.
         result, events, log = self.exercise(cmdline='rdinit=/init y2.recovery=1')
         self.assertEqual(result.returncode,98,result.stderr)
         sequence=['y2-platform-start','e2fsck -p /dev/mmcblk0p7','mount -t ext4 -o rw,nosuid,nodev /dev/mmcblk0p7 /newdata',
-                  'y2-update-core recovery','umount /newdata','poweroff -f']
+                  'y2-update-core recovery','umount /newdata','reboot -f']
         positions=[events.index(event) for event in sequence]
         self.assertEqual(positions,sorted(positions))
         for absent in ('y2-offline-charge','/dev/mmcblk0p5','switch_root','y2-abi-check'):
             self.assertNotIn(absent,events)
-        self.assertIn('power off',log)   # the fixture kmsg keeps the last line only
-        # The owner's restart switch: restart into the new system instead of off.
-        result, events, log = self.exercise('restart-mode', cmdline='rdinit=/init y2.recovery=1')
-        self.assertEqual(result.returncode,98,result.stderr)
-        self.assertIn('reboot -f',events)
-        self.assertLess(events.index('umount /newdata'),events.index('reboot -f'))
         self.assertNotIn('poweroff',events.split('reboot -f')[0])
+        # The owner's override turns off instead; Power starts the new system.
+        result, events, log = self.exercise('poweroff-mode', cmdline='rdinit=/init y2.recovery=1')
+        self.assertEqual(result.returncode,98,result.stderr)
+        self.assertIn('poweroff -f',events)
+        self.assertNotIn('reboot',events)
+        self.assertIn('power off',log)   # the fixture kmsg keeps the last line only
+        # A low battery without charger always turns off: a restart would loop.
+        script=(ROOT/'initramfs/production/recovery.sh').read_text()
+        self.assertRegex(script, r"charger_online \|\| \{[^}]*recovery_restart=; recovery_off 10; \}")
         result, events, log = self.exercise('recovery-stuck', cmdline='rdinit=/init y2.recovery=1')
         self.assertEqual(result.returncode,97,result.stderr)
         self.assertNotIn('poweroff',events)

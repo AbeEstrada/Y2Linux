@@ -62,18 +62,27 @@ downgrades; a development key may downgrade only with a signed manifest flag.
 2. **Download**: payloads go to a private staging directory on Y2DATA (space for the payloads plus a
    root backup estimate and 96 MiB reserve), each is hashed against the signed manifest, then the
    native core decompresses and verifies every payload (ext4 identity of the root, MTK boot layout and
-   name of both boot images) and queues the package.
+   name of both boot images) and queues the package. Space (OTA-46): a package left by a cancelled or
+   failed update is deleted first; the current rollback copies count as free, because the recovery
+   deletes them right before it writes the new ones; if the download still does not fit, disposable
+   data goes one entry at a time until it does — everything in `/data/logs` except `system.log`,
+   `recovery-last.log` and `recovery-display.txt`, the rotated `*.previous.jsonl` platform journals and
+   finished qualification runs. Music (on its own partition), settings, the library and the rollback
+   copies are never touched. If that is not enough, the download is refused with `needed_bytes` in
+   `download.json` and Reborn says how much system space the update needs. The same cleanup makes room
+   for the manifest itself, so a check works on a nearly full volume. Cancel deletes the package.
 3. **Install** (`Restart to Install`): needs the charger or ≥ 50 % battery. The core writes a newer
    RECOVERY image from the package first (BOOTIMG is untouched by that), reads it back, checks that
    RECOVERY holds a Y2 recovery image, then writes `boot-recovery` / `recovery\n--y2-update\n` to MISC.
-   The player powers off; the owner presses Power. (A software restart leaves the panel dark — open
-   defect — so v1 uses power-off.)
+   The player restarts into the recovery (default since OTA-46; restarts are lit since 43). Owner
+   override `/data/updates/restart.json` `{"mode": "poweroff"}`: it turns off and Power starts the
+   recovery.
 4. **Recovery**: verifies the package again, backs up the current root (compressed extent) and the
    whole 16 MiB BOOTIMG span to Y2DATA, decodes and checks the new BOOTIMG in memory, writes the root,
    reads it back from the medium, writes BOOTIMG with `O_DIRECT`, reads it back, records
-   `PendingHealth` and only then clears MISC. It shows progress on screen and powers off; Power starts
-   the new system. Low battery without a charger: it waits up to ten minutes for one, else turns off
-   with the request still set.
+   `PendingHealth` and only then clears MISC. It shows progress on screen and restarts into the new
+   system (with the override: turns off; Power starts it). Low battery without a charger: it waits up
+   to ten minutes for one, else always turns off with the request still set.
 5. **Health**: the platform acknowledges the new system when Reborn presents frames, answers and the core
    checks pass (unchanged 180-second worker). The installed package is then deleted; backups stay for an
    owner rollback (`rollback_allowed`).
@@ -100,7 +109,8 @@ computer. SP Flash Tool remains the outside recovery path.
 ```
 y2-platform update check|stage            # channel default; --url / --package for owner tests
 y2-platform update status
-y2-platform update apply                  # battery gate, recovery image, MISC request, power off
+y2-platform update apply                  # battery gate, recovery image, MISC request, restart
+y2-platform update cancel                 # cancel a queued update and delete its package
 y2-platform update rollback               # restore the previous system through recovery
 y2-platform update probe-recovery         # owner test of recovery entry, no install
 y2-platform update recovery-status        # MISC request and RECOVERY identity, read-only

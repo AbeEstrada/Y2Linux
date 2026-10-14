@@ -15,11 +15,13 @@ recovery_log() {
     echo "<6>Y2RECOVERY: $*" > /dev/kmsg
 }
 
-# The owner's restart switch (/data/updates/restart.json, "mode": "reboot"),
-# read while Y2DATA is mounted: restart into the result instead of power off.
+# Restart into the result (OTA-46 default). The owner's override
+# /data/updates/restart.json {"mode": "poweroff"}, read while Y2DATA is
+# mounted, turns off instead. Before Y2DATA is mounted nothing is restarted.
 recovery_restart=
 recovery_restart_mode() {
-    grep -q '"mode": *"reboot"' /newdata/updates/restart.json 2>/dev/null && recovery_restart=1
+    recovery_restart=1
+    grep -q '"mode": *"poweroff"' /newdata/updates/restart.json 2>/dev/null && recovery_restart=
 }
 
 # The recovery's evidence on Y2DATA (the normal system's diagnostics read it):
@@ -111,7 +113,8 @@ while :; do
         sleep 2
         attempt=$((attempt+1))
     done
-    charger_online || { recovery_screen 'Battery too low' 'Charge the player, then' 'press Power to continue.'; recovery_off 10; }
+    # Always off here: a restart would come straight back and drain the battery.
+    charger_online || { recovery_screen 'Battery too low' 'Charge the player, then' 'press Power to continue.'; recovery_restart=; recovery_off 10; }
     recovery_screen 'Installing Update' "Don't turn off the player." 'This takes 1-2 minutes.'
 done
 
@@ -131,12 +134,24 @@ case "$outcome" in
         recovery_screen 'Update not installed' 'The previous version' 'was restored.' '' 'Press Power to start.'
         recovery_off ;;
     failed_unchanged)
+        if [ -n "$recovery_restart" ]; then
+            recovery_screen 'Update not installed' 'Nothing was changed.' '' 'Restarting.'
+            recovery_off 8
+        fi
         recovery_screen 'Update not installed' 'Nothing was changed.' '' 'The player turns off now.' 'Press Power to start.'
         recovery_off ;;
     probe)
+        if [ -n "$recovery_restart" ]; then
+            recovery_screen 'Recovery works' '' 'Restarting.'
+            recovery_off 4
+        fi
         recovery_screen 'Recovery works' '' 'The player turns off now.' 'Press Power to start.'
         recovery_off ;;
     nothing)
+        if [ -n "$recovery_restart" ]; then
+            recovery_screen 'Nothing to install' '' 'Restarting.'
+            recovery_off 4
+        fi
         recovery_screen 'Nothing to install' '' 'The player turns off now.' 'Press Power to start.'
         recovery_off 6 ;;
     *)

@@ -8045,3 +8045,21 @@ at 0.49 s, display snapshot). No hardware or memory scope change; display driver
 
 **Gate decision:** READY for a candidate (44) delivered over the air; checked by the next restart-entered recovery
 (install or probe) with the owner's OK.
+
+## OTA-46 update space guarantee and restart by default scope audit — 2026-10-16
+
+**Boundary:** owner request after 45 (installed over the air, archive `20261016/149`): "does the update process also
+have a cleanup, so that we can guarantee there is always enough space for users to update?", then "build 46 with
+the cleanup … tag release … update this without cable … just wifi from git". No hardware or memory scope change;
+update manager, recovery script and Reborn's Software Update page. Publishing the first GitHub release is the
+owner's explicit instruction.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Cancelled package | GAP → CHANGED | 45 staging failed `update_data_space_reserve`: a cancelled package (57 MiB) stays in `pending` and counts against the check (package + root/4 + 96 MiB ≈ 281 MiB). Cancel and every new download now delete it first. |
+| Full Y2DATA | GAP → CHANGED | No cleanup existed; the owner's player had 330 MiB of test logs. Before refusing, the update manager removes disposable data one entry at a time (`/data/logs` except the live and last-installer logs, rotated platform journals, finished qualification runs), first for the manifest, then for the payloads. Music, settings, library and rollback copies are never touched. |
+| Rollback copies | CHANGED | The recovery deletes the previous copies before writing the new ones; the space check counts them as free. A failed backup ends `Failed`, which never restores. |
+| Refusal | CHANGED | `download.json` carries `needed_bytes`; Reborn names the MB and says music is not affected (the old text asked to remove music, which is on another partition). |
+| Restart | CHANGED | Restart into the recovery and back is the default (lit on 43 restart, 45 OTA); `restart.json` `{"mode": "poweroff"}` is the override. Low battery in the recovery always turns off (a restart would loop). Reborn: **Restart and Install**. |
+
+**Gate decision:** READY for candidate 46, published as a GitHub release and installed over Wi-Fi from the channel.
