@@ -1,7 +1,7 @@
 # POWER-FINAL-46 — space for every update, restart by default; first public release
 
-Status: **SEALED and PUBLISHED** as GitHub release `baseline-46` (2026-10-16), the first release on the update
-channel; awaiting the over-the-air install over Wi-Fi. Package `out/y2linux-platform-v1-power-final-candidate-46/`
+Status: **PUBLISHED and INSTALLED over Wi-Fi** as GitHub release `baseline-46` (2026-10-16, archive
+`20261016/150`), the first release on the update channel; its recovery screen stayed dark (fix: 47). Package `out/y2linux-platform-v1-power-final-candidate-46/`
 (fallback = 45, which the player runs), receipts `out/deep-sleep-final/build46-receipts/`. BOOTIMG
 `d5bacc9ee66b52c3894070e8f9c2846acb95e4fefa668262576856415bb5583f`, Y2ROOT
 `e8dde2d1b958a21cbc862fd7eaef5b147cda82ef08c306a7343c5c241842d87a`, RECOVERY
