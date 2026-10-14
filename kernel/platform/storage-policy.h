@@ -12,18 +12,33 @@ struct y2_emmc_request {
     unsigned has_sbc, sbc_opcode, sbc_arg;
     unsigned has_stop, stop_opcode, stop_arg;
     unsigned user_area, part_config, identified;
+    unsigned recovery_image; /* this kernel was booted from RECOVERY (y2.recovery=1) */
 };
-static inline int y2_emmc_write_range(unsigned sector, unsigned blocks)
+/* OTA-35 boot images (stock logical sectors). LK loads BOOTIMG normally and
+ * RECOVERY when the MISC message says "boot-recovery". A kernel may rewrite the
+ * other image, never the one it runs from, so one intact installer always
+ * remains. The MISC window is the 4 KiB Android bootloader message only; LK's
+ * ENV block at MISC+128 KiB stays read-only. */
+#define Y2_EMMC_BOOTIMG_START 60416U
+#define Y2_EMMC_RECOVERY_START 93184U
+#define Y2_EMMC_IMAGE_SECTORS 32768U
+#define Y2_EMMC_MISC_START 138240U
+#define Y2_EMMC_MISC_MESSAGE_SECTORS 8U
+static inline int y2_emmc_write_range(unsigned sector, unsigned blocks, unsigned recovery_image)
 {
-    unsigned end;
+    unsigned end, image;
     if (!blocks || blocks > 0xffffffffU - sector) return 0;
     end = sector + blocks;
+    image = recovery_image ? Y2_EMMC_BOOTIMG_START : Y2_EMMC_RECOVERY_START;
     /* ANDROID (Y2ROOT), USRDATA (Y2DATA) and the stock runtime FAT partition p8,
      * which Y2Media owns since POWER-FINAL-08 (owner-approved 2026-10-10). The
      * window ends at the exposed disk size, so the hidden tail stays unwritable. */
     return (sector >= 166912 && end <= 1846272) ||
            (sector >= 2104320 && end <= 3742720) ||
-           (sector >= 3742720 && end <= Y2_EMMC_DISK_SECTORS);
+           (sector >= 3742720 && end <= Y2_EMMC_DISK_SECTORS) ||
+           (sector >= image && end <= image + Y2_EMMC_IMAGE_SECTORS) ||
+           (sector >= Y2_EMMC_MISC_START &&
+            end <= Y2_EMMC_MISC_START + Y2_EMMC_MISC_MESSAGE_SECTORS);
 }
 static inline int y2_emmc_request_allowed(const struct y2_emmc_request *r)
 {
@@ -43,7 +58,7 @@ static inline int y2_emmc_request_allowed(const struct y2_emmc_request *r)
         if (!r->user_area || r->blksz != 512 || !r->blocks ||
             r->blocks > Y2_EMMC_DISK_SECTORS ||
             r->arg > Y2_EMMC_DISK_SECTORS - r->blocks) return 0;
-        if (write && !y2_emmc_write_range(r->arg, r->blocks)) return 0;
+        if (write && !y2_emmc_write_range(r->arg, r->blocks, r->recovery_image)) return 0;
         return r->opcode == (write ? 25U : 18U) ||
                (r->blocks == 1 && r->opcode == (write ? 24U : 17U));
     }

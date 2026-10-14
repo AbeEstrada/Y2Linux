@@ -102,12 +102,20 @@ int main(void) {
     assert(Y2_EMMC_USER_OFFSET+Y2_EMMC_DISK_SECTORS+Y2_EMMC_TAIL_SECTORS==15269888);
     /* Every native sector reachable by an allowed write is in the independent
      * physical extents of ANDROID, USRDATA and the p8 media partition (which
-     * directly follows USRDATA). Nothing reaches the prefix, CACHE or the tail. */
+     * directly follows USRDATA), the MISC bootloader message (native 0x4f00000,
+     * LK analysis) and the one boot image the running kernel does not come from:
+     * RECOVERY (native 0x3900000) from BOOTIMG, BOOTIMG (native 0x2900000) from
+     * RECOVERY. Nothing reaches the prefix, tables, LK, CACHE or the tail. */
     struct y2_emmc_request r={.opcode=24,.blocks=1,.blksz=512,.direction=Y2_MMC_WRITE,.user_area=1,.identified=1};
-    for(r.arg=0;r.arg<15269888;r.arg++) {
-        unsigned wire=y2_emmc_wire_arg(24,r.arg);
-        bool expected=(wire>=190464 && wire<1869824)||(wire>=2127872 && wire<3766272)||(wire>=3766272 && wire<15226880);
-        assert(!!y2_emmc_request_allowed(&r)==expected);
+    for(unsigned mode=0;mode<2;mode++) {
+        unsigned image=mode?0x2900000/512:0x3900000/512;
+        r.recovery_image=mode;
+        for(r.arg=0;r.arg<15269888;r.arg++) {
+            unsigned wire=y2_emmc_wire_arg(24,r.arg);
+            bool expected=(wire>=190464 && wire<1869824)||(wire>=2127872 && wire<3766272)||(wire>=3766272 && wire<15226880)||
+                          (wire>=image && wire<image+0x1000000/512)||(wire>=0x4f00000/512 && wire<0x4f00000/512+8);
+            assert(!!y2_emmc_request_allowed(&r)==expected);
+        }
     }
     return 0;
 }

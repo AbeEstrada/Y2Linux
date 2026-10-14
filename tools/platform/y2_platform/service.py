@@ -51,6 +51,32 @@ def health_settled(answer):
     return isinstance(value, dict) and value.get('state') not in (None, 'PendingHealth', 'Failed')
 
 
+def daily_update_check(ctx, network, child):
+    """Start the daily release check (update.automatic_check) in its own
+    process when Wi-Fi is online and it is due; the download may take seconds
+    and must never stall this loop. Returns the still-running child, if any."""
+    if child is not None:
+        if child.poll() is None:
+            return child
+        child = None
+    if network.get('state') != 'Online':
+        return None
+    last = ctx.json('/data/updates/last-check.json', {}) or {}
+    last = last if isinstance(last, dict) else {}
+    now = time.time()
+    for key, period in (('time', 24 * 3600), ('attempt', 3600)):
+        stamp = last.get(key)
+        if type(stamp) in (int, float) and 0 <= now - stamp < period:
+            return None
+    import subprocess
+    try:
+        return subprocess.Popen(['/usr/sbin/y2-platform', 'update', 'auto-check'],
+                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL, start_new_session=True, close_fds=True)
+    except OSError:
+        return None
+
+
 def cadence(dark, settled):
     return (DARK_INTERVAL_S if dark else INTERVAL_S,
             DARK_MAINTENANCE_S if dark and settled else MAINTENANCE_S)
@@ -108,6 +134,7 @@ def serve(ctx):
         previous = ctx.json('/run/y2/network.json', {})
         query_failures = previous.get('status_query_failures', 0) if previous.get('boot_id') == ctx.read('/proc/sys/kernel/random/boot_id') else 0
         query_failures = query_failures if isinstance(query_failures, int) and query_failures >= 0 else 0
+        update_check = None
         while running[0]:
             wake.drain()
             before = time.monotonic()
@@ -144,6 +171,7 @@ def serve(ctx):
                 # Run slow fs/stat/cleanup outside this readiness process. A
                 # kernel D-state does not block Wi-Fi or the power daemon.
                 ctx.command(['/usr/sbin/y2-platform', 'space', '--cleanup'], timeout=2)
+                update_check = daily_update_check(ctx, value, update_check)
                 settled = settled or health_settled(
                     ctx.command(['/usr/sbin/y2-platform', 'update', 'health-ack'], timeout=8))
                 ready = ctx.json('/run/y2/application-ready.json', {})

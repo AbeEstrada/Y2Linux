@@ -118,7 +118,7 @@ def main():
         else:
             build_userspace(PROJECT,out,source,run)
     if stage<=2:
-        run(builder+['sh','-c','cd /project && python3 -m tools.build.dev_initramfs --production && Y2_DTS=innioasis-y2-production.dts sh tools/build/dtb.sh && python3 -m tools.validation.dev_artifacts /build --package --production'],'artifact-validation.log')
+        run(builder+['sh','-c','cd /project && python3 -m tools.build.dev_initramfs --production && Y2_DTS=innioasis-y2-production.dts sh tools/build/dtb.sh && Y2_DTS=innioasis-y2-production.dts Y2_DTB_OUT=/build/y2-recovery.dtb Y2_DTS_DEFINES=-DY2_RECOVERY sh tools/build/dtb.sh && python3 -m tools.validation.dev_artifacts /build --package --production'],'artifact-validation.log')
     print('Built production candidate:',out,flush=True)
 
 def build_userspace(PROJECT,out,source,run):

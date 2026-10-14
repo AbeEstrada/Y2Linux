@@ -28,7 +28,7 @@ def inside(commit):
     from tools.validation.dev_memory import check_layout
     from tools.validation.d08 import Inputs
     from tools.validation.bootimg import check as check_bootimg
-    from tools.build.package import pack
+    from tools.build.bootimage import pack
     import gzip
     import stat
 

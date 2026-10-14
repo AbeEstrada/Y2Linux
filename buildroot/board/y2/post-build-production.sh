@@ -68,15 +68,19 @@ set -- "$Y2_ARTIFACT_DIR"/buildroot/build/openssh-[0-9]*/sftp-server
 [ "$#" -eq 1 ] && [ -f "$1" ] || { echo "expected exactly one OpenSSH sftp-server build: $*" >&2; exit 1; }
 install -m 755 "$1" "$target/usr/libexec/y2-sftp-server"
 install -m 644 "$project/tools/update/trust.json" "$target/etc/y2linux/update-trust.json"
+install -m 644 "$project/tools/update/channel.json" "$target/etc/y2linux/update-channel.json"
 python3 - "$target/etc/y2linux" <<'PYUPDATE'
 import json, pathlib, sys
 root=pathlib.Path(sys.argv[1]); versions=json.loads((root/'versions.json').read_text())
 caps=json.loads((root/'capabilities.json').read_text())
 caps['platform_version']=versions['release_version']
 (root/'capabilities.json').write_text(json.dumps(caps, indent=2)+'\n')
-(root/'update-compat.json').write_text(json.dumps(dict(schema=1, product='Y2',
+# OTA-35: full-system packages; the installed release's own sequence is the
+# downgrade floor until a recovery install records a higher accepted one.
+(root/'update-compat.json').write_text(json.dumps(dict(schema=2, product='Y2',
     hardware_revision='innioasis-y2-mt6582', kernel=versions['kernel_version'],
-    rootfs_contract='y2-platform-v1', sequence=0,
+    rootfs_contract='y2-platform-v1', layout_schema=1, data_schema=1, recovery_api=1,
+    sequence=versions.get('update_sequence', 0),
     feature_contract_version=versions.get('feature_contract_version', 1),
     battery_profile_schema=versions.get('battery_profile_schema', 1),
     low_battery_policy_schema=versions.get('low_battery_policy_schema', 1)), separators=(',',':')))

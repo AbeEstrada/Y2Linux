@@ -10,7 +10,7 @@ from tools.validation.d08 import Inputs, require
 from tools.validation.dev_memory import check_layout
 from tools.validation.sleep_syscall import check as check_sleep, slot_offset
 from tools.validation.bootimg import check as check_bootimg
-from tools.build.package import pack
+from tools.build.bootimage import pack
 
 
 def rescue_entries(raw):
@@ -164,12 +164,35 @@ def check(root,project,production=False):
     return layout,payload,rd
 
 
+def recovery_image(root, payload, rd):
+    """OTA-35 RECOVERY.img: the same kernel and archive, its own DTB that differs
+    only in bootargs (y2.recovery=1), the RECOVERY ramdisk label and our name."""
+    from tools.validation.formats import fdt
+    z=(root/'kernel/arch/arm/boot/zImage').read_bytes()
+    tree=(root/'y2.dtb').read_bytes();rtree=(root/'y2-recovery.dtb').read_bytes()
+    normal,reserved=fdt(tree);other,reserved_other=fdt(rtree)
+    require(other['/chosen'].pop('bootargs').decode().rstrip('\0')==
+            normal['/chosen'].pop('bootargs').decode().rstrip('\0')+' y2.recovery=1','recovery bootargs')
+    require(other==normal and reserved_other==reserved,'recovery tree differs only in bootargs')
+    check_dtb(rtree,len(rd),production=True,recovery=True)
+    require(payload==z+tree+bytes(-len(tree)%8),'BOOTIMG payload identity')
+    rpayload=z+rtree+bytes(-len(rtree)%8)
+    image=pack(rpayload,rd,recovery=True)
+    end=2048+(len(rpayload)+512+2047)//2048*2048+(len(rd)+512+2047)//2048*2048+4096
+    require(len(image)<=0x1000000,'RECOVERY partition span')
+    result=check_bootimg(image,rpayload,rd,{'bootimg_read_end':end},recovery=True)
+    (root/'zImage-recovery-dtb').write_bytes(rpayload);(root/'RECOVERY.img').write_bytes(image)
+    return result
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('--package',action='store_true');p.add_argument('--production',action='store_true');a=p.parse_args()
     project=Path(__file__).resolve().parents[2];layout,payload,rd=check(a.root,project,production=a.production)
     if a.package:
         boot=pack(payload,rd);layout['bootimg']=check_bootimg(boot,payload,rd,layout)
         (a.root/'zImage-dtb').write_bytes(payload);(a.root/'BOOTIMG.img').write_bytes(boot)
+        if a.production:
+            layout['recovery']=recovery_image(a.root,payload,rd)
     elif (a.root/'BOOTIMG.img').exists():layout['bootimg']=check_bootimg((a.root/'BOOTIMG.img').read_bytes(),payload,rd,layout)
     (a.root/'layout.json').write_text(json.dumps(layout,indent=2)+'\n');print(json.dumps(layout,indent=2))
 if __name__=='__main__':main()

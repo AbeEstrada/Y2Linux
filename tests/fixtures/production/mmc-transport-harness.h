@@ -54,6 +54,7 @@ static unsigned char factory_mbr[512];
 static struct mmc_host *mmc_from_priv(struct msdc_host *h) {return h->mmc;}
 static struct msdc_host *mmc_priv(struct mmc_host *m) {return m->priv;}
 static bool mmc_card_mmc(struct mmc_card *c) {assert(c);return c->is_mmc;}
+static bool y2_boot_recovery_image(void) {return false;} /* normal BOOTIMG kernel */
 static bool mmc_op_multi(unsigned op) {return op==18 || op==25;}
 static bool mmc_op_tuning(unsigned op) {return op==19 || op==21;}
 static u32 readl(void *address) {u32 v;memcpy(&v,address,4);return v;}

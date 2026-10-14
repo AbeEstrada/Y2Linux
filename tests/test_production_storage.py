@@ -35,6 +35,7 @@ struct mmc_data { unsigned flags,blocks,blksz; };
 struct mmc_request { struct mmc_command *cmd; struct mmc_data *data; struct mmc_command *sbc; struct mmc_command *stop; };
 struct msdc_host { bool y2_emmc,hsq_en,y2_identified,y2_blockaddr; unsigned y2_sectors,y2_partition; bool y2_switch_pending; };
 static int done,queued,finalized,accepted;
+static bool y2_boot_recovery_image(void) {return false;} /* normal BOOTIMG kernel */
 static bool mmc_hsq_finalize_request(struct mmc_host *m,struct mmc_request *r) {(void)m;(void)r;finalized++;return queued;}
 static void mmc_request_done(struct mmc_host *m,struct mmc_request *r) {(void)m;(void)r;done++;}
 static void guard(struct msdc_host *host,struct mmc_host *mmc,struct mmc_request *mrq) {

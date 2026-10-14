@@ -212,22 +212,26 @@
       "enabled": true,
       "qualified": false,
       "targets": [
-        "Y2ROOT"
+        "BOOTIMG",
+        "Y2ROOT",
+        "RECOVERY"
       ],
-      "kernel_compatibility": "exact",
+      "kernel_compatibility": "replaced with the release",
       "signature": "Ed25519",
       "trust": "development",
-      "rollback": "verified previous root; next boot on missing health",
+      "rollback": "verified previous BOOTIMG and root; recovery on unconfirmed health",
       "health_deadline_seconds": 180,
-      "physical_gate": "rescue installation/interruption/readback/restore",
+      "physical_gate": "recovery entry, installation, interruption, readback and restore on the device",
       "experimental": false,
-      "reason": "physical qualification of this exact candidate pending"
+      "reason": "physical qualification of this exact candidate pending",
+      "installer": "Y2 recovery image (RECOVERY) after power-off; MISC boot-recovery request",
+      "channel": "GitHub Releases (SchulzCode/Y2Linux), daily check, never automatic install"
     },
     "automatic_bootimg_update": {
-      "implemented": false,
-      "enabled": false,
+      "implemented": true,
+      "enabled": true,
       "qualified": false,
-      "reason": "single_slot_rescue_can_be_lost",
+      "reason": "installed by the Y2 recovery image; BOOTIMG is never written by the kernel it runs",
       "experimental": false
     },
     "shutdown": {

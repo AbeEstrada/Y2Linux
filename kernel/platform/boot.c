@@ -13,6 +13,10 @@
 
 static struct y2_boot_info boot_info;
 static bool normal_boot;
+/* OTA-35: set only by the RECOVERY image's own DTB bootargs. LK's command line
+ * never reaches this kernel (ATAG_DTB_COMPAT=n), so it names the image that
+ * was loaded, independent of the loader. Selects the eMMC write policy. */
+static bool recovery_image;
 static BLOCKING_NOTIFIER_HEAD(normal_boot_notifiers);
 static DEFINE_MUTEX(normal_boot_transition);
 
@@ -25,6 +29,17 @@ void y2_boot_unregister_notifier(struct notifier_block *nb)
 	blocking_notifier_chain_unregister(&normal_boot_notifiers, nb);
 }
 
+bool y2_boot_recovery_image(void)
+{
+	return recovery_image;
+}
+static int __init recovery_option(char *s)
+{
+	recovery_image = !strcmp(s, "1");
+	return 1;
+}
+__setup("y2.recovery=", recovery_option);
+
 bool y2_normal_boot_enabled(void)
 {
 	return READ_ONCE(normal_boot);
@@ -32,8 +47,9 @@ bool y2_normal_boot_enabled(void)
 
 static ssize_t metadata_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	return sysfs_emit(buf, "valid=%d boot_mode=%d boot_reason=%d offline=%d\n",
-		boot_info.valid, boot_info.mode, boot_info.reason, y2_boot_offline(&boot_info));
+	return sysfs_emit(buf, "valid=%d boot_mode=%d boot_reason=%d offline=%d recovery_image=%d\n",
+		boot_info.valid, boot_info.mode, boot_info.reason, y2_boot_offline(&boot_info),
+		recovery_image);
 }
 static struct kobj_attribute metadata_attr = __ATTR_RO(metadata);
 
@@ -71,8 +87,9 @@ static int __init y2_boot_init(void)
 	 * 0x80000100. It is ordinary retained DRAM, already in the linear map.
 	 * No ATAG is written and no unbounded loader pointer is dereferenced. */
 	boot_info = y2_boot_parse(phys_to_virt(0x80000100), 0x3f00);
-	pr_info("Y2BOOT: loader metadata valid=%d mode=%d reason=%d offline=%d; userspace handover pending\n",
-		boot_info.valid, boot_info.mode, boot_info.reason, y2_boot_offline(&boot_info));
+	pr_info("Y2BOOT: loader metadata valid=%d mode=%d reason=%d offline=%d recovery_image=%d; userspace handover pending\n",
+		boot_info.valid, boot_info.mode, boot_info.reason, y2_boot_offline(&boot_info),
+		recovery_image);
 	kobj = kobject_create_and_add("y2_boot", firmware_kobj);
 	if (!kobj) return -ENOMEM;
 	ret = sysfs_create_group(kobj, &y2_boot_group);

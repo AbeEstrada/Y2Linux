@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline Ed25519 key generation and signed root-only release creation.
+"""Offline Ed25519 key generation and signed full-system (OTA-35) package creation.
 
 Private keys must live outside all repositories/artifacts and never go to Y2.
 Uses libsodium's standard detached signature API; no custom cryptography.
@@ -79,39 +79,69 @@ def canonical(value):
                       allow_nan=False).encode()
 
 
+def compress(source, target, limit):
+    """Deterministic single-member gzip; returns the payload record."""
+    source = Path(source)
+    if not 4096 <= source.stat().st_size <= limit:
+        raise ValueError(f'{source.name} outside its partition budget')
+    raw_hash = hashlib.sha256()
+    with source.open('rb') as stream_in, target.open('wb') as encoded:
+        with gzip.GzipFile(fileobj=encoded, mode='wb', filename='', mtime=0) as stream:
+            while block := stream_in.read(1024**2):
+                raw_hash.update(block)
+                stream.write(block)
+        encoded.flush()
+        os.fsync(encoded.fileno())
+    with target.open('rb') as stream:
+        digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+    return dict(name=target.name, encoding='gzip', bytes=target.stat().st_size, sha256=digest,
+                raw_bytes=source.stat().st_size, raw_sha256=raw_hash.hexdigest())
+
+
+def boot_name(image, expected, label):
+    """The reviewed MTK boot layout and our image name, as y2-update-core checks it."""
+    data = Path(image).read_bytes()[:1 << 24]
+    if data[:8] != b'ANDROID!' or data[48:64].rstrip(b'\0') != expected:
+        raise ValueError(f'{Path(image).name}: not a {expected.decode()} image')
+    kernel = int.from_bytes(data[8:12], 'little')
+    ramdisk = 2048 + (kernel + 2047) // 2048 * 2048
+    if data[ramdisk + 8:ramdisk + 40] != label.ljust(32, b'\0'):
+        raise ValueError(f'{Path(image).name}: ramdisk is not {label.decode()}')
+
+
 def build(image, versions, output, private, key_id, sequence, minimum_sequence=0,
-          allow_downgrade=False, rollback_allowed=False):
+          allow_downgrade=False, rollback_allowed=False, bootimg=None, recovery=None, notes=''):
+    """Signed full-system package: Y2ROOT + BOOTIMG, optionally RECOVERY."""
     output = Path(output)
     if output.exists() or not re.fullmatch(r'[a-zA-Z0-9._-]{1,64}', key_id):
         raise ValueError('fresh output directory and safe key ID required')
     if type(sequence) is not int or sequence < 1 or not 0 <= minimum_sequence < sequence:
         raise ValueError('invalid release sequence')
+    if bootimg is None:
+        raise ValueError('a full update needs the matching BOOTIMG')
+    if not isinstance(notes, str) or len(notes) > 2000:
+        raise ValueError('release notes must be short text')
     image = Path(image)
     if not 8 * 1024**2 <= image.stat().st_size <= 820 * 1024**2:
         raise ValueError('root image extent outside Y2ROOT budget')
+    boot_name(bootimg, b'Y2Linux-M1', b'ROOTFS')
+    if recovery is not None:
+        boot_name(recovery, b'Y2Recovery-1', b'RECOVERY')
     output.mkdir(mode=0o700, parents=True)
-    raw_hash = hashlib.sha256()
-    with image.open('rb') as source, (output / 'rootfs.ext4.gz').open('wb') as encoded:
-        with gzip.GzipFile(fileobj=encoded, mode='wb', filename='', mtime=0) as stream:
-            while block := source.read(1024**2):
-                raw_hash.update(block)
-                stream.write(block)
-        encoded.flush()
-        os.fsync(encoded.fileno())
-    compressed = output / 'rootfs.ext4.gz'
-    with compressed.open('rb') as stream:
-        digest = hashlib.file_digest(stream, 'sha256').hexdigest()
-    manifest = dict(schema=1, product='Y2', hardware_revision='innioasis-y2-mt6582',
+    payloads = dict(rootfs=compress(image, output / 'rootfs.ext4.gz', 820 * 1024**2),
+                    bootimg=compress(bootimg, output / 'bootimg.img.gz', 16 * 1024**2))
+    if recovery is not None:
+        payloads['recovery'] = compress(recovery, output / 'recovery.img.gz', 16 * 1024**2)
+    manifest = dict(schema=2, product='Y2', hardware_revision='innioasis-y2-mt6582',
                     release_version=versions['release_version'], sequence=sequence,
                     minimum_sequence=minimum_sequence, kernel=versions['kernel_version'],
                     rootfs_version=versions['rootfs_version'], rootfs_contract='y2-platform-v1',
-                    layout_schema=1, data_schema=1, rescue_api=1, reborn_database_schema=1,
+                    layout_schema=1, data_schema=1, recovery_api=1, reborn_database_schema=1,
                     y2linux_commit=versions['build_git_commit'], reborn_commit=versions['reborn_source_commit'],
+                    reborn_version=versions.get('reborn_version', ''), notes=notes,
                     key_id=key_id, signature_format='Ed25519-detached-manifest.sig',
                     allow_downgrade=allow_downgrade, rollback_allowed=rollback_allowed,
-                    payload=dict(name='rootfs.ext4.gz', target='Y2ROOT', encoding='gzip',
-                                 bytes=compressed.stat().st_size, sha256=digest,
-                                 raw_bytes=image.stat().st_size, raw_sha256=raw_hash.hexdigest()))
+                    payloads=payloads)
     raw = canonical(manifest)
     (output / 'manifest.json').write_bytes(raw)
     (output / 'manifest.sig').write_bytes(sign(raw, private))
@@ -124,8 +154,10 @@ def main():
     key = sub.add_parser('keygen')
     key.add_argument('--private', type=Path, required=True)
     package = sub.add_parser('package')
-    for arg in ('image', 'versions', 'output', 'private'):
+    for arg in ('image', 'bootimg', 'versions', 'output', 'private'):
         package.add_argument('--' + arg, type=Path, required=True)
+    package.add_argument('--recovery', type=Path)
+    package.add_argument('--notes', default='')
     package.add_argument('--key-id', required=True)
     package.add_argument('--sequence', type=int, required=True)
     package.add_argument('--minimum-sequence', type=int, default=0)
@@ -137,7 +169,8 @@ def main():
     else:
         print(json.dumps(build(args.image, json.loads(args.versions.read_text()), args.output,
                                args.private, args.key_id, args.sequence, args.minimum_sequence,
-                               args.development_downgrade, args.rollback_allowed), indent=2))
+                               args.development_downgrade, args.rollback_allowed, args.bootimg,
+                               args.recovery, args.notes), indent=2))
 
 
 if __name__ == '__main__':

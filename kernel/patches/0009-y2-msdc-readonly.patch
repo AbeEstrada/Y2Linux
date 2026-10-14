@@ -746,7 +746,7 @@
  	writel(rawcmd, host->base + SDC_CMD);
  }
  
-@@ -1484,7 +2085,54 @@
+@@ -1484,7 +2085,55 @@
  static void msdc_ops_request(struct mmc_host *mmc, struct mmc_request *mrq)
  {
  	struct msdc_host *host = mmc_priv(mmc);
@@ -774,6 +774,7 @@
 +			.user_area = host->y2_identified && host->y2_blockaddr &&
 +				host->y2_sectors == Y2_EMMC_RAW_SECTORS && !host->y2_switch_pending && !(host->y2_partition & 7),
 +			.part_config = host->y2_partition,
++			.recovery_image = y2_boot_recovery_image(),
 +		};
 +		if (!y2_emmc_request_allowed(&request)) {
 +			mrq->cmd->error = -EROFS;
@@ -802,7 +803,7 @@
  	host->error = 0;
  	WARN_ON(!host->hsq_en && host->mrq);
  	host->mrq = mrq;
-@@ -1507,7 +2155,10 @@
+@@ -1507,7 +2156,10 @@
  	 * if HW option is enabled, and SBC does not have "special" flags,
  	 * use HW option,  otherwise use SW option
  	 */
@@ -814,7 +815,7 @@
  	    (mrq->sbc->arg & 0xFFFF0000)))
  		msdc_start_command(host, mrq, mrq->sbc);
  	else
-@@ -1562,6 +2213,17 @@
+@@ -1562,6 +2214,17 @@
  	     | MSDC_INT_DMA_PROTECT);
  	u32 val;
  	int ret;
@@ -832,7 +833,7 @@
  
  	spin_lock_irqsave(&host->lock, flags);
  	done = !host->data;
-@@ -1581,18 +2243,25 @@
+@@ -1581,18 +2244,25 @@
  
  		ret = readl_poll_timeout_atomic(host->base + MSDC_DMA_CTRL, val,
  						!(val & MSDC_DMA_CTRL_STOP), 1, 20000);
@@ -861,7 +862,7 @@
  			data->bytes_xfered = data->blocks * data->blksz;
  		} else {
  			dev_dbg(host->dev, "interrupt events: %x\n", events);
-@@ -1600,7 +2269,9 @@
+@@ -1600,7 +2270,9 @@
  			host->error |= REQ_DAT_ERR;
  			data->bytes_xfered = 0;
  
@@ -872,7 +873,7 @@
  				data->error = -ETIMEDOUT;
  			else if (events & MSDC_INT_DATCRCERR)
  				data->error = -EILSEQ;
-@@ -1654,14 +2325,34 @@
+@@ -1654,14 +2326,34 @@
  		if (ret < 0) {
  			dev_dbg(host->dev, "Regulator set error %d (%d)\n",
  				ret, ios->signal_voltage);
@@ -913,7 +914,7 @@
  	}
  	return 0;
  }
-@@ -1840,6 +2531,19 @@
+@@ -1840,6 +2532,19 @@
  
  		dev_dbg(host->dev, "%s: events=%08X\n", __func__, events);
  
@@ -933,7 +934,7 @@
  		if (cmd)
  			msdc_cmd_done(host, events, mrq, cmd);
  		else if (data)
-@@ -1847,6 +2551,28 @@
+@@ -1847,6 +2552,28 @@
  	}
  
  	return IRQ_HANDLED;
@@ -962,7 +963,7 @@
  }
  
  static void msdc_init_hw(struct msdc_host *host)
-@@ -1904,6 +2630,8 @@
+@@ -1904,6 +2631,8 @@
  	}
  	writel(0, host->base + MSDC_IOCON);
  	sdr_set_field(host->base + MSDC_IOCON, MSDC_IOCON_DDLSEL, 0);
@@ -971,7 +972,7 @@
  
  	/*
  	 * Patch bit 0 and 1 are completely rewritten, but for patch bit 2
-@@ -2027,9 +2755,18 @@
+@@ -2027,9 +2756,18 @@
  		if (host->top_base)
  			sdr_set_bits(host->top_base + EMMC_TOP_CONTROL,
  				     PAD_RXDLY_SEL);
@@ -991,7 +992,7 @@
  	}
  
  	if (mmc->caps2 & MMC_CAP2_NO_SDIO) {
-@@ -2146,8 +2883,13 @@
+@@ -2146,8 +2884,13 @@
  		}
  		break;
  	case MMC_POWER_OFF:
@@ -1006,7 +1007,7 @@
  
  		if (!IS_ERR(mmc->supply.vqmmc) && host->vqmmc_enabled) {
  			regulator_disable(mmc->supply.vqmmc);
-@@ -2158,6 +2900,11 @@
+@@ -2158,6 +2901,11 @@
  		break;
  	}
  
@@ -1018,7 +1019,7 @@
  	if (host->mclk != ios->clock || host->timing != ios->timing)
  		msdc_set_mclk(host, ios->timing, ios->clock);
  }
-@@ -2581,6 +3328,632 @@
+@@ -2581,6 +3329,632 @@
  				EMMC_TOP_CONTROL);
  		host->saved_tune_para.emmc_top_cmd = readl(host->top_base +
  				EMMC_TOP_CMD);
@@ -1651,7 +1652,7 @@
  	}
  	return ret;
  }
-@@ -2850,7 +4223,8 @@
+@@ -2850,7 +4224,8 @@
  	.ack_sdio_irq = msdc_ack_sdio_irq,
  	.start_signal_voltage_switch = msdc_ops_switch_volt,
  	.card_busy = msdc_card_busy,
@@ -1661,7 +1662,7 @@
  	.prepare_hs400_tuning = msdc_prepare_hs400_tuning,
  	.execute_hs400_tuning = msdc_execute_hs400_tuning,
  	.card_hw_reset = msdc_hw_reset,
-@@ -2957,11 +4331,139 @@
+@@ -2957,11 +4332,139 @@
  	return 0;
  }
  
@@ -1801,7 +1802,7 @@
  
  	if (!pdev->dev.of_node) {
  		dev_err(&pdev->dev, "No DT found\n");
-@@ -2983,6 +4485,9 @@
+@@ -2983,6 +4486,9 @@
  		return PTR_ERR(host->base);
  
  	host->dev_comp = of_device_get_match_data(&pdev->dev);
@@ -1811,7 +1812,7 @@
  
  	if (host->dev_comp->needs_top_base) {
  		host->top_base = devm_platform_ioremap_resource(pdev, 1);
-@@ -3016,6 +4521,11 @@
+@@ -3016,6 +4522,11 @@
  	if (host->irq < 0)
  		return host->irq;
  
@@ -1823,7 +1824,7 @@
  	host->pinctrl = devm_pinctrl_get(&pdev->dev);
  	if (IS_ERR(host->pinctrl))
  		return dev_err_probe(&pdev->dev, PTR_ERR(host->pinctrl),
-@@ -3032,6 +4542,8 @@
+@@ -3032,6 +4543,8 @@
  		dev_err(&pdev->dev, "Cannot find pinctrl uhs!\n");
  		return PTR_ERR(host->pins_uhs);
  	}
@@ -1832,7 +1833,7 @@
  
  	/* Support for SDIO eint irq ? */
  	if ((mmc->pm_caps & MMC_PM_WAKE_SDIO_IRQ) && (mmc->pm_caps & MMC_PM_KEEP_POWER)) {
-@@ -3048,9 +4560,62 @@
+@@ -3048,9 +4561,64 @@
  	}
  
  	msdc_of_property_parse(pdev, host);
@@ -1866,7 +1867,9 @@
 +		if (host->y2_sd)
 +			mmc->caps |= MMC_CAP_DRIVER_TYPE_A | MMC_CAP_DRIVER_TYPE_C | MMC_CAP_DRIVER_TYPE_D;
 +		mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
-+		dev_info(&pdev->dev, "MSDC inherited rails; policy=%s\n", host->y2_sd ? "removable media" : "ANDROID/USRDATA writable; protected regions read-only");
++		dev_info(&pdev->dev, "MSDC inherited rails; policy=%s\n", host->y2_sd ? "removable media" :
++			 y2_boot_recovery_image() ? "recovery: BOOTIMG, MISC message, ANDROID/USRDATA writable; other regions read-only" :
++			 "normal: RECOVERY, MISC message, ANDROID/USRDATA writable; other regions read-only");
 +	}
  	host->src_clk_freq = clk_get_rate(host->src_clk);
 +	if (host->y2_emmc || host->y2_sd) {
@@ -1895,7 +1898,7 @@
  	/* Set host parameters to mmc */
  	mmc->ops = &mt_msdc_ops;
  	if (host->dev_comp->clk_div_bits == 8)
-@@ -3072,6 +4637,8 @@
+@@ -3072,6 +4640,8 @@
  		mmc->caps2 |= MMC_CAP2_SDIO_IRQ_NOTHREAD;
  
  	mmc->caps |= MMC_CAP_CMD23;
@@ -1904,7 +1907,7 @@
  	if (host->cqhci)
  		mmc->caps2 |= MMC_CAP2_CQE | MMC_CAP2_CQE_DCMD;
  	/* MMC core transfer sizes tunable parameters */
-@@ -3102,6 +4669,10 @@
+@@ -3102,6 +4672,10 @@
  	}
  	msdc_init_gpd_bd(host, &host->dma);
  	INIT_DELAYED_WORK(&host->req_timeout, msdc_request_timeout);
@@ -1915,7 +1918,7 @@
  	spin_lock_init(&host->lock);
  
  	platform_set_drvdata(pdev, mmc);
-@@ -3132,7 +4703,7 @@
+@@ -3132,7 +4706,7 @@
  		mmc->max_seg_size = 64 * 1024;
  		/* Reduce CIT to 0x40 that corresponds to 2.35us */
  		msdc_cqe_cit_cal(host, 2350);
@@ -1924,7 +1927,7 @@
  		/* Use HSQ on eMMC/SD (but not on SDIO) if HW CQE not supported */
  		struct mmc_hsq *hsq = devm_kzalloc(&pdev->dev, sizeof(*hsq), GFP_KERNEL);
  		if (!hsq) {
-@@ -3160,9 +4731,51 @@
+@@ -3160,9 +4734,51 @@
  
  	if (ret)
  		goto end;
@@ -1977,7 +1980,7 @@
  	pm_runtime_disable(host->dev);
  release:
  	msdc_deinit_hw(host);
-@@ -3189,6 +4802,19 @@
+@@ -3189,6 +4805,19 @@
  
  	mmc = platform_get_drvdata(pdev);
  	host = mmc_priv(mmc);
@@ -1997,7 +2000,7 @@
  
  	pm_runtime_get_sync(host->dev);
  
-@@ -3278,6 +4904,86 @@
+@@ -3278,6 +4907,86 @@
  		__msdc_enable_sdio_irq(host, 1);
  }
  
@@ -2084,7 +2087,7 @@
  static int msdc_runtime_suspend(struct device *dev)
  {
  	struct mmc_host *mmc = dev_get_drvdata(dev);
-@@ -3285,6 +4991,12 @@
+@@ -3285,6 +4994,12 @@
  
  	if (host->hsq_en)
  		mmc_hsq_suspend(mmc);
@@ -2097,7 +2100,7 @@
  
  	msdc_save_reg(host);
  
-@@ -3306,6 +5018,8 @@
+@@ -3306,6 +5021,8 @@
  	struct msdc_host *host = mmc_priv(mmc);
  	int ret;
  

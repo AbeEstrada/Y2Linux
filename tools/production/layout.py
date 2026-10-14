@@ -84,6 +84,22 @@ def make_scatter(stock, initialize_data):
         blocks[i]=re.sub(r'(?m)^  is_download: .*$', '  is_download: '+str(enabled).lower(),blocks[i])
     return ''.join(blocks)
 
+RECOVERY_TARGET={'start':0x2d80000,'size':0x1000000,'linear':0x4180000,'file':'RECOVERY.img','type':'recovery'}
+
+def make_recovery_scatter(stock):
+    """OTA-35 one-time installation: only RECOVERY receives the Y2 recovery image.
+    Every other row, including BOOTIMG/ANDROID, stays unselected."""
+    require(hashlib.sha256(stock.encode()).hexdigest()==STOCK_SCATTER_SHA256,'stock scatter hash')
+    blocks=re.split(r'(?m)(?=^- partition_index: )',stock)
+    for i in range(1,len(blocks)):
+        recovery='partition_name: RECOVERY\n' in blocks[i]
+        if recovery:
+            require('linear_start_addr: 0x4180000\n' in blocks[i] and 'physical_start_addr: 0x2d80000\n' in blocks[i]
+                    and 'partition_size: 0x1000000\n' in blocks[i],'stock RECOVERY coordinates')
+        blocks[i]=re.sub(r'(?m)^  file_name: .*$', '  file_name: '+('RECOVERY.img' if recovery else 'NONE'),blocks[i])
+        blocks[i]=re.sub(r'(?m)^  is_download: .*$', '  is_download: '+('true' if recovery else 'false'),blocks[i])
+    return ''.join(blocks)
+
 def make_boot_scatter(stock):
     """Normal production kernel update: only BOOTIMG is a downloadable payload."""
     blocks=re.split(r'(?m)(?=^- partition_index: )',make_scatter(stock,False))

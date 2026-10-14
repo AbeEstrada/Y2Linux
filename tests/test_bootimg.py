@@ -1,5 +1,5 @@
 import unittest
-from tools.build.package import pack
+from tools.build.bootimage import pack
 from tools.validation.bootimg import check
 from tools.validation.d08 import up
 

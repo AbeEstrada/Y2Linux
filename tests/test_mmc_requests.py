@@ -3,7 +3,7 @@ import ctypes, subprocess, tempfile, unittest
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 class Request(ctypes.Structure):
-    _fields_=[(n,ctypes.c_uint) for n in ('opcode','arg','direction','blocks','blksz','has_sbc','sbc_opcode','sbc_arg','has_stop','stop_opcode','stop_arg','user_area','part_config','identified')]
+    _fields_=[(n,ctypes.c_uint) for n in ('opcode','arg','direction','blocks','blksz','has_sbc','sbc_opcode','sbc_arg','has_stop','stop_opcode','stop_arg','user_area','part_config','identified','recovery_image')]
 class ProductionMMC(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -42,13 +42,32 @@ class ProductionMMC(unittest.TestCase):
                 # Past the end is refused, except the single sector that is p8's first.
                 self.assertEqual(bool(self.io(True,arg=end-blocks+1,blocks=blocks)),end==3742720 and blocks==1)
         # Boot/protected areas, the gap before ANDROID and CACHE stay read-only.
-        for sector in (0,1024,18432,38912,125952,145408,1846272):
-            self.assertTrue(self.io(arg=sector));self.assertFalse(self.io(True,arg=sector))
+        for sector in (0,1024,18432,38912,125952,145408,1846272,59904,138248,138496):
+            for mode in (0,1):
+                self.assertTrue(self.io(arg=sector,recovery_image=mode));self.assertFalse(self.io(True,arg=sector,recovery_image=mode))
         self.assertTrue(self.io(arg=3742720));self.assertTrue(self.io(True,arg=3742720))
         self.assertFalse(self.io(True,arg=3742719,blocks=2))   # a write straddling two spans is refused
         self.assertTrue(self.io(arg=15203327,blocks=1))
         for sector,count in ((0xffffffff,2),(166912,0xffffffff),(15269888,1),(15203328,1),(15203327,2),(0,0)):
             self.assertFalse(self.io(arg=sector,blocks=count));self.assertFalse(self.io(True,arg=sector,blocks=count))
+    def test_boot_images_and_misc_message_by_running_image(self):
+        # OTA-35: BOOTIMG [60416,93184), RECOVERY [93184,125952), MISC message [138240,138248).
+        # A kernel from BOOTIMG writes RECOVERY, one from RECOVERY writes BOOTIMG; both the message.
+        for mode,(own,other) in ((0,(60416,93184)),(1,(93184,60416))):
+            for blocks in (1,8,256,32768):
+                self.assertTrue(self.io(True,arg=other,blocks=blocks,recovery_image=mode))
+                self.assertTrue(self.io(True,arg=other+32768-blocks,blocks=blocks,recovery_image=mode))
+                self.assertFalse(self.io(True,arg=own,blocks=blocks,recovery_image=mode))
+                self.assertFalse(self.io(True,arg=own+32768-blocks,blocks=blocks,recovery_image=mode))
+                self.assertTrue(self.io(arg=own,blocks=blocks,recovery_image=mode))
+            self.assertFalse(self.io(True,arg=other+32768-8,blocks=9,recovery_image=mode))
+            self.assertFalse(self.io(True,arg=other-1,blocks=2,recovery_image=mode))
+            for start,blocks in ((138240,8),(138240,1),(138247,1),(138244,4)):
+                self.assertTrue(self.io(True,arg=start,blocks=blocks,recovery_image=mode))
+            for start,blocks in ((138240,9),(138239,1),(138239,2),(138248,1),(138247,2),(138240+256,8)):
+                self.assertFalse(self.io(True,arg=start,blocks=blocks,recovery_image=mode))
+        # A write spanning both images is refused in either mode.
+        for mode in (0,1):self.assertFalse(self.io(True,arg=93184-4,blocks=8,recovery_image=mode))
     def test_switch_fields_and_hardware_areas(self):
         for index in range(256):
             for value in (0,1,2,3,4,5,6,0x40,0x48,0x82,0x86,0xff):

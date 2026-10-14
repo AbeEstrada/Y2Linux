@@ -1,7 +1,9 @@
-"""Signed root-only OTA admission and boot health; writes only dedicated staging.
+"""Signed full-system OTA (OTA-35): check, download, install request, boot health.
 
-The small native core is the shared authentication/policy authority. The rescue
-copy performs offline backup/write/readback; this module never opens a block.
+The small native core is the shared authentication/policy authority. It writes
+the RECOVERY image and the MISC request; the Y2 recovery image performs the
+offline backup/write/readback of BOOTIMG and Y2ROOT. This module never opens a
+block device itself.
 """
 # SPDX-License-Identifier: GPL-2.0-only
 from .workload import workload
@@ -20,9 +22,26 @@ from .boot import private_directory, mark
 from .common import atomic_json
 from .transfer import data_volume
 
-FILES = ('manifest.json', 'manifest.sig', 'rootfs.ext4.gz')
+FILES = ('manifest.json', 'manifest.sig', 'rootfs.ext4.gz', 'bootimg.img.gz', 'recovery.img.gz')
+PAYLOADS = {'rootfs': 'rootfs.ext4.gz', 'bootimg': 'bootimg.img.gz', 'recovery': 'recovery.img.gz'}
 TERMINAL = ('Idle', 'Acknowledged', 'RolledBack', 'Failed')
 RESERVE = 96 * 1024**2
+CHANNEL = '/etc/y2linux/update-channel.json'
+# Owner gate before the device turns off to install (decision 2026-10-15).
+MINIMUM_PERCENT = 50
+CHECK_INTERVAL = 24 * 3600
+
+
+def channel(ctx):
+    """The shipped release channel, or the owner's override on /data."""
+    shipped = ctx.json(CHANNEL, {}) or {}
+    override = ctx.json('/data/updates/channel.json', {}) or {}
+    value = {**shipped, **{k: v for k, v in override.items() if k in ('manifest_url', 'name')}}
+    hosts = shipped.get('allowed_redirect_hosts', [])
+    if not isinstance(hosts, list) or not all(isinstance(h, str) and h for h in hosts):
+        hosts = []
+    value['allowed_redirect_hosts'] = hosts
+    return value
 
 
 def status(ctx):
@@ -34,7 +53,9 @@ def status(ctx):
     if not isinstance(value, dict) or value.get('schema') != 1:
         return {'schema': 1, 'state': 'Failed', 'failure': 'journal_unreadable'}
     return {**value, 'download': ctx.json('/data/updates/download.json'),
-            'bootimg_automatic': False, 'physical_qualification': False}
+            'last_check': ctx.json('/data/updates/last-check.json'),
+            'channel': channel(ctx).get('name'), 'full_system': True,
+            'physical_qualification': False}
 
 
 def core(ctx, action, directory=None, timeout=15):
@@ -61,9 +82,21 @@ def free(fd, size):
         raise ValueError('update_data_space_reserve')
 
 
-class NoRedirect(urllib.request.HTTPRedirectHandler):
+class AllowlistedRedirect(urllib.request.HTTPRedirectHandler):
+    """Release hosting redirects to a CDN. Follow HTTPS only, to listed hosts;
+    authenticity comes from the signed manifest, never from the transport."""
+    max_redirections = 5
+
+    def __init__(self, hosts):
+        super().__init__()
+        self.hosts = frozenset(h.lower() for h in hosts)
+
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise ValueError('update_redirect_refused')
+        parts = urllib.parse.urlsplit(newurl)
+        if (parts.scheme != 'https' or not parts.hostname or parts.username or parts.password
+                or parts.hostname.lower() not in self.hosts or any(ord(c) < 33 for c in newurl)):
+            raise ValueError('update_redirect_refused')
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 def base_url(url):
@@ -105,7 +138,7 @@ def copy_stream(source, destination, maximum, exact=None, seconds=900):
 
 
 def remove_package(directory):
-    # Only these three disposable files; unexpected contents stop cleanup.
+    # Only these known disposable files; unexpected contents stop cleanup.
     if not directory.exists():
         return
     if not stat.S_ISDIR(directory.lstat().st_mode):
@@ -143,13 +176,16 @@ def stage(ctx, source=None, url=None, check_only=False):
         for item in old:
             remove_package(item)
         incoming.mkdir(mode=0o700)
-        atomic_json(root/'download.json', {'schema': 1, 'state': 'Staging', 'id': token}, durable=True)
+        # A check only reads the signed manifest; it never shows as a download.
+        atomic_json(root/'download.json', {'schema': 1, 'state': 'Checking' if check_only else 'Staging',
+                    'id': token}, durable=True)
         if url:
             from .timekeeping import status as clock
             if not clock(ctx)['tls_ready'] or not clock(ctx)['entropy_ready']:
                 raise ValueError('clock_or_entropy_not_ready_for_TLS')
             base = base_url(url)
-            opener = urllib.request.build_opener(NoRedirect(), urllib.request.ProxyHandler({}))
+            opener = urllib.request.build_opener(AllowlistedRedirect(channel(ctx)['allowed_redirect_hosts']),
+                                                 urllib.request.ProxyHandler({}))
 
             @contextlib.contextmanager
             def get(name):
@@ -173,16 +209,27 @@ def stage(ctx, source=None, url=None, check_only=False):
             with get(name) as stream:
                 copy_stream(stream, incoming/name, maximum, exact=64 if name.endswith('.sig') else None, seconds=30)
         manifest = core(ctx, 'check-manifest', '/data/updates/' + token)
+        payloads = manifest['payloads']
+        total = sum(item['bytes'] for item in payloads.values())
         if check_only:
             remove_package(incoming)
-            atomic_json(root/'download.json', {'schema': 1, 'state': 'Checked', 'release_version': manifest['release_version']})
+            summary = {'schema': 1, 'state': 'Checked', 'release_version': manifest['release_version'],
+                       'sequence': manifest['sequence'], 'download_bytes': total,
+                       'notes': manifest.get('notes', ''), 'reborn_version': manifest.get('reborn_version', '')}
+            atomic_json(root/'download.json', summary)
             return manifest
-        size = manifest['payload']['bytes']
-        free(fd, size)
-        with get('rootfs.ext4.gz') as stream:
-            count, digest = copy_stream(stream, incoming/'rootfs.ext4.gz', size, exact=size)
-        if digest != manifest['payload']['sha256']:
-            raise ValueError('download_hash_mismatch')
+        # Root payload plus its backup during installation; refuse early, not in recovery.
+        free(fd, total + payloads['rootfs']['raw_bytes'] // 4)
+        count = 0
+        for key, item in payloads.items():
+            name = PAYLOADS[key]
+            with get(name) as stream:
+                got, digest = copy_stream(stream, incoming/name, item['bytes'], exact=item['bytes'])
+            if digest != item['sha256']:
+                raise ValueError('download_hash_mismatch')
+            count += got
+            atomic_json(root/'download.json', {'schema': 1, 'state': 'Staging', 'id': token,
+                        'bytes_done': count, 'bytes_total': total})
         # Fresh sealed local copy, native decompression/hash/extent validation.
         core(ctx, 'check', '/data/updates/' + token, timeout=300)
         if data_volume(ctx)['generation'] != volume['generation']:
@@ -196,8 +243,8 @@ def stage(ctx, source=None, url=None, check_only=False):
             os.close(parent)
         result = core(ctx, 'queue', timeout=300)
         atomic_json(root/'download.json', {'schema': 1, 'state': 'Verified', 'bytes': count,
-                    'raw_bytes': manifest['payload']['raw_bytes'], 'sha256': digest,
-                    'backup_budget': 'rescue captures actual compressed previous root before any write',
+                    'release_version': manifest['release_version'], 'notes': manifest.get('notes', ''),
+                    'backup_budget': 'recovery captures the compressed previous root and BOOTIMG before any write',
                     'reserve_bytes': RESERVE}, durable=True)
         return result
     except (OSError, ValueError, TimeoutError) as error:
@@ -207,14 +254,75 @@ def stage(ctx, source=None, url=None, check_only=False):
         os.close(fd)
 
 
+def battery_gate(ctx):
+    """Charger connected, or at least MINIMUM_PERCENT from this boot's estimate."""
+    power = ctx.json('/run/y2/power.json', {}) or {}
+    battery = power.get('battery') or {}
+    if power.get('boot_id') not in (None, ctx.read('/proc/sys/kernel/random/boot_id')):
+        battery = {}
+    if battery.get('charging') is True or battery.get('status') in ('Charging', 'Full'):
+        return
+    percent = battery.get('percent')
+    if type(percent) is not int or percent < MINIMUM_PERCENT:
+        raise ValueError('update_needs_charger_or_half_battery')
+
+
 @workload("Maintenance")
 def apply(ctx, rollback=False):
+    """Install (or restore) in the Y2 recovery image. The software restart
+    leaves the panel dark (open defect), so the device powers off and the owner
+    presses Power; LK then starts RECOVERY from the MISC request."""
     if rollback:
         core(ctx, 'rollback')
     elif status(ctx)['state'] != 'Queued':
         raise ValueError('no_verified_queued_update')
+    battery_gate(ctx)
+    core(ctx, 'prepare', timeout=120)
     from .power import rpc
-    return rpc(ctx, {'action': 'reboot', 'reason': 'update'})
+    return rpc(ctx, {'action': 'poweroff', 'reason': 'update'})
+
+
+@workload("Maintenance")
+def probe(ctx):
+    """Owner test: power off into the recovery image, which records that it ran."""
+    core(ctx, 'probe', timeout=60)
+    from .power import rpc
+    return rpc(ctx, {'action': 'poweroff', 'reason': 'update'})
+
+
+def automatic_check(ctx, now=None):
+    """Daily check on Wi-Fi: only reports that an update exists, never downloads
+    a payload or installs. Called by the maintenance loop; cheap when not due."""
+    now = time.time() if now is None else now
+    directory = private_directory(ctx.path('/data/updates'))
+    last = ctx.json('/data/updates/last-check.json', {}) or {}
+    if type(last.get('time')) in (int, float) and 0 <= now - last['time'] < CHECK_INTERVAL:
+        return None
+    # Any attempt is recorded, so an unready clock retries hourly, not every tick.
+    atomic_json(directory/'last-check.json', {**last, 'schema': 1, 'attempt': now})
+    if status(ctx)['state'] not in TERMINAL or not channel(ctx).get('manifest_url'):
+        return None
+    if ctx.json('/run/y2/network.json', {}).get('state') != 'Online':
+        return None
+    from .timekeeping import status as clock
+    if not clock(ctx)['tls_ready']:
+        return None
+    record = {'schema': 1, 'time': now, 'attempt': now}
+    previous = ctx.json('/data/updates/download.json')
+    try:
+        manifest = stage(ctx, url=channel(ctx)['manifest_url'], check_only=True)
+        record.update(result='checked', release_version=manifest['release_version'])
+    except (OSError, ValueError, TimeoutError) as error:
+        record.update(result='failed', failure=str(error)[:120])
+        # A failed background check is not the owner's failed update: keep
+        # what the Software Update page showed before.
+        with contextlib.suppress(OSError, ValueError):
+            if previous is None:
+                ctx.path('/data/updates/download.json').unlink(missing_ok=True)
+            else:
+                atomic_json(ctx.path('/data/updates/download.json'), previous, durable=True)
+    atomic_json(directory/'last-check.json', record, durable=True)
+    return record
 
 
 def health_ack(ctx):
@@ -228,7 +336,10 @@ def health_ack(ctx):
         progress = {'boot_id': boot, 'deadline_monotonic_s': time.monotonic() + 180}
         atomic_json(runtime/'update-health.json', progress)
     if time.monotonic() >= progress['deadline_monotonic_s']:
-        return core(ctx, 'rollback')  # next owner reboot restores; never an automatic boot loop
+        # Ask LK for the recovery image now, so even a later hang before the
+        # rescue restores on the next power-on. Never an automatic power-off.
+        core(ctx, 'rollback')
+        return core(ctx, 'prepare', timeout=120)
     # A successful frame alone is insufficient: app must still answer, core
     # mounts/devices must be usable, and the same boot/process must own readiness.
     ready = ctx.json('/run/y2/application-ready.json', {})
@@ -256,4 +367,8 @@ def health_ack(ctx):
             app.get('library', {}).get('error') is not None or app.get('uptime_seconds', 0) < 10):
         return {'state': 'PendingHealth', 'reason': 'application_not_ready'}
     mark(ctx, 'application_ready')
-    return core(ctx, 'ack')
+    result = core(ctx, 'ack')
+    # The installed package is no longer needed; backups stay for rollback.
+    with contextlib.suppress(OSError, ValueError):
+        remove_package(ctx.path('/data/updates/pending'))
+    return result

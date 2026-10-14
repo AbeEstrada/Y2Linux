@@ -14,7 +14,7 @@ import sys
 PROJECT = Path(__file__).resolve().parents[2]
 REBORN = PROJECT.parent / 'Y2Reborn'
 sys.path.insert(0, str(PROJECT))
-from tools.production.layout import TARGETS, digest, require, make_scatter
+from tools.production.layout import TARGETS, RECOVERY_TARGET, digest, require, make_scatter, make_recovery_scatter
 from tools.production.boot_update import installed_components
 
 BUILDROOT_SOURCE = PROJECT/'.cache/sources' / ('buildroot-' + json.loads((PROJECT/'buildroot/inputs.lock.json').read_text())['version'])
@@ -154,6 +154,32 @@ def distribution_gate(build, public):
     return state
 
 
+def recovery_install(build, out, stock):
+    """OTA-35: the Y2 recovery image as its own one-time SPFT step. It replaces
+    the stock Android recovery; BOOTIMG, the root and Y2DATA are not selected."""
+    from tools.validation.bootimg import RECOVERY_NAME
+    directory = out/'recovery-install'
+    directory.mkdir()
+    image = directory/'RECOVERY.img'
+    shutil.copyfile(Path(build)/'RECOVERY.img', image)
+    raw = image.read_bytes()
+    require(len(raw) <= RECOVERY_TARGET['size'] and raw[:8] == b'ANDROID!' and raw[48:64] == RECOVERY_NAME,
+            'Y2 recovery image within the RECOVERY span')
+    scatter = directory/'MT6582_recovery_scatter.txt'
+    scatter.write_text(make_recovery_scatter(stock))
+    record = {'schema': 'org.y2linux.recovery-install/v1', 'target_partition': 'RECOVERY',
+              'scatter_physical_start_bytes': RECOVERY_TARGET['start'],
+              'scatter_linear_start_bytes': RECOVERY_TARGET['linear'],
+              'partition_size_bytes': RECOVERY_TARGET['size'],
+              'raw': {'file': image.name, 'size_bytes': len(raw), 'sha256': digest(image)},
+              'scatter': {'file': scatter.name, 'sha256': digest(scatter), 'selected_partitions': ['RECOVERY']},
+              'replaces': 'stock Android recovery (keep a readback of RECOVERY before the first write)',
+              'normal_update_path': 'later releases install RECOVERY from the signed OTA package'}
+    (directory/'recovery-install.json').write_text(json.dumps(record, indent=2)+'\n')
+    shutil.copyfile(PROJECT/'docs/architecture/ota-recovery-install.md', directory/'install.md')
+    return record
+
+
 def build_root_image(build):
     # Buildroot names ext4 output through its rootfs.ext2 alias. Resolve only
     # inside this build's images directory; arbitrary input links remain banned.
@@ -277,6 +303,8 @@ def package(build, base, fallback_root, out, fallback_overlay=None, public=False
     stock=(PROJECT/'tests/fixtures/production/MT6582_Android_scatter.txt').read_text()
     (out/scatter).write_text(preserving_scatter(stock)); (out/'fallback'/scatter).write_text(preserving_scatter(stock))
     manifest['profiles']={scatter:{'sha256':digest(out/scatter),'selected_partitions':['BOOTIMG','ANDROID']}}
+    if (build/'RECOVERY.img').exists():
+        manifest['recovery_install'] = recovery_install(build, out, stock)
     from tools.production.composition import write as write_composition
     manifest['release_composition'] = write_composition(build, out, manifest, privacy)
     (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')

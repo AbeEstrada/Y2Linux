@@ -95,7 +95,11 @@ def build(root, project, production=True):
         binary('sbin/y2-update-core',update)
         for name in ('update-trust.json','update-compat.json'):
             put('etc/y2linux/'+name,stat.S_IFREG|0o644,(target/'etc/y2linux'/name).read_bytes())
-        put('etc/y2linux/rescue-update',stat.S_IFREG|0o644,b'1\n')
+        # Both boot images carry this archive; the kernel's own y2.recovery=1
+        # (RECOVERY's DTB) decides whether it may install (OTA-35).
+        put('etc/y2linux/recovery-update',stat.S_IFREG|0o644,b'1\n')
+        put('sbin/y2-recovery',stat.S_IFREG|0o644,(project/'initramfs/production/recovery.sh').read_bytes())
+        binary('sbin/y2-recovery-ui',target/'usr/libexec/y2-recovery-ui')
         put('sbin/y2-storage',stat.S_IFREG|0o644,(project/'initramfs/production/storage.sh').read_bytes())
         if 'CONFIG_CFG80211=y' in (root/'kernel/.config').read_text().splitlines():
             from tools.build.regulatory import load
@@ -123,7 +127,8 @@ def build(root, project, production=True):
         ('\n'.join(dependencies)+'\n').encode())
     put('boot-modules/'+release+'/modules.alias',stat.S_IFREG|0o644,
         ('\n'.join(aliases)+'\n').encode())
-    for applet in ('sh','mount','mkdir','mknod','sleep','readlink','chroot','umount','switch_root','kill','cat','dmesg','grep','tail','cp','uname'):
+    for applet in ('sh','mount','mkdir','mknod','sleep','readlink','chroot','umount','switch_root','kill','cat','dmesg','grep','tail','cp','uname',
+                   'mv','sed','sync','poweroff'):
         put('bin/'+applet,stat.S_IFLNK|0o777,b'busybox')
     regular=sum(len(v[1]) for v in entries.values() if stat.S_ISREG(v[0]))
     require(regular<=0x800000,'DEV rescue regular-file budget')

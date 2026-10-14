@@ -54,6 +54,13 @@ rescue() {
         sleep 1
     done
 }
+# OTA-35: this kernel was loaded from RECOVERY. Install or restore, then power
+# off; the recovery image never starts the normal system.
+case " $(cat /proc/cmdline) " in
+    *' y2.recovery=1 '*)
+        . /sbin/y2-recovery
+        ;;
+esac
 case " $(cat /proc/cmdline) " in
     *' y2.rescue=1 '*)
         echo 1 > /sys/firmware/y2_boot/normal_boot || rescue 'normal peripheral handover failed'
@@ -88,18 +95,17 @@ while [ "$n" -lt 800 ]; do
     sleep 0.05
 done
 [ -n "$datadev" ] || rescue 'missing/invalid internal Y2DATA'
-# Inspect the trusted data identity before requiring an intact root. A torn
-# update may have destroyed its superblock. Only the native offline writer may
-# resolve root by controller + immutable geometry; normal boot still requires UUID.
+# Inspect the trusted data identity before requiring an intact root. An
+# interrupted update may have left a torn root; only the Y2 recovery image
+# installs or restores it (OTA-35), this rescue only routes there.
 mount -t ext4 -o ro,noload "$datadev" /newdata || rescue 'update data preflight mount'
 [ "$(cat /newdata/.y2data-schema 2>/dev/null)" = 1 ] || rescue 'update data schema'
 update_record=0
 if [ -e /newdata/updates/state.json ] || [ -L /newdata/updates/state.json ]; then
-    /sbin/y2-update-core rescue-needed > /run/y2/update-rescue.json
+    /sbin/y2-update-core boot-needed
     case "$?" in
         0) update_record=1 ;;
-        11) update_record=2 ;; # restore may need a root with no intact superblock
-        10) : ;; # completed history does not add another fsck or RNG wait
+        10) : ;; # completed history does not add another fsck or mount
         *) rescue 'update journal unreadable' ;;
     esac
 fi
@@ -108,18 +114,22 @@ if [ "$update_record" != 0 ]; then
     e2fsck -p "$datadev" > /dev/kmsg 2>&1
     [ "$?" -le 1 ] || rescue 'update data filesystem check'
     mount -t ext4 -o rw,nosuid,nodev "$datadev" /newdata || rescue 'update data mount'
-    # Same standard per-device entropy seed as normal boot; bounded helper, no
-    # weak RNG fallback. The verifier independently requires CRNG readiness.
-    /bin/busybox timeout 10 /bin/busybox seedrng --seed-dir=/newdata/system/entropy > /dev/kmsg 2>&1 || :
-    if [ "$update_record" = 1 ]; then
-        [ -n "$rootdev" ] || rescue 'no identifiable previous root for backup'
-        e2fsck -p "$rootdev" > /dev/kmsg 2>&1
-        [ "$?" -le 1 ] || rescue 'previous root is not safe to back up'
-    fi
     y2_stage rescue_update
-    /sbin/y2-update-core rescue > /run/y2/update-rescue.json || rescue 'update/restore failed; inspect update-rescue.json'
+    /sbin/y2-update-core boot-check > /run/y2/update-boot-check.json
+    update_decision=$?
+    cp /run/y2/update-boot-check.json /newdata/updates/boot-check-last.json 2>/dev/null
+    sync
     umount /newdata || rescue 'update data unmount'
-    rootdev=$(y2_find_partition Y2ROOT 79324c69-6e75-4801-8000-000000000101 166912 1679360)
+    case "$update_decision" in
+        10) : ;; # first boots of a new system are counted, then start normally
+        20)
+            # The recovery image restores the previous system on the next power-on.
+            echo '<3>Y2RESCUE: update unfinished; recovery requested; power off' > /dev/kmsg
+            sync
+            poweroff -f
+            rescue 'power off failed' ;;
+        *) rescue 'update needs attention; inspect update-boot-check.json' ;;
+    esac
 fi
 [ -n "$rootdev" ] || rescue 'missing/invalid internal Y2ROOT'
 

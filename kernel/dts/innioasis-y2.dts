@@ -178,7 +178,12 @@
     aliases { serial0 = &uart0; };
     chosen {
         stdout-path = "serial0";
+#ifdef Y2_RECOVERY
+        /* OTA-35 RECOVERY image: the only difference to BOOTIMG's tree. */
+        bootargs = "rdinit=/init earlycon console=ttyS0,921600n8 console=tty0 loglevel=3 panic=0 log_buf_len=1M user_debug=31 y2.recovery=1";
+#else
         bootargs = "rdinit=/init earlycon console=ttyS0,921600n8 console=tty0 loglevel=3 panic=0 log_buf_len=1M user_debug=31";
+#endif
         linux,initrd-start = <0x84000000>;
         linux,initrd-end = <Y2_INITRD_END>;
     };

@@ -80,7 +80,7 @@ def check_storage(nodes, handle):
     require(emmc['vqmmc-supply']==cells(handle(rails+'ldo_vio18')), 'eMMC IO on VIO18')
     require(sd['vmmc-supply']==cells(handle(rails+'ldo_vmch')) and sd['vqmmc-supply']==cells(handle(rails+'ldo_vmc')), 'SD card/IO rails')
 
-def check(data, initrd_size, production=True):
+def check(data, initrd_size, production=True, recovery=False):
     nodes,reserved=fdt(data)
     connectivity=CONN in nodes
     gpu=GPU in nodes
@@ -106,6 +106,8 @@ def check(data, initrd_size, production=True):
     require(chosen['stdout-path']==strings('serial0') and nodes['/aliases']['serial0']==strings('/serial@11002000'), 'UART observation path')
     args=chosen['bootargs'].decode().rstrip('\0')
     expected_args='rdinit=/init earlycon console=ttyS0,921600n8 console=tty0 loglevel=3 panic=0 log_buf_len=1M user_debug=31'
+    if recovery:
+        expected_args+=' y2.recovery=1'
     require(args==expected_args, 'profile command line')
     power='/thermal@1100b000' in nodes
     regs=REGS|POWER_REGS if power else REGS

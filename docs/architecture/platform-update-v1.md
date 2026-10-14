@@ -1,5 +1,8 @@
 # Signed root-only update contract v1
 
+> **Superseded by [OTA-35 over-the-air updates](platform-ota-v2.md)** (2026-10-15): full-system
+> packages installed by the Y2 recovery image. Kept as the record of the root-only design.
+
 <!-- knowledge-base-scope: source-contract -->
 > **Source-contract scope.** This page describes software ownership and
 > interface behavior. See [current state](../CURRENT_PLATFORM_STATE.md) for the exact latest image

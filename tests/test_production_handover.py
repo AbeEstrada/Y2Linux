@@ -31,16 +31,23 @@ class Handover(unittest.TestCase):
             (p/'boot-modules/fixture/kernel').mkdir(parents=True)
             (p/'boot-modules/fixture/kernel/g_ncm.ko').write_bytes(b'NCM fixture')
             (p/'boot-modules/fixture/modules.dep').write_text('kernel/g_ncm.ko: kernel/usb_f_ncm.ko\n')
-            if failure in ('torn-update','restore-fails'):
-                (p/'newdata/updates').mkdir()
-                (p/'newdata/updates/state.json').write_text('{"schema":1,"state":"Installing"}')
+            (p/'newdata/updates').mkdir()
+            if failure.startswith('update-') or cmdline.endswith('y2.recovery=1'):
+                (p/'newdata/updates/state.json').write_text('{"schema":2,"state":"PendingHealth"}')
             script=(ROOT/'initramfs/production/init').read_text()
             # Replace the terminal rescue loop with a finite test exit, keeping
             # every call site and root handover branch as production implements it.
             start=script.index('rescue() {');end=script.index('\ncase ',start)
             script=script[:start]+"rescue() { echo \"RESCUE $*\" >> \"$LEDGER\"; exit 99; }\n"+script[end:]
-            script=re.sub(r'(?<![A-Za-z0-9_./])/(?:sbin|bin|dev|proc|sys|run|tmp|newroot|newdata|boot-modules|display\.ko)(?=[/\s"\']|$)',
-                          lambda m:str(p)+m.group(),script)
+            paths=lambda text:re.sub(r'(?<![A-Za-z0-9_./])/(?:sbin|bin|dev|proc|sys|run|tmp|newroot|newdata|boot-modules|display\.ko)(?=[/\s"\']|$)',
+                                     lambda m:str(p)+m.group(),text)
+            script=paths(script)
+            # The recovery image's script, with its two endless PID1 loops made finite.
+            recovery=(ROOT/'initramfs/production/recovery.sh').read_text()
+            recovery=recovery.replace('while :; do sleep 60; done','exit 98')
+            start=recovery.index('    while :; do\n        /bin/busybox sh');end=recovery.index('    done\n',start)+9
+            recovery=recovery[:start]+'    exit 97\n'+recovery[end:]
+            (p/'sbin/y2-recovery').write_text(paths(recovery))
             script=re.sub(r'^export PATH=.*$',f'export PATH={p}/bin:{p}/sbin:/usr/bin:/bin',script,flags=re.M)
             script=script.replace('exec switch_root ',f'exec {p}/bin/switch_root ')
             # The fake mount command records ordering and can inject handover failure.
@@ -54,21 +61,27 @@ esac;;
 e2fsck) [ "$FAILURE" != fsck ] || exit 4;;
 y2-offline-charge) [ "$FAILURE" != boot-metadata ] || exit 2;;
 y2-update-core)
-  [ "$1" != rescue-needed ] || exit 11
-  [ "$FAILURE" != restore-fails ] || exit 1
-  touch "$LEDGER.restored";;
+  case "$1:$FAILURE" in
+  boot-needed:*) exit 0;;
+  boot-check:update-recover) exit 20;;
+  boot-check:update-attention) exit 11;;
+  boot-check:*) exit 10;;
+  recovery:recovery-stuck) echo '{"outcome":"rescue_required"}'; exit 1;;
+  recovery:*) echo '{"outcome":"installed","state":"PendingHealth"}';;
+  esac;;
+poweroff) [ "$FAILURE" != poweroff-fails ] || exit 1;;
 switch_root) [ "$FAILURE" != exec ] || exit 1; echo 'BUILDROOT INIT' >> "$LEDGER";;
 esac
 exit 0
 '''
             for name in ('mount','umount','mknod','sleep','chroot','switch_root','e2fsck',
-                         'y2-platform-start','y2-offline-charge','y2-abi-check','y2-usb-status','y2-status','y2-update-core'):
+                         'y2-platform-start','y2-offline-charge','y2-abi-check','y2-usb-status','y2-status','y2-update-core',
+                         'poweroff'):
                 target=p/('sbin' if name.startswith('y2-') or name=='e2fsck' else 'bin')/name
                 target.write_text('#!/nonexistent-interpreter\n' if name=='switch_root' and failure=='exec' else wrapper)
                 target.chmod(0o755)
             (p/'sbin/y2-storage').write_text('''y2_find_partition() {
  [ "$FAILURE" != missing ] || return 1
- if [ "$1" = Y2ROOT ] && [ "$FAILURE" = torn-update ] && [ ! -e "$LEDGER.restored" ]; then return 1; fi
  case "$1" in Y2ROOT) echo /dev/mmcblk0p5;; Y2DATA) echo /dev/mmcblk0p7;; esac
 }
 ''')
@@ -115,15 +128,38 @@ exit 0
                 self.assertNotIn('mount -t ext4 -o rw ',events)
                 if failure == 'boot-metadata': self.assertNotIn('mount -t ext4',events)
 
-    def test_torn_root_recovery_precedes_normal_identity_and_failed_restore_stays_in_ram(self):
-        result, events, _ = self.exercise('torn-update')
+    def test_unfinished_update_is_decided_before_the_root_is_trusted(self):
+        # OTA-35: the rescue never installs; it lets a new system start, routes
+        # an unfinished one to the recovery image (power off) or stays in RAM.
+        result, events, _ = self.exercise('update-continue')
         self.assertEqual(result.returncode,0,result.stderr)
-        self.assertLess(events.index('y2-update-core rescue'),events.index('mount -t ext4 -o ro,noload /dev/mmcblk0p5 /newroot'))
-        self.assertLess(events.index('e2fsck -p /dev/mmcblk0p7'),events.index('y2-update-core rescue\n'))
-        result, events, _ = self.exercise('restore-fails')
+        self.assertLess(events.index('e2fsck -p /dev/mmcblk0p7'),events.index('y2-update-core boot-check'))
+        self.assertLess(events.index('y2-update-core boot-check'),events.index('mount -t ext4 -o ro,noload /dev/mmcblk0p5 /newroot'))
+        self.assertIn('BUILDROOT INIT',events)
+        result, events, _ = self.exercise('update-recover')
         self.assertEqual(result.returncode,99,result.stderr)
+        self.assertIn('poweroff -f',events)
+        self.assertNotIn('mount -t ext4 -o ro,noload /dev/mmcblk0p5',events)
         self.assertNotIn('switch_root ',events)
+        result, events, _ = self.exercise('update-attention')
+        self.assertEqual(result.returncode,99,result.stderr)
         self.assertNotIn('mount -t ext4 -o rw /dev/mmcblk0p5',events)
+        self.assertNotIn('poweroff',events)
+
+    def test_recovery_image_installs_and_powers_off_without_starting_the_system(self):
+        result, events, log = self.exercise(cmdline='rdinit=/init y2.recovery=1')
+        self.assertEqual(result.returncode,98,result.stderr)
+        sequence=['y2-platform-start','e2fsck -p /dev/mmcblk0p7','mount -t ext4 -o rw,nosuid,nodev /dev/mmcblk0p7 /newdata',
+                  'y2-update-core recovery','umount /newdata','poweroff -f']
+        positions=[events.index(event) for event in sequence]
+        self.assertEqual(positions,sorted(positions))
+        for absent in ('y2-offline-charge','/dev/mmcblk0p5','switch_root','y2-abi-check'):
+            self.assertNotIn(absent,events)
+        self.assertIn('power off',log)   # the fixture kmsg keeps the last line only
+        result, events, log = self.exercise('recovery-stuck', cmdline='rdinit=/init y2.recovery=1')
+        self.assertEqual(result.returncode,97,result.stderr)
+        self.assertNotIn('poweroff',events)
+        self.assertIn('staying in recovery',log)
 
     def test_explicit_rescue_never_mounts_a_filesystem(self):
         result,events,_=self.exercise(cmdline='rdinit=/init y2.rescue=1')

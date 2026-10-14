@@ -1,5 +1,16 @@
 /* SPDX-License-Identifier: GPL-2.0-only
- * Root-only signed rescue updater. No BOOTIMG/partition-table write path.
+ * Signed full-system updater (OTA-35). One native policy authority shared by
+ * the normal system, the BOOTIMG rescue and the Y2 recovery image:
+ *
+ *   normal    check/queue a signed package, install a newer RECOVERY image,
+ *             request recovery through the MISC bootloader message, ack/rollback
+ *   rescue    boot-check: route an unfinished update to recovery, never install
+ *   recovery  back up BOOTIMG + Y2ROOT, write and read back both, restore both
+ *
+ * LK boots RECOVERY while MISC starts with "boot-recovery"; the request is
+ * cleared only after the installed or restored images are verified, so a power
+ * loss re-enters recovery. A kernel never writes the image it was booted from
+ * (kernel/platform/storage-policy.h enforces the same rule below this tool).
  * Y2_UPDATE_TEST enables regular-file/fault fixtures; never used in the image.
  */
 #define _GNU_SOURCE
@@ -30,9 +41,26 @@
 #define LIMIT (820ULL * 1024 * 1024)
 #define RESERVE (96ULL * 1024 * 1024)
 #define CHUNK 131072
+/* Stock logical disk (mmcblk0, 15203328 sectors); see storage-policy.h. */
+#define DISK_SECTORS 15203328ULL
+#define IMAGE_BYTES (16ULL * 1024 * 1024)
+#define BOOTIMG_OFFSET (60416ULL * 512)
+#define RECOVERY_OFFSET (93184ULL * 512)
+#define MISC_OFFSET (138240ULL * 512)
+#define MISC_BYTES 4096
+#define BOOT_NAME "Y2Linux-M1"
+#define RECOVERY_NAME "Y2Recovery-1"
+#define RECOVERY_API 1
+#define HEALTH_BOOTS 2
+
+enum kind { ROOT, BOOT, RECOVERY, REGION };
+static const char *const payload_key[] = {"rootfs", "bootimg", "recovery", ""};
+static const char *const payload_file[] = {"rootfs.ext4.gz", "bootimg.img.gz", "recovery.img.gz", ""};
+
 static char error_text[192];
 static int basefd = -1;
 static const char *testroot;
+static bool recovery_env;
 static bool failure(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -194,6 +222,34 @@ static const char *hash_string(const unsigned char *sum) {
     sodium_bin2hex(out, sizeof(out), sum, 32);
     return out;
 }
+static bool readtext(const char *name, char *buf, size_t cap) {
+    FILE *f = fopen(path(name), "re");
+    if (!f)
+        return false;
+    bool ok = fgets(buf, (int)cap, f) != NULL && !ferror(f);
+    fclose(f);
+    if (ok)
+        buf[strcspn(buf, "\r\n")] = 0;
+    return ok;
+}
+static bool text_is(const char *name, const char *want) {
+    char buf[256];
+    return readtext(name, buf, sizeof(buf)) && !strcmp(buf, want);
+}
+/* Coarse progress for the recovery screen: "<percent> <step>". Best effort. */
+static void progress(unsigned percent, const char *step) {
+    if (!recovery_env)
+        return;
+    char buf[64];
+    int n = snprintf(buf, sizeof(buf), "%u %s\n", percent > 100 ? 100 : percent, step);
+    int fd = open(path("/run/y2/recovery-progress.tmp"), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+    if (fd < 0)
+        return;
+    bool ok = n > 0 && writeall(fd, buf, (size_t)n);
+    close(fd);
+    if (ok)
+        rename(path("/run/y2/recovery-progress.tmp"), path("/run/y2/recovery-progress"));
+}
 static bool enough(int fd, uint64_t bytes) {
 #ifdef Y2_UPDATE_TEST
     if (getenv("Y2_TEST_FAULT") && !strcmp(getenv("Y2_TEST_FAULT"), "reserve"))
@@ -223,12 +279,37 @@ static uint64_t root_bytes(const unsigned char *buf) {
     uint64_t size = blocks * (1024ULL << log);
     return size >= 8 * 1024 * 1024 && size <= LIMIT ? size : 0;
 }
-/* gzip must have one member, exact encoded and raw lengths, hashes, ext4 identity.
- * The first pass has no destination; installation repeats validation while writing.
+/* The one reviewed legacy Android/MTK layout (tools/validation/bootimg.py):
+ * 2048-byte pages, MTK-wrapped KERNEL and ROOTFS/RECOVERY, our image name. */
+static bool boot_identity(const unsigned char *b, uint64_t len, enum kind kind) {
+    if (len < 4096 || len > IMAGE_BYTES || memcmp(b, "ANDROID!", 8) || u32(b + 36) != 2048)
+        return false;
+    char name[17] = {0};
+    memcpy(name, b + 48, 16);
+    if (strcmp(name, kind == RECOVERY ? RECOVERY_NAME : BOOT_NAME))
+        return false;
+    uint64_t k = u32(b + 8), r = u32(b + 16);
+    uint64_t ko = 2048, ro = ko + ((k + 2047) & ~2047ULL);
+    if (k < 512 || r < 512 || ro + ((r + 2047) & ~2047ULL) > len)
+        return false;
+    const char *label = kind == RECOVERY ? "RECOVERY" : "ROOTFS";
+    char want[32] = {0};
+    memcpy(want, label, strlen(label));
+    return u32(b + ko) == 0x58881688 && u32(b + ko + 4) == k - 512 &&
+           !memcmp(b + ko + 8, "KERNEL\0", 7) && u32(b + ro) == 0x58881688 &&
+           u32(b + ro + 4) == r - 512 && !memcmp(b + ro + 8, want, 32);
+}
+/* gzip must have one member, exact encoded and raw lengths, hashes and the
+ * kind's identity. Root streams to a descriptor; boot images and backups of
+ * the 16 MiB image spans decode into a zero-filled buffer for aligned I/O.
  */
-static bool stream_image(int input, int output, json_object *payload, bool inject) {
+static bool stream_image(int input, int output, unsigned char *mem, json_object *payload,
+                         enum kind kind, bool inject) {
+    uint64_t limit = kind == ROOT ? LIMIT : IMAGE_BYTES;
+    uint64_t minimum = kind == ROOT ? 8 * 1024 * 1024 : 4096;
     if (num(payload, "bytes") <= 0 || num(payload, "bytes") > (int64_t)LIMIT ||
-        num(payload, "raw_bytes") < 8 * 1024 * 1024 || num(payload, "raw_bytes") > (int64_t)LIMIT)
+        num(payload, "raw_bytes") < (int64_t)minimum || num(payload, "raw_bytes") > (int64_t)limit ||
+        (kind == REGION && num(payload, "raw_bytes") != (int64_t)IMAGE_BYTES))
         return failure("image metadata bounds");
     unsigned char in[CHUNK], out[CHUNK], header[4096], csum[32], rsum[32];
     size_t head = 0;
@@ -243,6 +324,8 @@ static bool stream_image(int input, int output, json_object *payload, bool injec
         inflateEnd(&z);
         return failure("image seek");
     }
+    if (mem)
+        memset(mem, 0, IMAGE_BYTES);
     bool ok = false, ended = false;
     for (;;) {
         ssize_t n = read(input, in, sizeof(in));
@@ -285,9 +368,11 @@ static bool stream_image(int input, int output, json_object *payload, bool injec
                 memcpy(header + head, out, copy);
                 head += copy;
             }
+            if (mem && count)
+                memcpy(mem + raw, out, count);
             raw += count;
             crypto_hash_sha256_update(&rh, out, count);
-            if (head == sizeof(header) &&
+            if (kind == ROOT && head == sizeof(header) &&
                 root_bytes(header) != (uint64_t)num(payload, "raw_bytes")) {
                 failure("root ext4 identity/extent");
                 goto done;
@@ -326,11 +411,22 @@ static bool stream_image(int input, int output, json_object *payload, bool injec
          sha_match(rsum, str(payload, "raw_sha256"));
     if (!ok)
         failure("payload hash/size mismatch");
+    else if ((kind == BOOT || kind == RECOVERY) && !(mem && boot_identity(mem, raw, kind)))
+        ok = failure("%s image identity", payload_key[kind]);
 done:
     inflateEnd(&z);
     return ok;
 }
+static bool drop_cache(int fd) {
+    /* Read back the medium, not the page cache that the write just filled. */
+    if (ioctl(fd, BLKFLSBUF, 0) && errno != ENOTTY && errno != EINVAL)
+        return failure("cache invalidate: %s", strerror(errno));
+    posix_fadvise(fd, 0, 0, POSIX_FADV_DONTNEED);
+    return true;
+}
 static bool file_hash(int fd, uint64_t count, const char *expected) {
+    if (!drop_cache(fd))
+        return false;
     if (lseek(fd, 0, SEEK_SET) < 0)
         return failure("readback seek");
     crypto_hash_sha256_state h;
@@ -354,6 +450,35 @@ static bool crypto_ready(void) {
     return (getrandom(&ready, 1, GRND_NONBLOCK) == 1 && sodium_init() >= 0) ||
            failure("kernel entropy not ready");
 }
+static bool payload_contract(json_object *p, enum kind kind) {
+    unsigned char hash[32];
+    uint64_t limit = kind == ROOT ? LIMIT : IMAGE_BYTES;
+    return p && json_object_is_type(p, json_type_object) &&
+           !strcmp(str(p, "name"), payload_file[kind]) && !strcmp(str(p, "encoding"), "gzip") &&
+           num(p, "bytes") >= 1 && num(p, "bytes") <= (int64_t)LIMIT &&
+           num(p, "raw_bytes") >= (kind == ROOT ? 8 * 1024 * 1024 : 4096) &&
+           num(p, "raw_bytes") <= (int64_t)limit && hex(str(p, "sha256"), 32, hash) &&
+           hex(str(p, "raw_sha256"), 32, hash);
+}
+static json_object *payload(json_object *m, enum kind kind) {
+    return field(field(m, "payloads"), payload_key[kind]);
+}
+static bool check_payload(int package, json_object *m, enum kind kind, unsigned char *mem) {
+    int fd = openfile(package, payload_file[kind], O_RDONLY, 0);
+    if (fd < 0)
+        return false;
+    bool ok = stream_image(fd, -1, mem, payload(m, kind), kind, false);
+    close(fd);
+    return ok;
+}
+static unsigned char *image_buffer(void) {
+    void *p = NULL;
+    if (posix_memalign(&p, 4096, IMAGE_BYTES)) {
+        failure("image buffer allocation");
+        return NULL;
+    }
+    return p;
+}
 static json_object *verify(int package, bool payload_check) {
     if (!crypto_ready())
         return NULL;
@@ -369,7 +494,7 @@ static json_object *verify(int package, bool payload_check) {
     compat = load(AT_FDCWD, path("/etc/y2linux/update-compat.json"));
     if (!trust || !compat)
         goto fail;
-    if (num(m, "schema") != 1 || num(trust, "schema") != 1 || num(compat, "schema") != 1) {
+    if (num(trust, "schema") != 1 || num(compat, "schema") != 2) {
         failure("schema incompatible");
         goto fail;
     }
@@ -402,17 +527,23 @@ static json_object *verify(int package, bool payload_check) {
         goto fail;
     }
     /* Nothing from the manifest is acted on before authentication. */
-    const char *exact[] = {"product", "hardware_revision", "kernel", "rootfs_contract", NULL};
+    if (num(m, "schema") != 2) {
+        failure("manifest schema");
+        goto fail;
+    }
+    const char *exact[] = {"product", "hardware_revision", "rootfs_contract", NULL};
     for (unsigned i = 0; exact[i]; i++)
         if (!*str(m, exact[i]) || strcmp(str(m, exact[i]), str(compat, exact[i]))) {
             failure("incompatible %s", exact[i]);
             goto fail;
         }
-    if (num(m, "layout_schema") != 1 || num(m, "data_schema") != 1 || num(m, "rescue_api") != 1 ||
-        num(m, "reborn_database_schema") != 1 || num(m, "sequence") < 1 ||
-        num(m, "minimum_sequence") < 0 || num(m, "sequence") < num(key, "minimum_sequence") ||
+    if (num(m, "layout_schema") != num(compat, "layout_schema") ||
+        num(m, "data_schema") != num(compat, "data_schema") || num(m, "data_schema") < 1 ||
+        num(m, "recovery_api") != RECOVERY_API || num(m, "reborn_database_schema") != 1 ||
+        num(m, "sequence") < 1 || num(m, "minimum_sequence") < 0 ||
+        num(m, "sequence") < num(key, "minimum_sequence") ||
         num(m, "sequence") > num(key, "maximum_sequence") || !*str(m, "release_version") ||
-        !*str(m, "rootfs_version")) {
+        !*str(m, "rootfs_version") || !*str(m, "kernel")) {
         failure("version/schema/key policy");
         goto fail;
     }
@@ -430,7 +561,10 @@ static json_object *verify(int package, bool payload_check) {
             failure("accepted sequence invalid");
             goto fail;
         }
-        installed = num(water, "current_sequence");
+        /* The running system's own sequence wins over a stale record, e.g.
+         * after a computer flash of a newer release. */
+        if (num(water, "current_sequence") > installed)
+            installed = num(water, "current_sequence");
         downgrade |= num(m, "sequence") <= num(water, "sequence");
         json_object_put(water);
     } else if (errno != ENOENT) {
@@ -446,22 +580,19 @@ static json_object *verify(int package, bool payload_check) {
         failure("downgrade/replay refused");
         goto fail;
     }
-    json_object *p = field(m, "payload");
-    unsigned char hash[32];
-    if (!p || strcmp(str(p, "target"), "Y2ROOT") || strcmp(str(p, "name"), "rootfs.ext4.gz") ||
-        strcmp(str(p, "encoding"), "gzip") || num(p, "bytes") < 1 ||
-        num(p, "bytes") > (int64_t)LIMIT || num(p, "raw_bytes") < 8 * 1024 * 1024 ||
-        num(p, "raw_bytes") > (int64_t)LIMIT || !hex(str(p, "sha256"), 32, hash) ||
-        !hex(str(p, "raw_sha256"), 32, hash)) {
+    json_object *list = field(m, "payloads");
+    if (!list || !json_object_is_type(list, json_type_object) ||
+        !payload_contract(payload(m, ROOT), ROOT) || !payload_contract(payload(m, BOOT), BOOT) ||
+        (payload(m, RECOVERY) && !payload_contract(payload(m, RECOVERY), RECOVERY)) ||
+        json_object_object_length(list) != (payload(m, RECOVERY) ? 3 : 2)) {
         failure("payload contract");
         goto fail;
     }
     if (payload_check) {
-        int fd = openfile(package, "rootfs.ext4.gz", O_RDONLY, 0);
-        if (fd < 0)
-            goto fail;
-        bool ok = stream_image(fd, -1, p, false);
-        close(fd);
+        unsigned char *mem = image_buffer();
+        bool ok = mem && check_payload(package, m, ROOT, NULL) && check_payload(package, m, BOOT, mem) &&
+                  (!payload(m, RECOVERY) || check_payload(package, m, RECOVERY, mem));
+        free(mem);
         if (!ok)
             goto fail;
     }
@@ -486,30 +617,181 @@ fail:
         json_object_put(m);
     return NULL;
 }
-static bool readtext(const char *name, char *buf, size_t cap) {
-    FILE *f = fopen(path(name), "re");
-    if (!f)
+/* Internal eMMC by controller, media type and immutable geometry; never a
+ * caller-supplied device path. Writes are confined to the matching kernel policy. */
+static bool internal_disk(const char *actual, char *parent, size_t cap) {
+    if (!strstr(actual, "/11230000.mmc/") || !strstr(actual, "/block/"))
         return false;
-    bool ok = fgets(buf, (int)cap, f) != NULL && !ferror(f);
-    fclose(f);
-    if (ok)
-        buf[strcspn(buf, "\r\n")] = 0;
+    char item[PATH_MAX + 32];
+    if (snprintf(parent, cap, "%s", actual) >= (int)cap)
+        return false;
+    snprintf(item, sizeof(item), "%s/removable", parent);
+    if (!text_is(item, "0"))
+        return false;
+    snprintf(item, sizeof(item), "%s/device/type", parent);
+    return text_is(item, "MMC");
+}
+static bool environment_writer(void) {
+#ifdef Y2_UPDATE_TEST
+    if (testroot)
+        return true;
+#endif
+    /* The recovery initramfs marker and the kernel's own image identity agree. */
+    char meta[160];
+    return (text_is("/etc/y2linux/recovery-update", "1") &&
+            readtext("/sys/firmware/y2_boot/metadata", meta, sizeof(meta)) &&
+            strstr(meta, " recovery_image=1")) ||
+           failure("Y2 recovery environment required");
+}
+static int disk_device(void) {
+#ifdef Y2_UPDATE_TEST
+    if (testroot)
+        return openfile(AT_FDCWD, path("/disk.img"), O_RDWR, 0);
+#endif
+    DIR *dir = opendir("/sys/class/block");
+    if (!dir) {
+        failure("block inventory");
+        return -1;
+    }
+    struct dirent *e;
+    int result = -1;
+    while ((e = readdir(dir))) {
+        if (e->d_name[0] == '.' || strchr(e->d_name, '/'))
+            continue;
+        char link[320], actual[PATH_MAX], parent[PATH_MAX], item[PATH_MAX + 32], dev[320];
+        snprintf(link, sizeof(link), "/sys/class/block/%s", e->d_name);
+        if (!realpath(link, actual))
+            continue;
+        snprintf(item, sizeof(item), "%s/partition", link);
+        if (!access(item, F_OK))
+            continue;
+        if (!internal_disk(actual, parent, sizeof(parent)))
+            continue;
+        snprintf(item, sizeof(item), "%s/size", parent);
+        if (!text_is(item, "15203328"))
+            continue;
+        snprintf(dev, sizeof(dev), "/dev/%s", e->d_name);
+        struct stat st;
+        if (lstat(dev, &st) || !S_ISBLK(st.st_mode))
+            continue;
+        if (result >= 0) {
+            close(result);
+            closedir(dir);
+            failure("ambiguous internal disk");
+            return -1;
+        }
+        result = open(dev, O_RDWR | O_CLOEXEC | O_DIRECT | O_SYNC | O_NOFOLLOW);
+        uint64_t bytes = 0;
+        struct stat opened;
+        if (result < 0 || ioctl(result, BLKGETSIZE64, &bytes) || bytes != DISK_SECTORS * 512 ||
+            fstat(result, &opened) || opened.st_rdev != st.st_rdev) {
+            if (result >= 0)
+                close(result);
+            closedir(dir);
+            failure("internal disk identity");
+            return -1;
+        }
+    }
+    closedir(dir);
+    if (result < 0)
+        failure("internal disk unavailable");
+    return result;
+}
+static bool region_read(int fd, uint64_t offset, unsigned char *buf, size_t n) {
+    size_t got = 0;
+    while (got < n) {
+        ssize_t r = pread(fd, buf + got, n - got, (off_t)(offset + got));
+        if (r < 0 && errno == EINTR)
+            continue;
+        if (r <= 0)
+            return failure("disk read: %s", r < 0 ? strerror(errno) : "short");
+        got += (size_t)r;
+    }
+    return true;
+}
+/* Full span write, cache flush and an independent read of the medium. */
+static bool region_write(int fd, uint64_t offset, const unsigned char *buf, size_t n) {
+    size_t done = 0;
+    while (done < n) {
+        ssize_t w = pwrite(fd, buf + done, n - done, (off_t)(offset + done));
+        if (w < 0 && errno == EINTR)
+            continue;
+        if (w <= 0)
+            return failure("disk write: %s", w < 0 ? strerror(errno) : "short");
+        done += (size_t)w;
+    }
+    if (fsync(fd))
+        return failure("disk flush: %s", strerror(errno));
+    unsigned char *check = NULL;
+    if (posix_memalign((void **)&check, 4096, n))
+        return failure("readback allocation");
+    bool ok = region_read(fd, offset, check, n) && (!memcmp(check, buf, n) || failure("disk readback mismatch"));
+    free(check);
     return ok;
 }
-static bool text_is(const char *name, const char *want) {
-    char buf[256];
-    return readtext(name, buf, sizeof(buf)) && !strcmp(buf, want);
+/* Android bootloader message: command[32] status[32] recovery[768]. LK
+ * compares command with "boot-recovery"; recovery names our operation. */
+static bool misc_request(int disk, const char *operation) {
+    unsigned char *msg = NULL;
+    if (posix_memalign((void **)&msg, 4096, MISC_BYTES))
+        return failure("allocation");
+    bool ok = region_read(disk, MISC_OFFSET, msg, MISC_BYTES);
+    if (ok) {
+        memset(msg, 0, 2048);
+        if (operation) {
+            strcpy((char *)msg, "boot-recovery");
+            snprintf((char *)msg + 64, 768, "recovery\n--%s\n", operation);
+        }
+        ok = region_write(disk, MISC_OFFSET, msg, MISC_BYTES);
+    }
+    free(msg);
+    return ok;
+}
+static bool misc_operation(int disk, char *operation, size_t cap) {
+    unsigned char *msg = NULL;
+    if (posix_memalign((void **)&msg, 4096, MISC_BYTES))
+        return failure("allocation");
+    bool ok = region_read(disk, MISC_OFFSET, msg, MISC_BYTES);
+    operation[0] = 0;
+    if (ok && !strncmp((char *)msg, "boot-recovery", 32)) {
+        char field[769];
+        memcpy(field, msg + 64, 768);
+        field[768] = 0;
+        if (!strcmp(field, "recovery\n--y2-update\n"))
+            snprintf(operation, cap, "y2-update");
+        else if (!strcmp(field, "recovery\n--y2-probe\n"))
+            snprintf(operation, cap, "y2-probe");
+        else
+            snprintf(operation, cap, "other");
+    } else if (ok && memchr(msg, 0, 32) && msg[0])
+        snprintf(operation, cap, "unknown-command");
+    free(msg);
+    return ok;
+}
+/* LK must find a Y2 recovery image before we ask it to boot one. */
+static bool recovery_installed(int disk, unsigned char *mem, const char *raw_sha256, uint64_t raw_bytes) {
+    if (!region_read(disk, RECOVERY_OFFSET, mem, IMAGE_BYTES))
+        return false;
+    if (!boot_identity(mem, IMAGE_BYTES, RECOVERY))
+        return failure("RECOVERY holds no Y2 recovery image");
+    if (!raw_sha256)
+        return true;
+    unsigned char sum[32];
+    crypto_hash_sha256(sum, mem, raw_bytes);
+    if (!sha_match(sum, raw_sha256))
+        return failure("RECOVERY differs from package");
+    for (uint64_t i = raw_bytes; i < IMAGE_BYTES; i++)
+        if (mem[i])
+            return failure("RECOVERY differs from package");
+    return true;
 }
 static int root_device(void) {
 #ifdef Y2_UPDATE_TEST
     if (testroot)
         return openfile(AT_FDCWD, path("/root.img"), O_RDWR, 0);
 #endif
-    if (!text_is("/etc/y2linux/rescue-update", "1")) {
-        failure("rescue environment required");
+    if (!environment_writer())
         return -1;
-    }
-    /* Fixed sysfs geometry and controller, never a caller-supplied device path. */
     DIR *dir = opendir("/sys/class/block");
     if (!dir) {
         failure("block inventory");
@@ -522,8 +804,7 @@ static int root_device(void) {
             continue;
         char link[320], actual[PATH_MAX], item[PATH_MAX + 32], parent[PATH_MAX], dev[320];
         snprintf(link, sizeof(link), "/sys/class/block/%s", e->d_name);
-        if (!realpath(link, actual) || !strstr(actual, "/11230000.mmc/") ||
-            !strstr(actual, "/block/"))
+        if (!realpath(link, actual))
             continue;
         snprintf(item, sizeof(item), "%s/partition", link);
         if (access(item, R_OK))
@@ -534,16 +815,11 @@ static int root_device(void) {
         snprintf(item, sizeof(item), "%s/size", link);
         if (!text_is(item, "1679360"))
             continue;
-        strcpy(parent, actual);
-        char *slash = strrchr(parent, '/');
+        char *slash = strrchr(actual, '/');
         if (!slash)
             continue;
         *slash = 0;
-        snprintf(item, sizeof(item), "%s/removable", parent);
-        if (!text_is(item, "0"))
-            continue;
-        snprintf(item, sizeof(item), "%s/device/type", parent);
-        if (!text_is(item, "MMC"))
+        if (!internal_disk(actual, parent, sizeof(parent)))
             continue;
         snprintf(item, sizeof(item), "%s/size", parent);
         if (!text_is(item, "15203328") && !text_is(item, "15269888"))
@@ -610,22 +886,22 @@ static void boot_id(char *buf, size_t n) {
     if (!readtext("/proc/sys/kernel/random/boot_id", buf, n))
         buf[0] = 0;
 }
-static bool backup_root(int root, json_object *journal) {
-    unsigned char header[4096];
-    if (pread(root, header, sizeof(header), 0) != sizeof(header))
-        return failure("old root header");
-    uint64_t bytes = root_bytes(header);
-    if (!bytes)
-        return failure("old root identity/extent");
-    if (!state(journal, "BackingUp", NULL) || !enough(basefd, CHUNK))
+/* Compressed copy of an image (root extent or a 16 MiB boot span), verified by
+ * decompression before anything is overwritten. */
+static bool backup_stream(int source_fd, const unsigned char *source_mem, uint64_t bytes,
+                          const char *name, enum kind kind, json_object *record, unsigned base_pct) {
+    char tmp[64];
+    snprintf(tmp, sizeof(tmp), "%s.tmp", name);
+    if (!enough(basefd, CHUNK))
         return false;
-    unlinkat(basefd, "previous.ext4.gz.tmp", 0);
-    int out = openfile(basefd, "previous.ext4.gz.tmp", O_WRONLY | O_CREAT | O_EXCL, 0600);
+    unlinkat(basefd, tmp, 0);
+    int out = openfile(basefd, tmp, O_WRONLY | O_CREAT | O_EXCL, 0600);
     if (out < 0)
         return false;
     z_stream z = {0};
     bool ok = false;
-    if (deflateInit2(&z, 6, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY) != Z_OK) {
+    /* Level 1: the image is mostly free blocks; speed matters on battery. */
+    if (deflateInit2(&z, 1, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY) != Z_OK) {
         failure("backup gzip init");
         close(out);
         return false;
@@ -635,21 +911,27 @@ static bool backup_root(int root, json_object *journal) {
     crypto_hash_sha256_init(&rh);
     crypto_hash_sha256_init(&ch);
     uint64_t left = bytes, gzbytes = 0;
-    if (lseek(root, 0, SEEK_SET) < 0)
+    if (source_fd >= 0 && (!drop_cache(source_fd) || lseek(source_fd, 0, SEEK_SET) < 0))
         goto done;
     while (left) {
         size_t count = left < sizeof(in) ? (size_t)left : sizeof(in);
-        ssize_t got = read(root, in, count);
-        if (got < 0 && errno == EINTR)
-            continue;
-        if (got <= 0) {
-            failure("backup read");
-            goto done;
+        const unsigned char *data = in;
+        if (source_mem)
+            data = source_mem + (bytes - left);
+        else {
+            ssize_t got = read(source_fd, in, count);
+            if (got < 0 && errno == EINTR)
+                continue;
+            if (got <= 0) {
+                failure("backup read");
+                goto done;
+            }
+            count = (size_t)got;
         }
-        left -= (uint64_t)got;
-        crypto_hash_sha256_update(&rh, in, (size_t)got);
-        z.next_in = in;
-        z.avail_in = (uInt)got;
+        left -= count;
+        crypto_hash_sha256_update(&rh, data, count);
+        z.next_in = (unsigned char *)data;
+        z.avail_in = (uInt)count;
         int rc;
         do {
             z.next_out = encoded;
@@ -659,12 +941,13 @@ static bool backup_root(int root, json_object *journal) {
                 failure("backup compression");
                 goto done;
             }
-            count = sizeof(encoded) - z.avail_out;
-            if (!enough(basefd, count) || !writeall(out, encoded, count))
+            size_t made = sizeof(encoded) - z.avail_out;
+            if (!enough(basefd, made) || !writeall(out, encoded, made))
                 goto done;
-            crypto_hash_sha256_update(&ch, encoded, count);
-            gzbytes += count;
+            crypto_hash_sha256_update(&ch, encoded, made);
+            gzbytes += made;
         } while (z.avail_in || z.avail_out == 0 || (!left && rc != Z_STREAM_END));
+        progress(base_pct + (unsigned)((bytes - left) * 15 / bytes), "backup");
     }
     if (fsync(out)) {
         failure("backup fsync");
@@ -672,23 +955,19 @@ static bool backup_root(int root, json_object *journal) {
     }
     crypto_hash_sha256_final(&rh, rawsum);
     crypto_hash_sha256_final(&ch, gzsum);
-    json_object *p = json_object_new_object();
-    setnum(p, "raw_bytes", (int64_t)bytes);
-    setnum(p, "bytes", (int64_t)gzbytes);
-    setstr(p, "raw_sha256", hash_string(rawsum));
-    setstr(p, "sha256", hash_string(gzsum));
-    int verifyfd = openfile(basefd, "previous.ext4.gz.tmp", O_RDONLY, 0);
-    ok = verifyfd >= 0 && stream_image(verifyfd, -1, p, false);
+    setnum(record, "raw_bytes", (int64_t)bytes);
+    setnum(record, "bytes", (int64_t)gzbytes);
+    setstr(record, "raw_sha256", hash_string(rawsum));
+    setstr(record, "sha256", hash_string(gzsum));
+    int verifyfd = openfile(basefd, tmp, O_RDONLY, 0);
+    unsigned char *mem = kind == REGION ? image_buffer() : NULL;
+    ok = verifyfd >= 0 && (kind != REGION || mem) &&
+         stream_image(verifyfd, -1, mem, record, kind, false);
+    free(mem);
     if (verifyfd >= 0)
         close(verifyfd);
     if (ok)
-        ok = renameat(basefd, "previous.ext4.gz.tmp", basefd, "previous.ext4.gz") == 0 &&
-             fsync(basefd) == 0;
-    if (ok) {
-        json_object_object_add(journal, "backup", p);
-        ok = save("state.json", journal);
-    } else
-        json_object_put(p);
+        ok = renameat(basefd, tmp, basefd, name) == 0 && fsync(basefd) == 0;
 done:
     deflateEnd(&z);
     close(out);
@@ -696,17 +975,51 @@ done:
         failure("backup failed");
     return ok;
 }
-static bool restore(int root, json_object *j, const char *reason) {
-    json_object *p = field(j, "backup");
-    if (!p)
-        return failure("no verified backup");
-    int fd = openfile(basefd, "previous.ext4.gz", O_RDONLY, 0);
-    if (fd < 0)
+static bool backup(int root, int disk, unsigned char *mem, json_object *journal) {
+    unsigned char header[4096];
+    if (pread(root, header, sizeof(header), 0) != sizeof(header))
+        return failure("old root header");
+    uint64_t bytes = root_bytes(header);
+    if (!bytes)
+        return failure("old root identity/extent");
+    if (!state(journal, "BackingUp", NULL))
         return false;
-    bool ok = stream_image(fd, -1, p, false) && state(j, "RollingBack", reason) &&
-              stream_image(fd, root, p, false) && fsync(root) == 0 &&
-              file_hash(root, (uint64_t)num(p, "raw_bytes"), str(p, "raw_sha256"));
-    close(fd);
+    json_object *saved = json_object_new_object(), *r = json_object_new_object(),
+                *b = json_object_new_object();
+    json_object_object_add(saved, "root", r);
+    json_object_object_add(saved, "bootimg", b);
+    bool ok = backup_stream(root, NULL, bytes, "previous.ext4.gz", ROOT, r, 10) &&
+              region_read(disk, BOOTIMG_OFFSET, mem, IMAGE_BYTES) &&
+              backup_stream(-1, mem, IMAGE_BYTES, "previous-bootimg.gz", REGION, b, 25);
+    if (!ok) {
+        json_object_put(saved);
+        return false;
+    }
+    json_object_object_add(journal, "backup", saved);
+    return save("state.json", journal);
+}
+static bool restore(int root, int disk, unsigned char *mem, json_object *j, const char *reason) {
+    json_object *saved = field(j, "backup"), *r = field(saved, "root"), *b = field(saved, "bootimg");
+    if (!r || !b)
+        return failure("no verified backup");
+    progress(5, "restore");
+    int rf = openfile(basefd, "previous.ext4.gz", O_RDONLY, 0);
+    int bf = rf >= 0 ? openfile(basefd, "previous-bootimg.gz", O_RDONLY, 0) : -1;
+    bool ok = rf >= 0 && bf >= 0 && stream_image(rf, -1, NULL, r, ROOT, false) &&
+              stream_image(bf, -1, mem, b, REGION, false) && state(j, "RollingBack", reason);
+    if (ok) {
+        progress(20, "restore");
+        ok = stream_image(rf, root, NULL, r, ROOT, false) && fsync(root) == 0 &&
+             file_hash(root, (uint64_t)num(r, "raw_bytes"), str(r, "raw_sha256"));
+    }
+    if (ok) {
+        progress(80, "restore");
+        ok = region_write(disk, BOOTIMG_OFFSET, mem, IMAGE_BYTES);
+    }
+    if (rf >= 0)
+        close(rf);
+    if (bf >= 0)
+        close(bf);
     if (!ok) {
         char why[192];
         snprintf(why, sizeof(why), "%s", error_text);
@@ -720,12 +1033,13 @@ static bool restore(int root, json_object *j, const char *reason) {
         water = json_object_new_object();
         setnum(water, "sequence", 0);
     }
-    setnum(water, "current_sequence", num(j, "previous_sequence"));
-    ok = save("accepted.json", water) && state(j, "RolledBack", reason);
+    setnum(water, "current_sequence", num(j, "previous_sequence") > 0 ? num(j, "previous_sequence") : 0);
+    ok = save("accepted.json", water) && state(j, "RolledBack", reason) && misc_request(disk, NULL);
     json_object_put(water);
+    progress(100, "restored");
     return ok;
 }
-static bool external_power(void) {
+static bool battery_safe(void) {
 #ifdef Y2_UPDATE_TEST
     if (testroot)
         return text_is("/external-power", "1");
@@ -747,69 +1061,112 @@ static bool external_power(void) {
             online = true;
     }
     closedir(d);
-    return online;
+    /* The owner gate (charger or 50 %) runs before power-off. This is the
+     * installer's own floor: charger or a battery that is clearly not empty. */
+    char volts[32];
+    long uv = readtext("/sys/class/power_supply/BAT0/voltage_now", volts, sizeof(volts))
+                  ? strtol(volts, NULL, 10) : 0;
+    return online || uv >= 3700000;
 }
-static bool rescue(json_object *j) {
-    char current[64];
+static void outcome(json_object *j, const char *what) { setstr(j, "outcome", what); }
+/* The installer that runs from RECOVERY. MISC stays "boot-recovery" until the
+ * outcome is verified and durable; every interruption returns here. */
+static bool recover(json_object *j) {
+    char current[64], operation[32];
     boot_id(current, sizeof(current));
     if (!*current)
         return failure("boot identity missing");
-    const char *s = str(j, "state");
-    if (!strcmp(s, "Idle") || !strcmp(s, "Acknowledged") || !strcmp(s, "RolledBack") ||
-        !strcmp(s, "Failed"))
-        return true;
-    if (!strcmp(s, "RescueRequired"))
-        return failure("manual rescue required; no automatic retry");
-    if (!external_power())
-        return failure("external power required for rescue update/restore");
-    if (!crypto_ready())
+    if (!recovery_env || !environment_writer())
+        return failure("Y2 recovery environment required");
+    int disk = disk_device();
+    if (disk < 0)
         return false;
-    int root = root_device();
-    if (root < 0)
-        return false;
+    unsigned char *mem = image_buffer();
+    int root = -1;
     bool ok = false;
-    if (!strcmp(s, "Installing") || !strcmp(s, "RollingBack") || !strcmp(s, "RollbackPending") ||
-        (!strcmp(s, "PendingHealth") && strcmp(str(j, "boot_id"), current))) {
-        ok = restore(root, j, "unacknowledged/interrupted update");
+    const char *s = str(j, "state");
+    if (!mem || !misc_operation(disk, operation, sizeof(operation)))
+        goto done;
+    if (!strcmp(operation, "y2-probe")) {
+        json_object *probe = json_object_new_object();
+        char meta[160];
+        setstr(probe, "boot_id", current);
+        setstr(probe, "metadata", readtext("/sys/firmware/y2_boot/metadata", meta, sizeof(meta)) ? meta : "");
+        setstr(probe, "result", "recovery_started");
+        ok = save("recovery-probe.json", probe) && misc_request(disk, NULL);
+        json_object_put(probe);
+        outcome(j, "probe");
+        progress(100, "probe");
         goto done;
     }
-    if (!strcmp(s, "PendingHealth")) {
-        ok = true;
+    if (!strcmp(s, "Idle") || !strcmp(s, "Acknowledged") || !strcmp(s, "RolledBack") ||
+        !strcmp(s, "Failed") || !strcmp(s, "PendingHealth")) {
+        /* Nothing unfinished: a stale request or a completed install whose
+         * clearing was interrupted. Clear it and start the system normally. */
+        ok = misc_request(disk, NULL);
+        outcome(j, !strcmp(s, "PendingHealth") ? "installed" : "nothing");
+        progress(100, "done");
+        goto done;
+    }
+    if (!strcmp(s, "RescueRequired")) {
+        failure("manual rescue required; no automatic retry");
+        goto done;
+    }
+    if (!battery_safe()) {
+        failure("connect the charger to continue");
+        outcome(j, "needs_power");
+        goto done;
+    }
+    if (!crypto_ready())
+        goto done;
+    root = root_device();
+    if (root < 0)
+        goto done;
+    if (!strcmp(s, "Installing") || !strcmp(s, "RollingBack") || !strcmp(s, "RollbackPending")) {
+        ok = restore(root, disk, mem, j,
+                     !strcmp(s, "RollbackPending") && *str(j, "failure") ? str(j, "failure")
+                                                                          : "interrupted update");
+        outcome(j, ok ? "rolled_back" : "rescue_required");
         goto done;
     }
     if (strcmp(s, "Queued") && strcmp(s, "BackingUp")) {
         failure("unknown update state");
         goto done;
     }
+    progress(2, "verify");
     int pkg = openat(basefd, "pending", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-    if (pkg < 0) {
-        failure("pending package missing");
-        goto done;
-    }
-    json_object *m = verify(pkg, true);
+    json_object *m = pkg >= 0 ? verify(pkg, true) : NULL;
     if (!m || strcmp(str(m, "y2linux_commit"), str(j, "y2linux_commit")) ||
         num(m, "sequence") != num(j, "sequence") ||
         strcmp(str(m, "_manifest_sha256"), str(j, "manifest_sha256"))) {
         char why[192];
-        snprintf(why, sizeof(why), "%s", m ? "queued identity changed" : error_text);
+        snprintf(why, sizeof(why), "%s", m ? "queued identity changed" : pkg < 0 ? "pending package missing" : error_text);
         if (m)
             json_object_put(m);
-        close(pkg);
-        ok = state(j, "Failed", why);
+        if (pkg >= 0)
+            close(pkg);
+        ok = state(j, "Failed", why) && misc_request(disk, NULL);
+        outcome(j, "failed_unchanged");
         goto done;
     }
-    if (!backup_root(root, j)) {
+    if (!backup(root, disk, mem, j)) {
         char why[192];
         snprintf(why, sizeof(why), "%s", error_text);
-        ok = state(j, "Failed", why);
+        ok = state(j, "Failed", why) && misc_request(disk, NULL);
+        outcome(j, "failed_unchanged");
         json_object_put(m);
         close(pkg);
         goto done;
     }
-    json_object *p = field(m, "payload");
-    int fd = openfile(pkg, "rootfs.ext4.gz", O_RDONLY, 0);
-    ok = fd >= 0 && state(j, "Installing", NULL) && stream_image(fd, root, p, true) &&
-         fsync(root) == 0;
+    json_object *rp = payload(m, ROOT), *bp = payload(m, BOOT);
+    int rf = openfile(pkg, payload_file[ROOT], O_RDONLY, 0);
+    int bf = rf >= 0 ? openfile(pkg, payload_file[BOOT], O_RDONLY, 0) : -1;
+    /* Decode and verify the new BOOTIMG before the first write of anything. */
+    ok = bf >= 0 && stream_image(bf, -1, mem, bp, BOOT, false) && state(j, "Installing", NULL);
+    if (ok) {
+        progress(40, "system");
+        ok = stream_image(rf, root, NULL, rp, ROOT, true) && fsync(root) == 0;
+    }
 #ifdef Y2_UPDATE_TEST
     if (ok && getenv("Y2_TEST_FAULT") && !strcmp(getenv("Y2_TEST_FAULT"), "readback")) {
         unsigned char b = 0xff;
@@ -817,29 +1174,143 @@ static bool rescue(json_object *j) {
             ok = false;
     }
 #endif
-    if (ok)
-        ok = file_hash(root, (uint64_t)num(p, "raw_bytes"), str(p, "raw_sha256"));
-    if (fd >= 0)
-        close(fd);
+    if (ok) {
+        progress(70, "check");
+        ok = file_hash(root, (uint64_t)num(rp, "raw_bytes"), str(rp, "raw_sha256"));
+    }
+#ifdef Y2_UPDATE_TEST
+    if (ok && getenv("Y2_TEST_FAULT") && !strcmp(getenv("Y2_TEST_FAULT"), "boot_interrupt"))
+        _exit(92);
+#endif
+    if (ok) {
+        progress(85, "boot");
+        ok = region_write(disk, BOOTIMG_OFFSET, mem, IMAGE_BYTES);
+    }
+    if (rf >= 0)
+        close(rf);
+    if (bf >= 0)
+        close(bf);
     if (ok) {
         setstr(j, "boot_id", current);
-        ok = state(j, "PendingHealth", NULL);
+        json_object_object_del(j, "health_boots");
+        ok = state(j, "PendingHealth", NULL) && misc_request(disk, NULL);
+        outcome(j, "installed");
+        progress(100, "installed");
     } else {
         char why[192];
         snprintf(why, sizeof(why), "%s", error_text);
-        ok = restore(root, j, why);
+        ok = restore(root, disk, mem, j, why);
+        outcome(j, ok ? "rolled_back" : "rescue_required");
     }
     json_object_put(m);
     close(pkg);
 done:
-    close(root);
+    if (root >= 0)
+        close(root);
+    free(mem);
+    close(disk);
     return ok;
+}
+/* Normal system: put the package's recovery image in place if it is newer,
+ * prove that RECOVERY holds a Y2 recovery image, then ask LK for it. */
+static bool prepare(json_object *j, const char *operation) {
+    const char *s = str(j, "state");
+    if (!strcmp(operation, "y2-update") && strcmp(s, "Queued") && strcmp(s, "RollbackPending") &&
+        strcmp(s, "BackingUp") && strcmp(s, "Installing") && strcmp(s, "RollingBack"))
+        return failure("nothing to install or restore");
+    if (recovery_env)
+        return failure("recovery cannot request itself");
+    int disk = disk_device();
+    if (disk < 0)
+        return false;
+    unsigned char *mem = image_buffer();
+    bool ok = mem != NULL;
+    if (ok && !strcmp(s, "Queued") && !strcmp(operation, "y2-update")) {
+        int pkg = openat(basefd, "pending", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+        json_object *m = pkg >= 0 ? verify(pkg, false) : NULL;
+        ok = m && !strcmp(str(m, "_manifest_sha256"), str(j, "manifest_sha256"));
+        if (!ok && m)
+            failure("queued identity changed");
+        json_object *rp = ok ? payload(m, RECOVERY) : NULL;
+        if (ok && rp && !recovery_installed(disk, mem, str(rp, "raw_sha256"), (uint64_t)num(rp, "raw_bytes"))) {
+            /* Write the new installer while this kernel's BOOTIMG stays intact. */
+            ok = check_payload(pkg, m, RECOVERY, mem) &&
+                 region_write(disk, RECOVERY_OFFSET, mem, IMAGE_BYTES);
+            if (ok)
+                setstr(j, "recovery_installed", str(rp, "raw_sha256"));
+            ok = ok && save("state.json", j);
+        }
+        if (m)
+            json_object_put(m);
+        if (pkg >= 0)
+            close(pkg);
+    }
+    ok = ok && recovery_installed(disk, mem, NULL, 0) && misc_request(disk, operation);
+    if (ok && !strcmp(operation, "y2-update")) {
+        setnum(j, "recovery_requests", num(j, "recovery_requests") > 0 ? num(j, "recovery_requests") + 1 : 1);
+        ok = save("state.json", j);
+    }
+    free(mem);
+    close(disk);
+    return ok;
+}
+/* BOOTIMG rescue, before the root is mounted. Exit 10: boot normally;
+ * 20: recovery was requested, power off and tell the owner; 11: stay in rescue. */
+static int boot_check(json_object *j) {
+    char current[64];
+    boot_id(current, sizeof(current));
+    const char *s = str(j, "state");
+    int disk = -1;
+    int code = 10;
+    if (!strcmp(s, "Idle") || !strcmp(s, "Acknowledged") || !strcmp(s, "RolledBack") ||
+        !strcmp(s, "Failed"))
+        return 10;
+    if (!strcmp(s, "RescueRequired"))
+        return 11;
+    if (!strcmp(s, "Queued")) {
+        /* Nothing was written. If a request is still set LK did not honour it;
+         * never loop: give up the update and boot the intact system. */
+        char operation[32];
+        disk = disk_device();
+        if (disk < 0)
+            return 11;
+        if (misc_operation(disk, operation, sizeof(operation)) && !strcmp(operation, "y2-update")) {
+            if (!misc_request(disk, NULL) || !state(j, "Failed", "recovery did not start"))
+                code = 11;
+        }
+        close(disk);
+        return code;
+    }
+    if (!strcmp(s, "PendingHealth")) {
+        int64_t boots = num(j, "health_boots");
+        if (boots < 0)
+            boots = 0;
+        if (boots < HEALTH_BOOTS) {
+            setnum(j, "health_boots", boots + 1);
+            return save("state.json", j) ? 10 : 11;
+        }
+        if (!state(j, "RollbackPending", "new system did not confirm health"))
+            return 11;
+        s = str(j, "state");
+    }
+    /* RollbackPending, or an interrupted install whose request was lost. */
+    if (num(j, "recovery_requests") >= 3) {
+        state(j, "RescueRequired", "recovery was requested three times");
+        return 11;
+    }
+    if (!prepare(j, "y2-update"))
+        return 11;
+    return 20;
 }
 static json_object *initial(void) {
     json_object *j = json_object_new_object();
-    setnum(j, "schema", 1);
+    setnum(j, "schema", 2);
     setstr(j, "state", "Idle");
     return j;
+}
+static bool terminal(const char *s) {
+    return !strcmp(s, "Idle") || !strcmp(s, "Acknowledged") || !strcmp(s, "RolledBack") ||
+           !strcmp(s, "Failed");
 }
 int main(int argc, char **argv) {
 #ifdef Y2_UPDATE_TEST
@@ -848,12 +1319,16 @@ int main(int argc, char **argv) {
         fputs("test root required\n", stderr);
         return 2;
     }
+    recovery_env = getenv("Y2_TEST_RECOVERY") != NULL;
 #endif
     if (argc < 2 || argc > 3)
         return 2;
-    bool isrescue = !strcmp(argv[1], "rescue") || !strcmp(argv[1], "rescue-restore") ||
-                    !strcmp(argv[1], "rescue-needed");
-    const char *base = path(isrescue ? "/newdata/updates" : "/data/updates");
+    bool offline = !strcmp(argv[1], "recovery") || !strcmp(argv[1], "boot-check") ||
+                   !strcmp(argv[1], "boot-needed");
+#ifndef Y2_UPDATE_TEST
+    recovery_env = !strcmp(argv[1], "recovery");
+#endif
+    const char *base = path(offline ? "/newdata/updates" : "/data/updates");
     basefd = open(base, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
     if (basefd < 0) {
         failure("update state directory unavailable");
@@ -864,12 +1339,20 @@ int main(int argc, char **argv) {
         failure("update state permissions");
         goto output;
     }
-    if (strcmp(argv[1], "rescue-needed")) {
-        int lock = openfile(basefd, ".lock", O_RDWR | O_CREAT, 0600);
-        if (lock < 0 || flock(lock, LOCK_EX | LOCK_NB)) {
-            failure("update busy");
-            goto output;
-        }
+    if (!strcmp(argv[1], "boot-needed") && argc == 2) {
+        /* Read-only, on the rescue's read-only data mount: 10 = finished
+         * history, nothing to do; 0 = run boot-check on a writable mount. */
+        json_object *j = load(basefd, "state.json");
+        int code = j && num(j, "schema") == 2 && terminal(str(j, "state")) ? 10 : !j && errno == ENOENT ? 10 : 0;
+        if (j)
+            json_object_put(j);
+        close(basefd);
+        return code;
+    }
+    int lock = openfile(basefd, ".lock", O_RDWR | O_CREAT, 0600);
+    if (lock < 0 || flock(lock, LOCK_EX | LOCK_NB)) {
+        failure("update busy");
+        goto output;
     }
     bool ok = false;
     json_object *j = load(basefd, "state.json");
@@ -882,20 +1365,20 @@ int main(int argc, char **argv) {
             goto output;
         }
     }
-    if (num(j, "schema") != 1 || !*str(j, "state")) {
+    if (num(j, "schema") != 2 || !*str(j, "state")) {
         json_object_put(j);
         failure("update journal schema");
         goto output;
     }
-    if (!strcmp(argv[1], "rescue-needed") && argc == 2) {
-        const char *s = str(j, "state");
-        bool idle = !strcmp(s, "Idle") || !strcmp(s, "Acknowledged") || !strcmp(s, "RolledBack") ||
-                    !strcmp(s, "Failed");
-        bool install = !strcmp(s, "Queued") || !strcmp(s, "BackingUp");
+    if (!strcmp(argv[1], "boot-check") && argc == 2) {
+        int code = boot_check(j);
+        setnum(j, "boot_check", code);
+        if (code == 11 && error_text[0])
+            setstr(j, "boot_check_failure", error_text);
         puts(json_object_to_json_string_ext(j, JSON_C_TO_STRING_PLAIN));
         json_object_put(j);
         close(basefd);
-        return idle ? 10 : install ? 0 : 11;
+        return code;
     }
     if ((!strcmp(argv[1], "check") || !strcmp(argv[1], "check-manifest")) && argc == 3) {
         int pkg = open(path(argv[2]), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
@@ -911,9 +1394,7 @@ int main(int argc, char **argv) {
         if (!error_text[0])
             failure("package unavailable");
     } else if (!strcmp(argv[1], "queue") && argc == 2) {
-        const char *s = str(j, "state");
-        if (strcmp(s, "Idle") && strcmp(s, "Acknowledged") && strcmp(s, "RolledBack") &&
-            strcmp(s, "Failed"))
+        if (!terminal(str(j, "state")))
             failure("update already pending");
         else {
             int pkg = openat(basefd, "pending", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
@@ -921,6 +1402,7 @@ int main(int argc, char **argv) {
             if (pkg >= 0)
                 close(pkg);
             if (m) {
+                /* A new install takes fresh backups of whatever is running. */
                 json_object_put(j);
                 j = initial();
                 setnum(j, "sequence", num(m, "sequence"));
@@ -934,14 +1416,29 @@ int main(int argc, char **argv) {
                 json_object_put(m);
             }
         }
-    } else if (isrescue && argc == 2) {
-        if (!strcmp(argv[1], "rescue-restore")) {
-            if (!field(j, "backup")) {
-                failure("verified backup unavailable");
-            } else if (state(j, "RollbackPending", "owner rescue restore"))
-                ok = rescue(j);
-        } else
-            ok = rescue(j);
+    } else if (!strcmp(argv[1], "recovery") && argc == 2) {
+        ok = recover(j);
+    } else if (!strcmp(argv[1], "prepare") && argc == 2) {
+        ok = prepare(j, "y2-update");
+    } else if (!strcmp(argv[1], "probe") && argc == 2) {
+        if (!terminal(str(j, "state")))
+            failure("an update is in progress");
+        else
+            ok = prepare(j, "y2-probe");
+    } else if (!strcmp(argv[1], "misc") && argc == 2) {
+        int disk = recovery_env ? -1 : disk_device();
+        unsigned char *mem = disk >= 0 ? image_buffer() : NULL;
+        char operation[32];
+        if (mem && misc_operation(disk, operation, sizeof(operation))) {
+            setstr(j, "misc_request", *operation ? operation : "none");
+            json_object_object_add(j, "recovery_image_valid",
+                                   json_object_new_boolean(recovery_installed(disk, mem, NULL, 0)));
+            error_text[0] = 0;
+            ok = true;
+        }
+        free(mem);
+        if (disk >= 0)
+            close(disk);
     } else if (!strcmp(argv[1], "status") && argc == 2)
         ok = true;
     else if (!strcmp(argv[1], "ack") && argc == 2) {
@@ -949,9 +1446,9 @@ int main(int argc, char **argv) {
         boot_id(current, sizeof(current));
         json_object *versions = load(AT_FDCWD, path("/etc/y2linux/versions.json"));
         json_object *ready = load(AT_FDCWD, path("/run/y2/application-ready.json"));
-        if (strcmp(str(j, "state"), "PendingHealth") || strcmp(str(j, "boot_id"), current) ||
-            !versions || strcmp(str(versions, "build_git_commit"), str(j, "y2linux_commit")) ||
-            !ready || strcmp(str(ready, "boot_id"), current))
+        if (strcmp(str(j, "state"), "PendingHealth") || !versions ||
+            strcmp(str(versions, "build_git_commit"), str(j, "y2linux_commit")) || !ready ||
+            strcmp(str(ready, "boot_id"), current))
             failure("boot-health acknowledgement prerequisites");
         else {
             json_object *water = load(basefd, "accepted.json");
@@ -964,6 +1461,7 @@ int main(int argc, char **argv) {
             int64_t highest = num(water, "sequence");
             setnum(water, "sequence", highest > num(j, "sequence") ? highest : num(j, "sequence"));
             setnum(water, "current_sequence", num(j, "sequence"));
+            setstr(j, "boot_id", current);
             ok = save("accepted.json", water) && state(j, "Acknowledged", NULL);
             json_object_put(water);
         }
@@ -976,10 +1474,12 @@ int main(int argc, char **argv) {
         if (strcmp(str(j, "state"), "Queued"))
             failure("only queued updates can be cancelled");
         else
-            ok = state(j, "Failed", "owner cancelled before rescue installation");
+            ok = state(j, "Failed", "owner cancelled before installation");
     } else if (!strcmp(argv[1], "rollback") && argc == 2) {
-        if (!field(j, "backup") ||
-            !(yes(j, "rollback_allowed") || !strcmp(str(j, "state"), "PendingHealth")))
+        json_object *saved = field(j, "backup");
+        if (!field(saved, "root") || !field(saved, "bootimg") ||
+            !(yes(j, "rollback_allowed") || !strcmp(str(j, "state"), "PendingHealth")) ||
+            !(!strcmp(str(j, "state"), "Acknowledged") || !strcmp(str(j, "state"), "PendingHealth")))
             failure("rollback policy/backup unavailable");
         else
             ok = state(j, "RollbackPending", "owner/health requested restore");
@@ -992,7 +1492,15 @@ int main(int argc, char **argv) {
         close(basefd);
         return 0;
     }
-    json_object_put(j);
+    if (j && field(j, "outcome")) {
+        setstr(j, "error", error_text);
+        puts(json_object_to_json_string_ext(j, JSON_C_TO_STRING_PLAIN));
+        json_object_put(j);
+        close(basefd);
+        return 1;
+    }
+    if (j)
+        json_object_put(j);
 output: {
     json_object *e = json_object_new_object();
     setstr(e, "state", "Failed");

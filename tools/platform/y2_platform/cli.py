@@ -63,8 +63,9 @@ def main():
     export.add_argument('--include-database', action='store_true')
     export.add_argument('--include-network', action='store_true')
     update = sub.add_parser('update')
-    update.add_argument('action', choices=['status', 'check', 'stage', 'apply', 'rollback', 'cancel', 'health-ack'])
-    update.add_argument('--url', help='exact HTTPS manifest.json URL; no redirects')
+    update.add_argument('action', choices=['status', 'check', 'stage', 'apply', 'rollback', 'cancel', 'health-ack',
+                                           'auto-check', 'probe-recovery', 'recovery-status'])
+    update.add_argument('--url', help='HTTPS manifest.json URL (default: the release channel)')
     update.add_argument('--package', help='owner-supplied local signed package directory')
     sub.add_parser('time-bootstrap')
     sub.add_parser('time')
@@ -183,8 +184,14 @@ def main():
         from . import update
         try:
             if args.action in ('check', 'stage'):
-                url = args.url or (ctx.json('/data/updates/channel.json', {}).get('manifest_url') if not args.package else None)
+                url = args.url or (update.channel(ctx).get('manifest_url') if not args.package else None)
                 result = update.stage(ctx, args.package, url, args.action == 'check')
+            elif args.action == 'auto-check':
+                result = update.automatic_check(ctx)
+            elif args.action == 'probe-recovery':
+                result = update.probe(ctx)
+            elif args.action == 'recovery-status':
+                result = update.core(ctx, 'misc')
             elif args.action in ('apply', 'rollback'):
                 result = update.apply(ctx, args.action == 'rollback')
             elif args.action == 'cancel':

@@ -40,7 +40,8 @@ def rebuild(project, out, run):
     receipt = out/'userspace-source.json'
     retained = json.loads(receipt.read_text())
     commit = retained['base_build_git_commit']
-    for source in ('tools/update/core.c', 'tools/update/trust.json'):
+    for source in ('tools/update/core.c', 'tools/update/trust.json', 'tools/update/recovery-ui.c',
+                   'tools/update/font-ter16x32.h'):
         try:
             previous = subprocess.check_output(['git','show',commit+':'+source],cwd=project,stderr=subprocess.DEVNULL)
         except subprocess.CalledProcessError as error:
