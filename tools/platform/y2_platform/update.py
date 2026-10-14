@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import stat
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
@@ -50,7 +51,8 @@ def status(ctx):
         ready = ctx.read('/data/.y2data-schema') == '1' and ctx.path('/data/updates').is_dir()
         value = {'schema': 1, 'state': 'Idle' if ready else 'Unavailable',
                  'failure': None if ready else 'data_state_unavailable'}
-    if not isinstance(value, dict) or value.get('schema') != 1:
+    # The native core writes journal schema 2 since OTA-35 (BOOTIMG + root).
+    if not isinstance(value, dict) or value.get('schema') not in (1, 2):
         return {'schema': 1, 'state': 'Failed', 'failure': 'journal_unreadable'}
     return {**value, 'download': ctx.json('/data/updates/download.json'),
             'last_check': ctx.json('/data/updates/last-check.json'),
@@ -208,8 +210,18 @@ def stage(ctx, source=None, url=None, check_only=False):
                         raise ValueError('local_package_regular_files_required')
                     yield stream
         for name, maximum in [('manifest.json', 16384), ('manifest.sig', 64)]:
-            with get(name) as stream:
-                copy_stream(stream, incoming/name, maximum, exact=64 if name.endswith('.sig') else None, seconds=30)
+            try:
+                with get(name) as stream:
+                    copy_stream(stream, incoming/name, maximum, exact=64 if name.endswith('.sig') else None, seconds=30)
+            except urllib.error.HTTPError as error:
+                if not (check_only and error.code == 404 and name == 'manifest.json'):
+                    raise
+                # Nothing published on the channel yet: nothing newer to install.
+                remove_package(incoming)
+                installed = ctx.json('/etc/y2linux/versions.json', {}).get('release_version')
+                atomic_json(root/'download.json', {'schema': 1, 'state': 'Checked', 'up_to_date': True,
+                                                   'release_version': installed, 'published': False})
+                return {'state': 'UpToDate', 'release_version': installed}
         try:
             manifest = core(ctx, 'check-manifest', '/data/updates/' + token)
         except ValueError as error:

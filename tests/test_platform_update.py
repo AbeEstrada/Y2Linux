@@ -14,6 +14,7 @@ import struct
 import subprocess
 import tempfile
 import unittest
+import unittest.mock
 from unittest.mock import patch
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"tools/platform"))
@@ -378,6 +379,9 @@ class UpdateTests(unittest.TestCase):
             self.assertEqual(stage(ctx,source)['state'],'Queued')
             progress=json.loads((self.base/'download.json').read_text())
             self.assertEqual(progress['state'],'Verified')
+            # The platform reads the core's own journal (schema 2) as the queued update.
+            from y2_platform.update import status
+            self.assertEqual(status(ctx)['state'],'Queued')
         self.assertEqual((self.root/'root.img').read_bytes(),self.old)
         # The installed release offered again: a check says up to date, not a failure.
         self.write('etc/y2linux/versions.json', dict(self.versions, release_version='test-v1'))
@@ -474,6 +478,28 @@ class PlatformPolicyTests(unittest.TestCase):
                 handler.redirect_request(request, None, 302, 'Found', {}, url)
         followed = handler.redirect_request(request, None, 302, 'Found', {}, 'https://release-assets.githubusercontent.com/a?sig=1')
         self.assertEqual(followed.full_url, 'https://release-assets.githubusercontent.com/a?sig=1')
+
+    def test_journal_schemas_and_unpublished_channel(self):
+        from y2_platform import update
+        (self.root/'data/updates/state.json').write_text(json.dumps({'schema': 2, 'state': 'PendingHealth'}))
+        self.assertEqual(update.status(self.ctx)['state'], 'PendingHealth')
+        (self.root/'data/updates/state.json').write_text(json.dumps({'schema': 3, 'state': 'Idle'}))
+        self.assertEqual(update.status(self.ctx)['failure'], 'journal_unreadable')
+        (self.root/'data/updates/state.json').unlink()
+        (self.root/'etc/y2linux/versions.json').write_text(json.dumps({'release_version': 'v35'}))
+        import urllib.error
+        missing = urllib.error.HTTPError('https://github.com/x/manifest.json', 404, 'Not Found', {}, None)
+        opener = unittest.mock.MagicMock()
+        opener.open.side_effect = missing
+        with patch('y2_platform.timekeeping.status', return_value={'tls_ready': True, 'entropy_ready': True}), \
+             patch('y2_platform.update.data_volume', return_value={'generation': 1}), \
+             patch('urllib.request.build_opener', return_value=opener):
+            self.assertEqual(update.stage(self.ctx, url='https://github.com/o/r/releases/latest/download/manifest.json',
+                                          check_only=True)['state'], 'UpToDate')
+            checked = json.loads((self.root/'data/updates/download.json').read_text())
+            self.assertEqual((checked['state'], checked['release_version'], checked['published']), ('Checked', 'v35', False))
+            with self.assertRaises(urllib.error.HTTPError):   # a download never treats 404 as success
+                update.stage(self.ctx, url='https://github.com/o/r/releases/latest/download/manifest.json')
 
     def test_daily_check_is_rate_limited_and_never_shows_a_failed_update(self):
         from y2_platform import update
