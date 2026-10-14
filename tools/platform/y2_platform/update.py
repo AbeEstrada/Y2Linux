@@ -287,6 +287,14 @@ def stage(ctx, source=None, url=None, check_only=False):
         os.close(fd)
 
 
+def restart_mode(ctx):
+    """'reboot' once a software restart is proven on this player (the stock
+    external-reset sequence, 38); otherwise power off and the owner presses
+    Power. Owner switch: /data/updates/restart.json {"mode": "reboot"}."""
+    value = ctx.json('/data/updates/restart.json', {}) or {}
+    return 'reboot' if isinstance(value, dict) and value.get('mode') == 'reboot' else 'poweroff'
+
+
 def battery_gate(ctx):
     """Charger connected, or at least MINIMUM_PERCENT from this boot's estimate."""
     power = ctx.json('/run/y2/power.json', {}) or {}
@@ -312,7 +320,7 @@ def apply(ctx, rollback=False):
     battery_gate(ctx)
     core(ctx, 'prepare', timeout=120)
     from .power import rpc
-    return rpc(ctx, {'action': 'poweroff', 'reason': 'update'})
+    return rpc(ctx, {'action': restart_mode(ctx), 'reason': 'update'})
 
 
 @workload("Maintenance")

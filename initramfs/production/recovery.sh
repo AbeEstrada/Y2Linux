@@ -16,7 +16,15 @@ recovery_log() {
     echo "<6>Y2RECOVERY: $*" > /dev/kmsg
 }
 
-# Keep evidence on Y2DATA (the normal system's diagnostics read it), then turn off.
+# The owner's restart switch (/data/updates/restart.json, "mode": "reboot"),
+# read while Y2DATA is mounted: restart into the result instead of power off.
+recovery_restart=
+recovery_restart_mode() {
+    grep -q '"mode": *"reboot"' /newdata/updates/restart.json 2>/dev/null && recovery_restart=1
+}
+
+# Keep evidence on Y2DATA (the normal system's diagnostics read it), then turn off
+# or, with the owner's switch, restart.
 recovery_off() {
     if [ -n "$recovery_data_mounted" ]; then
         mkdir -p /newdata/logs
@@ -27,6 +35,10 @@ recovery_off() {
     fi
     sync
     sleep "${1:-12}"
+    if [ -n "$recovery_restart" ]; then
+        recovery_log 'restart'
+        reboot -f
+    fi
     recovery_log 'power off'
     poweroff -f
     # poweroff never returns on this hardware; keep PID1 alive if it does.
@@ -80,6 +92,7 @@ e2fsck -p "$datadev" > /dev/kmsg 2>&1
 mount -t ext4 -o rw,nosuid,nodev "$datadev" /newdata || recovery_stuck 'Storage did not mount'
 recovery_data_mounted=1
 [ "$(cat /newdata/.y2data-schema 2>/dev/null)" = 1 ] || recovery_stuck 'Unknown storage format'
+recovery_restart_mode
 /bin/busybox timeout 10 /bin/busybox seedrng --seed-dir=/newdata/system/entropy > /dev/kmsg 2>&1 || :
 y2_stage recovery_install
 
@@ -103,9 +116,17 @@ done
 
 case "$outcome" in
     installed)
+        if [ -n "$recovery_restart" ]; then
+            recovery_screen 'Update installed' '' 'Starting the new version.'
+            recovery_off 4
+        fi
         recovery_screen 'Update installed' '' 'The player turns off now.' 'Press Power to start.'
         recovery_off ;;
     rolled_back)
+        if [ -n "$recovery_restart" ]; then
+            recovery_screen 'Update not installed' 'The previous version' 'was restored.' '' 'Restarting.'
+            recovery_off 8
+        fi
         recovery_screen 'Update not installed' 'The previous version' 'was restored.' '' 'Press Power to start.'
         recovery_off ;;
     failed_unchanged)

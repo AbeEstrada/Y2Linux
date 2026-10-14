@@ -202,7 +202,7 @@
       "path": "drivers/watchdog/mtk_wdt.c",
       "patch": "0037-mt6582-consys-reset.patch",
       "base_sha256": "6e8230dff7db590f16bdc83918220da48be57c8a594cd3f0917f4c0e0018da9b",
-      "result_sha256": "ec71d5eb59965154b475f8283d9dde8f65b550c06ab4d32c3d2b1cd35ea69fc9"
+      "result_sha256": "38115738fe57ad79668f4671f5fee70b9da35a9425eca5262e7b6416ab826581"
     },
     {
       "path": "drivers/gpu/drm/lima/lima_drv.c",

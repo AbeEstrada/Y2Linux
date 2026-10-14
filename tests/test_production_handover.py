@@ -34,6 +34,8 @@ class Handover(unittest.TestCase):
             (p/'newdata/updates').mkdir()
             if failure.startswith('update-') or cmdline.endswith('y2.recovery=1'):
                 (p/'newdata/updates/state.json').write_text('{"schema":2,"state":"PendingHealth"}')
+            if failure == 'restart-mode':
+                (p/'newdata/updates/restart.json').write_text('{"mode": "reboot"}')
             script=(ROOT/'initramfs/production/init').read_text()
             # Replace the terminal rescue loop with a finite test exit, keeping
             # every call site and root handover branch as production implements it.
@@ -70,13 +72,14 @@ y2-update-core)
   recovery:*) echo '{"outcome":"installed","state":"PendingHealth"}';;
   esac;;
 poweroff) [ "$FAILURE" != poweroff-fails ] || exit 1;;
+reboot) :;;
 switch_root) [ "$FAILURE" != exec ] || exit 1; echo 'BUILDROOT INIT' >> "$LEDGER";;
 esac
 exit 0
 '''
             for name in ('mount','umount','mknod','sleep','chroot','switch_root','e2fsck',
                          'y2-platform-start','y2-offline-charge','y2-abi-check','y2-usb-status','y2-status','y2-update-core',
-                         'poweroff'):
+                         'poweroff','reboot'):
                 target=p/('sbin' if name.startswith('y2-') or name=='e2fsck' else 'bin')/name
                 target.write_text('#!/nonexistent-interpreter\n' if name=='switch_root' and failure=='exec' else wrapper)
                 target.chmod(0o755)
@@ -156,6 +159,12 @@ exit 0
         for absent in ('y2-offline-charge','/dev/mmcblk0p5','switch_root','y2-abi-check'):
             self.assertNotIn(absent,events)
         self.assertIn('power off',log)   # the fixture kmsg keeps the last line only
+        # The owner's restart switch: restart into the new system instead of off.
+        result, events, log = self.exercise('restart-mode', cmdline='rdinit=/init y2.recovery=1')
+        self.assertEqual(result.returncode,98,result.stderr)
+        self.assertIn('reboot -f',events)
+        self.assertLess(events.index('umount /newdata'),events.index('reboot -f'))
+        self.assertNotIn('poweroff',events.split('reboot -f')[0])
         result, events, log = self.exercise('recovery-stuck', cmdline='rdinit=/init y2.recovery=1')
         self.assertEqual(result.returncode,97,result.stderr)
         self.assertNotIn('poweroff',events)

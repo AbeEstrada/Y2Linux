@@ -128,7 +128,7 @@ def build(root, project, production=True):
     put('boot-modules/'+release+'/modules.alias',stat.S_IFREG|0o644,
         ('\n'.join(aliases)+'\n').encode())
     for applet in ('sh','mount','mkdir','mknod','sleep','readlink','chroot','umount','switch_root','kill','cat','dmesg','grep','tail','cp','uname',
-                   'mv','sed','sync','poweroff'):
+                   'mv','sed','sync','poweroff','reboot'):
         put('bin/'+applet,stat.S_IFLNK|0o777,b'busybox')
     regular=sum(len(v[1]) for v in entries.values() if stat.S_ISREG(v[0]))
     require(regular<=0x800000,'DEV rescue regular-file budget')

@@ -479,6 +479,14 @@ class PlatformPolicyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             battery_gate(self.ctx)
 
+    def test_install_restarts_only_with_the_owner_switch(self):
+        from y2_platform import update
+        self.assertEqual(update.restart_mode(self.ctx), 'poweroff')
+        (self.root/'data/updates/restart.json').write_text(json.dumps({'mode': 'reboot'}))
+        self.assertEqual(update.restart_mode(self.ctx), 'reboot')
+        (self.root/'data/updates/restart.json').write_text(json.dumps({'mode': 'anything'}))
+        self.assertEqual(update.restart_mode(self.ctx), 'poweroff')
+
     def test_channel_override_and_redirect_allowlist(self):
         from y2_platform.update import AllowlistedRedirect, channel
         self.assertEqual(channel(self.ctx)['name'], 'stable')
