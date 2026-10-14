@@ -6,22 +6,22 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Baseline 48 (2026-10-16), developer preview.** It runs every day on
-> the maintainer's Y2. The first install is built from source and flashed with
-> SP Flash Tool; after that, the player installs new releases over Wi-Fi from
-> this repository's [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases).
+> **Status: Baseline 49 (2026-10-16), developer preview.** It runs every day on
+> the maintainer's Y2. Install it from the ready-made images of the
+> [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases) with SP Flash
+> Tool once ([INSTALL](docs/INSTALL.md)); after that the player updates itself over Wi-Fi.
 > Only one hardware revision has been tested (see
 > [Supported hardware](#supported-hardware)). Read [Known issues](#known-issues)
 > before you flash.
 
-| | Baseline 48 |
+| | Baseline 49 |
 | --- | --- |
-| Git tag (both repositories) | `baseline-48` (previous: `baseline-47`); GitHub release `baseline-48` carries the signed over-the-air update |
-| Kernel | `6.18.56-y2linux-platform-v1-power-final-48` (Linux 6.18 long-term line) |
-| Root filesystem / release | `2026.08-platform-v1.78` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.48` |
+| Git tag (both repositories) | `baseline-49` (previous: `baseline-48`); GitHub release `baseline-49` carries the first-install images, the signed over-the-air update and the GPL sources |
+| Kernel | `6.18.56-y2linux-platform-v1-power-final-49` (Linux 6.18 long-term line) |
+| Root filesystem / release | `2026.08-platform-v1.79` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.49` |
 | Player | Y2Reborn 0.3.0 (Rust 1.99) with Cover Flow, Genres and 15 themes |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 — every component on its newest release |
-| Maintainer's images built from | Y2Linux `d5cc381`, Y2Reborn `62af097` (later commits: docs only) |
+| Maintainer's images built from | Y2Linux `b4610ea`, Y2Reborn `ceb6313` (later commits: docs only) |
 
 ## Getting started
 
@@ -110,7 +110,8 @@ update channel and installed over Wi-Fi):
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for [48](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-48.md) (download screen),
+reports for [49](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-49.md) (firmware-free images, flash package, codecs),
+[48](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-48.md) (download screen),
 [47](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-47.md) (DSI clock gating),
 [46](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-46.md) (update space, restart by default, first release),
 [44](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-44.md)/[45](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-45.md) (display read lag, installer screen),
@@ -161,10 +162,12 @@ verifies it. Please report your device's details in an issue.
 ## Licence
 
 Each source file carries its own SPDX licence identifier; the kernel drivers and
-patches are GPL-2.0, and Y2Reborn is MIT. The proprietary MediaTek radio firmware is
-**not** in this repository and is never downloaded. You extract it from your own
-copy of the Innioasis firmware (see [BUILDING](docs/BUILDING.md)). Images that
-contain it are for your own device; do not redistribute them.
+patches are GPL-2.0, and Y2Reborn is MIT. Each release carries the corresponding
+sources of the packages in its images (Buildroot legal-info and the Linux archive).
+The proprietary MediaTek radio firmware is **not** in this repository or in any
+image: each player takes it from its owner's copy of the Innioasis firmware package
+([INSTALL](docs/INSTALL.md#why-the-innioasis-package)). Bluetooth codecs in public
+images: SBC, AAC (fdk-aac-free) and LDAC.
 
 This project is not affiliated with Innioasis or MediaTek. Flashing replaces the
 stock system; you do it at your own risk.

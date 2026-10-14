@@ -1,6 +1,15 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-48 download screen, Baseline 48 — 2026-10-16 (latest, published)
+## POWER-FINAL-49 firmware-free public images, Baseline 49 — 2026-10-16 (latest, published)
+
+Release `baseline-49` (Linux `b4610ea`, Reborn `ceb6313`): first-install images for SP Flash Tool (BOOTIMG, RECOVERY,
+system, data without SSH key), the signed update and the GPL sources. No image carries the MediaTek radio firmware:
+updated players keep theirs (the recovery copies it to Y2DATA), new players take it from the owner's `system.img` on the
+**Firmware** drive. Public Bluetooth codecs: SBC, AAC (fdk-aac-free), LDAC; aptX only in owner-private builds. Merged
+contributions #38 (Y2Linux), #6–#8 (Y2Reborn). Suite 727. **Physical:** pending (owner installs over Wi-Fi).
+Details: [49 report](validation/Y2-PLATFORM-V1-POWER-FINAL-49.md).
+
+## POWER-FINAL-48 download screen, Baseline 48 — 2026-10-16 (published)
 
 `out/y2linux-platform-v1-power-final-candidate-48/` (Linux `d5cc381`, Reborn `62af097`; BOOTIMG `5a1fa90e…d74b`,
 Y2ROOT `1d7c4bca…e047`, RECOVERY `6c14a2f7…0a3f`), fallback 47; git tag and GitHub release `baseline-48`. The update
