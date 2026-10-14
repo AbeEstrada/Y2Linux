@@ -8,6 +8,7 @@ This suite never opens a block device and is not power-loss durability evidence.
 """
 import copy
 import json
+import shutil
 import os
 from pathlib import Path
 import struct
@@ -253,6 +254,69 @@ class UpdateTests(unittest.TestCase):
         self.write('run/y2/application-ready.json', {'boot_id': 'new-1'})
         self.run_core('ack')
         self.assertIn('replay', self.run_core('queue', expected=1)['failure'])
+
+    def test_only_changed_chunks_are_written_and_steps_are_logged(self):
+        (self.root/'dev').mkdir()
+        (self.root/'dev/kmsg').write_text('')
+        self.install()
+        changed = self.journal()['root_bytes_written']
+        self.assertGreater(changed, 0)
+        self.assertLess(changed, len(self.new) // 4)     # only the chunks that differ
+        steps = [line.split()[1] for line in (self.root/'dev/kmsg').read_text().splitlines()]
+        self.assertEqual(steps, ['step=verify', 'step=backup', 'step=system', 'step=check',
+                                 'step=boot', 'step=installed'])
+        # Installing the same release again (development reinstall, as the device
+        # test package) writes nothing and still reads back.
+        self.write('run/y2/application-ready.json', {'boot_id': 'new-1'})
+        self.run_core('ack')
+        build(self.root/'new.img', self.versions, self.base/'again', self.private, 'test', 1,
+              allow_downgrade=True, bootimg=self.root/'new-boot.img', recovery=self.root/'new-recovery.img')
+        shutil.rmtree(self.base/'pending')   # the platform removes it after the health ack
+        (self.base/'again').rename(self.base/'pending')
+        self.run_core('queue')
+        self.run_core('prepare')
+        self.assertEqual(self.run_core('recovery', recovery=True)['outcome'], 'installed')
+        self.assertEqual(self.journal()['root_bytes_written'], 0)
+        self.assertEqual((self.root/'root.img').read_bytes(), self.new)
+
+    def test_a_payload_changed_after_queueing_is_refused_before_any_write(self):
+        self.run_core('queue')
+        self.run_core('prepare')
+        payload = self.base/'pending/rootfs.ext4.gz'
+        data = bytearray(payload.read_bytes())
+        data[len(data)//2] ^= 1
+        payload.write_bytes(bytes(data))
+        self.assertEqual(self.run_core('recovery', recovery=True)['outcome'], 'failed_unchanged')
+        self.assertEqual((self.root/'root.img').read_bytes(), self.old)
+        self.assertTrue(self.span(BOOTIMG, self.old_boot))
+        self.assertFalse((self.base/'previous.ext4.gz').exists())
+
+    def test_backups_recorded_before_38_still_restore(self):
+        import hashlib
+        self.run_core('queue')
+        self.run_core('prepare')
+        self.run_core('recovery', expected=91, fault='write_interrupt', recovery=True)
+        journal = self.journal()
+        root = journal['backup']['root']
+        del root['raw_crc32']
+        root['raw_sha256'] = hashlib.sha256(self.old).hexdigest()
+        boot = journal['backup']['bootimg']
+        del boot['raw_crc32']
+        boot['raw_sha256'] = hashlib.sha256(self.old_boot + bytes(SPAN - len(self.old_boot))).hexdigest()
+        (self.base/'state.json').write_text(json.dumps(journal))
+        self.boot('recovery-2')
+        self.assertEqual(self.run_core('recovery', recovery=True)['outcome'], 'rolled_back')
+        self.assertEqual((self.root/'root.img').read_bytes(), self.old)
+        self.assertTrue(self.span(BOOTIMG, self.old_boot))
+        # A wrong legacy hash is caught before it is trusted.
+        self.run_core('queue')
+        self.run_core('prepare')
+        self.run_core('recovery', expected=91, fault='write_interrupt', recovery=True)
+        journal = self.journal()
+        del journal['backup']['root']['raw_crc32']
+        journal['backup']['root']['raw_sha256'] = '0' * 64
+        (self.base/'state.json').write_text(json.dumps(journal))
+        self.assertEqual(self.run_core('recovery', expected=1, recovery=True)['outcome'], 'rescue_required')
 
     def test_an_unchanged_recovery_image_is_not_rewritten(self):
         with (self.root/'disk.img').open('r+b') as disk:

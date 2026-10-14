@@ -236,10 +236,20 @@ static bool text_is(const char *name, const char *want) {
     char buf[256];
     return readtext(name, buf, sizeof(buf)) && !strcmp(buf, want);
 }
-/* Coarse progress for the recovery screen: "<percent> <step>". Best effort. */
+/* Progress for the recovery screen: "<percent> <step>". Best effort. Each new
+ * step is also logged to the kernel log, whose timestamps time the install. */
+static const char *progress_step;
 static void progress(unsigned percent, const char *step) {
     if (!recovery_env)
         return;
+    if (!progress_step || strcmp(progress_step, step)) {
+        progress_step = step;
+        int log = open(path("/dev/kmsg"), O_WRONLY | O_APPEND | O_CLOEXEC);
+        if (log >= 0) {
+            dprintf(log, "<6>Y2RECOVERY step=%s percent=%u\n", step, percent);
+            close(log);
+        }
+    }
     char buf[64];
     int n = snprintf(buf, sizeof(buf), "%u %s\n", percent > 100 ? 100 : percent, step);
     int fd = open(path("/run/y2/recovery-progress.tmp"), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
@@ -249,6 +259,29 @@ static void progress(unsigned percent, const char *step) {
     close(fd);
     if (ok)
         rename(path("/run/y2/recovery-progress.tmp"), path("/run/y2/recovery-progress"));
+}
+/* A step that moves the bar from base to base+span over total bytes. */
+static struct {
+    const char *step;
+    unsigned base, span, last;
+    uint64_t total;
+} prog;
+static void progress_span(const char *step, unsigned base, unsigned span, uint64_t total) {
+    prog.step = step;
+    prog.base = base;
+    prog.span = span;
+    prog.total = total;
+    prog.last = base;
+    progress(base, step);
+}
+static void progress_bytes(uint64_t done) {
+    if (!prog.step || !prog.total)
+        return;
+    unsigned p = prog.base + (unsigned)((done > prog.total ? prog.total : done) * prog.span / prog.total);
+    if (p != prog.last) {
+        prog.last = p;
+        progress(p, prog.step);
+    }
 }
 static bool enough(int fd, uint64_t bytes) {
 #ifdef Y2_UPDATE_TEST
@@ -299,21 +332,34 @@ static bool boot_identity(const unsigned char *b, uint64_t len, enum kind kind) 
            !memcmp(b + ko + 8, "KERNEL\0", 7) && u32(b + ro) == 0x58881688 &&
            u32(b + ro + 4) == r - 512 && !memcmp(b + ro + 8, want, 32);
 }
-/* gzip must have one member, exact encoded and raw lengths, hashes and the
- * kind's identity. Root streams to a descriptor; boot images and backups of
- * the 16 MiB image spans decode into a zero-filled buffer for aligned I/O.
+/* gzip must have one member, exact encoded and raw lengths, the SHA-256 of the
+ * encoded bytes (signed manifest or our backup record) and the kind's identity.
+ * The encoded hash authenticates the payload; zlib checks the gzip CRC-32 and
+ * length trailer of the output, and a record's raw_crc32 when it has one.
+ * STREAM_RAW_SHA also requires the raw SHA-256 (backups recorded before
+ * OTA-38 carry only that). STREAM_SKIP_SAME writes only the 128 KiB chunks
+ * that differ from what the output already holds. Root streams to a
+ * descriptor; boot images and the 16 MiB span backups decode into a
+ * zero-filled buffer for aligned I/O. *crc receives the raw CRC-32.
  */
+#define STREAM_INJECT 1u
+#define STREAM_RAW_SHA 2u
+#define STREAM_SKIP_SAME 4u
+static uint64_t stream_written;
 static bool stream_image(int input, int output, unsigned char *mem, json_object *payload,
-                         enum kind kind, bool inject) {
+                         enum kind kind, unsigned flags, uint32_t *crc) {
+    bool inject = flags & STREAM_INJECT;
     uint64_t limit = kind == ROOT ? LIMIT : IMAGE_BYTES;
     uint64_t minimum = kind == ROOT ? 8 * 1024 * 1024 : 4096;
     if (num(payload, "bytes") <= 0 || num(payload, "bytes") > (int64_t)LIMIT ||
         num(payload, "raw_bytes") < (int64_t)minimum || num(payload, "raw_bytes") > (int64_t)limit ||
         (kind == REGION && num(payload, "raw_bytes") != (int64_t)IMAGE_BYTES))
         return failure("image metadata bounds");
-    unsigned char in[CHUNK], out[CHUNK], header[4096], csum[32], rsum[32];
+    static unsigned char in[CHUNK], out[CHUNK], old[CHUNK];
+    unsigned char header[4096], csum[32], rsum[32];
     size_t head = 0;
     uint64_t compressed = 0, raw = 0;
+    uLong rawcrc = crc32(0L, Z_NULL, 0);
     crypto_hash_sha256_state ch, rh;
     crypto_hash_sha256_init(&ch);
     crypto_hash_sha256_init(&rh);
@@ -370,15 +416,37 @@ static bool stream_image(int input, int output, unsigned char *mem, json_object 
             }
             if (mem && count)
                 memcpy(mem + raw, out, count);
+            if (output >= 0 && count) {
+                bool same = false;
+                if (flags & STREAM_SKIP_SAME) {
+                    ssize_t got = pread(output, old, count, (off_t)raw);
+                    same = got == (ssize_t)count && !memcmp(old, out, count);
+                }
+                if (!same) {
+                    size_t done = 0;
+                    while (done < count) {
+                        ssize_t w = pwrite(output, out + done, count - done, (off_t)(raw + done));
+                        if (w < 0 && errno == EINTR)
+                            continue;
+                        if (w <= 0) {
+                            failure("write: %s", w < 0 ? strerror(errno) : "short");
+                            goto done;
+                        }
+                        done += (size_t)w;
+                    }
+                    stream_written += count;
+                }
+            }
             raw += count;
-            crypto_hash_sha256_update(&rh, out, count);
+            rawcrc = crc32(rawcrc, out, (uInt)count);
+            if (flags & STREAM_RAW_SHA)
+                crypto_hash_sha256_update(&rh, out, count);
+            progress_bytes(raw);
             if (kind == ROOT && head == sizeof(header) &&
                 root_bytes(header) != (uint64_t)num(payload, "raw_bytes")) {
                 failure("root ext4 identity/extent");
                 goto done;
             }
-            if (output >= 0 && count && !writeall(output, out, count))
-                goto done;
 #ifdef Y2_UPDATE_TEST
             if (inject && getenv("Y2_TEST_FAULT") &&
                 !strcmp(getenv("Y2_TEST_FAULT"), "write_interrupt") && raw >= CHUNK)
@@ -408,9 +476,12 @@ static bool stream_image(int input, int output, unsigned char *mem, json_object 
     crypto_hash_sha256_final(&rh, rsum);
     ok = head == sizeof(header) && raw == (uint64_t)num(payload, "raw_bytes") &&
          compressed == (uint64_t)num(payload, "bytes") && sha_match(csum, str(payload, "sha256")) &&
-         sha_match(rsum, str(payload, "raw_sha256"));
+         (!(flags & STREAM_RAW_SHA) || sha_match(rsum, str(payload, "raw_sha256"))) &&
+         (!field(payload, "raw_crc32") || num(payload, "raw_crc32") == (int64_t)rawcrc);
     if (!ok)
         failure("payload hash/size mismatch");
+    else if (crc)
+        *crc = (uint32_t)rawcrc;
     else if ((kind == BOOT || kind == RECOVERY) && !(mem && boot_identity(mem, raw, kind)))
         ok = failure("%s image identity", payload_key[kind]);
 done:
@@ -424,6 +495,26 @@ static bool drop_cache(int fd) {
     posix_fadvise(fd, 0, 0, POSIX_FADV_DONTNEED);
     return true;
 }
+/* Readback of the medium against the CRC-32 computed while writing: detects
+ * storage faults at memory speed; authenticity was settled before writing. */
+static bool file_crc(int fd, uint64_t count, uint32_t expected) {
+    if (!drop_cache(fd))
+        return false;
+    static unsigned char buf[CHUNK];
+    uLong c = crc32(0L, Z_NULL, 0);
+    uint64_t at = 0;
+    while (at < count) {
+        ssize_t n = pread(fd, buf, count - at < sizeof(buf) ? (size_t)(count - at) : sizeof(buf), (off_t)at);
+        if (n < 0 && errno == EINTR)
+            continue;
+        if (n <= 0)
+            return failure("readback short read");
+        c = crc32(c, buf, (uInt)n);
+        at += (uint64_t)n;
+        progress_bytes(at);
+    }
+    return (uint32_t)c == expected || failure("readback mismatch");
+}
 static bool file_hash(int fd, uint64_t count, const char *expected) {
     if (!drop_cache(fd))
         return false;
@@ -432,6 +523,7 @@ static bool file_hash(int fd, uint64_t count, const char *expected) {
     crypto_hash_sha256_state h;
     crypto_hash_sha256_init(&h);
     unsigned char buf[CHUNK], sum[32];
+    uint64_t total = count;
     while (count) {
         ssize_t n = read(fd, buf, count < sizeof(buf) ? (size_t)count : sizeof(buf));
         if (n < 0 && errno == EINTR)
@@ -440,6 +532,7 @@ static bool file_hash(int fd, uint64_t count, const char *expected) {
             return failure("readback short read");
         crypto_hash_sha256_update(&h, buf, (size_t)n);
         count -= (uint64_t)n;
+        progress_bytes(total - count);
     }
     crypto_hash_sha256_final(&h, sum);
     return sha_match(sum, expected) || failure("readback hash mismatch");
@@ -467,9 +560,38 @@ static bool check_payload(int package, json_object *m, enum kind kind, unsigned 
     int fd = openfile(package, payload_file[kind], O_RDONLY, 0);
     if (fd < 0)
         return false;
-    bool ok = stream_image(fd, -1, mem, payload(m, kind), kind, false);
+    bool ok = stream_image(fd, -1, mem, payload(m, kind), kind, 0, NULL);
     close(fd);
     return ok;
+}
+/* SHA-256 of the encoded bytes against the record: the authenticity check that
+ * the recovery repeats before it writes (the decoded content follows). */
+static bool file_digest(int dir, const char *name, json_object *p) {
+    int fd = openfile(dir, name, O_RDONLY, 0);
+    if (fd < 0)
+        return false;
+    static unsigned char buf[CHUNK];
+    unsigned char sum[32];
+    crypto_hash_sha256_state h;
+    crypto_hash_sha256_init(&h);
+    uint64_t total = 0;
+    for (;;) {
+        ssize_t n = read(fd, buf, sizeof(buf));
+        if (n < 0 && errno == EINTR)
+            continue;
+        if (n < 0) {
+            close(fd);
+            return failure("payload read");
+        }
+        if (!n)
+            break;
+        crypto_hash_sha256_update(&h, buf, (size_t)n);
+        total += (uint64_t)n;
+    }
+    close(fd);
+    crypto_hash_sha256_final(&h, sum);
+    return (total == (uint64_t)num(p, "bytes") && sha_match(sum, str(p, "sha256"))) ||
+           failure("%s hash/size mismatch", name);
 }
 static unsigned char *image_buffer(void) {
     void *p = NULL;
@@ -482,7 +604,9 @@ static unsigned char *image_buffer(void) {
 /* installed < 0: the running system's compat sequence. The recovery image
  * passes the sequence the normal system recorded when it queued the package:
  * its own compat file names the recovery's release, which may be this one. */
-static json_object *verify(int package, bool payload_check, int64_t installed_sequence) {
+/* check: 0 manifest only, 1 decode every payload (staging), 2 SHA-256 of the
+ * encoded payloads only (the recovery, which decodes while it writes). */
+static json_object *verify(int package, int check, int64_t installed_sequence) {
     if (!crypto_ready())
         return NULL;
     size_t length, siglen;
@@ -591,7 +715,14 @@ static json_object *verify(int package, bool payload_check, int64_t installed_se
         failure("payload contract");
         goto fail;
     }
-    if (payload_check) {
+    if (check == 2) {
+        progress_span("verify", 0, 3, 3);
+        bool ok = file_digest(package, payload_file[ROOT], payload(m, ROOT)) &&
+                  file_digest(package, payload_file[BOOT], payload(m, BOOT)) &&
+                  (!payload(m, RECOVERY) || file_digest(package, payload_file[RECOVERY], payload(m, RECOVERY)));
+        if (!ok)
+            goto fail;
+    } else if (check == 1) {
         unsigned char *mem = image_buffer();
         bool ok = mem && check_payload(package, m, ROOT, NULL) && check_payload(package, m, BOOT, mem) &&
                   (!payload(m, RECOVERY) || check_payload(package, m, RECOVERY, mem));
@@ -891,8 +1022,11 @@ static void boot_id(char *buf, size_t n) {
 }
 /* Compressed copy of an image (root extent or a 16 MiB boot span), verified by
  * decompression before anything is overwritten. */
+/* Compressed copy of an image (root extent or a 16 MiB boot span). The record
+ * keeps the SHA-256 of the compressed file and the CRC-32 of the raw image; the
+ * file is read back from the medium and hashed before anything is overwritten. */
 static bool backup_stream(int source_fd, const unsigned char *source_mem, uint64_t bytes,
-                          const char *name, enum kind kind, json_object *record, unsigned base_pct) {
+                          const char *name, json_object *record) {
     char tmp[64];
     snprintf(tmp, sizeof(tmp), "%s.tmp", name);
     if (!enough(basefd, CHUNK))
@@ -909,12 +1043,13 @@ static bool backup_stream(int source_fd, const unsigned char *source_mem, uint64
         close(out);
         return false;
     }
-    unsigned char in[CHUNK], encoded[CHUNK], rawsum[32], gzsum[32];
-    crypto_hash_sha256_state rh, ch;
-    crypto_hash_sha256_init(&rh);
+    static unsigned char in[CHUNK], encoded[CHUNK];
+    unsigned char gzsum[32];
+    crypto_hash_sha256_state ch;
     crypto_hash_sha256_init(&ch);
+    uLong rawcrc = crc32(0L, Z_NULL, 0);
     uint64_t left = bytes, gzbytes = 0;
-    if (source_fd >= 0 && (!drop_cache(source_fd) || lseek(source_fd, 0, SEEK_SET) < 0))
+    if (source_fd >= 0 && !drop_cache(source_fd))
         goto done;
     while (left) {
         size_t count = left < sizeof(in) ? (size_t)left : sizeof(in);
@@ -922,7 +1057,7 @@ static bool backup_stream(int source_fd, const unsigned char *source_mem, uint64
         if (source_mem)
             data = source_mem + (bytes - left);
         else {
-            ssize_t got = read(source_fd, in, count);
+            ssize_t got = pread(source_fd, in, count, (off_t)(bytes - left));
             if (got < 0 && errno == EINTR)
                 continue;
             if (got <= 0) {
@@ -932,7 +1067,7 @@ static bool backup_stream(int source_fd, const unsigned char *source_mem, uint64
             count = (size_t)got;
         }
         left -= count;
-        crypto_hash_sha256_update(&rh, data, count);
+        rawcrc = crc32(rawcrc, data, (uInt)count);
         z.next_in = (unsigned char *)data;
         z.avail_in = (uInt)count;
         int rc;
@@ -950,27 +1085,19 @@ static bool backup_stream(int source_fd, const unsigned char *source_mem, uint64
             crypto_hash_sha256_update(&ch, encoded, made);
             gzbytes += made;
         } while (z.avail_in || z.avail_out == 0 || (!left && rc != Z_STREAM_END));
-        progress(base_pct + (unsigned)((bytes - left) * 15 / bytes), "backup");
+        progress_bytes(bytes - left);
     }
-    if (fsync(out)) {
+    if (fsync(out) || !drop_cache(out)) {
         failure("backup fsync");
         goto done;
     }
-    crypto_hash_sha256_final(&rh, rawsum);
     crypto_hash_sha256_final(&ch, gzsum);
     setnum(record, "raw_bytes", (int64_t)bytes);
     setnum(record, "bytes", (int64_t)gzbytes);
-    setstr(record, "raw_sha256", hash_string(rawsum));
+    setnum(record, "raw_crc32", (int64_t)rawcrc);
     setstr(record, "sha256", hash_string(gzsum));
-    int verifyfd = openfile(basefd, tmp, O_RDONLY, 0);
-    unsigned char *mem = kind == REGION ? image_buffer() : NULL;
-    ok = verifyfd >= 0 && (kind != REGION || mem) &&
-         stream_image(verifyfd, -1, mem, record, kind, false);
-    free(mem);
-    if (verifyfd >= 0)
-        close(verifyfd);
-    if (ok)
-        ok = renameat(basefd, tmp, basefd, name) == 0 && fsync(basefd) == 0;
+    ok = file_digest(basefd, tmp, record) &&
+         renameat(basefd, tmp, basefd, name) == 0 && fsync(basefd) == 0;
 done:
     deflateEnd(&z);
     close(out);
@@ -991,9 +1118,13 @@ static bool backup(int root, int disk, unsigned char *mem, json_object *journal)
                 *b = json_object_new_object();
     json_object_object_add(saved, "root", r);
     json_object_object_add(saved, "bootimg", b);
-    bool ok = backup_stream(root, NULL, bytes, "previous.ext4.gz", ROOT, r, 10) &&
-              region_read(disk, BOOTIMG_OFFSET, mem, IMAGE_BYTES) &&
-              backup_stream(-1, mem, IMAGE_BYTES, "previous-bootimg.gz", REGION, b, 25);
+    progress_span("backup", 3, 37, bytes);
+    bool ok = backup_stream(root, NULL, bytes, "previous.ext4.gz", r) &&
+              region_read(disk, BOOTIMG_OFFSET, mem, IMAGE_BYTES);
+    if (ok) {
+        progress_span("backup", 40, 2, IMAGE_BYTES);
+        ok = backup_stream(-1, mem, IMAGE_BYTES, "previous-bootimg.gz", b);
+    }
     if (!ok) {
         json_object_put(saved);
         return false;
@@ -1001,22 +1132,32 @@ static bool backup(int root, int disk, unsigned char *mem, json_object *journal)
     json_object_object_add(journal, "backup", saved);
     return save("state.json", journal);
 }
+/* Backups from before OTA-38 carry only a raw SHA-256: check them that way. */
+static bool legacy_record(json_object *r) { return !field(r, "raw_crc32"); }
 static bool restore(int root, int disk, unsigned char *mem, json_object *j, const char *reason) {
     json_object *saved = field(j, "backup"), *r = field(saved, "root"), *b = field(saved, "bootimg");
     if (!r || !b)
         return failure("no verified backup");
-    progress(5, "restore");
+    progress(2, "restore");
     int rf = openfile(basefd, "previous.ext4.gz", O_RDONLY, 0);
     int bf = rf >= 0 ? openfile(basefd, "previous-bootimg.gz", O_RDONLY, 0) : -1;
-    bool ok = rf >= 0 && bf >= 0 && stream_image(rf, -1, NULL, r, ROOT, false) &&
-              stream_image(bf, -1, mem, b, REGION, false) && state(j, "RollingBack", reason);
+    unsigned rflags = STREAM_SKIP_SAME | (legacy_record(r) ? STREAM_RAW_SHA : 0);
+    uint32_t crc = 0;
+    /* Both backups must be intact before the first write. */
+    bool ok = rf >= 0 && bf >= 0 && file_digest(basefd, "previous.ext4.gz", r) &&
+              stream_image(bf, -1, mem, b, REGION, legacy_record(b) ? STREAM_RAW_SHA : 0, NULL) &&
+              state(j, "RollingBack", reason);
     if (ok) {
-        progress(20, "restore");
-        ok = stream_image(rf, root, NULL, r, ROOT, false) && fsync(root) == 0 &&
-             file_hash(root, (uint64_t)num(r, "raw_bytes"), str(r, "raw_sha256"));
+        progress_span("restore", 5, 75, (uint64_t)num(r, "raw_bytes"));
+        ok = stream_image(rf, root, NULL, r, ROOT, rflags, &crc) && fsync(root) == 0;
     }
     if (ok) {
-        progress(80, "restore");
+        progress_span("check", 80, 15, (uint64_t)num(r, "raw_bytes"));
+        ok = legacy_record(r) ? file_hash(root, (uint64_t)num(r, "raw_bytes"), str(r, "raw_sha256"))
+                              : file_crc(root, (uint64_t)num(r, "raw_bytes"), crc);
+    }
+    if (ok) {
+        progress(96, "restore");
         ok = region_write(disk, BOOTIMG_OFFSET, mem, IMAGE_BYTES);
     }
     if (rf >= 0)
@@ -1136,9 +1277,8 @@ static bool recover(json_object *j) {
         failure("unknown update state");
         goto done;
     }
-    progress(2, "verify");
     int pkg = openat(basefd, "pending", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-    json_object *m = pkg >= 0 ? verify(pkg, true, num(j, "previous_sequence")) : NULL;
+    json_object *m = pkg >= 0 ? verify(pkg, 2, num(j, "previous_sequence")) : NULL;
     if (!m || strcmp(str(m, "y2linux_commit"), str(j, "y2linux_commit")) ||
         num(m, "sequence") != num(j, "sequence") ||
         strcmp(str(m, "_manifest_sha256"), str(j, "manifest_sha256"))) {
@@ -1165,10 +1305,15 @@ static bool recover(json_object *j) {
     int rf = openfile(pkg, payload_file[ROOT], O_RDONLY, 0);
     int bf = rf >= 0 ? openfile(pkg, payload_file[BOOT], O_RDONLY, 0) : -1;
     /* Decode and verify the new BOOTIMG before the first write of anything. */
-    ok = bf >= 0 && stream_image(bf, -1, mem, bp, BOOT, false) && state(j, "Installing", NULL);
+    uint32_t crc = 0;
+    ok = bf >= 0 && stream_image(bf, -1, mem, bp, BOOT, 0, NULL) && state(j, "Installing", NULL);
     if (ok) {
-        progress(40, "system");
-        ok = stream_image(rf, root, NULL, rp, ROOT, true) && fsync(root) == 0;
+        progress_span("system", 42, 38, (uint64_t)num(rp, "raw_bytes"));
+        stream_written = 0;
+        ok = stream_image(rf, root, NULL, rp, ROOT, STREAM_INJECT | STREAM_SKIP_SAME, &crc) &&
+             fsync(root) == 0;
+        if (ok)
+            setnum(j, "root_bytes_written", (int64_t)stream_written);
     }
 #ifdef Y2_UPDATE_TEST
     if (ok && getenv("Y2_TEST_FAULT") && !strcmp(getenv("Y2_TEST_FAULT"), "readback")) {
@@ -1178,15 +1323,15 @@ static bool recover(json_object *j) {
     }
 #endif
     if (ok) {
-        progress(70, "check");
-        ok = file_hash(root, (uint64_t)num(rp, "raw_bytes"), str(rp, "raw_sha256"));
+        progress_span("check", 80, 16, (uint64_t)num(rp, "raw_bytes"));
+        ok = file_crc(root, (uint64_t)num(rp, "raw_bytes"), crc);
     }
 #ifdef Y2_UPDATE_TEST
     if (ok && getenv("Y2_TEST_FAULT") && !strcmp(getenv("Y2_TEST_FAULT"), "boot_interrupt"))
         _exit(92);
 #endif
     if (ok) {
-        progress(85, "boot");
+        progress(96, "boot");
         ok = region_write(disk, BOOTIMG_OFFSET, mem, IMAGE_BYTES);
     }
     if (rf >= 0)
@@ -1230,7 +1375,7 @@ static bool prepare(json_object *j, const char *operation) {
     bool ok = mem != NULL;
     if (ok && !strcmp(s, "Queued") && !strcmp(operation, "y2-update")) {
         int pkg = openat(basefd, "pending", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-        json_object *m = pkg >= 0 ? verify(pkg, false, -1) : NULL;
+        json_object *m = pkg >= 0 ? verify(pkg, 0, -1) : NULL;
         ok = m && !strcmp(str(m, "_manifest_sha256"), str(j, "manifest_sha256"));
         if (!ok && m)
             failure("queued identity changed");
@@ -1385,7 +1530,7 @@ int main(int argc, char **argv) {
     }
     if ((!strcmp(argv[1], "check") || !strcmp(argv[1], "check-manifest")) && argc == 3) {
         int pkg = open(path(argv[2]), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-        json_object *m = pkg >= 0 ? verify(pkg, strcmp(argv[1], "check-manifest") != 0, -1) : NULL;
+        json_object *m = pkg >= 0 ? verify(pkg, strcmp(argv[1], "check-manifest") ? 1 : 0, -1) : NULL;
         if (pkg >= 0)
             close(pkg);
         if (m) {
@@ -1401,7 +1546,7 @@ int main(int argc, char **argv) {
             failure("update already pending");
         else {
             int pkg = openat(basefd, "pending", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-            json_object *m = pkg >= 0 ? verify(pkg, true, -1) : NULL;
+            json_object *m = pkg >= 0 ? verify(pkg, 1, -1) : NULL;
             if (pkg >= 0)
                 close(pkg);
             if (m) {

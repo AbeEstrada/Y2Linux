@@ -16,6 +16,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 #include <drm_fourcc.h>
 #include <xf86drm.h>
@@ -175,28 +176,40 @@ static bool slurp(const char *path, char *buf, size_t cap) {
     buf[n] = 0;
     return true;
 }
-/* Installer steps (y2-update-core progress()) in words. */
-static const char *step_text(const char *step) {
-    static const char *const map[][2] = {
-        {"verify", "Checking the update"},      {"backup", "Saving the current system"},
-        {"system", "Installing the system"},    {"check", "Verifying the system"},
-        {"boot", "Installing the kernel"},      {"installed", "Update installed"},
-        {"restore", "Restoring the old system"}, {"restored", "Old system restored"},
-        {"probe", "Recovery works"},            {"done", "Nothing to install"},
+/* Installer steps (y2-update-core progress()) in words, and their place in
+ * the four stages an owner sees ("Step 2 of 4"). Stage 0: no counter. */
+static const char *step_text(const char *step, unsigned *stage) {
+    static const struct { const char *step, *words; unsigned stage; } map[] = {
+        {"verify", "Checking the update", 1},     {"backup", "Saving the current system", 2},
+        {"system", "Installing the system", 3},   {"check", "Checking the system", 4},
+        {"boot", "Installing the kernel", 4},     {"installed", "Update installed", 0},
+        {"restore", "Restoring the old system", 0}, {"restored", "Old system restored", 0},
+        {"probe", "Recovery works", 0},           {"done", "Nothing to install", 0},
     };
     for (size_t i = 0; i < sizeof(map) / sizeof(map[0]); i++)
-        if (!strcmp(map[i][0], step))
-            return map[i][1];
+        if (!strcmp(map[i].step, step)) {
+            *stage = map[i].stage;
+            return map[i].words;
+        }
+    *stage = 0;
     return "";
 }
-static void draw(Display *d, const char *screen, const char *progress) {
+/* Body lines, the step and its counter, the bar with a moving shimmer in its
+ * unfilled part (the screen visibly lives while a long step runs), and the
+ * time left. phase is a free-running animation counter. */
+static void draw(Display *d, const char *screen, const char *progress, const char *time_line,
+                 unsigned phase) {
     unsigned ox = (d->width - 480) / 2, oy = (d->height - 360) / 2;
     rect(d, 0, 0, d->width, d->height, BG);
+    unsigned percent = 0;
+    char step[32] = {0};
+    bool running = sscanf(progress, "%u %31s", &percent, step) >= 1;
     char copy[1024];
     snprintf(copy, sizeof(copy), "%s", screen);
-    /* Blank lines are spacing, so split exactly at each newline. */
+    /* Blank lines are spacing, so split exactly at each newline. With a bar
+     * on screen the body keeps clear of the step lines below it. */
     char *line = copy;
-    for (unsigned i = 0; *line && i < LINES; i++) {
+    for (unsigned i = 0; *line && i < (running ? 4u : LINES); i++) {
         char *end = strchr(line, '\n');
         if (end)
             *end = 0;
@@ -205,17 +218,51 @@ static void draw(Display *d, const char *screen, const char *progress) {
             break;
         line = end + 1;
     }
-    unsigned percent = 0;
-    char step[32] = {0};
-    if (sscanf(progress, "%u %31s", &percent, step) >= 1) {
-        if (percent > 100)
-            percent = 100;
-        const char *words = step_text(step);
-        if (*words)
-            centered(d, oy, 252, words, TEXT);
-        rect(d, ox + 40, oy + 300, 400, 6, TRACK);
-        rect(d, ox + 40, oy + 300, 4 * percent, 6, FILL);
+    if (!running)
+        return;
+    if (percent > 100)
+        percent = 100;
+    unsigned stage;
+    const char *words = step_text(step, &stage);
+    if (*words)
+        centered(d, oy, 216, words, TEXT);
+    if (stage) {
+        char counter[24];
+        snprintf(counter, sizeof(counter), "Step %u of 4", stage);
+        centered(d, oy, 250, counter, DIM);
     }
+    unsigned fill = 4 * percent;
+    rect(d, ox + 40, oy + 292, 400, 6, TRACK);
+    rect(d, ox + 40, oy + 292, fill, 6, FILL);
+    if (percent < 100 && fill + 24 < 400) {
+        unsigned room = 400 - fill - 24;
+        unsigned at = fill + (phase * 6) % (room + 1);
+        rect(d, ox + 40 + at, oy + 292, 24, 6, DIM);
+    }
+    if (time_line && *time_line)
+        centered(d, oy, 314, time_line, DIM);
+}
+static uint64_t now_ms(void) {
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (uint64_t)t.tv_sec * 1000 + (uint64_t)t.tv_nsec / 1000000;
+}
+/* Remaining time from the average rate so far; rounded up to whole minutes so
+ * the line does not flicker, and only once there is enough to go on. */
+static void time_left(char *out, size_t cap, unsigned percent, uint64_t elapsed_ms) {
+    if (percent >= 100) {
+        out[0] = 0;
+        return;
+    }
+    if (percent < 3 || elapsed_ms < 8000) {
+        snprintf(out, cap, "Estimating time left");
+        return;
+    }
+    uint64_t left = elapsed_ms * (100 - percent) / percent / 1000;
+    if (left < 50)
+        snprintf(out, cap, "Less than a minute left");
+    else
+        snprintf(out, cap, "About %u min left", (unsigned)((left + 59) / 60));
 }
 int main(void) {
     Display d;
@@ -233,21 +280,38 @@ int main(void) {
     if (!ready)
         return 1;
     char screen[1024] = {0}, progress[64] = {0}, last_screen[1024] = {1}, last_progress[64] = {1};
+    char line[40] = {0}, last_line[40] = {1};
     bool shown = false;
+    uint64_t started = 0, refreshed = 0;
+    unsigned phase = 0;
     for (;;) {
         if (!slurp("/run/y2/recovery-screen", screen, sizeof(screen)))
             screen[0] = 0;
         if (!slurp("/run/y2/recovery-progress", progress, sizeof(progress)))
             progress[0] = 0;
-        if (strcmp(screen, last_screen) || strcmp(progress, last_progress)) {
-            draw(&d, screen, progress);
+        unsigned percent = 0;
+        bool running = sscanf(progress, "%u", &percent) == 1 && percent < 100;
+        uint64_t now = now_ms();
+        if (running && !started)
+            started = now;
+        /* The estimate changes at most every three seconds. */
+        if (running && now - refreshed >= 3000) {
+            time_left(line, sizeof(line), percent, now - started);
+            refreshed = now;
+        } else if (!running)
+            line[0] = 0;
+        bool changed = strcmp(screen, last_screen) || strcmp(progress, last_progress) ||
+                       strcmp(line, last_line);
+        if (changed || running) {
+            draw(&d, screen, progress, line, phase++);
             if (!shown)
                 shown = !show(&d);
             else
                 drmModeDirtyFB(d.fd, d.fb, NULL, 0);
             memcpy(last_screen, screen, sizeof(screen));
             memcpy(last_progress, progress, sizeof(progress));
+            memcpy(last_line, line, sizeof(line));
         }
-        poll(NULL, 0, 200);
+        poll(NULL, 0, running ? 100 : 200);
     }
 }
