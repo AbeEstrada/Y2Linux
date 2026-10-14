@@ -7992,3 +7992,39 @@ plus the release identity. Builds the image; the owner flashes.
 | User copies | NOTE | The 13 trial copies in Internal Storage `Themes/` are hidden by the shipped skins of the same name; the owner may delete them. |
 
 **Gate decision:** READY for the build.
+
+## OTA-35 full over-the-air updates through a Y2 recovery image scope audit — 2026-10-15
+
+**Boundary:** owner request: users on Wi-Fi search for updates on the Y2 and install a full update (Y2Linux kernel,
+rescue, root and Reborn) without a computer; flashing the RECOVERY partition for this is approved. Owner decisions
+(2026-10-15, "yes to all"): (1) the device powers off and the user presses Power to enter the installer, and again
+to start the new system, while the warm-reboot display defect is fixed separately; (2) releases are hosted as
+GitHub Release assets of SchulzCode/Y2Linux; (3) installing needs the charger or at least 50 % battery;
+(4) an automatic daily check that only shows that an update is available, never installs; (5) the stock Android
+recovery is replaced by a Y2 recovery image after a backup. Material production-scope change: new device-side
+write windows (RECOVERY, MISC message block, BOOTIMG from recovery only) and a new SPFT row (RECOVERY).
+
+**Read-only evidence (archive `20261015/128-ota-entry-baseline`, device on 34, boot ID in the archive):**
+installed LK (UBOOT `0x1d20000`, first 242440 bytes) is byte-identical to the analysed FM `lk.bin`
+(`bb1a93b4…964a`), so the static LK findings apply: `boot_mode_select` honours the MISC bootloader command
+`boot-recovery` and the RTC PDN1 recovery flag, has no recovery key, and checks both before charging mode.
+BOOTIMG prefix equals candidate 34 (`ee80a82c…c30c`). RECOVERY holds an intact stock Android recovery
+(`RECOVERY` ramdisk label, kernel lineage `b026b285…`, OriginalFirmware, not FM; region hash `b3389226…be26`),
+saved with UBOOT, BOOTIMG and MISC as `emmc-readback/*.bin`. MISC's Android message area (first 2 KiB) is all
+zero; LK's `ENV_v1` block at MISC+0x20000 is not touched by this work. Our kernel ignores LK's command line
+(`ATAG_DTB_COMPAT=n`) and takes `bootargs`/`initrd-end` from its own appended DTB, so a recovery image carries
+its own DTB. LK's boot mode is visible at `/sys/firmware/y2_boot/metadata`.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Recovery entry | NEW, PHYSICAL_GATE | Normal system writes the 2 KiB MISC message (`boot-recovery`) only after checking that RECOVERY holds a Y2 recovery image; LK then loads RECOVERY on the next power-on. The request stays set until the installer's work is verified, so power loss re-enters recovery. RTC flag not used (lifetime unmeasured). |
+| Y2 recovery image | NEW | Same zImage, own DTB (`y2.recovery=1`, own initrd end), ramdisk labelled `RECOVERY`, boot-image name `Y2Recovery`; initramfs = production rescue plus installer and progress screen. Fits the 16 MiB RECOVERY span. |
+| eMMC write policy | CHANGED | `storage-policy.h`: kernel from BOOTIMG may write RECOVERY and the MISC message; kernel from RECOVERY may write BOOTIMG and the MISC message; neither writes its own image. ANDROID/USRDATA/FAT unchanged; everything else stays read-only. |
+| Update contract | CHANGED | Manifest schema 2: BOOTIMG + Y2ROOT (+ optional RECOVERY) payloads; the kernel is no longer required to match. The installer backs up both and rolls back both. Schema-1 root-only rescue installation is retired (no device ever installed one). |
+| Download | CHANGED | Default channel GitHub Releases; HTTPS redirects only to an allowlist; authenticity from the Ed25519 signature; payload hashes pinned by the signed manifest. |
+| Reborn | CHANGED | Software Update page wording for power-off install, daily check result, battery gate. |
+| Warm reboot display | OPEN (separate) | Software reboot leaves the panel dark (since 11). Not needed for OTA v1 (cold power-on only). |
+| Hang before rescue | ACCEPTED RISK | LK has no try-once boot: a BOOTIMG that hangs before its initramfs runs needs SP Flash Tool. Mitigation: OTA BOOTIMGs are byte-identical to computer-flashed and checked candidates. |
+
+**Gate decision:** READY for source work and a candidate build. Physical steps (flash RECOVERY with SPFT, first
+recovery entry, first OTA) remain the owner's; the agent never flashes.
