@@ -2,10 +2,9 @@
 # Y2 recovery image (OTA-35). init sources this when the kernel was loaded from
 # RECOVERY (y2.recovery=1 in that image's own DTB). It installs or restores
 # BOOTIMG + Y2ROOT through y2-update-core, records what happened on Y2DATA and
-# powers off: a software restart leaves the panel dark (open defect), so the
-# owner starts the new system with Power. It never starts the normal system,
-# formats storage or reboots in a loop. Uses init's y2_stage, start_observer
-# and y2_find_partition.
+# powers off, or restarts into the result when the owner's restart switch is
+# set. It never starts the normal system itself, formats storage or reboots in
+# a loop. Uses init's y2_stage, start_observer and y2_find_partition.
 
 recovery_screen() {
     printf '%s\n' "$@" > /run/y2/recovery-screen.tmp &&
@@ -23,14 +22,20 @@ recovery_restart_mode() {
     grep -q '"mode": *"reboot"' /newdata/updates/restart.json 2>/dev/null && recovery_restart=1
 }
 
-# Keep evidence on Y2DATA (the normal system's diagnostics read it), then turn off
-# or, with the owner's switch, restart.
+# The recovery's evidence on Y2DATA (the normal system's diagnostics read it):
+# result, kernel log and the display path's register snapshot.
+recovery_evidence() {
+    mkdir -p /newdata/logs
+    cp /run/y2/recovery-result.json /newdata/updates/recovery-last.json 2>/dev/null
+    dmesg > /newdata/logs/recovery-last.log 2>/dev/null
+    cat /sys/kernel/debug/y2_display_snapshot > /newdata/logs/recovery-display.txt 2>/dev/null
+    sync
+}
+
+# Keep the evidence, then turn off or, with the owner's switch, restart.
 recovery_off() {
     if [ -n "$recovery_data_mounted" ]; then
-        mkdir -p /newdata/logs
-        cp /run/y2/recovery-result.json /newdata/updates/recovery-last.json 2>/dev/null
-        dmesg > /newdata/logs/recovery-last.log 2>/dev/null
-        sync
+        recovery_evidence
         umount /newdata 2>/dev/null
     fi
     sync
@@ -50,11 +55,7 @@ recovery_off() {
 recovery_stuck() {
     recovery_log "$*; staying in recovery"
     recovery_screen 'Update needs attention' "$1" '' 'Connect the player' 'to a computer.'
-    if [ -n "$recovery_data_mounted" ]; then
-        cp /run/y2/recovery-result.json /newdata/updates/recovery-last.json 2>/dev/null
-        dmesg > /newdata/logs/recovery-last.log 2>/dev/null
-        sync
-    fi
+    [ -z "$recovery_data_mounted" ] || recovery_evidence
     while :; do
         /bin/busybox sh </dev/console >/dev/console 2>&1
         sleep 1

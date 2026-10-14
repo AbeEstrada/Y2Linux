@@ -8028,3 +8028,20 @@ its own DTB. LK's boot mode is visible at `/sys/firmware/y2_boot/metadata`.
 
 **Gate decision:** READY for source work and a candidate build. Physical steps (flash RECOVERY with SPFT, first
 recovery entry, first OTA) remain the owner's; the agent never flashes.
+
+## POWER-FINAL-44 dark recovery screen (DSI register reads lag) scope audit — 2026-10-16
+
+**Boundary:** the 43 install with the owner's restart switch ran end to end without a Power press (53 s, health
+`Acknowledged`), the restart into the new system was lit, but the recovery's progress screen stayed dark (owner:
+"only the update display did not show with usb connected"). Read-only evidence: the recovery's kernel log on Y2DATA
+(`/data/logs/recovery-last.log`) and archive `20261016/143` (42 cold start with USB plugged in, dark, early hand-over
+at 0.49 s, display snapshot). No hardware or memory scope change; display driver and recovery script only.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Dark recovery screen | NEW (distinct from the restart wedge fixed in 43) | Both dark boots read the whole DSI register file shifted by one word (each read returns the previous read's data: `vactive` reads PSCTRL's `0x305a0`, `ld0` reads LCC). 143's snapshot vs the lit restart 147 differs in DSI only (77 words) plus one CPU-PLL bit; SMI larb0 idle, MMSYS gates, PHY, mutex identical. Real CON_CTRL reads 0 (DSI_EN lost): every `mtk_dsi_mask()` stored a neighbour's value. 144 (42 restart, the larb0 wedge) reads DSI correctly, so this is a second, intermittent failure mode; USB enumeration is not concurrent (5 s in 143). |
+| Fix (44) | CHANGED | `mtk_dsi_poweron()` reads PSCTRL then VACT_NL after the timing setup; if VACT_NL is not the mode's vactive it power-cycles PHY and DSI clocks and repeats the setup (at most 3 times, logged). The hand-over logs the same read-back of LK's timing, to show whether the lag is inherited. The recovery saves `y2_display_snapshot` as `/data/logs/recovery-display.txt`. |
+| Cause | OPEN | Why the register port lags is unknown (no vendor reference found yet). The retry is a mitigation that only runs when the lag is measured. |
+
+**Gate decision:** READY for a candidate (44) delivered over the air; checked by the next restart-entered recovery
+(install or probe) with the owner's OK.
