@@ -4,8 +4,8 @@
 REBORN_SITE = $(if $(Y2_REBORN_SOURCE),$(Y2_REBORN_SOURCE),$(BR2_EXTERNAL_Y2LINUX_PATH)/../../Y2Reborn)
 REBORN_VERSION = $(shell python3 "$(BR2_EXTERNAL_Y2LINUX_PATH)/../tools/production/application.py" --source-version "$(REBORN_SITE)/Cargo.toml")
 REBORN_SITE_METHOD = local
-REBORN_LICENSE = MIT, OFL-1.1 (Open Sans glyph data in the binary)
-REBORN_LICENSE_FILES = LICENSE assets/fonts/OpenSans-OFL.txt
+REBORN_LICENSE = MIT, OFL-1.1 (Open Sans glyph data in the binary and fonts of the Classic skin)
+REBORN_LICENSE_FILES = LICENSE assets/fonts/OpenSans-OFL.txt skins/classic/fonts/OpenSans-OFL.txt
 REBORN_DEPENDENCIES = ffmpeg sqlite alsa-lib dbus mesa3d libdrm util-linux host-pkgconf
 REBORN_CARGO ?= $(HOME)/.cargo/bin/cargo
 REBORN_OVERRIDE_SRCDIR_RSYNC_EXCLUSIONS = --exclude=/target --exclude=/out --exclude=/.git
@@ -35,6 +35,12 @@ define REBORN_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0644 $(@D)/docs/architecture/dependencies.json $(TARGET_DIR)/usr/share/reborn/dependencies.json
 	$(INSTALL) -D -m 0644 $(@D)/LICENSE $(TARGET_DIR)/usr/share/reborn/LICENSE
 	$(INSTALL) -D -m 0644 $(@D)/assets/fonts/OpenSans-OFL.txt $(TARGET_DIR)/usr/share/reborn/OpenSans-OFL.txt
+	# Shipped skins; user skins are folders in Themes on the media storage.
+	rm -rf $(TARGET_DIR)/usr/share/reborn/skins
+	mkdir -p $(TARGET_DIR)/usr/share/reborn/skins
+	cp -a $(@D)/skins/. $(TARGET_DIR)/usr/share/reborn/skins/
+	find $(TARGET_DIR)/usr/share/reborn/skins -type d -exec chmod 0755 {} +
+	find $(TARGET_DIR)/usr/share/reborn/skins -type f -exec chmod 0644 {} +
 	$(INSTALL) -D -m 0755 $(REBORN_PKGDIR)/reborn-supervise $(TARGET_DIR)/usr/libexec/reborn-supervise
 	# Y2DATA is prepared by S02y2-data. Reborn starts last, after the platform
 	# services and (when enabled) the radios are up; S90reborn waits for them.
