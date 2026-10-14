@@ -317,7 +317,7 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [POWER-FINAL-42 — reopen the SMI gates before a software restart](validation/Y2-PLATFORM-V1-POWER-FINAL-42.md) | Flashed candidate report (restart still dark) |
 | [POWER-FINAL-43 — hold SMI for LK's display until the display takes over](validation/Y2-PLATFORM-V1-POWER-FINAL-43.md) | Candidate report; software restart fixed (archive 147) |
 | [POWER-FINAL-44 — dark recovery screen: DSI register reads lag one word](validation/Y2-PLATFORM-V1-POWER-FINAL-44.md) | Flashed candidate report (cold start lit, archive 148) |
-| [POWER-FINAL-45 — over-the-air test package for 44's recovery screen](validation/Y2-PLATFORM-V1-POWER-FINAL-45.md) | Sealed candidate report (staged on the player) |
+| [POWER-FINAL-45 — over-the-air test package for 44's recovery screen](validation/Y2-PLATFORM-V1-POWER-FINAL-45.md) | Installed over the air, PASSED (archive 149) |
 | [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |
 | [POWER-FINAL-32 — deep idle during screen-off playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) | Sealed candidate report (in 33) |
 | [POWER-FINAL-31 — folder-first artwork and metadata formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) | Sealed candidate report (in 33) |
