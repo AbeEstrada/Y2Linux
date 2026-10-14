@@ -309,7 +309,8 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | --- | --- |
 | [POWER-FINAL-34 — all skins shipped, battery level fixed](validation/Y2-PLATFORM-V1-POWER-FINAL-34.md) | Sealed candidate report (Baseline 34) |
 | [POWER-FINAL-35 — over-the-air updates through a Y2 recovery image](validation/Y2-PLATFORM-V1-POWER-FINAL-35.md) | Flashed candidate report (recovery entry passed) |
-| [POWER-FINAL-37 — recovery replay fix and the warm-restart display snapshot](validation/Y2-PLATFORM-V1-POWER-FINAL-37.md) | Sealed candidate report (awaiting flash) |
+| [POWER-FINAL-37 — recovery replay fix and the warm-restart display snapshot](validation/Y2-PLATFORM-V1-POWER-FINAL-37.md) | Flashed candidate report |
+| [POWER-FINAL-38 — stock restart sequence (external reset)](validation/Y2-PLATFORM-V1-POWER-FINAL-38.md) | Sealed candidate report (awaiting install) |
 | [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |
 | [POWER-FINAL-32 — deep idle during screen-off playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) | Sealed candidate report (in 33) |
 | [POWER-FINAL-31 — folder-first artwork and metadata formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) | Sealed candidate report (in 33) |
