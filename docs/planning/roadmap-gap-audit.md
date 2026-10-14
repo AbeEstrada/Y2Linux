@@ -7958,3 +7958,22 @@ screen-off playback) and a wired screen-off playback test. Platform-only kernel/
 | Bluetooth enabled-but-idle | NOT_CHANGED | Needs STP PSM + BTIF clock gating (stock `stp_psm_*`, `btif_enter_dpidle`); separate change after this test. |
 
 **Gate decision:** READY for the build.
+
+## POWER-FINAL-33 Reborn skins (themes) scope audit — 2026-10-14
+
+**Boundary:** owner request: themes that give Reborn a totally different look (example: a classic click-wheel
+player), switchable in Reborn and addable on the device; the current UI stays the untouched default; steps 1
+(engine, format, Classic proof) and 2 (every screen part, fonts from TTF, Settings picker, install from storage).
+Reborn change (`cfd21df` vendor, `e4b175b` skins); platform as 32 plus installing the shipped skins and the
+release identity. Builds the image; the owner flashes and tests. Steps 3 (web editor) and 4 (polish) not in scope.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Default look | NO_CHANGE (host-verified) | Without a skin `screens::draw` runs the old path; every reborn-preview state is byte-identical to Reborn `0892bf2` except Display (new Theme row). The skin texture slot is a 1×1 texel until a skin is chosen. |
+| Renderer | CHANGED | Texture slot 8 = skin atlas (≤1024×1024 RGBA, uploaded on choice, released on Reborn, re-uploaded after a renderer restart); quads validated against its size. One extra texture name, no new shader. |
+| Pictures | CHANGED | `rb_media_image_file` reuses the FFmpeg mjpeg/png/webp decoders at the picture's own size (≤480×360, bounded file read, no image demuxer, no network). |
+| Skin files | NEW | Shipped: `/usr/share/reborn/skins/classic` (skin.json, 7 small PNGs, Open Sans Bold/Regular/SemiBold TTF + OFL). User: `Themes/` (any case) in the internal music root (MTP Internal Storage) and the SD card root. Every named file must canonicalize inside its skin folder; size limits per file. The UI crate does no I/O (architecture guard); the app reads. |
+| Settings | CHANGED | `Settings.theme` (serde default empty = Reborn), Settings → Display → Theme picker (rescans on open), live switch; a refused skin keeps the current look and says why; a missing skin at start falls back for the session; Reset settings returns to Reborn. Control op `theme` / `rebornctl theme [ID|reborn]`. |
+| Risk | OPEN, device test | Load time and memory on the Y2 (atlas ≤4 MiB RAM + texture), Lima texture upload, MTP folder copy, SD-hosted skin, live switch from the picker, sleep/wake with a skin active. |
+
+**Gate decision:** READY for the build.
