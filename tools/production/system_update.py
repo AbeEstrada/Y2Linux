@@ -124,8 +124,19 @@ def validate_preservation(out, manifest):
         {'file':'fallback/'+p['raw']['file'],'size_bytes':p['raw']['size_bytes'],'sha256':p['raw']['sha256']}
         for p in (oldboot,oldroot)], 'fallback identity receipt')
     require((out/'fallback/MT6582_preserve_data_scatter.txt').read_text()==preserving_scatter(stock), 'fallback preserves data')
-    require(manifest['radio_firmware']==json.loads((out/'metadata/radio-firmware.json').read_text())==RADIO_FIRMWARE,
-            'no radio firmware in the images (RELEASE-49)')
+    if 'radio_firmware' in manifest:
+        require(manifest['radio_firmware']==json.loads((out/'metadata/radio-firmware.json').read_text())==RADIO_FIRMWARE,
+                'no radio firmware in the images (RELEASE-49)')
+    else:
+        # Packages before RELEASE-49 carried the owner's reviewed firmware.
+        from tools.connectivity.provision import DEFAULTS, INVENTORY
+        require(manifest['owner_firmware']['redistribution_permission_established'] is False, 'owner-only provisioning')
+        files={x['filename']:{'size_bytes':x['bytes'],'sha256':x['sha256']}
+               for x in json.loads(INVENTORY.read_text())['files']}
+        files.update({name:{'size_bytes':v[0],'sha256':v[1]} for name,v in DEFAULTS.items()})
+        require(manifest['owner_firmware']==json.loads((out/'metadata/owner-firmware.json').read_text())==
+                {'schema':'org.schulzcode.y2linux.owner-firmware/v1',
+                 'redistribution_permission_established':False,'files':files}, 'reviewed firmware receipt')
     if manifest.get('feature_contract_version') == 2:
         configuration = manifest['hardware_configuration']
         require(configuration == json.loads((out/'metadata/hardware-configuration.json').read_text()),

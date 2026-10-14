@@ -9,6 +9,10 @@ REBORN_LICENSE_FILES = LICENSE assets/fonts/OpenSans-OFL.txt skins/classic/fonts
 REBORN_DEPENDENCIES = ffmpeg sqlite alsa-lib dbus mesa3d libdrm util-linux host-pkgconf
 REBORN_CARGO ?= $(HOME)/.cargo/bin/cargo
 REBORN_OVERRIDE_SRCDIR_RSYNC_EXCLUSIONS = --exclude=/target --exclude=/out --exclude=/.git
+# legal-info would pack the whole build tree (Cargo target, ~2.6 GB). Reborn is
+# this project's own MIT code; its exact source is the Y2Reborn repository at
+# the same baseline tag (and its vendored crates), named in each release.
+REBORN_REDISTRIBUTE = NO
 
 define REBORN_BUILD_CMDS
 	$(TARGET_CC) $(TARGET_CFLAGS) -Os -Wall -Wextra -Werror -I$(STAGING_DIR)/usr/include/libdrm \

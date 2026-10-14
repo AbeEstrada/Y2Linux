@@ -205,6 +205,11 @@ def ca_certificates(buildroot_source: Path) -> None:
     if "c_rehash" in updated or "openssl rehash" not in updated:
         raise ValueError("ca-certificates rehash anchor missing")
     recipe.write_text(updated)
+    # 20260816 ships a revised debian/copyright (license file of legal-info);
+    # the archive itself is pinned by its own hash above.
+    replace_once(buildroot_source / "package/ca-certificates/ca-certificates.hash",
+                 "e85e1bcad3a915dc7e6f41412bc5bdeba275cadd817896ea0451f2140a93967c  debian/copyright",
+                 "1ae033c4679e4440848d2fcf6bc8e57d4da2644662775f401e2fede57862674c  debian/copyright")
 
 
 def bluez_alsa(buildroot_source: Path) -> None:
@@ -317,11 +322,21 @@ def bootlin_toolchain(buildroot_source: Path) -> None:
                          f"armv7-eabihf--glibc--stable-{TOOLCHAIN_VERSION}.tar.xz", TOOLCHAIN_SHA256)
 
 
+# License files that changed with a bump (checked by `make legal-info`): the
+# archives are pinned above; only the copyright years moved.
+LICENSE_HASHES = (
+    ("python-mako", "LICENSE", "68d7064e53e3ffa8e9f420a9e604bd2e2059d9c330492fa6ebd4eb3d48111689",
+     "8c1d171bc5d341ad9cd33d5e2c39b96a82c7bd49b3ae89a470c37e5822232054"),
+)
+
+
 def apply(buildroot_source: Path) -> None:
     for row in BUMPS:
         bump(buildroot_source, *row)
     for row in PYPI_BUMPS:
         bump_pypi(buildroot_source, *row)
+    for name, file, old, new in LICENSE_HASHES:
+        replace_once(buildroot_source / "package" / name / f"{name}.hash", f"{old}  {file}", f"{new}  {file}")
     fdk_aac_free(buildroot_source)
     bluez_alsa(buildroot_source)
     ca_certificates(buildroot_source)

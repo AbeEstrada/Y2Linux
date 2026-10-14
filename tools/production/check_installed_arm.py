@@ -79,11 +79,13 @@ assert len(interpreters)==1, interpreters
 for name in ('usr/bin/'+interpreters[0],'usr/sbin/y2-audio-contract','usr/bin/reborn','usr/bin/reborn-bench'):
     with (target/name).open('rb') as f: binaries[name]=hashlib.file_digest(f,'sha256').hexdigest()
 help_text=run('usr/bin/bluealsad', ['--help']).stdout
-for codec in ('SBC', 'AAC', 'aptX', 'aptX-HD', 'LDAC'):
+codec_inventory=json.loads((target/'etc/y2linux/bluetooth-codecs.json').read_text())
+# RELEASE-49: a public image compiles SBC, AAC and LDAC; aptX/aptX HD only private.
+expected={'SBC','AAC','LDAC'} if codec_inventory['profile']=='public' else {'SBC','AAC','aptX','aptX-HD','LDAC'}
+for codec in expected:
     assert codec in help_text, codec
 (build/'arm-bluealsa-help.txt').write_text(help_text)
-codec_inventory=json.loads((target/'etc/y2linux/bluetooth-codecs.json').read_text())
-assert all(v['compiled_locally'] for v in codec_inventory['codecs'].values())
+assert {n for n,v in codec_inventory['codecs'].items() if v['compiled_locally']}==expected
 assert all(not v['platform_qualified'] for v in codec_inventory['codecs'].values())
 receipt=dict(versions=versions,hardware_validation=False,passed=True,binaries=binaries,
              python=python,audio_null_constraints=audio,reborn_defaults=defaults,codec_software_contract='arm-codec-software-contract.txt',
