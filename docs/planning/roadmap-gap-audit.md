@@ -7944,3 +7944,17 @@ identity. Builds the image; the owner flashes.
 | Disc subfolders (Album/CD1/) | NOT_CHANGED | A cover one level up would need the pinned-storage sidecar API to open the parent directory; left for a later change. |
 
 **Gate decision:** READY for the build.
+
+## POWER-FINAL-32 deep idle during screen-off playback scope audit — 2026-10-14
+
+**Boundary:** owner request: awake idle power pass with REA (ledger F34–F38); owner go for change 1 (deep idle during
+screen-off playback) and a wired screen-off playback test. Platform-only kernel/userspace change; Reborn as 31
+(`0892bf2`). Builds the image; the owner flashes and tests.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Deep idle with the audio clock on | CHANGED (switch `deep_idle_audio`, `/sys/module/clocks/parameters/deep_idle_audio`, kernel default off, `power_features` arms it) | Stock `dpidle_handler` / `clkmgr_idle_can_enter` masks: INFRA `0xa080`, AUDIO group unchecked; `spm_dpidle_before_wfi` moves only AUDINTBUS to 26 MHz and restores it. Y2 31 added INFRA bit 5 (AFE clock), so screen-off playback never deep-idled. 32 drops bit 5 when the switch is on; every other stock mask, MSDC, display, UART, topology, OPP and screen rule unchanged. `deep_audio_entries` counts admissions with the AFE clock on; sleep rows record both. |
+| Risk | OPEN, device test | Audio DMA continues on the 26 MHz AUDINTBUS during the PCM program; underruns would show in Reborn's `audio_xruns` and be audible. Test: wired, screen off, Bluetooth off, ≈30 min; compare SPM `dormant_entries`/`dormant_residency_us`, SLIDLE entries, `deep_audio_entries`, `audio_xruns`. Off switch: `{"deep_idle_audio": false}`. |
+| Bluetooth enabled-but-idle | NOT_CHANGED | Needs STP PSM + BTIF clock gating (stock `stp_psm_*`, `btif_enter_dpidle`); separate change after this test. |
+
+**Gate decision:** READY for the build.
