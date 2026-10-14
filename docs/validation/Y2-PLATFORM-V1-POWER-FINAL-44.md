@@ -1,6 +1,6 @@
 # POWER-FINAL-44 — dark recovery screen: DSI register reads lag one word
 
-Status: **SEALED, awaiting the over-the-air install** (2026-10-16). Package
+Status: **FLASHED by the owner** (2026-10-16; cold start lit, archive `20261016/148`); tested over the air with 45. Package
 `out/y2linux-platform-v1-power-final-candidate-44/` (fallback = 43, which the player runs), receipts
 `out/deep-sleep-final/build44-receipts/`. BOOTIMG `f2c19f69980a6ea2491503437db29d0e32cd25a40cff6d4a28c9799242437385`, Y2ROOT `d53db06a9d54ebf89a6e49a6bd0c559b11dca95218c23c812dbe493bdf30d0a9`, RECOVERY `56fdf20b07eb7f4fe61ec92f33aad8a958118578a870ddcc8ca2916500d6a77f`. Kernel
 `6.18.56-y2linux-platform-v1-power-final-44`, release `…candidate.44`, update sequence 4400. Container suite
