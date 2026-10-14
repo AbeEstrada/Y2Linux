@@ -28,3 +28,11 @@ space for users to update?" Staging 45 had failed `update_data_space_reserve` be
 
 1. Player on Wi-Fi: Settings → About & Updates → **Check for Updates**, **Download Update**, **Restart and Install**.
 2. The agent checks the install log, the display, `Acknowledged` and the cleaned-up package afterwards.
+
+## Device results
+
+- **Over-the-air install from the GitHub release over Wi-Fi PASSED** (owner: "it worked"): check found 46 (58.7 MB,
+  release key), download, Restart and Install, restart into 46 (boot `5b0b3a40`, reason 4), `Acknowledged`, taint 0.
+- **The recovery screen stayed dark.** Hand-over read-back correct (`vact=00000168` at 0.52 s), then at the first
+  modeset (0.56 s) the read lag; 44's three power cycles did not clear it (`still lag after 3 power cycles`), vblank 1.
+  Analysis and fix: [47](Y2-PLATFORM-V1-POWER-FINAL-47.md).
