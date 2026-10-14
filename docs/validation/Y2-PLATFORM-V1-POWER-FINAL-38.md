@@ -1,10 +1,10 @@
-# POWER-FINAL-38 — stock restart sequence (external reset)
+# POWER-FINAL-38 — stock restart sequence, faster installs, clearer progress
 
 Status: **SEALED, awaiting the owner** (2026-10-15). Package `out/y2linux-platform-v1-power-final-candidate-38/`
 (fallback = 37), receipts `out/deep-sleep-final/build38-receipts/`. BOOTIMG
-`aedd1c3ebbc2332dfd788cad2d918ee9be1a3ee23b5d9f12f942dd4f9cd575cf`, Y2ROOT
-`91ec460bdacc3b94575fbf208fb7a0d0bfc121493c5a130fa787c10564962531`, RECOVERY
-`a6d1de5fe888a82dcfd03b3a11716169f51e41b926afd054d8c7188e8413c482`. Kernel `6.18.56-y2linux-platform-v1-power-final-38`,
+`d4e99ba51149e4effd37b34eff7fea0a90b645497b01ef47df1f25b473abcf9d`, Y2ROOT
+`5670c063fa84ff0eba939510996f7ca7b9b1692cbd7d504afd3dbf8198ff6709`, RECOVERY
+`953c3153fd5bcffcf823585fc9f5eed4fe52ba380c8615cf46cc25cee6283857`. Kernel `6.18.56-y2linux-platform-v1-power-final-38`,
 release `1.0.0-platform-v1-power-final-candidate.38`, update sequence 3800. Container suite **718 OK**, all seal checks
 PASS. Signed OTA (release key): `out/y2linux-platform-v1-power-final-candidate-38-ota-release/`.
 
@@ -21,10 +21,12 @@ only wrote `WDT_SWRST`, so display-path state survived and Linux got no frames a
 | Restart | `mtk_wdt_restart` on MT6582 uses the stock sequence (patch 0037). The suspend backstop watchdog is unchanged. |
 | Updates | Restart instead of power-off only with the owner switch `/data/updates/restart.json` `{"mode": "reboot"}` (apply and recovery), until a restart is proven on the device. |
 | Snapshot | 37's read-only display snapshot stays for a cold/warm diff if a restart still fails. |
+| Install speed | 37 took 136 s in recovery (SHA-256 of the 512 MiB root about five times). 38 authenticates the encoded payloads by their signed SHA-256 only, checks backups by their compressed-file hash, reads back by CRC-32, skips unchanged root chunks (`root_bytes_written`) and logs each step's time. Backups from before 38 still restore. |
+| Recovery screen | "Step n of 4", a bar that moves within each step, a shimmer in the unfilled part, the time left from the rate so far, "This takes 1-2 minutes." |
 
 ## Owner steps
 
-1. Install 38 (SP Flash Tool BOOTIMG + ANDROID, or over the air from 37 with the signed package).
+1. Install 38 (SP Flash Tool BOOTIMG + ANDROID, or over the air from 37 with the signed package — this also measures the new install time).
 2. With the owner's OK: one `y2-platform shutdown reboot`. Panel lit → restart fixed; then
    `restart.json` on, and an install test without pressing Power. Panel dark → hold Power 10 s; the agent diffs
    the snapshots (cold: archive 133).

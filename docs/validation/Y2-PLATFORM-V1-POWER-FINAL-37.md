@@ -16,6 +16,17 @@ PASS. 36 (status fix only) was never installed; 37 contains it.
 | `y2-platform update status` called the schema-2 journal unreadable (Reborn could not install; health would never acknowledge). | Python accepts journal schema 2; an unpublished channel (404) means up to date. |
 | A software restart (boot_reason 4) leaves the panel dark (archives 130/131): DSI/PHY registers equal a cold start, but OVL never completes and RDMA never reports done; vblank stays 1. The owner saw LK's logo on the restart. REA of the FM LK (`platform_init` 0x81e004b8): display init and logo run with no boot-reason branch. | Read-only display-path snapshot at `/sys/kernel/debug/y2_display_snapshot`: two samples of MMSYS, OVL, RDMA, MUTEX, SMI larb0/common, DSI, MIPI TX, APMIXED PLLs, INFRACFG, TOPCKGEN and SPM power status, for a cold/warm diff. |
 
+## Device results
+
+- **Flashed 2026-10-15;** cold display snapshot saved (archive `20261015/133`, both samples complete).
+- **First full over-the-air install PASSED** (reinstall of 37 with the development package, owner tapped Turn Off
+  and Install, Power, Power): recovery 136 s from kernel start to `installed`, both images read back equal to the
+  package (BOOTIMG `8c92985d…`, RECOVERY `9ea3c9c8…` over the 16 MiB spans), MISC cleared, the new boot
+  acknowledged health (`Acknowledged`, `accepted.json` 3700), staged package removed. Owner: pace OK, wants it faster
+  and more reassuring while waiting; likes the screen.
+- Measured for speed (read-only, normal system): full verification 24.2 s (libsodium SHA-256 ≈30 MB/s dominates),
+  eMMC read of the root 5.8 s, zlib inflate of the root 7.6 s, CRC-32 ≈200 MB/s. Changes in 38.
+
 ## Owner steps
 
 1. Flash 37 (preserve scatter: BOOTIMG + ANDROID; RECOVERY optional — the install test writes 37's recovery
