@@ -8063,3 +8063,22 @@ owner's explicit instruction.
 | Restart | CHANGED | Restart into the recovery and back is the default (lit on 43 restart, 45 OTA); `restart.json` `{"mode": "poweroff"}` is the override. Low battery in the recovery always turns off (a restart would loop). Reborn: **Restart and Install**. |
 
 **Gate decision:** READY for candidate 46, published as a GitHub release and installed over Wi-Fi from the channel.
+
+## POWER-FINAL-47 DSI register read lag: display DCM scope audit — 2026-10-16
+
+**Boundary:** 46 installed over Wi-Fi from the release (archive `20261016/150`, Acknowledged), but its recovery screen
+stayed dark. Its log narrows the read lag: at the hand-over LK's DSI registers read correctly (`vact=00000168`); at
+Linux's first modeset, 42 ms later, every read lags, and 44's three DSI clock/PHY power cycles did not clear it. In
+that window the mutex's first prepare applies MMSYS DCM, including group 1 (DSI engine/digital, DPI). Stock calls
+`dcm_enable` only from `mt_dcm_init` (and sysfs), when its display already streams; `bus_dcm_*` only around idle.
+Every lagged boot (143, 43's recovery, 150) is after POWER-FINAL-16 introduced the DCM; the older dark restarts read
+the DSI correctly. Not proven causal (no clean A/B yet).
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| DSI/DPI DCM | CHANGED | Group 1 keeps DCM off (`0x1400012c`/`0x14000130` = 0xf, clear register untouched). Group 0 and SMI DCM unchanged. No power cost: with the screen on the DSI streams continuously, with it off DIS is powered down. |
+| Evidence | CHANGED | Hand-over and read-back lines print the group-1 DCM register (`dcm1=`). |
+| Probe | CHANGED | `update probe-recovery` follows the restart setting, so restart-entered recovery screens can be repeated without an install (the A/B test). |
+
+**Gate decision:** READY for candidate 47; device qualification by repeated restart-entered recovery probes with the
+owner's OK.

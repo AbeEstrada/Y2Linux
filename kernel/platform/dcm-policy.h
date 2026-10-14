@@ -57,13 +57,20 @@ static inline void y2_dcm_mm(const struct y2_dcm_io *io)
 	/* SMI_DCM (stock also sets 0x1000c014 bit 2 and 0x102055f0 bit 0;
 	 * not adopted until those blocks are identified). */
 	io->write(io->context, 0x14011300, 1);
-	/* DIS_DCM. */
+	/* DIS_DCM group 0 (the CG0 engines: OVL, RDMA, COLOR, mutex, ...). */
 	io->write(io->context, 0x14000120, 0);
 	io->write(io->context, 0x14000124, 0);
 	io->write(io->context, 0x14000128, 0xffffffff);
-	io->write(io->context, 0x1400012c, 0);
-	io->write(io->context, 0x14000130, 0);
-	io->write(io->context, 0x14000134, 0xffffffff);
+	/* Group 1 (CG1: DSI engine/digital, DPI) stays without DCM
+	 * (POWER-FINAL-47). Stock enables it once at boot while its display is
+	 * already streaming; Linux applies DCM at every CRTC enable, with the DSI
+	 * idle. Three times after that (archives 143, 147's recovery, 150) the DSI
+	 * register port answered every read one register late from the first
+	 * modeset on, and power-cycling DSI clocks and PHY did not clear it, so
+	 * no frame ever started. With the screen on the DSI streams and is never
+	 * idle; with it off DIS is powered down: no power cost. */
+	io->write(io->context, 0x1400012c, 0xf);
+	io->write(io->context, 0x14000130, 0xf);
 	y2_dcm_set(io, 0x14010014, 0, 0x8000); /* SMI LARB0 */
 }
 #endif

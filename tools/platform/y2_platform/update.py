@@ -409,10 +409,11 @@ def apply(ctx, rollback=False):
 
 @workload("Maintenance")
 def probe(ctx):
-    """Owner test: power off into the recovery image, which records that it ran."""
+    """Owner test: enter the recovery image, which records that it ran and
+    shows its screen, then returns like an install (restart by default)."""
     core(ctx, 'probe', timeout=60)
     from .power import rpc
-    return rpc(ctx, {'action': 'poweroff', 'reason': 'update'})
+    return rpc(ctx, {'action': restart_mode(ctx), 'reason': 'update'})
 
 
 def cancel(ctx):

@@ -31,12 +31,12 @@ run once over SSH:
 
 ```
 y2-platform update recovery-status     # misc_request "none", recovery_image_valid true
-y2-platform update probe-recovery      # the player turns off
+y2-platform update probe-recovery      # the player restarts into the recovery image
 ```
 
-Press Power. The player shows **Recovery works** and restarts into the normal system after a few seconds
-(with the owner's `{"mode": "poweroff"}` override in `/data/updates/restart.json` it turns off; press Power
-again). `/data/updates/recovery-probe.json` records the recovery boot
+The player restarts into the recovery image, shows **Recovery works** and restarts into the normal system
+after a few seconds (with the owner's `{"mode": "poweroff"}` override in `/data/updates/restart.json` it
+turns off instead; press Power to enter the recovery, and again to start the system). `/data/updates/recovery-probe.json` records the recovery boot
 (`boot_mode=2` from LK, `recovery_image=1` from the kernel).
 
 ## Undo

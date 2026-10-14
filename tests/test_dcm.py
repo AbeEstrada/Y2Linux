@@ -58,6 +58,8 @@ int main(void) {
  y2_dcm_mm(&io);
  assert(find(0x14011300)->value == 1 && find(0x14000128)->value == 0xffffffff &&
         find(0x14000120)->value == 0 && find(0x14010014)->value == 0x8000);
+ /* POWER-FINAL-47: DSI/DPI (group 1) keep DCM off; its clear register is never written. */
+ assert(find(0x1400012c)->value == 0xf && find(0x14000130)->value == 0xf && find(0x14000134)->value == 0);
  return 0;
 }
 ''')
