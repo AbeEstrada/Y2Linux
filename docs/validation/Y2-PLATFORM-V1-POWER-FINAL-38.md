@@ -24,6 +24,14 @@ only wrote `WDT_SWRST`, so display-path state survived and Linux got no frames a
 | Install speed | 37 took 136 s in recovery (SHA-256 of the 512 MiB root about five times). 38 authenticates the encoded payloads by their signed SHA-256 only, checks backups by their compressed-file hash, reads back by CRC-32, skips unchanged root chunks (`root_bytes_written`) and logs each step's time. Backups from before 38 still restore. |
 | Recovery screen | "Step n of 4", a bar that moves within each step, a shimmer in the unfilled part, the time left from the rate so far, "This takes 1-2 minutes." |
 
+## Device results
+
+- **First release-key over-the-air update PASSED, 37 → 38** (2026-10-15; package staged locally, owner: Turn Off
+  and Install, Power, Power). 38's recovery ran the install (written by `prepare` before entry) in **52 s**
+  (37: 136 s): verify 1.9 s, backup 31.1 s, system 13.0 s (19 046 063 of 536 870 912 bytes written), check 4.9 s,
+  kernel 0.7 s. New system: kernel `…-power-final-38`, taint 0, health acknowledged at 47 s uptime,
+  `accepted.json` 3800, package removed. Automatic restart not yet switched on (restart test pending).
+
 ## Owner steps
 
 1. Install 38 (SP Flash Tool BOOTIMG + ANDROID, or over the air from 37 with the signed package — this also measures the new install time).
