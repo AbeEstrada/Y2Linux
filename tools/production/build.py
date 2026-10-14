@@ -45,7 +45,7 @@ def main():
     p.add_argument('--output',default='out/y2linux-platform-v1-build')
     p.add_argument('--resume',choices=['kernel','buildroot','artifacts'])
     p.add_argument('--reuse-userspace',type=Path,help='verified production package whose root/data and rescue binaries are retained')
-    p.add_argument('--owner-firmware',type=Path,help='explicit local provision.py output; no downloads or calibration inputs')
+    p.add_argument('--owner-firmware',type=Path,help='ignored since RELEASE-49 (images carry no radio firmware)')
     a=p.parse_args();out=(PROJECT/a.output).resolve()
     if not out.is_relative_to(PROJECT/'out') or (out.exists() and not a.resume):p.error('fresh directory inside out required')
     out.mkdir(parents=True,exist_ok=True)
@@ -56,13 +56,10 @@ def main():
     reborn_version=reborn_source_version((REBORN/'Cargo.toml').read_text())
     localversion=re.search(r'^CONFIG_LOCALVERSION="([^"]+)"$',(PROJECT/'kernel/config/production.config').read_text(),re.M).group(1)
     versions={**json.loads((PROJECT/'tools/production/release.json').read_text()),'layout_version':1,'kernel_version':kernel_release_base(PROJECT)+localversion,'data_schema_version':1,'reborn_version':reborn_version,'build_git_commit':commit,'reborn_source_commit':reborn_commit}
-    if not a.reuse_userspace:
-        if not a.owner_firmware:p.error('M5 requires explicit --owner-firmware local provisioning')
-        from tools.connectivity.provision import verify_provision
-        provisioned=verify_provision(a.owner_firmware.resolve())
-        (out/'owner-firmware.json').write_text(json.dumps({'schema':'org.schulzcode.y2linux.owner-firmware/v1',
-            'redistribution_permission_established':False,'files':{
-                n:{'size_bytes':v[0],'sha256':v[1]} for n,v in provisioned.items()}},indent=2)+'\n')
+    # RELEASE-49: the MediaTek radio firmware never enters an image; each
+    # player takes it from its owner's copy (y2_platform.radiofw).
+    if a.owner_firmware:
+        print('note: --owner-firmware is ignored since RELEASE-49; images carry no radio firmware')
     if a.reuse_userspace:
         from tools.production.validate import validate_manifest
         base=a.reuse_userspace.resolve()
@@ -95,8 +92,7 @@ def main():
         apply_buildroot_modernization(source)
         apply_ffmpeg9(source, PROJECT/'.cache/buildroot-dl')
     env=os.environ.copy();env.pop('Y2_PUBLIC_KEY_FILE',None)
-    if a.owner_firmware:env['Y2_OWNER_FIRMWARE']=str(a.owner_firmware.resolve())
-    else:env.pop('Y2_OWNER_FIRMWARE',None)
+    env.pop('Y2_OWNER_FIRMWARE',None)
     build_id = versions.get('build_id', 'Y2LINUX-REBORN-PREMIUM-' + versions['rootfs_version'].rsplit('.', 1)[-1].zfill(2))
     env.update(Y2_ARTIFACT_DIR=str(out),BR2_DL_DIR=str(PROJECT/'.cache/buildroot-dl'),SOURCE_DATE_EPOCH=str(lock['source_date_epoch']),E2FSPROGS_FAKE_TIME=str(lock['source_date_epoch']),Y2_BUILD_ID=build_id,LC_ALL='C',TZ='UTC')
     if not shutil.which('bc'):

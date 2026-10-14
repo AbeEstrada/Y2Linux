@@ -77,6 +77,31 @@ def daily_update_check(ctx, network, child):
         return None
 
 
+def radio_firmware(ctx, child, ready, maintenance):
+    """While the player has no radio firmware, look for the owner's
+    Firmware/system.img (and keep the folder visible) in its own process: the
+    extraction reads a 518 MB image and must never stall this loop."""
+    if ready:
+        return child, True
+    if child is not None:
+        if child.poll() is None:
+            return child, False
+        child = None
+    from .radiofw import candidates, present
+    if present(ctx):
+        return None, True
+    waiting = any(path.exists() for path in candidates(ctx))
+    if not (waiting or maintenance):
+        return None, False
+    import subprocess
+    try:
+        return subprocess.Popen(['/usr/sbin/y2-platform', 'firmware', 'scan'],
+                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL, start_new_session=True, close_fds=True), False
+    except OSError:
+        return None, False
+
+
 def cadence(dark, settled):
     return (DARK_INTERVAL_S if dark else INTERVAL_S,
             DARK_MAINTENANCE_S if dark and settled else MAINTENANCE_S)
@@ -135,6 +160,7 @@ def serve(ctx):
         query_failures = previous.get('status_query_failures', 0) if previous.get('boot_id') == ctx.read('/proc/sys/kernel/random/boot_id') else 0
         query_failures = query_failures if isinstance(query_failures, int) and query_failures >= 0 else 0
         update_check = None
+        firmware_scan, firmware_ready = None, False
         while running[0]:
             wake.drain()
             before = time.monotonic()
@@ -166,7 +192,9 @@ def serve(ctx):
             if value['state'] == 'Online' and before >= next_ntp:
                 next_ntp = before + 60
                 ctx.command(['/etc/init.d/S43y2-time', 'start'], timeout=1)
-            if before >= next_maintenance:
+            due = before >= next_maintenance
+            firmware_scan, firmware_ready = radio_firmware(ctx, firmware_scan, firmware_ready, due)
+            if due:
                 next_maintenance = before + maintenance
                 # Run slow fs/stat/cleanup outside this readiness process. A
                 # kernel D-state does not block Wi-Fi or the power daemon.

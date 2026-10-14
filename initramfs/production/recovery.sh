@@ -64,6 +64,46 @@ recovery_stuck() {
     done
 }
 
+# RELEASE-49: images carry no MediaTek radio firmware. Before a new root is
+# written, keep the reviewed files of the old root (images before 49 carried
+# them) on Y2DATA, where /lib/firmware/mediatek/mt6582 points. Hash-checked;
+# never fatal: without them the owner copies system.img into "Firmware".
+RADIO_FIRMWARE='4def37522e2bfd2d4b78e01bf9f567a37e3f67ab3d7b6646ffb317f5b2b49b82  WIFI_RAM_CODE_MT6582
+cea0a94b8a88e9c24e6835446ebc3106d7b100c3709ea98e8bb7368689c8a2b5  WMT_SOC.cfg
+fa3be4a92540296de512d64f56272746be10bdfa2db571c8ceada2d40cd616f0  mt6572_82_patch_e1_0_hdr.bin
+96eb25489305bd472805db1da33bcc0acd37b5bb21cceda98d7e88ba1179ca37  mt6572_82_patch_e1_1_hdr.bin
+5059775975cbf6ab74c43978ca8f65d9a274b83585f456134e39b09f6dc7a4f1  modem_1_2g_n.img
+eb5e87224e3a493e825179f547fc13924f564a42730ea821b4359b5b36f4defe  WIFI.defaults
+f224ff4abfb45a612ef03249e87e4ecfa44b7c1f9f19ee3cc78ae354764d9472  BT.defaults'
+radio_firmware_ok() {
+    [ -d "$1" ] && [ ! -L "$1" ] &&
+        (cd "$1" && printf '%s\n' "$RADIO_FIRMWARE" | /bin/busybox sha256sum -c -s -)
+}
+recovery_keep_radio_firmware() {
+    target=/newdata/firmware/mt6582
+    radio_firmware_ok "$target" && return 0
+    rootdev=$(y2_find_partition Y2ROOT 79324c69-6e75-4801-8000-000000000101 166912 1679360)
+    [ -n "$rootdev" ] || return 0
+    mkdir -p /oldroot
+    mount -t ext4 -o ro,noload "$rootdev" /oldroot 2>/dev/null || return 0
+    source=/oldroot/lib/firmware/mediatek/mt6582
+    if radio_firmware_ok "$source"; then
+        mkdir -p /newdata/firmware
+        /bin/busybox rm -rf /newdata/firmware/.mt6582.keep
+        if mkdir -m 700 /newdata/firmware/.mt6582.keep &&
+            cp "$source"/* /newdata/firmware/.mt6582.keep/ &&
+            radio_firmware_ok /newdata/firmware/.mt6582.keep; then
+            /bin/busybox rm -rf "$target"
+            mv /newdata/firmware/.mt6582.keep "$target" && sync
+            recovery_log 'radio firmware kept on Y2DATA'
+        else
+            /bin/busybox rm -rf /newdata/firmware/.mt6582.keep
+            recovery_log 'radio firmware copy failed'
+        fi
+    fi
+    umount /oldroot 2>/dev/null
+}
+
 charger_online() {
     for supply in /sys/class/power_supply/*; do
         case "$(cat "$supply/type" 2>/dev/null)" in USB|Mains) ;; *) continue ;; esac
@@ -97,6 +137,7 @@ recovery_data_mounted=1
 [ "$(cat /newdata/.y2data-schema 2>/dev/null)" = 1 ] || recovery_stuck 'Unknown storage format'
 recovery_restart_mode
 /bin/busybox timeout 10 /bin/busybox seedrng --seed-dir=/newdata/system/entropy > /dev/kmsg 2>&1 || :
+recovery_keep_radio_firmware
 y2_stage recovery_install
 
 attempt=0

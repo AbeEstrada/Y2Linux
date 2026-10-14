@@ -53,10 +53,23 @@ def media_views(ctx):
             result.append({'path': path, 'name': label, 'mount_id': mount['mount_id'],
                            'device_id': mount['device_id'], 'uuid': volume.get('uuid'),
                            'filesystem': mount['filesystem'], 'access': 'ro' if 'ro' in mount['options'] or 'ro' in mount['super_options'] else 'rw'})
+    # RELEASE-49: while the radio firmware is missing, one empty folder of
+    # Y2DATA is shown as "Firmware" for the owner's system.img copy.
+    from .radiofw import INBOX, inbox, present
+    data = next((m for m in mounts if m['path'] == '/data'), None)
+    if data and 'ro' not in data['options'] and not present(ctx):
+        try:
+            inbox(ctx)
+            result.append({'path': INBOX, 'name': NAMES[INBOX], 'mount_id': data['mount_id'],
+                           'device_id': data['device_id'], 'uuid': None,
+                           'filesystem': data['filesystem'], 'access': 'rw'})
+        except OSError:
+            pass
     return result
 
 
-NAMES = {'/media/internal/music': 'Internal Storage', '/media/sd': 'SD Card'}
+NAMES = {'/media/internal/music': 'Internal Storage', '/media/sd': 'SD Card',
+         '/data/firmware/inbox': 'Firmware'}
 
 
 def identity(view):
@@ -339,7 +352,8 @@ class USBService:
             selection(requested)
             # Reuse validated views until identity/options change. This adds no
             # recurring blkid process, storage read, or polling wakeup.
-            signature = (self.ctx.read('/proc/self/mountinfo'),
+            from .radiofw import present
+            signature = (present(self.ctx), self.ctx.read('/proc/self/mountinfo'),
                          self.ctx.read('/run/y2/media-mount.json'),
                          self.ctx.read('/run/y2/usb-release-sd.json'),
                          [(p.name, read(p / 'dev'), read(p / 'device/cid'))

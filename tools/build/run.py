@@ -83,13 +83,6 @@ def main():
         '--bind', str(output), '/build', '--chdir', '/build',
         '--ro-bind', str(REBORN), '/tmp/Y2Reborn',
     ]
-    owner_firmware = os.environ.get('Y2_OWNER_FIRMWARE')
-    if owner_firmware:
-        owner_firmware = Path(owner_firmware).resolve()
-        from tools.connectivity.provision import verify_provision
-        verify_provision(owner_firmware)
-        invocation += ['--ro-bind', str(owner_firmware), '/tmp/Y2OwnerFirmware']
-        env['Y2_OWNER_FIRMWARE'] = '/tmp/Y2OwnerFirmware'
     # A private parent mount permits adding Y2 sources without creating files
     # in the locked upstream tree or replacing another platform's directory.
     invocation += ['--tmpfs', '/src/drivers']

@@ -28,6 +28,7 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [Y2Linux documentation](README.md) | Current entry / index |
 | [Building Y2Linux from source](BUILDING.md) | Current entry / index |
 | [Installing Y2Linux on the Innioasis Y2](INSTALL.md) | Current entry / index |
+| [Recovery and updates: how the Y2 updates itself](RECOVERY-AND-UPDATES.md) | Current entry: why RECOVERY is flashed once, what an update does |
 
 ## Architecture
 

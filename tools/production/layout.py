@@ -100,6 +100,18 @@ def make_recovery_scatter(stock):
         blocks[i]=re.sub(r'(?m)^  is_download: .*$', '  is_download: '+('true' if recovery else 'false'),blocks[i])
     return ''.join(blocks)
 
+def make_public_scatter(stock):
+    """RELEASE-49 one-time setup from the public images: BOOTIMG, ANDROID,
+    USRDATA and the Y2 recovery image in RECOVERY, in one SP Flash Tool pass."""
+    blocks=re.split(r'(?m)(?=^- partition_index: )',make_scatter(stock,True))
+    for i in range(1,len(blocks)):
+        if 'partition_name: RECOVERY\n' in blocks[i]:
+            require('linear_start_addr: 0x4180000\n' in blocks[i] and 'physical_start_addr: 0x2d80000\n' in blocks[i]
+                    and 'partition_size: 0x1000000\n' in blocks[i],'stock RECOVERY coordinates')
+            blocks[i]=re.sub(r'(?m)^  file_name: .*$','  file_name: RECOVERY.img',blocks[i])
+            blocks[i]=re.sub(r'(?m)^  is_download: .*$','  is_download: true',blocks[i])
+    return ''.join(blocks)
+
 def make_boot_scatter(stock):
     """Normal production kernel update: only BOOTIMG is a downloadable payload."""
     blocks=re.split(r'(?m)(?=^- partition_index: )',make_scatter(stock,False))

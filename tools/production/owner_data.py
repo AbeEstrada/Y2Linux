@@ -61,6 +61,7 @@ def validate_seed(image, key):
             found.add(fields[5])
         require(found == names, 'unused initialization seed required: /'+directory)
     require(fs_read(image, 'cat /.y2data-schema') == b'1\n', 'data schema')
+    # key b'': a public package (RELEASE-49) with no SSH authorization at all.
     require(fs_read(image, 'cat /ssh/authorized_keys.d/authorized_keys') == key,
             'packaged authorization must exactly match the selected existing public key')
     for path, mode in [('ssh', '0700'), ('ssh/authorized_keys.d', '0700'),

@@ -88,14 +88,12 @@ PYUPDATE
 # Keep bond writers stopped when an owner reset was interrupted. Match the
 # pinned upstream service's explicit function, and reject an unknown structure.
 python3 "$project/tools/production/service_guards.py" "$target/etc/init.d/S40bluetoothd"
-# Explicit owner provisioning is a build input, never a boot-time download.
-[ -n "${Y2_OWNER_FIRMWARE:-}" ]
-PYTHONPATH="$project" python3 - "$Y2_OWNER_FIRMWARE" "$target" <<'PY'
-import sys
-from pathlib import Path
-from tools.connectivity.provision import install_provision
-install_provision(Path(sys.argv[1]), Path(sys.argv[2]))
-PY
+# RELEASE-49: no MediaTek radio firmware in any image (it may not be
+# redistributed). Each player keeps the reviewed files from its owner's copy on
+# Y2DATA; the kernel and y2-factory find them through this link.
+rm -rf "$target/lib/firmware/mediatek/mt6582"
+mkdir -p "$target/lib/firmware/mediatek"
+ln -s /data/firmware/mt6582 "$target/lib/firmware/mediatek/mt6582"
 # D-Bus identity and all radio state are generated/persisted on Y2DATA.
 [ ! -f "$target/var/lib/dbus/machine-id" ]
 [ ! -f "$target/etc/machine-id" ]

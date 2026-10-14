@@ -551,6 +551,7 @@ def bluetooth(ctx):
 
 def system(ctx):
     from .update import status as update_status
+    from .radiofw import state as radiofw_state
     from .boot import RESET_STATUS, evidence_status, reset_cause
     from .timekeeping import status as time_status
     clock = time_status(ctx)
@@ -599,6 +600,7 @@ def system(ctx):
             'crng_ready': clock['entropy_ready'], 'usb': {'mode': 'peripheral', 'udcs': udcs, 'dma': dma,
                         'file_transfer': ctx.json('/run/y2/usb-transfer.json', {}), **usb_extra},
             'update': update_status(ctx),
+            'radio_firmware': radiofw_state(ctx),
             'reborn_supervisor': ctx.json('/data/reborn/logs/supervisor-last.json')}
 
 

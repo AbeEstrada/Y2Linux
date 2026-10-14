@@ -41,7 +41,7 @@ class Handover(unittest.TestCase):
             # every call site and root handover branch as production implements it.
             start=script.index('rescue() {');end=script.index('\ncase ',start)
             script=script[:start]+"rescue() { echo \"RESCUE $*\" >> \"$LEDGER\"; exit 99; }\n"+script[end:]
-            paths=lambda text:re.sub(r'(?<![A-Za-z0-9_./])/(?:sbin|bin|dev|proc|sys|run|tmp|newroot|newdata|boot-modules|display\.ko)(?=[/\s"\']|$)',
+            paths=lambda text:re.sub(r'(?<![A-Za-z0-9_./])/(?:sbin|bin|dev|proc|sys|run|tmp|newroot|newdata|oldroot|boot-modules|display\.ko)(?=[/\s"\']|$)',
                                      lambda m:str(p)+m.group(),text)
             script=paths(script)
             # The recovery image's script, with its two endless PID1 loops made finite.
@@ -157,8 +157,13 @@ exit 0
                   'y2-update-core recovery','umount /newdata','reboot -f']
         positions=[events.index(event) for event in sequence]
         self.assertEqual(positions,sorted(positions))
-        for absent in ('y2-offline-charge','/dev/mmcblk0p5','switch_root','y2-abi-check'):
+        for absent in ('y2-offline-charge','switch_root','y2-abi-check'):
             self.assertNotIn(absent,events)
+        # RELEASE-49: the old root is only read (its radio firmware kept on
+        # Y2DATA) and released before the install writes it.
+        self.assertEqual([l for l in events.splitlines() if 'mmcblk0p5' in l],
+                         ['mount -t ext4 -o ro,noload /dev/mmcblk0p5 /oldroot'])
+        self.assertLess(events.index('umount /oldroot'),events.index('y2-update-core recovery'))
         self.assertNotIn('poweroff',events.split('reboot -f')[0])
         # The owner's override turns off instead; Power starts the new system.
         result, events, log = self.exercise('poweroff-mode', cmdline='rdinit=/init y2.recovery=1')

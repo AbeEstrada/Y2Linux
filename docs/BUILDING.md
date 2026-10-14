@@ -54,16 +54,12 @@ Keep both trees clean (no uncommitted changes). The build and packaging tools
 refuse dirty trees and record both commit IDs in the image. If you change
 anything, commit it first.
 
-## 3. Stock firmware files (from your own Innioasis firmware)
+## 3. The stock Innioasis firmware folder
 
-The Wi-Fi/Bluetooth chip needs proprietary MediaTek firmware. It is not in this
-repository, and the build never downloads it. You extract it from the Innioasis
-firmware package for the Y2, **v3.2.0 FM (2026-08-13)**, the folder you would
-load into SP Flash Tool to reflash stock. The tools check every file by SHA-256,
-so other firmware versions are rejected.
-
-The same folder is needed again in step 6. It is also your only way back to stock,
-so keep a copy.
+Keep the Innioasis firmware package for the Y2, **v3.2.0 FM (2026-08-13)**, unpacked: the
+folder you would load into SP Flash Tool to reflash stock. Packaging (step 6) checks it by
+SHA-256 and takes the partition layout from its scatter file. It is also your only way back to
+stock.
 
 | File in the stock folder | SHA-256 |
 | --- | --- |
@@ -72,35 +68,19 @@ so keep a copy.
 | `userdata.img` | `552e325ecf2faffeb9351022147bbfda3b7cebe25df491b2d732e85c5c68f27c` |
 | `MT6582_Android_scatter.txt` | `e5fe03e9f3219cc9b5ead27892f2ddb722acc16adce3306d27feb87893cd977e` |
 
-Extract the five firmware files and the NVRAM defaults library from `system.img`,
-then stage them:
-
-```sh
-STOCK=/path/to/y2_v3.2.0_FM-20260813
-WORK=$(mktemp -d)
-simg2img "$STOCK/system.img" "$WORK/system.raw"
-mkdir "$WORK/firmware"
-for f in WIFI_RAM_CODE_MT6582 WMT_SOC.cfg mt6572_82_patch_e1_0_hdr.bin \
-         mt6572_82_patch_e1_1_hdr.bin modem_1_2g_n.img; do
-    debugfs -R "dump /etc/firmware/$f $WORK/firmware/$f" "$WORK/system.raw"
-done
-debugfs -R "dump /lib/libcustom_nvram.so $WORK/libcustom_nvram.so" "$WORK/system.raw"
-
-python3 tools/connectivity/provision.py \
-    --owner-firmware "$WORK/firmware" \
-    --stock-custom-nvram "$WORK/libcustom_nvram.so" \
-    --output out/owner-firmware
-```
-
-`provision.py` prints `Verified owner-local firmware: 7 files`. It derives
-`WIFI.defaults` and `BT.defaults` (generic board parameters) from the library.
-It never copies a device's own calibration or MAC addresses. Your device keeps
-those in its NVRAM partition, which the install never touches.
+**Radio firmware (since Baseline 49).** The Wi-Fi/Bluetooth chip needs proprietary MediaTek
+firmware that may not be redistributed. It is not in this repository, the build never downloads
+it, and **no image contains it**. Each player gets it once from its owner's `system.img`
+(the *Firmware* drive, or `y2-platform firmware install /path/to/system.img`), checked file by
+file against the reviewed SHA-256 values
+([inventory](knowledge/evidence/m5-firmware-inventory.json)); a player that ran an older image
+keeps its copy across the update. See [INSTALL](INSTALL.md#why-the-innioasis-package).
+`--owner-firmware` and `tools/connectivity/provision.py` are no longer needed for a build.
 
 ## 4. Build
 
 ```sh
-python3 tools/production/build.py --output out/y2-build --owner-firmware out/owner-firmware
+python3 tools/production/build.py --output out/y2-build
 ```
 
 On the first run this:
@@ -139,6 +119,7 @@ cd ../Y2Reborn && cargo test --workspace --locked --offline
 ## 6. Make the first-install package
 
 ```sh
+STOCK=/path/to/y2_v3.2.0_FM-20260813
 python3 tools/production/package.py \
     --build out/y2-build \
     --output out/y2-first-install \
@@ -148,7 +129,11 @@ python3 tools/production/package.py \
 python3 tools/production/validate.py out/y2-first-install --build out/y2-build
 ```
 
-`validate.py` should end with `PASS offline Production Storage v1`. The package contains:
+`validate.py` should end with `PASS offline Production Storage v1`. `$STOCK` is the folder from
+step 3. A **public** package for a release (as on the GitHub releases page) uses `--public`
+instead of `--public-key`: its data image has no SSH key, its manifest no local paths, and its
+`MT6582_Android_scatter.txt` also writes the Y2 recovery image (`RECOVERY.img`), so one SP Flash
+Tool pass sets up everything ([why](RECOVERY-AND-UPDATES.md)). The package contains:
 
 | File | Purpose |
 | --- | --- |

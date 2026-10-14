@@ -62,6 +62,9 @@ def main():
     export = sub.add_parser('export-state')
     export.add_argument('--include-database', action='store_true')
     export.add_argument('--include-network', action='store_true')
+    firmware = sub.add_parser('firmware', help="radio firmware from the owner's own copy")
+    firmware.add_argument('action', choices=['status', 'scan', 'install'])
+    firmware.add_argument('path', nargs='?', help='install: stock system.img or a directory of the reviewed files')
     update = sub.add_parser('update')
     update.add_argument('action', choices=['status', 'check', 'stage', 'apply', 'rollback', 'cancel', 'health-ack',
                                            'auto-check', 'probe-recovery', 'recovery-status'])
@@ -179,6 +182,16 @@ def main():
             return 0
         except (OSError, ValueError, TimeoutError) as error:
             print(json.dumps({'state':'Failed','failure':str(error)}))
+            return 1
+    if args.command == 'firmware':
+        from . import radiofw
+        try:
+            if args.action == 'install' and not args.path:
+                raise ValueError('install needs a system.img or a directory')
+            print(json.dumps(radiofw.main(ctx, args.action, args.path), sort_keys=True))
+            return 0
+        except (OSError, ValueError, TimeoutError) as error:
+            print(json.dumps({'state': 'Failed', 'failure': str(error)}))
             return 1
     if args.command == 'update':
         from . import update

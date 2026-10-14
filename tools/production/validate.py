@@ -139,13 +139,19 @@ def validate_manifest(out):
             name=row['partition_name'];r=baseline[name]
             for field,key in [('linear_start_addr','scatter_linear_bytes'),('physical_start_addr','scatter_physical_bytes'),('partition_size','scatter_size_bytes')]:require(int(row[field],16)==int(r[key],16),'stock scatter coordinates changed '+name)
             require(row['region']==r['scatter_region'],'scatter region changed')
+            public_recovery=name=='RECOVERY' and filename=='MT6582_Android_scatter.txt' and m.get('debug_access',{}).get('public')
             if name in expected_payloads:
                 p=next(p for p in m['payloads'] if p['target_partition']==name)
                 require(row['file_name']==p['spft']['file'],'scatter image mapping')
                 require(row['type']==('NORMAL_ROM' if name=='BOOTIMG' else 'YAFFS_IMG'),'stock image type')
+            elif public_recovery:
+                # RELEASE-49: the one-time setup also writes the Y2 recovery image.
+                require(row['file_name']=='RECOVERY.img' and row['is_download']=='true','public recovery mapping')
             else:require(row['file_name']=='NONE' and row['is_download']=='false','protected mapping '+name)
             if row['is_download']=='true':selected.append(name)
         expected=['BOOTIMG','ANDROID','USRDATA'] if filename=='MT6582_Android_scatter.txt' else ['BOOTIMG','ANDROID']
+        if filename=='MT6582_Android_scatter.txt' and m.get('debug_access',{}).get('public'):
+            expected=sorted(expected+['RECOVERY'],key=[r['partition_name'] for r in rows].index)
         require(selected==expected==profile['selected_partitions'],'selected rows')
     # SHA256SUMS covers every deliverable, including the manifest and both profiles.
     validate_checksums(out)
@@ -311,12 +317,13 @@ def validate_rootfs(out,build,m):
         require(json.loads(read('etc/y2linux/versions.json'))==json.loads((build/'versions.json').read_text()),'versions root/build')
         require(json.loads(read('etc/y2linux/versions.json'))['build_git_commit']==m['build_git_commit'],'manifest root commit')
         if connectivity:
+            # RELEASE-49: no MediaTek radio firmware in the image, only the
+            # link to the owner's copy on Y2DATA.
+            link=members.get('lib/firmware/mediatek/mt6582')
+            require(link is not None and link.issym() and link.linkname=='/data/firmware/mt6582','radio firmware link to Y2DATA')
             from tools.connectivity.provision import DEFAULTS, INVENTORY
-            files={x['filename']:(x['bytes'],x['sha256']) for x in json.loads(INVENTORY.read_text())['files']}
-            files.update(DEFAULTS)
-            for name,(size,sha) in files.items():
-                content=read('lib/firmware/mediatek/mt6582/'+name)
-                require(len(content)==size and hashlib.sha256(content).hexdigest()==sha,'reviewed owner firmware '+name)
+            names=set(DEFAULTS)|{x['filename'] for x in json.loads(INVENTORY.read_text())['files']}
+            require(not [n for n in members if n.rsplit('/',1)[-1] in names],'no radio firmware in Y2ROOT')
             for name in members:
                 require(not name.startswith(('data/network/','data/bluetooth/','data/connectivity/','var/lib/bluetooth/','var/lib/bluealsa/')),'no mutable radio state in Y2ROOT')
             for name in ('usr/sbin/y2-factory','usr/sbin/y2-calibration','usr/sbin/y2-radio-activate',
@@ -403,7 +410,13 @@ def validate_rootfs(out,build,m):
         return
     require(run('debugfs','-R','cat /.y2data-schema',str(out/'Y2DATA.img'))==b'1\n','data schema')
     key=run('debugfs','-R','cat /ssh/authorized_keys.d/authorized_keys',str(out/'Y2DATA.img'))
-    require(key.startswith(b'ssh-ed25519 ') and hashlib.sha256(key).hexdigest()==m['debug_access']['authorized_public_key_sha256'],'owner-specific data public key')
+    if m['debug_access'].get('public'):
+        # RELEASE-49 public package: no SSH authorization, no local paths.
+        require(key==b'' and m['debug_access']['authorized_public_key_sha256'] is None,'public data image without SSH key')
+        require(all('/' not in r['source'] for r in m['restoration_sources']),'no local paths in a public manifest')
+        require(digest(out/'RECOVERY.img')==m['recovery_image']['sha256'],'public recovery image')
+    else:
+        require(key.startswith(b'ssh-ed25519 ') and hashlib.sha256(key).hexdigest()==m['debug_access']['authorized_public_key_sha256'],'owner-specific data public key')
     for path in ('/ssh','/ssh/authorized_keys.d','/ssh/host-keys'):
         info=run('debugfs','-R','stat '+path,str(out/'Y2DATA.img')).decode()
         require('0700' in info and 'User:     0' in info and 'Group:     0' in info,'data SSH permissions '+path)
