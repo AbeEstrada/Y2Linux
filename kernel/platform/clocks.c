@@ -194,6 +194,18 @@ out:
  * clock consumer can start DMA/AFE while system clocks are handed to PCM. */
 static unsigned idle_bus, idle_audio;
 static unsigned deep_disp0_blockers, deep_disp1_blockers;
+/* POWER-FINAL-32 (ledger F34/F36): stock dpidle admits with the INFRA audio
+ * clock (bit 5) on, i.e. during screen-off playback; its INFRA mask is 0xa080
+ * and the AUDIO group is unchecked, and spm_dpidle_before_wfi moves only
+ * AUDINTBUS to 26 MHz (as below). N keeps 31's rule: audio blocks deep idle. */
+static bool deep_idle_audio;
+module_param(deep_idle_audio, bool, 0644);
+static unsigned deep_audio_entries;
+module_param(deep_audio_entries, uint, 0400);
+static inline unsigned y2_deep_infra_mask(void)
+{
+	return 0x0000a080U | (READ_ONCE(deep_idle_audio) ? 0 : BIT(5));
+}
 module_param(deep_disp0_blockers, uint, 0400);
 module_param(deep_disp1_blockers, uint, 0400);
 int y2_ccf_deep_idle_begin(void)
@@ -207,11 +219,12 @@ int y2_ccf_deep_idle_begin(void)
 	pdn = readl(peri + 0x18);
 	/* Stock UART startup conditionally permits non-DMA clocks with sleep
 	 * enabled. UART1 admission is provisional until SPM's real global ACK.
-	 * All other stock masks, plus all MSDC/AFE blockers, remain unchanged. */
+	 * All other stock masks and the MSDC blockers remain unchanged; the AFE
+	 * clock follows deep_idle_audio (32). */
 	deep_peri_raw = y2_dpidle_peri_blockers(pdn, 0);
 	ret = y2_uart_sleep_available(pdn, &deep_uart_deferred);
 	deep_peri_blockers = y2_dpidle_peri_blockers(pdn, deep_uart_deferred);
-	deep_infra_blockers = ~readl(infra + 0x40) & (0x0000a080U | BIT(5));
+	deep_infra_blockers = ~readl(infra + 0x40) & y2_deep_infra_mask();
 	if (ret || deep_peri_blockers || deep_infra_blockers) goto busy;
 	if (y2_mm_idle_blockers(&deep_disp0_blockers, &deep_disp1_blockers) ||
 	    deep_disp0_blockers || deep_disp1_blockers) goto busy;
@@ -230,6 +243,7 @@ int y2_ccf_deep_idle_begin(void)
 		}
 	}
 	uart_sleep_phase = "awaiting_global_spm_ack";
+	if (~readl(infra + 0x40) & BIT(5)) deep_audio_entries++;
 	writel(Y2_BUS_DCM_IDLE, top + 4);
 	writel(idle_audio & 0xf8ffffff, top + 0x70);
 	dsb(sy);
@@ -255,7 +269,7 @@ int y2_ccf_deep_idle_blockers(unsigned *peri, unsigned *infra, unsigned *bus)
 	pdn = readl(p + 0x18);
 	ret = y2_uart_sleep_available(pdn, &deferred);
 	*peri = y2_dpidle_peri_blockers(pdn, deferred);
-	*infra = ~readl(i + 0x40) & (0x0000a080U | BIT(5));
+	*infra = ~readl(i + 0x40) & y2_deep_infra_mask();
 	*bus = readl(top + 4);
 	spin_unlock_irqrestore(&y2_clk_lock, flags);
 	return ret;

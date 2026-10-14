@@ -1,4 +1,4 @@
-"""POWER-FINAL-16/17/18/19/27 runtime power features, armed once the UI has drawn its first frame.
+"""POWER-FINAL-16/17/18/19/27/32 runtime power features, armed once the UI has drawn its first frame.
 
 Each feature is a kernel parameter whose kernel default is the safe (15)
 behaviour. This module turns them on at `application_ready`, never earlier: the
@@ -32,6 +32,9 @@ FEATURES = {
     # 27 (ledger F20): the CS43131's VGP2 rail turns off while the DAC is
     # idle, as in stock; N keeps 26's always-on rail (y2-cs43131.c).
     'vgp2_idle_off': ('/sys/module/y2_cs43131/parameters/vgp2_idle_off', True),
+    # 32 (ledger F34/F36): deep idle (SLIDLE/DORMANT) while the audio clock is
+    # on, i.e. during screen-off playback, as stock dpidle; N keeps 31's rule.
+    'deep_idle_audio': ('/sys/module/clocks/parameters/deep_idle_audio', True),
 }
 
 

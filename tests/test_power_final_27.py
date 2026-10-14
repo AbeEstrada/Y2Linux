@@ -120,6 +120,24 @@ class Switches(unittest.TestCase):
             apply(ctx)
             self.assertEqual((panel.read_text(), vgp2.read_text()), ('N', 'N'))
 
+    def test_deep_idle_audio_is_armed_by_userspace(self):
+        # POWER-FINAL-32: kernel default off, power_features turns it on.
+        from y2_platform.common import Context
+        from y2_platform.power_features import apply
+        with tempfile.TemporaryDirectory() as temp:
+            ctx = Context(temp)
+            param = ctx.path('/sys/module/clocks/parameters/deep_idle_audio')
+            param.parent.mkdir(parents=True)
+            param.write_text('N')
+            self.assertEqual(apply(ctx)['deep_idle_audio']['value'], 'Y')
+            override = ctx.path('/data/system/platform/power-features.json')
+            override.parent.mkdir(parents=True)
+            override.write_text(json.dumps({'deep_idle_audio': False}))
+            apply(ctx)
+            self.assertEqual(param.read_text(), 'N')
+        diagnostics = (ROOT / 'tools/platform/y2_platform/sleep_diagnostics.py').read_text()
+        self.assertIn("'/sys/module/clocks/parameters/deep_audio_entries'", diagnostics)
+
     def test_sleep_rows_record_both(self):
         diagnostics = (ROOT / 'tools/platform/y2_platform/sleep_diagnostics.py').read_text()
         self.assertIn("'/sys/module/panel/parameters/stock_suspend'", diagnostics)

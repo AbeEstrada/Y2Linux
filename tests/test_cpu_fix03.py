@@ -74,6 +74,38 @@ int main(void){
 }
 ''')
 
+    def test_audio_clock_blocks_deep_idle_unless_switched_on(self):
+        """32 (ledger F34/F36): stock dpidle admits with the INFRA audio clock on."""
+        s = self.source()
+        run_c(self.FIXTURE + r'''
+#include "uart-idle-policy.h"
+static unsigned idle_bus,idle_audio,deep_peri_raw,deep_uart_deferred,uart1_gate_before;
+static struct y2_uart_idle_save dormant_uart_save;
+static struct y2_spm_io uart_idle_io;
+static void *dormant_uart[2];
+static const char *uart_sleep_phase;
+static int y2_uart_sleep_available(unsigned pdn,unsigned *d){*d=0;return 0;}
+static int y2_uart_sleep_restore(void){return 0;}
+static int deep_idle_audio; static unsigned deep_audio_entries;
+#define READ_ONCE(x) (x)
+''' + function(s, 'y2_deep_infra_mask') + function(s, 'y2_ccf_deep_idle_end') +
+              function(s, 'y2_ccf_deep_idle_begin') + r'''
+int main(void){
+ peri[0x18/4]=~0U;top[0x70/4]=0x07123456;top[1]=0;
+ infra[0x40/4]=~BIT(5);                       /* AFE clock on: playback */
+ assert(y2_ccf_deep_idle_begin()==-EBUSY && deep_infra_blockers==BIT(5) && !y2_clk_lock);
+ deep_idle_audio=1;                            /* stock rule */
+ assert(!y2_ccf_deep_idle_begin() && deep_audio_entries==1 && top[0x70/4]==0x00123456);
+ assert(!y2_ccf_deep_idle_end() && top[0x70/4]==0x07123456);
+ infra[0x40/4]=~BIT(7);                        /* stock-mask INFRA clocks still block */
+ assert(y2_ccf_deep_idle_begin()==-EBUSY && deep_infra_blockers==BIT(7));
+ infra[0x40/4]=~0U;                            /* audio off: admitted, not counted */
+ assert(!y2_ccf_deep_idle_begin() && deep_audio_entries==1);
+ assert(!y2_ccf_deep_idle_end());
+ return 0;
+}
+''')
+
     def test_deep_idle_uses_the_same_baseline_and_restores_exactly(self):
         s = self.source()
         run_c(self.FIXTURE + r'''
@@ -85,7 +117,9 @@ static void *dormant_uart[2];
 static const char *uart_sleep_phase;
 static int y2_uart_sleep_available(unsigned pdn,unsigned *d){*d=0;return 0;}
 static int y2_uart_sleep_restore(void){return 0;}
-''' + function(s, 'y2_ccf_deep_idle_end') +
+static int deep_idle_audio; static unsigned deep_audio_entries;
+#define READ_ONCE(x) (x)
+''' + function(s, 'y2_deep_infra_mask') + function(s, 'y2_ccf_deep_idle_end') +
               function(s, 'y2_ccf_deep_idle_begin') + r'''
 int main(void){
  peri[0x18/4]=~0U;infra[0x40/4]=~0U;top[0x70/4]=0x07123456;

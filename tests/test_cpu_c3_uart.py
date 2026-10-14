@@ -15,6 +15,7 @@ class UartSleep(unittest.TestCase):
             source = source.replace('int '+name+'(', 'static int '+name+'(')
         body = function(source,'uart_idle_read') + function(source,'uart_idle_write')
         body += 'static struct y2_spm_io uart_idle_io={.read=uart_idle_read,.write=uart_idle_write};\n'
+        body += function(source,'y2_deep_infra_mask')
         for name in ('y2_uart_sleep_available','y2_uart_sleep_restore','y2_ccf_deep_idle_end',
                      'y2_ccf_deep_idle_begin','y2_ccf_deep_idle_blockers'):
             body += function(source,name)
@@ -31,6 +32,8 @@ static unsigned top[64],peri[64],infra[64],uart0[0x80/4],uart1[0x80/4];
 static void *y2_clock_bases[]={top,peri,infra},*dormant_uart[]={uart0,uart1};
 static unsigned deep_peri_raw,deep_uart_deferred,deep_peri_blockers,deep_infra_blockers;
 static unsigned deep_disp0_blockers,deep_disp1_blockers,idle_bus,idle_audio;
+static int deep_idle_audio; static unsigned deep_audio_entries; /* 32 switch: kernel default off */
+#define READ_ONCE(x) (x)
 static unsigned uart1_gate_before,uart1_gate_after,uart_restore_failures,uart0_sleep,uart0_dma;
 static struct y2_uart_idle_save dormant_uart_save;
 static struct y2_uart_idle_save uart1_observed;
