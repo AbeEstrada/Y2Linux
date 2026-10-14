@@ -7852,3 +7852,22 @@ profile). This audit builds nothing and flashes nothing.
 | aptX / aptX-HD / LDAC on a real peer | NOT_RUN | Needs headphones that advertise them. |
 
 **Gate decision:** READY for the build.
+
+## POWER-FINAL-27 stock sleep-parity gaps C, A, B scope audit — 2026-10-14
+
+**Boundary:** owner request after the 26 night (archive `20261014/124`, 21/21 clean, ≈8.3 mA whole-night,
+relaxation-limited) and the read-only remaining-gap audit (ledger F18–F27): build 27 with gaps C (panel), A (VGP2)
+and B (VSYS). Gap D (VEMC3V3) stays out (storage model). Platform-only change; Reborn unchanged (`1c9edd4`). Each
+change has its own switch whose kernel default is 26's behaviour and which `power_features` arms at
+`application_ready`; the owner disables one with `/data/system/platform/power-features.json`. This audit builds the
+image; it does not flash it (the owner flashes).
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| C Panel power-down | CHANGED (switch `panel_stock_suspend`, `/sys/module/panel/parameters/stock_suspend`) | Stock GC9503V `lcm_suspend` 0xc04a24f4, table 0xc09ff464: vendor pre-sequence, display off, sleep-in, 25 analog writes, then reset **high** 50 ms. 26: display off, sleep-in, reset low. Any DCS failure falls back to 26's sequence; `prepare()` still pulses reset and replays the full init. Risk: display wake; checked by every screen-on. |
+| A VGP2 | CHANGED (switch `vgp2_idle_off`, `/sys/module/y2_cs43131/parameters/vgp2_idle_off`) | Stock: CS43131 is VGP2's only user; `cs43131_power_down_hw` drops GPIO15/18/20 then `hwPowerDown(VGP2)`. DTS `regulator-always-on` removed; the card holds one reference unless the switch is set; the codec's runtime PM (upstream, unchanged) then disables VA/VP/VCP and VD/VL when idle. Risk: audio start after idle; checked by playback. DTB validator updated. |
+| B VSYS buck | CHANGED (`pmic_sleep` group 8, default mask 7 → 0xf) | Stock PMIC_INIT (vendor `pmic_mt6323.c` 3417–3424, image init table): `QI_VSYS_VSLEEP` 2, `VSYS_VOSEL_CTRL` 1, slew rates, `VSYS_TRANSTD` 3, `VOSEL_TRANS_EN` 1, `VSYS_VSLEEP_EN` 1. Applied inside the SPM enter with the other PMIC sleep fields, mode bit last, restored exactly (mode bit first) before any resume. Only while VSYS is in software mode with VOSEL = VOSEL_ON = VOSEL_SLEEP = readback (live: all 0x40, 2.2 V), otherwise refused and counted (`vsys_refusals`); every VSYS selector stays unwritable, so the voltage never changes. PMIC write policy admits only these mode/slew bits (13 had kept VSYS closed; owner go 2026-10-14). Effect size unknown. |
+| D VEMC3V3 | NOT_CHANGED | Needs eMMC power-off/re-init; separate milestone. |
+| Effect on drain | NOT_RUN | No coulomb counter on this board (stock `fgauge_read_*` stubs). Night test should start ≥4 h after charging and run ≥12 h; per-gap A/B nights with the switches if the owner wants attribution. |
+
+**Gate decision:** READY for the build.
