@@ -29,3 +29,9 @@ Previews: Reborn `reborn-preview` states `34-update-downloading`, `34b-update-do
 1. First 47's test (installed from the queue, five recovery probes).
 2. Install 48 over Wi-Fi. That download still uses 47's screen; 48's screen shows from the next
    download on (or a development reinstall published for the test).
+
+## Device results
+
+- **Installed over Wi-Fi from the release** (47 before it, also over Wi-Fi): boot `7ab5099e`, `Acknowledged`, recovery
+  screen lit, install 53 s (archive `20261016/151`). The new download screen shows from the next download.
+- Five restart-entered recovery probes: all lit; details in [47](Y2-PLATFORM-V1-POWER-FINAL-47.md#device-results-on-48-archive-20261016151).

@@ -1,6 +1,6 @@
 # POWER-FINAL-47 — DSI register read lag: keep DCM off for DSI/DPI
 
-Status: **PUBLISHED** as GitHub release `baseline-47` (owner: publish as latest now), not yet on the player (2026-10-16). Package `out/y2linux-platform-v1-power-final-candidate-47/`
+Status: **PUBLISHED** as GitHub release `baseline-47`; its fix confirmed on 48 (archive `20261016/151`). Package `out/y2linux-platform-v1-power-final-candidate-47/`
 (fallback = 46, which the player runs), receipts `out/deep-sleep-final/build47-receipts/`. BOOTIMG
 `97f2ef876bc78b140933204f504142830786f6ec9b4f65a2b5b08b632cf9e280`, Y2ROOT
 `efb3f4e66f85ed8f200f4b292d1e1a2894bf462e04641748e27aff5a1df40bce`, RECOVERY
@@ -28,3 +28,16 @@ boots (143, 43's recovery, 150) are after POWER-FINAL-16 introduced the DCM; the
 1. Install 47 over Wi-Fi from the release (Settings → About & Updates).
 2. With the owner's OK: several `y2-platform update probe-recovery` runs (each restarts into the recovery screen
    and back); the agent archives each recovery log. Pass: every recovery screen lit, no `read-back` line.
+
+## Device results (on 48, archive `20261016/151`)
+
+- **48's own install (over Wi-Fi from the release): recovery screen lit** (vblank 16 → 219, no read lag, 53 s),
+  `Acknowledged`. DCM group 1 reads `0x1400012c = 0000000f` in the recovery and the running system.
+- **Five restart-entered recovery probes (owner-approved): all five recovery screens produced frames** (vblank 16–17
+  at 1.2 s, OVL irq `0x10`, RDMA irq `0x27`, no vblank/flip timeouts), all five returned on their own in 20–35 s, every
+  return boot lit. Logs `probe1..5-recovery.log` and `probe1..5-return-dmesg.txt` in the archive.
+- **The read lag itself is not DCM:** probes 4 and 5 still read the DSI one register late with `dcm1=0000000f`
+  (44's three power cycles again did not clear it). But unlike every lagged boot before (143, 150: OVL irq 0, RDMA
+  `0x24`, vblank 1), the pipeline ran. So far the evidence says DSI DCM turned the lag into a dark screen; the lag's
+  own cause is unknown (2 of 5 restart entries). 44's power-cycle retry is useless and costs ~75 ms when it fires.
+- Visual confirmation of each probe screen by the owner: pending.

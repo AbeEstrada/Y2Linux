@@ -6,8 +6,9 @@
 Y2ROOT `1d7c4bca…e047`, RECOVERY `6c14a2f7…0a3f`), fallback 47; git tag and GitHub release `baseline-48`. The update
 download shows its step, percentage, a gliding bar, MB, speed and time left (live progress in `/run/y2`), checks the
 package once instead of twice (about 12 s less), runs at low priority, and turns to Ready to Install with a notice when
-done. Contains 47 (DSI DCM off). Suite 718. **Physical:** pending (47's recovery screen and probes, 48's Wi-Fi install;
-the new screen shows from the following download).
+done. Contains 47 (DSI DCM off). Suite 718. **Physical:** 48 installed over Wi-Fi, recovery screen lit; five
+restart-entered recovery probes all lit and returned on their own (archive `20261016/151`). The DSI read lag still
+occurs (2 of 5 entries) but no longer stops the picture; its own cause is open.
 Details: [48 report](validation/Y2-PLATFORM-V1-POWER-FINAL-48.md).
 
 ## POWER-FINAL-47 DSI clock gating off, Baseline 47 — 2026-10-16 (published)
