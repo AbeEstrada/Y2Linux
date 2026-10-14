@@ -32,6 +32,9 @@
 #define LINES 6
 #define COLUMNS 28
 
+/* Two dumb buffers: draw() always writes the one that is not scanned out
+ * (pixels/fb), present() flips to it at vblank. Drawing into the visible
+ * buffer showed half-drawn frames (owner, 38: the screen flickered). */
 typedef struct {
     int fd;
     uint32_t connector, crtc, fb, handle, pitch;
@@ -39,6 +42,9 @@ typedef struct {
     size_t size;
     uint8_t *pixels;
     drmModeModeInfo mode;
+    uint32_t fbs[2];
+    uint8_t *maps[2];
+    unsigned back;
 } Display;
 
 static int display_open(Display *d) {
@@ -90,25 +96,30 @@ static int display_open(Display *d) {
     d->height = d->mode.vdisplay;
     if (!d->crtc || d->width < 480 || d->width > 1024 || d->height < 360 || d->height > 1024)
         return -1;
-    struct drm_mode_create_dumb create = {.width = d->width, .height = d->height, .bpp = 32};
-    if (drmIoctl(d->fd, DRM_IOCTL_MODE_CREATE_DUMB, &create))
-        return -1;
-    d->handle = create.handle;
-    d->pitch = create.pitch;
-    d->size = create.size;
-    if (d->pitch < d->width * 4 || d->size < (uint64_t)d->pitch * d->height || d->size > 8 * 1024 * 1024)
-        return -1;
-    uint32_t handles[4] = {d->handle}, pitches[4] = {d->pitch}, offsets[4] = {0};
-    if (drmModeAddFB2(d->fd, d->width, d->height, DRM_FORMAT_XRGB8888, handles, pitches, offsets, &d->fb, 0))
-        return -1;
-    struct drm_mode_map_dumb map = {.handle = d->handle};
-    if (drmIoctl(d->fd, DRM_IOCTL_MODE_MAP_DUMB, &map))
-        return -1;
-    d->pixels = mmap(NULL, d->size, PROT_READ | PROT_WRITE, MAP_SHARED, d->fd, map.offset);
-    if (d->pixels == MAP_FAILED) {
-        d->pixels = NULL;
-        return -1;
+    for (unsigned i = 0; i < 2; i++) {
+        struct drm_mode_create_dumb create = {.width = d->width, .height = d->height, .bpp = 32};
+        if (drmIoctl(d->fd, DRM_IOCTL_MODE_CREATE_DUMB, &create))
+            return -1;
+        d->handle = create.handle;
+        d->pitch = create.pitch;
+        d->size = create.size;
+        if (d->pitch < d->width * 4 || d->size < (uint64_t)d->pitch * d->height ||
+            d->size > 8 * 1024 * 1024)
+            return -1;
+        uint32_t handles[4] = {d->handle}, pitches[4] = {d->pitch}, offsets[4] = {0};
+        if (drmModeAddFB2(d->fd, d->width, d->height, DRM_FORMAT_XRGB8888, handles, pitches, offsets,
+                          &d->fbs[i], 0))
+            return -1;
+        struct drm_mode_map_dumb map = {.handle = d->handle};
+        if (drmIoctl(d->fd, DRM_IOCTL_MODE_MAP_DUMB, &map))
+            return -1;
+        d->maps[i] = mmap(NULL, d->size, PROT_READ | PROT_WRITE, MAP_SHARED, d->fd, map.offset);
+        if (d->maps[i] == MAP_FAILED)
+            return -1;
     }
+    d->back = 0;
+    d->pixels = d->maps[0];
+    d->fb = d->fbs[0];
     return 0;
 }
 static void light(const char *value) {
@@ -121,6 +132,28 @@ static void light(const char *value) {
 }
 /* As the boot splash: keep the light off across the first modeset (LK's
  * picture would show noise), then always turn it back on. */
+static void swap_buffers(Display *d) {
+    d->back ^= 1;
+    d->pixels = d->maps[d->back];
+    d->fb = d->fbs[d->back];
+}
+static void flipped(int fd, unsigned frame, unsigned sec, unsigned usec, void *data) {
+    (void)fd, (void)frame, (void)sec, (void)usec;
+    *(bool *)data = true;
+}
+/* Show the buffer just drawn at the next vblank and wait for it, so the
+ * buffer drawn next is never the one on screen. */
+static void present(Display *d) {
+    bool done = false;
+    if (!drmModePageFlip(d->fd, d->crtc, d->fb, DRM_MODE_PAGE_FLIP_EVENT, &done)) {
+        drmEventContext events = {.version = 2, .page_flip_handler = flipped};
+        struct pollfd pfd = {.fd = d->fd, .events = POLLIN};
+        while (!done && poll(&pfd, 1, 200) > 0)
+            drmHandleEvent(d->fd, &events);
+    } else
+        drmModeSetCrtc(d->fd, d->crtc, d->fb, 0, 0, &d->connector, 1, &d->mode);
+    swap_buffers(d);
+}
 static int show(Display *d) {
     light("4\n");
     int ret = drmModeSetCrtc(d->fd, d->crtc, d->fb, 0, 0, &d->connector, 1, &d->mode);
@@ -130,6 +163,8 @@ static int show(Display *d) {
             poll(NULL, 0, 40);
     }
     light("0\n");
+    if (!ret)
+        swap_buffers(d);
     return ret;
 }
 static void rect(Display *d, unsigned x, unsigned y, unsigned w, unsigned h, uint32_t rgb) {
@@ -194,9 +229,9 @@ static const char *step_text(const char *step, unsigned *stage) {
     *stage = 0;
     return "";
 }
-/* Body lines, the step and its counter, the bar with a moving shimmer in its
- * unfilled part (the screen visibly lives while a long step runs), and the
- * time left. phase is a free-running animation counter. */
+/* Body lines, the step with animated dots (the screen visibly lives while a
+ * long step runs; a moving mark in the bar read as a second progress bar),
+ * its counter, the bar and the time left. phase counts redraws. */
 static void draw(Display *d, const char *screen, const char *progress, const char *time_line,
                  unsigned phase) {
     unsigned ox = (d->width - 480) / 2, oy = (d->height - 360) / 2;
@@ -224,8 +259,16 @@ static void draw(Display *d, const char *screen, const char *progress, const cha
         percent = 100;
     unsigned stage;
     const char *words = step_text(step, &stage);
-    if (*words)
-        centered(d, oy, 216, words, TEXT);
+    if (*words) {
+        /* Center the words alone, so the dots do not shift them. */
+        size_t n = strlen(words);
+        unsigned x = (d->width - (unsigned)n * FONT_W) / 2;
+        text(d, x, oy + 216, words, TEXT);
+        if (stage) {
+            static const char *const dots[] = {"", ".", "..", "..."};
+            text(d, x + (unsigned)n * FONT_W, oy + 216, dots[(phase / 3) % 4], TEXT);
+        }
+    }
     if (stage) {
         char counter[24];
         snprintf(counter, sizeof(counter), "Step %u of 4", stage);
@@ -234,11 +277,6 @@ static void draw(Display *d, const char *screen, const char *progress, const cha
     unsigned fill = 4 * percent;
     rect(d, ox + 40, oy + 292, 400, 6, TRACK);
     rect(d, ox + 40, oy + 292, fill, 6, FILL);
-    if (percent < 100 && fill + 24 < 400) {
-        unsigned room = 400 - fill - 24;
-        unsigned at = fill + (phase * 6) % (room + 1);
-        rect(d, ox + 40 + at, oy + 292, 24, 6, DIM);
-    }
     if (time_line && *time_line)
         centered(d, oy, 314, time_line, DIM);
 }
@@ -307,7 +345,7 @@ int main(void) {
             if (!shown)
                 shown = !show(&d);
             else
-                drmModeDirtyFB(d.fd, d.fb, NULL, 0);
+                present(&d);
             memcpy(last_screen, screen, sizeof(screen));
             memcpy(last_progress, progress, sizeof(progress));
             memcpy(last_line, line, sizeof(line));

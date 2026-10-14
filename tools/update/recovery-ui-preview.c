@@ -10,6 +10,7 @@ int main(int argc, char **argv) {
         return 2;
     static uint8_t pixels[480 * 360 * 4];
     Display d = {.fd = -1, .width = 480, .height = 360, .pitch = 480 * 4, .pixels = pixels};
+    (void)present;
     char screen[1024] = {0};
     if (!slurp(argv[2], screen, sizeof(screen)))
         return 1;
