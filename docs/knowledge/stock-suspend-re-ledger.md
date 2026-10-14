@@ -59,3 +59,32 @@ boot e2952adf rows). The floor while suspended is the gap.
   refused every 5 min (`charger_or_usb_active`) while the charger is `INHIBITED`/"Not charging": 75 % → 32 %
   in 6.3 h on a powered-off PC. Sleep policy must allow suspend when nothing charges and no host is configured.
 - Python 3.15 `/dev/kmsg` flush EINVAL (S03/S05), power-journal keeps only ≈4.5 h.
+
+## Remaining-gap audit after 26 (2026-10-14, archive `20261014/124`)
+
+Trigger: 26 night 10.3 h, 21/21 clean, whole-night ≈8.3 mA (least squares, first 2 h skipped). Owner asked
+whether this is stock parity. Static analysis of the stock image (REA/Ghidra 12.1.2 session 2026-10-14,
+plus literal/`movw`+`movt` scans of `fm-decompressed.bin`) and read-only live reads on 26 boot `8943a99a`
+(`live-reads/`, `golden-live.txt` in the archive). Nothing was written to the device.
+
+| # | Question | Stock (address, Evidence) | Y2 26 | Status |
+| --- | --- | --- | --- | --- |
+| F18 | Who writes AP_PLL_CON1/CON2, MAINPLL_CON0 and CLK_CFG_0 (the SoC rows still different at entry)? | No code writes AP_PLL_CON1/2: the only `0xf0209004/8` references are the debug prints in `slp_suspend_ops_enter` (`ev_2561cc4d…`) and the golden tables; vendor `clksq1_sw2hw()` starts with `return;`. CLK_CFG_0 has no direct writer; the mux table `0xc09b17c8` (13 muxes) only lists MUX_MM there. | Same preloader/LK, same values. | **Answered: checklist-only rows.** Stock sleeps with the bootloader values too; not a gap. Remaining mux rows are the UART mux (kept on deliberately) and TOPCKGEN+4 bus DCM (idle-only). |
+| F19 | Stock `slp_suspend_ops_enter` arguments | Flag block `0xc09b1084` = `01 01 01 00`: `cpu_pdn` 1, `infra_pdn` 1, register dump 1 (stock prints AP_PLL/TOPCKGEN/INFRA/PERI/SPM registers as `[SLP] …` at every suspend). | `SPM_CPU_SHUTDOWN_INFRA_PDN`. | **Answered: identical.** No stock `[SLP]` log is archived; one would give stock's real sleep values. |
+| F20 | VGP2 (CS43131 VA/VP/VCP 1.8 V) | Only owner is the CS43131 driver: `hwPowerOn(6)` in probe/`cs43131_on`/`cs43131_late_resume`, `hwPowerDown(6,"CS_DAC")` in `cs43131_power_down_hw` 0xc054b620 (`ev_7b6992d2…`), called from `cs43131_early_suspend` when not playing (`ev_18a5a6f6…`) and `cs43131_off`; LDO id 6 = VGP2 per `pmic_ldo_enable` (`ev_d08d64ac…`). Every hwPowerOn/Down caller scanned: no other VGP2 user. | DTS `regulator-always-on` ("shared ownership not qualified"); VGP2 stays on in sleep while the GPIO-switched VD/VL rails are off. | **Gap A (confirmed, single owner).** Stock order: EINT16 mask, GPIO15/18/20 low, then VGP2 off. Effect unmeasured (LDO quiescent + codec analog leakage). |
+| F21 | VSYS buck sleep | Vendor `PMIC_INIT` (`pmic_mt6323.c` 3417–3424) and the image's init table: `QI_VSYS_VSLEEP` 2, `VSYS_VOSEL_CTRL` 1, `VSYS_SFCHG_*`, `VSYS_TRANSTD` 3, `VSYS_VOSEL_TRANS_EN` 1, `VSYS_VSLEEP_EN` 1; golden 0x256[8]=1. | Live: 0x238=0x0003 (`RG_VSYS_SLP` already 3), 0x23c=0, 0x242=0x0505, 0x256=0x0001, VOSEL=VOSEL_SLEEP=0x40 (2.2 V): VSYS stays in software mode, never enters its sleep mode. | **Gap B.** Same pattern as VPROC (13): apply inside the SPM enter, or as stock at init. |
+| F22 | Panel suspend | GC9503V `lcm_suspend` 0xc04a24f4: 39-entry table `0xc09ff464` (72-byte rows): page `f0 55 aa 52 08 00`, `c1 3f`, `6c 60`, `b1 00`, `fa 7f 00 00 00`, `6c 50`, `28`, `10`, then 24 analog writes (`c2 ce`, `c3 cd`, `c6 fc`, `c5 03`, `cd 64`, `c4 ff`, `c9 cd`, `f6 5a 87`, `fd aa aa 0a`, `fe 6a 0a`, `78 2a aa`, `92 17 08`, `77 aa 2a`, `76 aa aa`, `84 00`, `78 2b ba`, `89 73`, `88 3a`, `85 b0`, `76 eb aa`, `94 80`, `87 04 07 30`, `93 27`, `af 02`), then **reset high**, 50 ms. | `gc9503v_unprepare`: `28`, `10`, 120 ms, **reset asserted (low)**. | **Gap C.** The vendor low-power register block is never sent, and reset is held in the opposite state. Effect unknown, possibly the largest single item (panel supply stays on in both). |
+| F23 | VEMC3V3 (eMMC) | `msdc_emmc_power(host, 0)` 0xc04f265c (`ev_2c81c7b5…`, indirect caller): waits for DAT0 not busy, `msdc_set_smt`, `msdc_ldo_power(0, 4 /*VEMC*/, 3300 mV)`. | On through sleep (overlay 0029 keeps the eMMC in TRAN without re-init). | **Gap D (known, confirmed in code).** Needs an eMMC suspend model with power-off + re-init (or sleep/awake). Storage risk. |
+| F24 | Radios, SD, other LDOs at entry | Stock consys and msdc drop their LDOs; camera/SIM/VIBR LDOs unused. | PMIC capture at entry: VCN18/28/33, VMC, VMCH off; only 0x04e, 0x108[9], 0x120, 0x256, 0x310, 0x508, 0x70c[9] differ. | **Answered: no gap** apart from F21/F23 (0x04e/0x120 AUXADC modes and 0x310 VPA are negligible). |
+| F25 | DRAM at suspend | `mt_emifreq_early_suspend` is screen-off DVFS; self-refresh in suspend is the PCM firmware's (same image). | — | **Answered: no sleep-current effect.** G4 is an awake-dark item only. |
+| F26 | GPIO | `mt_gpio_suspend` is empty; GPIO sleep state = preloader defaults + driver changes. | Y2 pinctrl changes only I2C 84–87, MSDC1 124–129, I2S 43/44/46, LCM reset 112, EINT 25/55. No `/dev/mem`; a full register dump needs a probe (taints). | **Low priority.** |
+| F27 | Hardware fuel gauge | `fgauge_initialization/read_current/read_columb` all return 0 (stubs): no coulomb counter on this board. | Voltage estimate only. | **Measurement limit:** stock's "≈1 % per night" is a smoothed voltage percentage, not a current. |
+
+**Measurement note (26 night).** The filtered voltage slope falls through the night (h0–3 −10.6, h3–6 −4.3,
+h6–9 −1.2 mV/h; ±6 mV per-sample jitter), i.e. post-charge relaxation inflates the early hours. At
+≈1.65 mAh/mV (stock curve near 3.93 V) the late-night drain is between ≈2 and ≈8 mA depending on the window.
+A fair stock comparison needs a start ≥4 h after charging and a ≥12 h run, or an external meter.
+
+**Ranked candidates for the next image:** C panel suspend sequence (stock table + reset high), A VGP2 off when
+the DAC is idle (stock order), B VSYS sleep mode (stock init fields, inside the SPM enter like VPROC),
+D VEMC3V3 off (separate storage milestone). Each behind its own switch, one night per change if possible.
