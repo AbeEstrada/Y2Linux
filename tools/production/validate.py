@@ -364,14 +364,19 @@ def validate_rootfs(out,build,m):
             # profiles and have no args file. New profiles must carry the
             # matching runtime disable list in both filesystem representations.
             if 'profile' in codec_inventory:
-                require(codec_inventory['profile'] in ('sbc-only', 'owner-private-experiments', 'owner-private-integration'),
+                require(codec_inventory['profile'] in ('sbc-only', 'owner-private-experiments', 'owner-private-integration', 'public'),
                         'known Bluetooth codec profile')
-                if codec_inventory['profile'] == 'owner-private-integration':
+                # RELEASE-49 owner decision: SBC, AAC (fdk-aac-free) and LDAC may be distributed.
+                approved = {'SBC', 'AAC', 'LDAC'}
+                if codec_inventory['profile'] in ('owner-private-integration', 'public'):
                     require(codec_inventory.get('private_integration_enabled') is True,
-                            'private integration endpoints require explicit scope')
-                    require(all(not value.get('distribution_approved') and not value.get('platform_qualified')
-                                for codec, value in codec_inventory['codecs'].items() if codec != 'SBC'),
-                            'private integration never implies distribution or physical qualification')
+                            'integration endpoints require explicit scope')
+                    require(all(value.get('distribution_approved') == (codec in approved) and not value.get('platform_qualified')
+                                for codec, value in codec_inventory['codecs'].items()),
+                            'only SBC, AAC and LDAC approved; nothing physically qualified')
+                if codec_inventory['profile'] == 'public':
+                    require({c for c, v in codec_inventory['codecs'].items() if v['compiled_locally']} == approved,
+                            'public image carries exactly SBC, AAC and LDAC')
                 name = 'etc/y2linux/bluetooth-daemon.args'
                 codec_args = read(name)
                 require(run('debugfs','-R','cat /'+name,str(out/'Y2ROOT.img')) == codec_args,

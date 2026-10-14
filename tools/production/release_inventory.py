@@ -10,6 +10,8 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from tools.production.layout import RADIO_FIRMWARE  # noqa: E402
 
 PROJECT=Path(__file__).resolve().parents[2]
 REBORN=PROJECT.parent/'Y2Reborn'
@@ -91,7 +93,7 @@ def inventory(project,reborn,build):
     return {'schema':'org.y2linux.release-inventory/v1','versions':versions,'inputs':inputs,'packages':packages,
             'rust_vendor':{'packages':len(checksums),'checksum_manifest_set_sha256':vendor.hexdigest(),
                            'authority':'Cargo.lock plus checked-in vendor/.cargo-checksum.json; cargo --locked --offline'},
-            'radio_firmware':__import__('tools.production.layout',fromlist=['RADIO_FIRMWARE']).RADIO_FIRMWARE,
+            'radio_firmware':RADIO_FIRMWARE,
             'host_tools':host,'byte_reproducibility_proven':False,
             'footprint':{'regular_file_bytes':sum(x['bytes'] for x in files),'regular_files':len(files),
                          'elf_files':elf_count,'largest_files':sorted(files,key=lambda x:x['bytes'],reverse=True)[:40],
