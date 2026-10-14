@@ -7927,3 +7927,20 @@ change; Reborn unchanged (`1c9edd4`). Builds the image; the owner flashes.
 | ALSA period | NO_CHANGE | 512 frames (≈86 wakeups/s); user volume is applied at write time, so a larger buffer would delay volume changes. |
 
 **Gate decision:** READY for the build.
+
+## POWER-FINAL-31 metadata formats and folder-first artwork scope audit — 2026-10-14
+
+**Boundary:** owner request: a pass on metadata decoding and supported formats; artwork from the album folder first,
+the embedded picture only when the folder has none. Reborn change (`0892bf2`); platform as 30 plus the release
+identity. Builds the image; the owner flashes.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Formats (image FFmpeg 9.0.2) | MEASURED | Demuxers: aac, aiff, ape, flac, mov, mp3, ogg, wav, wv. Audio decoders: aac, alac, ape, flac, mp3/mp3float, opus, vorbis, wavpack, pcm s16/s24/s32/f32 (le/be). Image decoders: mjpeg, png, webp (+vp8). No image or network demuxer. |
+| Extensions | EXTENDED | Library adds `.m4b`, `.oga`, `.aifc` (already demuxed/decoded). `.mp4` stays out: a music video has no audio-only stream and would mark every scan incomplete. Not supported (would need new FFmpeg components): DSD (.dsf/.dff), WMA, ALAC-in-CAF, TAK, Musepack. |
+| Tags | EXTENDED | FFmpeg's normalised keys for ID3v2, Vorbis comments, MP4 atoms and APEv2: title, artist (AIFF author), album, album artist (`album_artist`/`albumartist`, now also `ALBUM ARTIST` with a space as foobar2000 writes it), date/year, genre, track/disc, ReplayGain. `METADATA_REVISION` 3 → 4: every row re-reads its tags once. |
+| Embedded artwork | NO_CHANGE | Attached pictures (ID3 APIC, FLAC PICTURE, MP4 covr, Ogg METADATA_BLOCK_PICTURE, APEv2) in JPEG/PNG/WebP up to 16 MiB. |
+| Artwork order | CHANGED | Was embedded first, folder fallback (thumbnail worker and playback). Now the folder cover first, embedded only when the folder has none. Folder names by priority (any case, jpg/jpeg/png/webp): cover, folder, front, album, albumart, artwork; then Windows Media Player AlbumArt_{GUID}_Large / AlbumArtSmall; finally the only image in the folder. macOS `._*` never counts. Thumbnail cache renamed (`thumb2-`), old files removed once, so existing thumbnails follow the new order. Playback's embedded-picture cache stays embedded-only. |
+| Disc subfolders (Album/CD1/) | NOT_CHANGED | A cover one level up would need the pinned-storage sidecar API to open the parent directory; left for a later change. |
+
+**Gate decision:** READY for the build.
