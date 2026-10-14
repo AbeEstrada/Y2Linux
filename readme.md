@@ -6,7 +6,7 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Baseline 46 (2026-10-16), developer preview.** It runs every day on
+> **Status: Baseline 47 (2026-10-16), developer preview.** It runs every day on
 > the maintainer's Y2. The first install is built from source and flashed with
 > SP Flash Tool; after that, the player installs new releases over Wi-Fi from
 > this repository's [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases).
@@ -14,14 +14,14 @@ factory partitions untouched.
 > [Supported hardware](#supported-hardware)). Read [Known issues](#known-issues)
 > before you flash.
 
-| | Baseline 46 |
+| | Baseline 47 |
 | --- | --- |
-| Git tag (both repositories) | `baseline-46` (previous: `baseline-34`); GitHub release `baseline-46` carries the signed over-the-air update |
-| Kernel | `6.18.56-y2linux-platform-v1-power-final-46` (Linux 6.18 long-term line) |
-| Root filesystem / release | `2026.08-platform-v1.76` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.46` |
+| Git tag (both repositories) | `baseline-47` (previous: `baseline-46`); GitHub release `baseline-47` carries the signed over-the-air update |
+| Kernel | `6.18.56-y2linux-platform-v1-power-final-47` (Linux 6.18 long-term line) |
+| Root filesystem / release | `2026.08-platform-v1.77` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.47` |
 | Player | Y2Reborn 0.3.0 (Rust 1.99) with Cover Flow, Genres and 15 themes |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 — every component on its newest release |
-| Maintainer's images built from | Y2Linux `d03ab29`, Y2Reborn `850687d` (later commits: docs only) |
+| Maintainer's images built from | Y2Linux `ba7a003`, Y2Reborn `850687d` (later commits: docs only) |
 
 ## Getting started
 
@@ -33,8 +33,8 @@ factory partitions untouched.
 
 ## What works
 
-Observed on the maintainer's device on the candidates up to 45 (46 is the first release on the
-update channel):
+Observed on the maintainer's device on the candidates up to 46 (46 was the first release on the
+update channel and installed over Wi-Fi):
 
 - **Over-the-air updates:** Settings → About & Updates checks once a day on Wi-Fi (or on demand),
   downloads a signed release and, with **Restart and Install**, restarts into a Y2 recovery image
@@ -81,10 +81,11 @@ update channel):
 
 ## Known issues
 
-- **Rarely a dark screen at start.** Twice the display controller answered every register read one
-  register late, so the first picture never started (a cold start with USB plugged in on 42, and the
-  installer screen once). Since 44 the driver detects this and restarts the display; the retry
-  has not been needed on the device yet. Hold Power for 10 s and start again if it happens.
+- **Dark screen at start (being verified).** Three times the display controller answered every
+  register read one register late, so the first picture never started (a cold start with USB
+  plugged in on 42, and the installer screen on 43 and 46; restarting the display did not help).
+  47 keeps the display's DSI clock gating off, the suspected cause; not yet confirmed on the
+  device. Hold Power for 10 s and start again if it happens.
 - **USB after a wake from deep sleep.** On 13–15 the device re-enumerated and received,
   but its transmit never completed, so USB networking and MTP stayed silent until a
   restart. Since 16 every wake has worked (one after a 16 h night), and 17's diagnostics
@@ -108,7 +109,8 @@ update channel):
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for [46](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-46.md) (update space, restart by default, first release),
+reports for [47](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-47.md) (DSI clock gating),
+[46](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-46.md) (update space, restart by default, first release),
 [44](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-44.md)/[45](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-45.md) (display read lag, installer screen),
 [43](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-43.md) (software restart fixed),
 [35](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-35.md)–[38](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-38.md) (over-the-air updates),

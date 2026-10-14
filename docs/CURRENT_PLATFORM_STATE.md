@@ -1,6 +1,16 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-46 update space, restart by default, Baseline 46 — 2026-10-16 (latest, published)
+## POWER-FINAL-47 DSI clock gating off, Baseline 47 — 2026-10-16 (latest, published)
+
+`out/y2linux-platform-v1-power-final-candidate-47/` (Linux `ba7a003`, Reborn `850687d`; BOOTIMG `97f2ef87…e280`,
+Y2ROOT `efb3f4e6…0bce`, RECOVERY `4293cfca…ce35`), fallback 46; git tag and GitHub release `baseline-47`. 46 installed
+over Wi-Fi from its release (archive `20261016/150`) but its recovery screen stayed dark: the DSI register reads lag
+from Linux's first modeset, not from the hand-over, and power-cycling the DSI does not clear it. 47 keeps MMSYS DCM
+off for DSI/DPI (stock enables DCM only once, while its display streams) and lets `probe-recovery` restart, for
+repeated recovery-screen tests. Suite 718. **Physical:** pending (install, then five recovery probes).
+Details: [47 report](validation/Y2-PLATFORM-V1-POWER-FINAL-47.md).
+
+## POWER-FINAL-46 update space, restart by default, Baseline 46 — 2026-10-16 (published)
 
 `out/y2linux-platform-v1-power-final-candidate-46/` (Linux `d03ab29`, Reborn `850687d`; BOOTIMG `d5bacc9e…583f`,
 Y2ROOT `e8dde2d1…d87a`, RECOVERY `476567c5…e1e2`), fallback 45; git tag `baseline-46` in both repositories and the

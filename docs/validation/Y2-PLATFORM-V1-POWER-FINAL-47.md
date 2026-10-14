@@ -1,6 +1,6 @@
 # POWER-FINAL-47 — DSI register read lag: keep DCM off for DSI/DPI
 
-Status: **SEALED, not yet on the player** (2026-10-16). Package `out/y2linux-platform-v1-power-final-candidate-47/`
+Status: **PUBLISHED** as GitHub release `baseline-47` (owner: publish as latest now), not yet on the player (2026-10-16). Package `out/y2linux-platform-v1-power-final-candidate-47/`
 (fallback = 46, which the player runs), receipts `out/deep-sleep-final/build47-receipts/`. BOOTIMG
 `97f2ef876bc78b140933204f504142830786f6ec9b4f65a2b5b08b632cf9e280`, Y2ROOT
 `efb3f4e66f85ed8f200f4b292d1e1a2894bf462e04641748e27aff5a1df40bce`, RECOVERY
@@ -25,7 +25,6 @@ boots (143, 43's recovery, 150) are after POWER-FINAL-16 introduced the DCM; the
 
 ## Owner steps
 
-1. Install 47 (owner's choice: GitHub pre-release over Wi-Fi, or staged over USB).
+1. Install 47 over Wi-Fi from the release (Settings → About & Updates).
 2. With the owner's OK: several `y2-platform update probe-recovery` runs (each restarts into the recovery screen
    and back); the agent archives each recovery log. Pass: every recovery screen lit, no `read-back` line.
-3. Then publish/promote 47 as the latest release.
