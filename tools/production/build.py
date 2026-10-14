@@ -126,6 +126,15 @@ def build_userspace(PROJECT,out,source,run,public=False):
         run([str(source/'utils/config'),'--file',str(out/'buildroot/.config'),'--disable','BR2_PACKAGE_Y2_CODEC_APTX'],'buildroot-public-codecs.log')
         run(br+['olddefconfig'],'buildroot-public-codecs.log')
     (out/'codec-variant').write_text(('public' if public else 'private')+'\n')
+    # Buildroot never removes files of dropped or replaced packages from its
+    # target directory (a reused workspace kept libfreeaptx and the full FDK
+    # in a public image). Re-install every package into an empty target; the
+    # compiled packages themselves are reused.
+    target=out/'buildroot/target'
+    if target.exists():
+        shutil.rmtree(target)
+        for stamp in (out/'buildroot/build').glob('*/.stamp_target_installed'):
+            stamp.unlink()
     # Buildroot's local-package stamps do not track edits in this repository.
     # Rebuild these small native helpers when resuming an existing workspace;
     # the codec packages follow the public/private variant and the AAC source.
