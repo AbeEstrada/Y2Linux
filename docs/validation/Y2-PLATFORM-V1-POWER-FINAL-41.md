@@ -16,6 +16,14 @@ display fetch through larb0 never completes. The DSI handover now opens the SMI 
 closed, waits up to 10 ms for larb0 to drain and logs
 `handoff: SMI gates … left closed by a restart, opened; larb0 stat=… after … us`. A cold start does not log it.
 
+## Device results
+
+- Cold start (archive `20261016/141`): healthy, no `SMI gates` line, larb0 idle.
+- **Software restart (archive 142): still dark, but the cause is confirmed**: `handoff: SMI gates 1 left closed by a
+  restart, opened; larb0 stat=00000001 after 10000 us`. With the clock back, SMI common reads like a cold start,
+  yet the request LK issued while it was gated stays stuck in larb0. Opening at handover is too late; 42 reopens
+  the gates before the restart.
+
 ## Owner steps
 
 1. Flash 41 (BOOTIMG + ANDROID). Cold start: no `SMI gates` line expected.

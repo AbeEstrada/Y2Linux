@@ -1,6 +1,8 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-16, later): ROOT CAUSE OF THE DARK PANEL AFTER A SOFTWARE RESTART FOUND (40); 41 SEALED WITH THE FIX.** At handover after a restart MMSYS_CG_CON0=1: Linux closed the SMI common gate at shutdown, the watchdog restart keeps it, LK's first fetch hangs (larb0 busy, GREQ 1). 41 opens the gates at handover. Next: flash 41, restart test, then `restart.json` and a no-press install.
+> **START HERE (2026-10-16, evening): 42 SEALED.** 41 on the device confirmed the closed SMI gate after a restart but opening it at handover is too late (archive 142); 42 reopens the gates in a restart handler before the watchdog reset. Next: flash 42, restart test, then `restart.json`.
+
+> Previous entry: **START HERE (2026-10-16, later): ROOT CAUSE OF THE DARK PANEL AFTER A SOFTWARE RESTART FOUND (40); 41 SEALED WITH THE FIX.** At handover after a restart MMSYS_CG_CON0=1: Linux closed the SMI common gate at shutdown, the watchdog restart keeps it, LK's first fetch hangs (larb0 busy, GREQ 1). 41 opens the gates at handover. Next: flash 41, restart test, then `restart.json` and a no-press install.
 
 > Previous entry: **START HERE (2026-10-16): 40 SEALED (handover snapshot), AWAITING FLASH.** 39 on the device: restart still dark with screen on and off (archives 137/138); SMI larb0 busy after every restart. 40 snapshots LK's pipeline at handover/parked. Next: flash 40, cold + one restart, diff slots 2/3. OTA works (two Power presses); automatic restart waits for this.
 
