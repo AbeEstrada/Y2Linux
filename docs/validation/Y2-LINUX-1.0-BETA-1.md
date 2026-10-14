@@ -1,17 +1,17 @@
 # Y2Linux 1.0 Beta 1 (Baseline 50)
 
-Status: **@STATUS@** (2026-10-16). The first public beta of Y2Linux and Y2Reborn: release `1.0.0-beta.1`,
-Reborn `1.0.0-beta.1`, kernel `6.18.56-y2linux-1.0.0-beta.1`, update sequence 5000, Linux `@LINUX@`,
-Reborn `@REBORN@`, git tag `baseline-50` in both repositories. Built with `--public`. Container suite **@SUITE@**,
+Status: **PUBLISHED as GitHub release `baseline-50`** (2026-10-16). The first public beta of Y2Linux and Y2Reborn: release `1.0.0-beta.1`,
+Reborn `1.0.0-beta.1`, kernel `6.18.56-y2linux-1.0.0-beta.1`, update sequence 5000, Linux `5ac955f`,
+Reborn `e394c38`, git tag `baseline-50` in both repositories. Built with `--public`. Container suite **728 OK**,
 all seal checks PASS (public distribution gate, no radio firmware). Milestone audit: BETA-1 in
 [roadmap-gap-audit](../planning/roadmap-gap-audit.md).
 
 | Image | SHA-256 |
 | --- | --- |
-| BOOTIMG | `@BOOTIMG@` |
-| Y2ROOT | `@Y2ROOT@` |
-| RECOVERY | `@RECOVERY@` |
-| Y2DATA (no SSH key) | `@Y2DATA@` |
+| BOOTIMG | `55e8ed3a685274c691e82ca4a18d0badb5b4c06a29ef0f995378f3e15547e004` |
+| Y2ROOT | `cc794c25917d64bad4ca0e7d08b3322a3f03c513ad239422a2aadcde267cb3c8` |
+| RECOVERY | `b58b8f68bde5390a2c0a0f5270f42ec719de40860ca25bfa19828b390b11a379` |
+| Y2DATA (no SSH key) | `28149d30eb9b8f959537643c9bd3e980d1d5e904abff42f382b0912eecfdc343` |
 
 ## Release contents
 

@@ -21,7 +21,7 @@ factory partitions untouched.
 | Player | Y2Reborn 1.0.0-beta.1 (Rust 1.99) with Cover Flow, Genres and 15 themes |
 | Bluetooth codecs | SBC, AAC (fdk-aac-free) and LDAC |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 |
-| Maintainer's images built from | see the [Beta 1 report](docs/validation/Y2-LINUX-1.0-BETA-1.md) |
+| Images built from | Y2Linux `5ac955f`, Y2Reborn `e394c38` ([Beta 1 report](docs/validation/Y2-LINUX-1.0-BETA-1.md)) |
 
 ## Getting started
 
