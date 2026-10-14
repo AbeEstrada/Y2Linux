@@ -6,7 +6,8 @@ Release `baseline-49` (Linux `b4610ea`, Reborn `ceb6313`): first-install images 
 system, data without SSH key), the signed update and the GPL sources. No image carries the MediaTek radio firmware:
 updated players keep theirs (the recovery copies it to Y2DATA), new players take it from the owner's `system.img` on the
 **Firmware** drive. Public Bluetooth codecs: SBC, AAC (fdk-aac-free), LDAC; aptX only in owner-private builds. Merged
-contributions #38 (Y2Linux), #6–#8 (Y2Reborn). Suite 727. **Physical:** pending (owner installs over Wi-Fi).
+contributions #38 (Y2Linux), #6–#8 (Y2Reborn). Suite 727. **Physical:** installed over Wi-Fi; firmware kept by the
+recovery, radios up from `/data/firmware`, recovery screen lit (archive `20261016/153`).
 Details: [49 report](validation/Y2-PLATFORM-V1-POWER-FINAL-49.md).
 
 ## POWER-FINAL-48 download screen, Baseline 48 — 2026-10-16 (published)

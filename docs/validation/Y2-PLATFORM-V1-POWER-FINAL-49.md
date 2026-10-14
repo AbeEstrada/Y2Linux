@@ -1,6 +1,6 @@
 # POWER-FINAL-49 — firmware-free public images, one-time flash package, public codec set
 
-Status: **PUBLISHED** as GitHub release `baseline-49` (2026-10-16): the update files, a first-install package for SP
+Status: **PUBLISHED** as GitHub release `baseline-49` and **installed over Wi-Fi** (2026-10-16): the update files, a first-install package for SP
 Flash Tool and the GPL source collection. Linux `b4610ea`, Reborn `ceb6313`, kernel
 `6.18.56-y2linux-platform-v1-power-final-49`, release `…candidate.49`, update sequence 4900. Container suite **727 OK**,
 all seal checks PASS (public distribution gate included). Packages `out/y2linux-platform-v1-power-final-candidate-49/`
@@ -37,5 +37,14 @@ removed (notes added; never in Git). The public-distribution gate also blocked A
 
 ## Device results
 
-- Before publishing, the owner chose to install the public 49 over Wi-Fi from the release (the private variant was
-  staged over USB and cancelled). Pending: firmware kept across the update, Wi-Fi/Bluetooth working, recovery screen.
+- **Installed over Wi-Fi from the release (2026-10-16, archive `20261016/153`, boot `1723225f`): PASSED.** The
+  recovery logged `radio firmware kept on Y2DATA` (seven files, reviewed hashes) before writing the new root;
+  install 54 s; recovery screen lit (vblank 16 at 1.28 s; the DSI read lag appeared again and the pipeline ran, as on
+  47/48); `Acknowledged`, taint 0. `/lib/firmware/mediatek/mt6582` → `/data/firmware/mt6582`, `firmware status` Ready.
+  Radios from the new location: MD1 calibration boot result 0, both WMT patches applied, Wi-Fi Online, Bluetooth
+  powered; codec inventory `public` (SBC, AAC, LDAC), only `libfdk-aac.so.2.0.3`, no aptX.
+- Found on the way: after the cancelled private 49, Reborn kept showing *Update Didn't Finish* and never offered the
+  release a later check had found (journal `Failed: owner cancelled` won over everything). Fixed in Reborn `476e281`
+  (a cancel is no failure; a later check supersedes a failure), ships with the next release. Owner unblocked by staging
+  the release over the player's Wi-Fi via SSH.
+- Still to do: AAC playback with the owner's headphones; the Firmware-drive path for new players (owner OK needed).
