@@ -1,6 +1,8 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-15, late night): 39 SEALED (display mutex reset), AWAITING FLASH.** Restart on 38 stayed dark (archive 135): stale mutex grant → `could not acquire mutex 0`; 39 resets all display mutexes once at handover. Next: flash 39, check `Y2SCAN mutex reset` line, restart test (owner OK), then `restart.json` on.
+> **START HERE (2026-10-16): 40 SEALED (handover snapshot), AWAITING FLASH.** 39 on the device: restart still dark with screen on and off (archives 137/138); SMI larb0 busy after every restart. 40 snapshots LK's pipeline at handover/parked. Next: flash 40, cold + one restart, diff slots 2/3. OTA works (two Power presses); automatic restart waits for this.
+
+> Previous entry: **START HERE (2026-10-15, late night): 39 SEALED (display mutex reset), AWAITING FLASH.** Restart on 38 stayed dark (archive 135): stale mutex grant → `could not acquire mutex 0`; 39 resets all display mutexes once at handover. Next: flash 39, check `Y2SCAN mutex reset` line, restart test (owner OK), then `restart.json` on.
 
 > Previous entry: **START HERE (2026-10-15, night): 38 INSTALLED OVER THE AIR FROM 37 (release key), 52 s in recovery (37: 136 s), health acknowledged.** Next: one software restart on 38 (owner OK) to test the stock external-reset sequence; if the panel survives, `/data/updates/restart.json` `{"mode": "reboot"}` and an install without Power presses. Possible further speed-up: back up only the chunks that change (backup is now 31 of 52 s).
 

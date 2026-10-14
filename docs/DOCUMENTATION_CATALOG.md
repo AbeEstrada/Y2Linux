@@ -311,7 +311,8 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [POWER-FINAL-35 — over-the-air updates through a Y2 recovery image](validation/Y2-PLATFORM-V1-POWER-FINAL-35.md) | Flashed candidate report (recovery entry passed) |
 | [POWER-FINAL-37 — recovery replay fix and the warm-restart display snapshot](validation/Y2-PLATFORM-V1-POWER-FINAL-37.md) | Flashed candidate report |
 | [POWER-FINAL-38 — stock restart sequence, faster installs, clearer progress](validation/Y2-PLATFORM-V1-POWER-FINAL-38.md) | Installed candidate report (over the air) |
-| [POWER-FINAL-39 — display mutex reset for the software restart](validation/Y2-PLATFORM-V1-POWER-FINAL-39.md) | Sealed candidate report (awaiting flash) |
+| [POWER-FINAL-39 — display mutex reset for the software restart](validation/Y2-PLATFORM-V1-POWER-FINAL-39.md) | Flashed candidate report (restart still dark) |
+| [POWER-FINAL-40 — handover snapshot for the restart display defect](validation/Y2-PLATFORM-V1-POWER-FINAL-40.md) | Sealed diagnostic candidate (awaiting flash) |
 | [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |
 | [POWER-FINAL-32 — deep idle during screen-off playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) | Sealed candidate report (in 33) |
 | [POWER-FINAL-31 — folder-first artwork and metadata formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) | Sealed candidate report (in 33) |
