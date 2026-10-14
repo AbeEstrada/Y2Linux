@@ -1,5 +1,69 @@
 # Candidate and fallback identity index
 
+## POWER-FINAL-34 — sealed 2026-10-14, Baseline 34
+
+`Y2LINUX-PLATFORM-V1-POWER-FINAL-34`: compiled Linux `de62fa9` / Reborn `5b69ef500ebed0e80640fc47c3dd3fd4037dbcfb`;
+kernel `6.18.56-y2linux-platform-v1-power-final-34`, root `2026.08-platform-v1.64`, release
+`1.0.0-platform-v1-power-final-candidate.34`. BOOTIMG `ee80a82cbc71afbdd80aceaa178bb76b22c757c85ebd7b90daef0b17fb84c30c`,
+Y2ROOT `9d3e93c13fe400834fbf098109b6c4c76383bcad184fc71fa4196600d3e9ff6c`. Package
+`out/y2linux-platform-v1-power-final-candidate-34/` (fallback = 33).
+
+## POWER-FINAL-33 — installed 2026-10-14
+
+`Y2LINUX-PLATFORM-V1-POWER-FINAL-33`: compiled Linux `b42a391` / Reborn `76e681d866178adf97a5a25922cbc7a34d180fb6`;
+kernel `6.18.56-y2linux-platform-v1-power-final-33`, root `2026.08-platform-v1.63`, release
+`1.0.0-platform-v1-power-final-candidate.33`. BOOTIMG `1d19f28869cee65203c7e68bdae639e4bc3be523e0cbe77ba31cedd0a43d3eb2`,
+Y2ROOT `2d9b07a61c24b0f26f3d3a23be5d069efec7cb7a43c09f4ec9d132aeff1d7788`. Package
+`out/y2linux-platform-v1-power-final-candidate-33/` (fallback = 32).
+
+## POWER-FINAL-32 — sealed 2026-10-14, never flashed (in 33)
+
+`Y2LINUX-PLATFORM-V1-POWER-FINAL-32`: compiled Linux `4ded0fe` / Reborn `0892bf27c409b2048a70b0b057df756cc2a3a34b`;
+kernel `6.18.56-y2linux-platform-v1-power-final-32`, root `2026.08-platform-v1.62`, release
+`1.0.0-platform-v1-power-final-candidate.32`. BOOTIMG `5f1766ca727ffee2824aab2f2bfee5f09d06bbe68dcc27146887338bc591a131`,
+Y2ROOT `f9ca5bbc5c7400e9d7d45708efcf70d8f58c9afe79ebfe4ded8724763d558938`. Package
+`out/y2linux-platform-v1-power-final-candidate-32/` (fallback = 31).
+
+## POWER-FINAL-31 — sealed 2026-10-14, never flashed (in 33)
+
+`Y2LINUX-PLATFORM-V1-POWER-FINAL-31`: compiled Linux `ebd2a58` / Reborn `0892bf27c409b2048a70b0b057df756cc2a3a34b`;
+kernel `6.18.56-y2linux-platform-v1-power-final-31`, root `2026.08-platform-v1.61`, release
+`1.0.0-platform-v1-power-final-candidate.31`. BOOTIMG `9aeeba7899f47b3d137f664f3ae0d20e6a25cde76e87f14ec3a837b0012bb384`,
+Y2ROOT `b275bf043f14979ffa6ffcf9a84f5882b9453c7da822879157c2de0078d6bf4f`. Package
+`out/y2linux-platform-v1-power-final-candidate-31/` (fallback = 30).
+
+## POWER-FINAL-30 — sealed 2026-10-14, never flashed (in 33)
+
+`Y2LINUX-PLATFORM-V1-POWER-FINAL-30`: compiled Linux `6aa52e3` / Reborn `f08cf9378c0af053417286b4c3638a8184460764`;
+kernel `6.18.56-y2linux-platform-v1-power-final-30`, root `2026.08-platform-v1.60`, release
+`1.0.0-platform-v1-power-final-candidate.30`. BOOTIMG `7d95f85517e8744fc4c19c904e422decaade4cf9d7cd19004b186e4cb4c302b9`,
+Y2ROOT `65467e6ab707cca8078a315ed31ed8f845cf11566151b37ac4910836fe2b82c2`. Package
+`out/y2linux-platform-v1-power-final-candidate-30/` (fallback = 29).
+
+## POWER-FINAL-29 — installed 2026-10-14
+
+`Y2LINUX-PLATFORM-V1-POWER-FINAL-29`: compiled Linux `f9ce653` / Reborn `1c9edd479d23c84ef8dc373d6c8dd5bf3abc6659`;
+kernel `6.18.56-y2linux-platform-v1-power-final-29`, root `2026.08-platform-v1.59`, release
+`1.0.0-platform-v1-power-final-candidate.29`. BOOTIMG `3f82ae593a936067730cd735c780cf42d483457ab8f2591590748448cc6efc07`,
+Y2ROOT `5d9f298bb8432a0bcf13acb1ae2498e9d95252764f4f461003d9a0bc2b717f52`. Package
+`out/y2linux-platform-v1-power-final-candidate-29/` (fallback = 28).
+
+## POWER-FINAL-28 — installed 2026-10-14
+
+`Y2LINUX-PLATFORM-V1-POWER-FINAL-28`: compiled Linux `36b8500` / Reborn `1c9edd479d23c84ef8dc373d6c8dd5bf3abc6659`;
+kernel `6.18.56-y2linux-platform-v1-power-final-28`, root `2026.08-platform-v1.58`, release
+`1.0.0-platform-v1-power-final-candidate.28`. BOOTIMG `eb413fdc22ac656ed85067efd62d86da01e1c24057b9c8cdede53ffd0b779c94`,
+Y2ROOT `7537ba4311b347355e5a6df1edfca2a793eb02fef1f4f7bf671ccefa0a01afdf`. Package
+`out/y2linux-platform-v1-power-final-candidate-28/` (fallback = 27).
+
+## POWER-FINAL-27 — installed 2026-10-14
+
+`Y2LINUX-PLATFORM-V1-POWER-FINAL-27`: compiled Linux `2c3e2bd` / Reborn `1c9edd479d23c84ef8dc373d6c8dd5bf3abc6659`;
+kernel `6.18.56-y2linux-platform-v1-power-final-27`, root `2026.08-platform-v1.57`, release
+`1.0.0-platform-v1-power-final-candidate.27`. BOOTIMG `c9017de1d19924c404f0776b9bacd0e09df9bca1c82802fc7f260e058c57902c`,
+Y2ROOT `c70dc92bb86a883ef83a0af22bbda52f6cd19577710f15a8532d576fa73f737a`. Package
+`out/y2linux-platform-v1-power-final-candidate-27/` (fallback = 26).
+
 ## POWER-FINAL-26 — installed 2026-10-13
 
 `Y2LINUX-PLATFORM-V1-POWER-FINAL-26`: compiled Linux `64b3cc4` / Reborn `1c9edd479d23c84ef8dc373d6c8dd5bf3abc6659`;

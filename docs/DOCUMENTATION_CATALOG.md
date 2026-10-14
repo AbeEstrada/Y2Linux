@@ -13,7 +13,7 @@ document links, rather than relocating or deleting proof. See the
 [shared knowledge rules](KNOWLEDGE_BASE.md)
 and the other repository's catalog for product-wide context.
 
-Indexed pages: **307**. Explicit scope notices: **220**.
+Indexed pages: **315**. Explicit scope notices: **228**.
 
 ## Entry
 
@@ -305,9 +305,17 @@ Indexed pages: **307**. Explicit scope notices: **220**.
 
 | Page | Scope |
 | --- | --- |
+| [POWER-FINAL-34 — all skins shipped, battery level fixed](validation/Y2-PLATFORM-V1-POWER-FINAL-34.md) | Sealed candidate report (Baseline 34) |
+| [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |
+| [POWER-FINAL-32 — deep idle during screen-off playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) | Sealed candidate report (in 33) |
+| [POWER-FINAL-31 — folder-first artwork and metadata formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) | Sealed candidate report (in 33) |
+| [POWER-FINAL-30 — storage and decode performance pass](validation/Y2-PLATFORM-V1-POWER-FINAL-30.md) | Sealed candidate report (in 33) |
+| [POWER-FINAL-29 — finish-stage and discharge-estimate corrections](validation/Y2-PLATFORM-V1-POWER-FINAL-29.md) | Installed candidate report |
+| [POWER-FINAL-28 — stock battery percentage and top-off](validation/Y2-PLATFORM-V1-POWER-FINAL-28.md) | Installed candidate report |
+| [POWER-FINAL-27 — stock sleep-parity gaps C, A, B](validation/Y2-PLATFORM-V1-POWER-FINAL-27.md) | Installed candidate report |
 | [POWER-FINAL-26 — Bluetooth codec auto-selection](validation/Y2-PLATFORM-V1-POWER-FINAL-26.md) | Installed candidate report |
 | [POWER-FINAL-25 — Cover Flow frame gate, card hygiene](validation/Y2-PLATFORM-V1-POWER-FINAL-25.md) | Installed candidate report |
-| [POWER-FINAL-24 — animation frame pacing](validation/Y2-PLATFORM-V1-POWER-FINAL-24.md) | Installed candidate report (Baseline 24) |
+| [POWER-FINAL-24 — animation frame pacing](validation/Y2-PLATFORM-V1-POWER-FINAL-24.md) | Installed candidate report (Baseline 24, previous baseline) |
 | [POWER-FINAL-23 — Reborn Cover Flow and Genres](validation/Y2-PLATFORM-V1-POWER-FINAL-23.md) | Installed candidate report |
 | [POWER-FINAL-22 — dark DSI hand-over](validation/Y2-PLATFORM-V1-POWER-FINAL-22.md) | Sealed candidate report |
 | [POWER-FINAL-21 — quiet display power transitions](validation/Y2-PLATFORM-V1-POWER-FINAL-21.md) | Installed candidate report (shutdown fixed) |

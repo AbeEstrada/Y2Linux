@@ -1,6 +1,6 @@
 # POWER-FINAL-34 — all skins shipped, battery level fixed
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-14). Package
+Status: **SEALED, BASELINE 34** (2026-10-14; git tag `baseline-34`; awaiting the owner flash). Package
 `out/y2linux-platform-v1-power-final-candidate-34/` (fallback = 33), receipts `out/deep-sleep-final/build34-receipts/`.
 BOOTIMG `ee80a82cbc71afbdd80aceaa178bb76b22c757c85ebd7b90daef0b17fb84c30c`, Y2ROOT
 `9d3e93c13fe400834fbf098109b6c4c76383bcad184fc71fa4196600d3e9ff6c`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-34`,

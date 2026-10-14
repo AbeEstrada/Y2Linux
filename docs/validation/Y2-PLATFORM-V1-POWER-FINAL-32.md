@@ -1,6 +1,6 @@
 # POWER-FINAL-32 — deep idle during screen-off playback
 
-Status: **SEALED, AWAITING THE OWNER FLASH AND PLAYBACK TEST** (2026-10-14). Package
+Status: **SUPERSEDED, NEVER FLASHED ALONE; PLAYBACK TEST OWED** (2026-10-14; contained in 33–34, installed as part of 33). Package
 `out/y2linux-platform-v1-power-final-candidate-32/` (fallback = 31), receipts `out/deep-sleep-final/build32-receipts/`.
 BOOTIMG `5f1766ca727ffee2824aab2f2bfee5f09d06bbe68dcc27146887338bc591a131`, Y2ROOT
 `f9ca5bbc5c7400e9d7d45708efcf70d8f58c9afe79ebfe4ded8724763d558938`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-32`,

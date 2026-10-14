@@ -1,6 +1,6 @@
 # POWER-FINAL-33 — Reborn skins (themes)
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-14). Package
+Status: **INSTALLED** (2026-10-14; owner: themes work; superseded by 34). Package
 `out/y2linux-platform-v1-power-final-candidate-33/` (fallback = 32), receipts `out/deep-sleep-final/build33-receipts/`.
 BOOTIMG `1d19f28869cee65203c7e68bdae639e4bc3be523e0cbe77ba31cedd0a43d3eb2`, Y2ROOT
 `2d9b07a61c24b0f26f3d3a23be5d069efec7cb7a43c09f4ec9d132aeff1d7788`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-33`,

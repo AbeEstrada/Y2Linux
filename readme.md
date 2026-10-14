@@ -6,20 +6,20 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Baseline 24 (2026-10-13), developer preview.** It runs every day on
+> **Status: Baseline 34 (2026-10-14), developer preview.** It runs every day on
 > the maintainer's Y2. There are no prebuilt images yet: you build from source
 > and flash with SP Flash Tool. Only one hardware revision has been tested (see
 > [Supported hardware](#supported-hardware)). Read [Known issues](#known-issues)
 > before you flash.
 
-| | Baseline 24 |
+| | Baseline 34 |
 | --- | --- |
-| Git tag (both repositories) | `baseline-24` (previous: `baseline-18`) |
-| Kernel | `6.18.56-y2linux-platform-v1-power-final-24` (Linux 6.18 long-term line) |
-| Root filesystem / release | `2026.08-platform-v1.54` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.24` |
-| Player | Y2Reborn 0.3.0 (Rust 1.99) with Cover Flow and Genres |
+| Git tag (both repositories) | `baseline-34` (previous: `baseline-24`) |
+| Kernel | `6.18.56-y2linux-platform-v1-power-final-34` (Linux 6.18 long-term line) |
+| Root filesystem / release | `2026.08-platform-v1.64` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.34` |
+| Player | Y2Reborn 0.3.0 (Rust 1.99) with Cover Flow, Genres and 15 themes |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 — every component on its newest release |
-| Maintainer's images built from | Y2Linux `d2b38e8`, Y2Reborn `ced5199` (later commits: docs only) |
+| Maintainer's images built from | Y2Linux `de62fa9`, Y2Reborn `5b69ef5` (later commits: docs only) |
 
 ## Getting started
 
@@ -31,21 +31,31 @@ factory partitions untouched.
 
 ## What works
 
-Observed on the maintainer's device on Baseline 18 or the candidates just before it:
+Observed on the maintainer's device on the candidates up to 33 (34 adds the shipped themes and a
+battery-display fix on top of 33):
 
 - Boots from internal eMMC: stock preloader and LK, then Linux 6.18 and Buildroot. No SD card needed.
 - Display with GPU (DRM + Lima), buttons, click wheel and the Reborn player UI.
+- **Themes:** Settings → Display → Theme switches between Reborn's own look and 15 shipped
+  themes that restyle every screen (Classic, Nano Glass, Walkman, Terminal, Winamp, Paper,
+  Big Type, Cassette, Neon Night, Zune, five Mini colours). More can be added by copying a
+  theme folder into `Themes` on the player over MTP. Authoring guide:
+  [Reborn skins](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/skins.md).
 - Albums in **Cover Flow** (perspective covers with reflections, the cover flies into the
   album page; the grid stays available in Settings → Display), and **Genres** in the main list
   (genre → All Songs and its albums).
+- Album art from the album folder first (cover.jpg, folder.jpg, … and Windows Media Player
+  names), the embedded picture when the folder has none.
 - Wired headphone audio (CS43131 DAC), S16 stereo at 44.1/48 kHz; higher-rate files are converted.
-- Bluetooth audio (SBC).
+- Bluetooth audio; the codec is chosen automatically (SBC, or AAC/aptX/LDAC when the
+  headphones support them and BlueALSA offers them).
 - Wi-Fi (2.4 GHz).
 - USB: MTP (internal storage and SD card), and SSH/SFTP over USB Ethernet for developers.
 - microSD card for music (`/media/sd`). Optionally, the stock FAT partition can be turned into
   a 5.4 GiB ext4 music partition (`y2-platform internal-media provision`).
-- Charging over USB (conservative 650 mA default ceiling) with a real "Full" state, and an
-  offline charging screen when the player is off.
+- Charging over USB (conservative 650 mA default ceiling) with the stock top-off: the battery
+  is charged until really full, shows 100 % then counts down 99, 98, …, and keeps its
+  percentage across a restart. An offline charging screen when the player is off.
 - Deep sleep when the screen times out: the SoC suspends and wakes every 30 min for
   housekeeping, with the stock suspend settings (CPU at 0.85 V, USB PHY off, wheel controller
   asleep). Sleep and USB state are written to `/data` so they survive a restart.
@@ -68,23 +78,34 @@ Observed on the maintainer's device on Baseline 18 or the candidates just before
   but its transmit never completed, so USB networking and MTP stayed silent until a
   restart. Since 16 every wake has worked (one after a 16 h night), and 17's diagnostics
   caught and repaired a lost USB interrupt setting after a sleep; not yet confirmed over many wakes.
-- **Battery life is not stock-like yet.** 16 draws about 8.6 mA asleep (≈0.75 points/h,
-  one 16 h night; 15: about 10 mA); stock is about 1.3 mA (≈0.1 points/h). The SoC's
+- **Battery life is not stock-like yet.** 26 drew about 8.3 mA asleep over a 10 h night
+  (16: about 8.6 mA); stock is about 1.3 mA (≈0.1 points/h). 27 adds the stock panel
+  power-down, VGP2-off and VSYS sleep mode, 32 deep idle during screen-off playback; neither
+  has had its overnight or playback measurement yet. The SoC's
   infrastructure power domain still never switches off in sleep (the SoC side now matches stock;
   17–20 gate the remaining modem, PMIC, PMIC-wrapper and UART1 clocks like stock; their overnight
   drain has not been measured yet). The percentage is estimated from voltage; there is
   no current sensor.
-- Cover Flow runs at about 27 frames per second (half the panel's 63 Hz); it is CPU-bound
-  at the low clock and is being optimised.
-- An SD card written by macOS carries `._*` files that Reborn tries to read; the library scan
-  then reports itself incomplete. Delete them or wait for the scanner fix.
-- Bluetooth uses SBC only. AAC/aptX/LDAC sources exist but are not enabled in
-  normal builds.
+- Cover Flow should now run at the panel's rate (25 removed a 34-ms frame gate); the new
+  frame rate has not been measured on the device yet.
+- Bluetooth: saved headphones are not always reconnected after a start or wake (the platform
+  reconnect can end `Inhibited`; connect them once from Settings → Bluetooth). AAC with
+  AirPods has not been confirmed on the device yet.
+- Playing to a saved but disconnected Bluetooth output fails instead of connecting it.
 - No public update channel or release signing. You flash or copy updates by hand.
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for [24](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-24.md) (frame pacing),
+reports for [34](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-34.md) (shipped themes, battery display),
+[33](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) (themes),
+[32](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) (deep idle during playback),
+[31](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) (artwork and formats),
+[30](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-30.md) (storage and decode speed),
+[28](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-28.md)/[29](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-29.md) (stock battery percentage and top-off),
+[27](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-27.md) (stock panel, VGP2 and VSYS sleep),
+[26](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-26.md) (Bluetooth codecs),
+[25](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-25.md) (Cover Flow frame gate),
+[24](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-24.md) (frame pacing),
 [23](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-23.md) (Cover Flow and Genres),
 [21](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-21.md)/[22](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-22.md) (display power transitions),
 [19](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-19.md)/[20](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-20.md) (PMIC_WRAP and UART1 clocks),

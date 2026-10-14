@@ -1,6 +1,6 @@
 # POWER-FINAL-30 — storage and decode performance pass
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-14). Package `out/y2linux-platform-v1-power-final-candidate-30/`
+Status: **SUPERSEDED, NEVER FLASHED ALONE** (2026-10-14; contained in 31–34, installed as part of 33). Package `out/y2linux-platform-v1-power-final-candidate-30/`
 (fallback = 29), receipts `out/deep-sleep-final/build30-receipts/`. BOOTIMG
 `7d95f85517e8744fc4c19c904e422decaade4cf9d7cd19004b186e4cb4c302b9`, Y2ROOT
 `65467e6ab707cca8078a315ed31ed8f845cf11566151b37ac4910836fe2b82c2`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-30`,

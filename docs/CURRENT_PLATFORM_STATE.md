@@ -1,6 +1,42 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-26 Bluetooth codec auto-selection — 2026-10-13 (latest, installed)
+## POWER-FINAL-34 shipped themes, battery display, Baseline 34 — 2026-10-14 (latest, published)
+
+`out/y2linux-platform-v1-power-final-candidate-34/` (Linux `de62fa9`, **Reborn `5b69ef5`**; BOOTIMG `ee80a82c…c30c`,
+Y2ROOT `9d3e93c1…ff6c`), fallback 33; git tag `baseline-34` in both repositories. 15 Reborn themes shipped in
+`/usr/share/reborn/skins` (Classic, Nano Glass, Walkman, Terminal, Winamp, Paper, Big Type, Cassette, Neon Night, Zune,
+Mini Silver/Pink/Blue/Green/Gold; OFL fonts); skin fonts may carry ASCII only and text may be lowercased (Zune).
+Reborn shows the battery level again: since 29 the platform reports the source `stock_oam`, which Reborn ignored
+(seen on the 33 device capture as an empty battery). Suite 715. **Physical:** 13 of the themes loaded on the 33 device
+(87–119 ms each, trial copies in `Themes`); 34 itself awaits the owner's flash (battery level, Zune).
+Details: [34 report](validation/Y2-PLATFORM-V1-POWER-FINAL-34.md).
+
+## POWER-FINAL-33 Reborn themes — 2026-10-14 (installed)
+
+`out/y2linux-platform-v1-power-final-candidate-33/` (Linux `b42a391`, Reborn `76e681d`; BOOTIMG `1d19f288…3eb2`,
+Y2ROOT `2d9b07a6…7788`), fallback 32; contains 27–32. Skin engine in Reborn (format, strict validation, skin atlas
+texture, TTF fonts, live picker in Settings → Display → Theme, `Themes` folders on Internal Storage and the SD card,
+`rebornctl theme`), the Classic skin, and Reborn's own look unchanged when no skin is chosen. Suite 713.
+**Physical:** installed; owner: "it works very good"; Classic loaded in 162 ms. Details:
+[33 report](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md), authoring guide in Y2Reborn `docs/skins.md`.
+
+## POWER-FINAL-27 to 32 — 2026-10-14
+
+- **27** stock panel power-down, VGP2 off when the DAC idles, VSYS buck sleep mode (switches in
+  `power-features.json`); installed (archive 125), overnight drain not yet measured.
+  [27 report](validation/Y2-PLATFORM-V1-POWER-FINAL-27.md)
+- **28/29** stock battery percentage (UI SOC, power-on OCV, kept across restarts) and stock top-off (450 → 200 →
+  70 mA finish, plateau completion, 3 h budget); 29 installed, full charge qualified (archive 127: rest 4.128 V,
+  display 100, no fault). [28](validation/Y2-PLATFORM-V1-POWER-FINAL-28.md), [29](validation/Y2-PLATFORM-V1-POWER-FINAL-29.md)
+- **30** plugged exFAT/FAT/ext4 directory readahead (cold SD scan measured ≈7 s on 29), `noatime`, Reborn limiter
+  only when the DSP can raise a peak; never flashed alone, contained in 33; cold-scan time not yet re-measured.
+  [30 report](validation/Y2-PLATFORM-V1-POWER-FINAL-30.md)
+- **31** folder-first artwork, more cover names, `.m4b/.oga/.aifc`, `ALBUM ARTIST`; contained in 33.
+  [31 report](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md)
+- **32** deep idle during screen-off playback (`deep_idle_audio`); contained in 33; the wired screen-off playback test
+  (xruns, idle counters) is still owed. [32 report](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md)
+
+## POWER-FINAL-26 Bluetooth codec auto-selection — 2026-10-13 (installed)
 
 `out/y2linux-platform-v1-power-final-candidate-26/` (Linux `64b3cc4`, **Reborn `1c9edd4`**; BOOTIMG `f4ca442b…585a`,
 Y2ROOT `66efd3ed…405f`), fallback 25. Reborn matched BlueALSA 5.0's `A2DP-source:` codec prefix only in lower case, so
@@ -20,7 +56,7 @@ as m:ss and skips macOS `._*` files and system folders. **Physical:** healthy; t
 files, 0 failures); Cover Flow frame rate not yet measured. Details:
 [25 report](validation/Y2-PLATFORM-V1-POWER-FINAL-25.md).
 
-## POWER-FINAL-24 animation frame pacing, Baseline 24 — 2026-10-13
+## POWER-FINAL-24 animation frame pacing, Baseline 24 — 2026-10-13 (previous baseline)
 
 `out/y2linux-platform-v1-power-final-candidate-24/` (Linux `d2b38e8`, **Reborn `ced5199`**; BOOTIMG `653c7d85…dda7`,
 Y2ROOT `21f21e47…860b`), fallback 23. On 23 Cover Flow looked right but ran at ≈10 fps although frames cost only 3–17 ms:

@@ -1,6 +1,6 @@
 # POWER-FINAL-31 — folder-first artwork and metadata formats
 
-Status: **SEALED, AWAITING THE OWNER FLASH** (2026-10-14). Package `out/y2linux-platform-v1-power-final-candidate-31/`
+Status: **SUPERSEDED, NEVER FLASHED ALONE** (2026-10-14; contained in 32–34, installed as part of 33). Package `out/y2linux-platform-v1-power-final-candidate-31/`
 (fallback = 30), receipts `out/deep-sleep-final/build31-receipts/`. BOOTIMG
 `9aeeba7899f47b3d137f664f3ae0d20e6a25cde76e87f14ec3a837b0012bb384`, Y2ROOT
 `b275bf043f14979ffa6ffcf9a84f5882b9453c7da822879157c2de0078d6bf4f`. Identity: build `Y2LINUX-PLATFORM-V1-POWER-FINAL-31`,
