@@ -1,6 +1,14 @@
 # Current Y2Linux platform state
 
-## POWER-FINAL-49 firmware-free public images, Baseline 49 — 2026-10-16 (latest, published)
+## Y2Linux 1.0 Beta 1, Baseline 50 — 2026-10-16 (latest, published: first public beta)
+
+Release `1.0.0-beta.1` (Reborn `1.0.0-beta.1`), tag `baseline-50`: first-install images, the signed update and the
+GPL sources on GitHub. 49 plus the firmware watcher and radio restart fixes and Reborn's cancel/failure precedence fix.
+Known gaps: sleep ≈8.3 mA (stock ≈1.3), rare slow display start after a restart, USB after deep-sleep wake, Bluetooth
+reconnect, AAC with AirPods unconfirmed, install from stock run on one player. Details:
+[Beta 1 report](validation/Y2-LINUX-1.0-BETA-1.md).
+
+## POWER-FINAL-49 firmware-free public images, Baseline 49 — 2026-10-16 (published)
 
 Release `baseline-49` (Linux `b4610ea`, Reborn `ceb6313`): first-install images for SP Flash Tool (BOOTIMG, RECOVERY,
 system, data without SSH key), the signed update and the GPL sources. No image carries the MediaTek radio firmware:

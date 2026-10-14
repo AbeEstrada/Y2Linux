@@ -8124,3 +8124,26 @@ the player's `Firmware` folder over USB; the player extracts and checks the five
 | Codecs | CHANGED | The public-distribution gate (`privacy.public_distribution`) also blocked AAC, aptX, aptX HD and LDAC. Owner decision 2026-10-16: public images carry SBC, AAC from **fdk-aac-free** 2.0.3 (Red Hat's stripped FDK, AAC-LC only, as Fedora ships after legal review; upstream `wtaymans/fdk-aac-stripped` `stripped5`, Ubuntu's pinned release tarball) and LDAC; aptX/aptX HD only in owner-private builds (`build.py --public` disables `BR2_PACKAGE_Y2_CODEC_APTX`). Codec inventory profile `public`; gate passes only that set. |
 
 **Gate decision:** READY for candidate 49; publish only after the firmware migration and the copy flow work on the owner's player.
+
+## BETA-1 (Baseline 50) first public beta: milestone gap audit — 2026-10-16
+
+**Boundary:** owner: "push baseline 50 as the first beta release of Y2Linux/Reborn with all images needed and update
+all docs and the readme". Crossing from developer preview to a public beta is a milestone boundary (standing rule).
+Hardware evidence used (no new flash or device write for this audit): 49 installed over Wi-Fi from its public release
+(archive `20261016/153`: recovery kept the radio firmware, radios up from `/data/firmware`, recovery screen lit), the
+Firmware-drive install on the owner's player (archive 154), restart and restart-entered recovery (43–48, archives
+147–151: five probes lit), over-the-air installs 37/38/45/46/47/48/49, sleep nights on 16 and 26 (≈8.6 / 8.3 mA).
+
+| Area | State for a beta | Evidence / gap |
+| --- | --- | --- |
+| Install | READY | Public first-install package (49): one SP Flash Tool pass incl. the Y2 recovery image; radio firmware from the owner's `system.img` on the Firmware drive (owner-tested 49). Gap: the full path from stock on a second, untouched player has not been run. |
+| Updates | READY | Signed GitHub releases, Wi-Fi check/download/install with restart, backup and rollback (≥ 8 device installs). Fixes since 49: a cancel no longer hides a newer release (Reborn `476e281`); the firmware watcher re-checks and restarts the radios reliably (Linux `d1f1195`). |
+| Display | READY with known rare issue | Restart fixed (43); DSI read lag still occurs (2 of 5 restart entries) but no longer darkens the screen (47). |
+| Audio / Bluetooth | READY with gaps | Wired playback daily. Public codecs SBC, AAC (fdk-aac-free), LDAC; AAC with the owner's AirPods not yet confirmed; saved headphones not always reconnected after a wake. |
+| Power | KNOWN GAP | Sleep ≈8.3 mA vs stock ≈1.3 mA; 27/32 measures not yet measured overnight. Beta notes say so. |
+| USB | READY with gap | MTP/charging fixes; USB after deep-sleep wake not confirmed over many wakes. |
+| Distribution | READY | No MediaTek firmware in any image; public codec gate; GPL sources (legal-info + Linux archive) attached. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.1 / Reborn 1.0.0-beta.1** (Baseline 50, update sequence 5000) as a
+public beta with the gaps above stated in the release notes and readmes. Not a final 1.0: power parity, AAC
+confirmation and a second-device install remain.

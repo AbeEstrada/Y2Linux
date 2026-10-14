@@ -80,8 +80,12 @@ keeps its copy across the update. See [INSTALL](INSTALL.md#why-the-innioasis-pac
 ## 4. Build
 
 ```sh
-python3 tools/production/build.py --output out/y2-build
+python3 tools/production/build.py --output out/y2-build            # your own image (all codecs)
+python3 tools/production/build.py --output out/y2-build --public   # as the public releases
 ```
+
+`--public` leaves out the codecs the public images may not carry (aptX/aptX HD); SBC, AAC
+(fdk-aac-free) and LDAC stay. Every build installs into an empty target directory.
 
 On the first run this:
 
@@ -105,8 +109,8 @@ The result is `out/y2-build/BOOTIMG.img` (kernel and rescue initramfs) and
 python3 tools/build/run.py --output out/y2-build -- sh /project/tools/production/tests.sh
 ```
 
-This runs the platform test suite inside the locked environment. Baseline 34
-passed 715 cases there. Running the same tests directly on the host gives some
+This runs the platform test suite inside the locked environment. 1.0 Beta 1
+passed 728 cases there. Running the same tests directly on the host gives some
 errors that only depend on the host (missing `qemu-arm`, `pyelftools`); use the
 container.
 

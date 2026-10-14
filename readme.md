@@ -6,43 +6,45 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Baseline 49 (2026-10-16), developer preview.** It runs every day on
-> the maintainer's Y2. Install it from the ready-made images of the
-> [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases) with SP Flash
-> Tool once ([INSTALL](docs/INSTALL.md)); after that the player updates itself over Wi-Fi.
-> Only one hardware revision has been tested (see
-> [Supported hardware](#supported-hardware)). Read [Known issues](#known-issues)
-> before you flash.
+> **Status: Y2Linux 1.0 Beta 1 (Baseline 50, 2026-10-16), public beta.** It runs every day
+> on the maintainer's Y2. Install it once from the ready-made images of the
+> [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases) with SP Flash Tool
+> ([INSTALL](docs/INSTALL.md)); after that the player updates itself over Wi-Fi. Only one
+> hardware revision has been tested (see [Supported hardware](#supported-hardware)). Read
+> [Known issues](#known-issues) before you flash: battery life in sleep is not yet stock-like.
 
-| | Baseline 49 |
+| | 1.0 Beta 1 (Baseline 50) |
 | --- | --- |
-| Git tag (both repositories) | `baseline-49` (previous: `baseline-48`); GitHub release `baseline-49` carries the first-install images, the signed over-the-air update and the GPL sources |
-| Kernel | `6.18.56-y2linux-platform-v1-power-final-49` (Linux 6.18 long-term line) |
-| Root filesystem / release | `2026.08-platform-v1.79` (Buildroot 2026.08) / `1.0.0-platform-v1-power-final-candidate.49` |
-| Player | Y2Reborn 0.3.0 (Rust 1.99) with Cover Flow, Genres and 15 themes |
-| Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 — every component on its newest release |
-| Maintainer's images built from | Y2Linux `b4610ea`, Y2Reborn `ceb6313` (later commits: docs only) |
+| Git tag (both repositories) | `baseline-50` (previous: `baseline-49`); the GitHub release carries the first-install images, the signed over-the-air update and the GPL sources |
+| Release / kernel | `1.0.0-beta.1` / `6.18.56-y2linux-1.0.0-beta.1` (Linux 6.18 long-term line) |
+| Root filesystem | `2026.08-platform-v1.80` (Buildroot 2026.08) |
+| Player | Y2Reborn 1.0.0-beta.1 (Rust 1.99) with Cover Flow, Genres and 15 themes |
+| Bluetooth codecs | SBC, AAC (fdk-aac-free) and LDAC |
+| Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 |
+| Maintainer's images built from | see the [Beta 1 report](docs/validation/Y2-LINUX-1.0-BETA-1.md) |
 
 ## Getting started
 
-1. **[Build from source](docs/BUILDING.md)**: host setup, the stock firmware
-   files you extract from Innioasis's own firmware package, the build and the
-   first-install package.
-2. **[Install on the Y2](docs/INSTALL.md)**: back up, flash with SP Flash
-   Tool, first boot, SSH over USB, updating and going back to stock.
+1. **[Install on the Y2](docs/INSTALL.md)**: download the release, flash it once with SP Flash
+   Tool, copy `system.img` from the Innioasis firmware package onto the player for Wi-Fi and
+   Bluetooth. Updates then come over Wi-Fi ([how they work](docs/RECOVERY-AND-UPDATES.md)).
+2. **[Build from source](docs/BUILDING.md)**: host setup, the build, the first-install package.
 
 ## What works
 
-Observed on the maintainer's device on the candidates up to 46 (46 was the first release on the
-update channel and installed over Wi-Fi):
+Observed on the maintainer's device (candidates up to 49; 49 was installed over Wi-Fi from its
+public release, and its Firmware-drive install was tested on the device):
 
 - **Over-the-air updates:** Settings → About & Updates checks once a day on Wi-Fi (or on demand),
   downloads a signed release (showing progress, speed and time left) and, with **Restart and
   Install**, restarts into a Y2 recovery image
   that backs up, installs and verifies kernel, rescue and system, then restarts into the new
   version (about a minute; the old version is restored on any failure). It makes room on its own
-  by removing old logs; music and settings are never touched. Needs the Y2 recovery image flashed
-  once ([recovery install](docs/architecture/ota-recovery-install.md)).
+  by removing old logs; music and settings are never touched. The release images include the Y2
+  recovery image this needs.
+- **Radio firmware from your own copy:** no image carries MediaTek's firmware; copy `system.img`
+  from the Innioasis package onto the player's *Firmware* drive once and it installs the five
+  radio files itself. Players that already run Y2Linux keep theirs across updates.
 - Software restart works (since 43).
 
 - Boots from internal eMMC: stock preloader and LK, then Linux 6.18 and Buildroot. No SD card needed.
@@ -82,35 +84,24 @@ update channel and installed over Wi-Fi):
 
 ## Known issues
 
-- **Dark screen at start (being verified).** Three times the display controller answered every
-  register read one register late, so the first picture never started (a cold start with USB
-  plugged in on 42, and the installer screen on 43 and 46; restarting the display did not help).
-  47 keeps the display's DSI clock gating off, the suspected cause; not yet confirmed on the
-  device. Hold Power for 10 s and start again if it happens.
-- **USB after a wake from deep sleep.** On 13–15 the device re-enumerated and received,
-  but its transmit never completed, so USB networking and MTP stayed silent until a
-  restart. Since 16 every wake has worked (one after a 16 h night), and 17's diagnostics
-  caught and repaired a lost USB interrupt setting after a sleep; not yet confirmed over many wakes.
-- **Battery life is not stock-like yet.** 26 drew about 8.3 mA asleep over a 10 h night
-  (16: about 8.6 mA); stock is about 1.3 mA (≈0.1 points/h). 27 adds the stock panel
-  power-down, VGP2-off and VSYS sleep mode, 32 deep idle during screen-off playback; neither
-  has had its overnight or playback measurement yet. The SoC's
-  infrastructure power domain still never switches off in sleep (the SoC side now matches stock;
-  17–20 gate the remaining modem, PMIC, PMIC-wrapper and UART1 clocks like stock; their overnight
-  drain has not been measured yet). The percentage is estimated from voltage; there is
-  no current sensor.
-- Cover Flow should now run at the panel's rate (25 removed a 34-ms frame gate); the new
-  frame rate has not been measured on the device yet.
-- Bluetooth: saved headphones are not always reconnected after a start or wake (the platform
-  reconnect can end `Inhibited`; connect them once from Settings → Bluetooth). AAC with
-  AirPods has not been confirmed on the device yet.
-- Playing to a saved but disconnected Bluetooth output fails instead of connecting it.
-- Over-the-air updates need the Y2 recovery image in RECOVERY (flashed once with SP Flash Tool).
-  A kernel that hangs before its rescue system runs can only be fixed with SP Flash Tool.
+- **Battery life in sleep is not yet stock-like.** About 8.3 mA asleep (stock: about 1.3 mA,
+  ≈0.1 points/h); several stock-parity measures since then still await their overnight
+  measurement. The percentage is estimated from voltage; there is no current sensor.
+- **Rarely a slow display start.** The display controller sometimes answers register reads one
+  register late after a restart; since 47 the picture starts anyway. If the panel ever stays dark,
+  hold Power for 10 s and start again.
+- **USB after a wake from deep sleep** has worked on every wake since 16, but is not yet confirmed
+  over many wakes. Power off and on if USB stays silent.
+- **Bluetooth:** saved headphones are not always reconnected after a start or wake (connect them
+  once from Settings → Bluetooth); AAC with the new free library is not yet confirmed with AirPods;
+  playing to a saved but disconnected output fails instead of connecting it.
+- **Install:** the full path from stock has been run on the maintainer's player only. A kernel that
+  hangs before its rescue system runs can only be fixed with SP Flash Tool.
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for [49](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-49.md) (firmware-free images, flash package, codecs),
+reports for [1.0 Beta 1](docs/validation/Y2-LINUX-1.0-BETA-1.md),
+[49](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-49.md) (firmware-free images, flash package, codecs),
 [48](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-48.md) (download screen),
 [47](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-47.md) (DSI clock gating),
 [46](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-46.md) (update space, restart by default, first release),

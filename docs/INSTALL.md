@@ -11,8 +11,8 @@ Read the whole page once before you start.
 
 - A computer (Windows or Linux) and a USB cable.
 - **SP Flash Tool v5.2032**, MediaTek's flashing program, with its bundled `MTK_AllInOne_DA.bin`.
-- The **Y2Linux release**: `Y2Linux-<version>-first-install.zip` from the
-  [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases) (Baseline 49 or later).
+- The **Y2Linux release**: the `…-first-install.zip` of the newest
+  [GitHub release](https://github.com/SchulzCode/Y2Linux/releases) (1.0 Beta 1 or later).
 - The **Innioasis firmware package for the Y2**, v3.2.0 (`y2_v3.2.0_FM-20260813`), from
   Innioasis's download page. You need it once, for the radio firmware, and it is also your
   way back to stock, so keep it.

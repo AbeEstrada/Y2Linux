@@ -1,35 +1,12 @@
 # Y2Linux documentation
 
-**Baseline 34 (2026-10-14)** is the current published state: the POWER-FINAL-34
-image (Linux `de62fa9`, Reborn `5b69ef5`), git tag `baseline-34` in both repositories.
-Since Baseline 24: Reborn **themes** with 15 shipped skins and a live picker
-([33](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md), [34](validation/Y2-PLATFORM-V1-POWER-FINAL-34.md));
-the **stock battery percentage and top-off** (charged until really full, 100 → 99 → 98, kept
-across restarts; [28](validation/Y2-PLATFORM-V1-POWER-FINAL-28.md),
-[29](validation/Y2-PLATFORM-V1-POWER-FINAL-29.md), full charge qualified on the device);
-the stock panel power-down, VGP2-off and VSYS sleep mode ([27](validation/Y2-PLATFORM-V1-POWER-FINAL-27.md));
-faster card scans and decoding ([30](validation/Y2-PLATFORM-V1-POWER-FINAL-30.md));
-folder-first album art and more file formats ([31](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md));
-deep idle during screen-off playback ([32](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md), test owed);
-automatic Bluetooth codec choice ([26](validation/Y2-PLATFORM-V1-POWER-FINAL-26.md)) and
-Cover Flow at the panel's rate ([25](validation/Y2-PLATFORM-V1-POWER-FINAL-25.md)).
-26 slept 10 h cleanly at about 8.3 mA (stock: about 1.3 mA).
-Baseline 24 added Reborn's **Cover Flow** for Albums and **Genres**
-([23](validation/Y2-PLATFORM-V1-POWER-FINAL-23.md), smooth frame pacing in
-[24](validation/Y2-PLATFORM-V1-POWER-FINAL-24.md)), no colour flash at start-up and a dark
-screen at power-off ([21](validation/Y2-PLATFORM-V1-POWER-FINAL-21.md),
-[22](validation/Y2-PLATFORM-V1-POWER-FINAL-22.md)), and the PMIC_WRAP and UART1 clocks gated like
-stock ([19](validation/Y2-PLATFORM-V1-POWER-FINAL-19.md),
-[20](validation/Y2-PLATFORM-V1-POWER-FINAL-20.md)). Baseline 18 set the power-management chip to its stock suspend values while asleep (the
-audio 26 MHz clock request Linux never released, unused clocks, VREF18); see the
-[18 report](validation/Y2-PLATFORM-V1-POWER-FINAL-18.md). Baseline 17 gated the never-used modem's clock requests and lights the screen about half a
-second after Power (Wi-Fi/Bluetooth follow in the background); see the
-[17 report](validation/Y2-PLATFORM-V1-POWER-FINAL-17.md). Baseline 16 added stock sleep parity from the Y2's own stock kernel (display power domain,
-stock clock gating, golden sleep entry, stock fuel gauge, USB-after-wake and
-charging fixes) to Baseline 15 (newest release of every component, Linux 6.18.56).
-First night: 16 h of clean sleep at about 8.6 mA (stock: about 1.3 mA). See the
-[16 report](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md) and the
-[stock suspend ledger](knowledge/stock-suspend-re-ledger.md).
+**Y2Linux 1.0 Beta 1 (Baseline 50, 2026-10-16)** is the current published state and the first
+public beta: ready-made images on the [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases),
+installed once with SP Flash Tool, then updated over Wi-Fi by the player itself
+([recovery and updates](RECOVERY-AND-UPDATES.md)). No image carries MediaTek's radio firmware: each
+player takes it from its owner's Innioasis package ([INSTALL](INSTALL.md)). What works, what does not
+and the latest hardware results: [current platform state](CURRENT_PLATFORM_STATE.md); the beta's
+evidence and open gaps: [1.0 Beta 1 report](validation/Y2-LINUX-1.0-BETA-1.md).
 
 | Need | Start here |
 | --- | --- |
@@ -37,6 +14,7 @@ First night: 16 h of clean sleep at about 8.6 mA (stock: about 1.3 mA). See the
 | Flash it, connect, update, go back to stock | [INSTALL.md](INSTALL.md) |
 | How updates and the Y2 recovery image work | [RECOVERY-AND-UPDATES.md](RECOVERY-AND-UPDATES.md) |
 | What works, what doesn't, latest hardware results | [Current platform state](CURRENT_PLATFORM_STATE.md) |
+| What the path to the beta changed (35–50) | [1.0 Beta 1](validation/Y2-LINUX-1.0-BETA-1.md), [49 firmware-free images](validation/Y2-PLATFORM-V1-POWER-FINAL-49.md), [48 download screen](validation/Y2-PLATFORM-V1-POWER-FINAL-48.md), [47 DSI clock gating](validation/Y2-PLATFORM-V1-POWER-FINAL-47.md), [46 update space](validation/Y2-PLATFORM-V1-POWER-FINAL-46.md), [43 restart fixed](validation/Y2-PLATFORM-V1-POWER-FINAL-43.md), [35 over-the-air updates](validation/Y2-PLATFORM-V1-POWER-FINAL-35.md) |
 | What 34 back to 13 changed | [34 shipped themes, battery display](validation/Y2-PLATFORM-V1-POWER-FINAL-34.md), [33 themes](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md), [32 deep idle during playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md), [31 artwork and formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md), [30 storage and decode speed](validation/Y2-PLATFORM-V1-POWER-FINAL-30.md), [29 top-off corrections](validation/Y2-PLATFORM-V1-POWER-FINAL-29.md), [28 stock battery percentage](validation/Y2-PLATFORM-V1-POWER-FINAL-28.md), [27 panel, VGP2, VSYS sleep](validation/Y2-PLATFORM-V1-POWER-FINAL-27.md), [26 Bluetooth codecs](validation/Y2-PLATFORM-V1-POWER-FINAL-26.md), [25 Cover Flow frame gate](validation/Y2-PLATFORM-V1-POWER-FINAL-25.md), [24 frame pacing](validation/Y2-PLATFORM-V1-POWER-FINAL-24.md), [23 Cover Flow and Genres](validation/Y2-PLATFORM-V1-POWER-FINAL-23.md), [22 dark DSI hand-over](validation/Y2-PLATFORM-V1-POWER-FINAL-22.md), [21 quiet display power](validation/Y2-PLATFORM-V1-POWER-FINAL-21.md), [20 UART1 clock](validation/Y2-PLATFORM-V1-POWER-FINAL-20.md), [19 PMIC_WRAP clock](validation/Y2-PLATFORM-V1-POWER-FINAL-19.md), [18 stock PMIC sleep settings](validation/Y2-PLATFORM-V1-POWER-FINAL-18.md), [17 modem gate and faster wake](validation/Y2-PLATFORM-V1-POWER-FINAL-17.md), [16 stock sleep parity](validation/Y2-PLATFORM-V1-POWER-FINAL-16.md), [15 dependency update](validation/Y2-PLATFORM-V1-POWER-FINAL-15.md), [14 diagnostics](validation/Y2-PLATFORM-V1-POWER-FINAL-14.md), [13 stock power parity](validation/Y2-PLATFORM-V1-POWER-FINAL-13.md) |
 | Deep sleep history (01 to 13) | [Deep-sleep report](validation/Y2-PLATFORM-V1-DEEP-SLEEP-FINAL.md), [suspend architecture](architecture/deep-suspend.md) |
 | Charging, storage | [Charging policy](knowledge/charging-current-policy.md), [internal storage](knowledge/internal-storage.md) |

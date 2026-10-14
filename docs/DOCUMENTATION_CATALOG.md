@@ -323,6 +323,7 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [POWER-FINAL-47 — DSI register read lag: keep DCM off for DSI/DPI](validation/Y2-PLATFORM-V1-POWER-FINAL-47.md) | Published release baseline-47; fix confirmed on 48 (archive 151, five probes lit) |
 | [POWER-FINAL-48 — download screen with progress, speed and time left](validation/Y2-PLATFORM-V1-POWER-FINAL-48.md) | Published release baseline-48; installed over Wi-Fi (archive 151) |
 | [POWER-FINAL-49 — firmware-free public images, one-time flash package, public codec set](validation/Y2-PLATFORM-V1-POWER-FINAL-49.md) | Published release baseline-49; installed over Wi-Fi (archive 153) |
+| [Y2Linux 1.0 Beta 1 (Baseline 50)](validation/Y2-LINUX-1.0-BETA-1.md) | Current entry: first public beta release |
 | [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |
 | [POWER-FINAL-32 — deep idle during screen-off playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) | Sealed candidate report (in 33) |
 | [POWER-FINAL-31 — folder-first artwork and metadata formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) | Sealed candidate report (in 33) |
