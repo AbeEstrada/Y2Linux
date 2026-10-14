@@ -27,7 +27,7 @@
 +		reg &= 0xffffffa6;
 +		reg |= WDT_MODE_EXRST_EN | WDT_MODE_AUTO_START;
 +		writel(reg | WDT_MODE_KEY, wdt_base + WDT_MODE);
-+		udelay(2500);
++		mdelay(3);	/* stock waits 2.5 ms */
 +	} else {
 +		writel(reg | WDT_MODE_KEY, wdt_base + WDT_MODE);
 +	}
