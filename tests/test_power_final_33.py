@@ -20,7 +20,9 @@ class ShippedSkins(unittest.TestCase):
 
     def test_the_classic_skin_fonts_carry_their_licence(self):
         self.assertIn('skins/classic/fonts/OpenSans-OFL.txt', self.mk)
-        self.assertIn('fonts of the Classic skin', self.mk)
+        # POWER-FINAL-34: the example skins add Noto fonts.
+        self.assertIn('skins/paper/fonts/Noto-OFL.txt', self.mk)
+        self.assertIn('Noto fonts of the shipped skins', self.mk)
 
 
 if __name__ == '__main__':
