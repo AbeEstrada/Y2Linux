@@ -4,7 +4,7 @@
 >
 > **Work list, in this order:**
 > 1. Owner flashes 35 (preserve scatter: BOOTIMG + ANDROID) and `recovery-install/` (RECOVERY only). Then read-only archive 129: `recovery_image=0`, policy line, `y2-platform update recovery-status` → valid recovery image.
-> 2. `probe-recovery` (owner OK; Power once): "Recovery works", then `recovery-probe.json` (`boot_mode=2`, `recovery_image=1`). Unknown: whether LK lights the panel in recovery mode.
+> 2. ~~`probe-recovery`~~ **PASSED 2026-10-15** (archive 129 + `recovery-probe.json`): LK boot mode 2, `recovery_image=1`, panel lit ("Recovery works"), MISC cleared, normal start afterwards. Steps 1–2 done; 3 is next.
 > 3. First install from `…-35-ota-devtest` copied to the device (`update stage --package`), Turn Off and Install in Reborn; then optional interruption test.
 > 4. Network: a GitHub release needs the owner's OK (outward-facing). Older work list (34 checks, owed tests, open defects incl. warm-reboot dark panel, themes 3/4, BT PSM) is unchanged below.
 >

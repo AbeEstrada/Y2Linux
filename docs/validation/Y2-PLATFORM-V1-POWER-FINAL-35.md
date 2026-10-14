@@ -36,6 +36,18 @@ inventory 108 packages.
 Not tested: anything after the flash. LK booting our RECOVERY image, the panel in LK's recovery mode, eMMC writes
 of BOOTIMG/RECOVERY/MISC on the device, install time, power loss.
 
+## Device results
+
+- **Flashed 2026-10-15** (owner, BOOTIMG + ANDROID and the one-row RECOVERY scatter). Archive `20261015/129`:
+  build/kernel 35, taint 0, Reborn first frame at 20 s, `recovery_image=0`, policy `normal: RECOVERY, MISC message …`,
+  BOOTIMG and RECOVERY on the eMMC byte-identical to the package (RECOVERY tail zero), `recovery_image_valid: true`.
+  The CMD35/WRITE_ZEROES refusal and the boot-stage `OSError` are unchanged from 34.
+- **Recovery entry PASSED** (`probe-recovery`, then Power): LK booted RECOVERY (`boot_mode=2`), our kernel ran with
+  `y2.recovery=1` and the recovery write policy, the display came up (owner saw **Recovery works**), the probe was
+  recorded, MISC cleared, power off; the next Power started the normal system (boot `7676548e`, taint 0). Recovery
+  from kernel start to the recorded outcome: 1.4 s. Evidence: `/data/updates/recovery-probe.json`,
+  `/data/logs/recovery-last.log`.
+
 ## Owner steps
 
 **1. Flash (one SP Flash Tool session, Download Only).**
