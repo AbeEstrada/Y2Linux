@@ -236,13 +236,16 @@ static bool text_is(const char *name, const char *want) {
     char buf[256];
     return readtext(name, buf, sizeof(buf)) && !strcmp(buf, want);
 }
-/* Progress for the recovery screen: "<percent> <step>". Best effort. Each new
- * step is also logged to the kernel log, whose timestamps time the install. */
+/* Progress for the recovery screen, and (OTA-48) for the normal system's
+ * download check that Reborn shows: "<percent> <step>". Best effort. Each new
+ * recovery step is also logged to the kernel log, whose timestamps time the
+ * install. */
 static const char *progress_step;
+static const char *progress_name;
 static void progress(unsigned percent, const char *step) {
-    if (!recovery_env)
+    if (!progress_name)
         return;
-    if (!progress_step || strcmp(progress_step, step)) {
+    if (recovery_env && (!progress_step || strcmp(progress_step, step))) {
         progress_step = step;
         int log = open(path("/dev/kmsg"), O_WRONLY | O_APPEND | O_CLOEXEC);
         if (log >= 0) {
@@ -252,13 +255,15 @@ static void progress(unsigned percent, const char *step) {
     }
     char buf[64];
     int n = snprintf(buf, sizeof(buf), "%u %s\n", percent > 100 ? 100 : percent, step);
-    int fd = open(path("/run/y2/recovery-progress.tmp"), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+    char tmp[64];
+    snprintf(tmp, sizeof(tmp), "%s.tmp", progress_name);
+    int fd = open(path(tmp), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
     if (fd < 0)
         return;
     bool ok = n > 0 && writeall(fd, buf, (size_t)n);
     close(fd);
     if (ok)
-        rename(path("/run/y2/recovery-progress.tmp"), path("/run/y2/recovery-progress"));
+        rename(path(tmp), path(progress_name));
 }
 /* A step that moves the bar from base to base+span over total bytes. */
 static struct {
@@ -724,11 +729,14 @@ static json_object *verify(int package, int check, int64_t installed_sequence) {
             goto fail;
     } else if (check == 1) {
         unsigned char *mem = image_buffer();
+        /* The root is nearly all of the decoding work. */
+        progress_span("check", 0, 96, (uint64_t)num(payload(m, ROOT), "raw_bytes"));
         bool ok = mem && check_payload(package, m, ROOT, NULL) && check_payload(package, m, BOOT, mem) &&
                   (!payload(m, RECOVERY) || check_payload(package, m, RECOVERY, mem));
         free(mem);
         if (!ok)
             goto fail;
+        progress(100, "check");
     }
     unsigned char manifest_hash[32];
     crypto_hash_sha256(manifest_hash, (const unsigned char *)raw, length);
@@ -1482,6 +1490,10 @@ int main(int argc, char **argv) {
 #ifndef Y2_UPDATE_TEST
     recovery_env = !strcmp(argv[1], "recovery");
 #endif
+    if (recovery_env)
+        progress_name = "/run/y2/recovery-progress";
+    else if (!strcmp(argv[1], "check") || !strcmp(argv[1], "queue"))
+        progress_name = "/run/y2/update-check-progress";
     const char *base = path(offline ? "/newdata/updates" : "/data/updates");
     basefd = open(base, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
     if (basefd < 0) {

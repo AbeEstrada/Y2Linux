@@ -11,6 +11,7 @@ import contextlib
 import fcntl
 import hashlib
 import json
+import collections
 import os
 from pathlib import Path
 import shutil
@@ -231,6 +232,43 @@ def remove_package(directory):
     directory.rmdir()
 
 
+PROGRESS = '/run/y2/update-progress.json'
+CHECK_PROGRESS = '/run/y2/update-check-progress'
+
+
+class Progress:
+    """Live download progress for Reborn in RAM (OTA-48): bytes, speed over
+    the last few seconds and time left, at most four times a second. The
+    durable journal on Y2DATA only records the start and the result."""
+    WINDOW = 4.0
+
+    def __init__(self, ctx, release, total):
+        self.path = ctx.path(PROGRESS)
+        self.release, self.total = release, total
+        self.samples = collections.deque()
+        self.written = 0.0
+        self.done = 0
+
+    def publish(self, phase, force=False):
+        now = time.monotonic()
+        if not force and now - self.written < 0.25:
+            return
+        self.written = now
+        self.samples.append((now, self.done))
+        while len(self.samples) > 2 and now - self.samples[0][0] > self.WINDOW:
+            self.samples.popleft()
+        (t0, b0), (t1, b1) = self.samples[0], self.samples[-1]
+        speed = int((b1 - b0) / (t1 - t0)) if t1 - t0 >= 0.5 else None
+        left = int((self.total - self.done) / speed) if speed and phase == 'download' else None
+        value = {'schema': 1, 'phase': phase, 'release_version': self.release, 'bytes_done': self.done,
+                 'bytes_total': self.total, 'speed_bytes_per_s': speed, 'seconds_left': left}
+        with contextlib.suppress(OSError, ValueError):
+            atomic_json(self.path, value, mode=0o644)
+
+    def finish(self, phase):
+        self.publish(phase, force=True)
+
+
 def stage(ctx, source=None, url=None, check_only=False):
     if bool(source) == bool(url):
         raise ValueError('exactly_one_local_package_or_HTTPS_manifest_required')
@@ -241,6 +279,7 @@ def stage(ctx, source=None, url=None, check_only=False):
     fd = os.open(root / '.stage.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     token = '.incoming-' + uuid.uuid4().hex
     incoming = root / token
+    live = None
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if status(ctx)['state'] not in TERMINAL:
@@ -323,15 +362,16 @@ def stage(ctx, source=None, url=None, check_only=False):
             return manifest
         # Root payload plus its backup during installation; refuse early, not in recovery.
         cleaned += make_room(ctx, fd, total + payloads['rootfs']['raw_bytes'] // 4)
+        # Music and the screen come first: download and check yield the CPU.
+        with contextlib.suppress(OSError):
+            os.nice(10)
+        live = Progress(ctx, manifest['release_version'], total)
+        live.finish('download')
         count = 0
-        shown = [0]
 
         def report(done):
-            # Progress for the Software Update page, about once per megabyte.
-            if count + done - shown[0] >= 1024**2:
-                shown[0] = count + done
-                atomic_json(root/'download.json', {'schema': 1, 'state': 'Staging', 'id': token,
-                            'bytes_done': shown[0], 'bytes_total': total})
+            live.done = count + done
+            live.publish('download')
         for key, item in payloads.items():
             name = PAYLOADS[key]
             with get(name) as stream:
@@ -340,10 +380,12 @@ def stage(ctx, source=None, url=None, check_only=False):
             if digest != item['sha256']:
                 raise ValueError('download_hash_mismatch')
             count += got
-            atomic_json(root/'download.json', {'schema': 1, 'state': 'Staging', 'id': token,
-                        'bytes_done': count, 'bytes_total': total})
-        # Fresh sealed local copy, native decompression/hash/extent validation.
-        core(ctx, 'check', '/data/updates/' + token, timeout=300)
+        live.done = count
+        # The queue below decodes and checks every payload once (OTA-48: the
+        # separate check before it decoded the same files a second time).
+        with contextlib.suppress(OSError):
+            ctx.path(CHECK_PROGRESS).unlink()
+        live.finish('verify')
         if data_volume(ctx)['generation'] != volume['generation']:
             raise ValueError('update_data_generation_changed')
         remove_package(root/'pending')
@@ -354,6 +396,7 @@ def stage(ctx, source=None, url=None, check_only=False):
         finally:
             os.close(parent)
         result = core(ctx, 'queue', timeout=300)
+        live.finish('done')
         atomic_json(root/'download.json', {'schema': 1, 'state': 'Verified', 'bytes': count,
                     'release_version': manifest['release_version'], 'notes': manifest.get('notes', ''),
                     'backup_budget': 'recovery captures the compressed previous root and BOOTIMG before any write',
@@ -366,6 +409,8 @@ def stage(ctx, source=None, url=None, check_only=False):
             with contextlib.suppress(OSError, ValueError):
                 remove_package(incoming)
         atomic_json(root/'download.json', record, durable=True)
+        if live is not None:
+            live.finish('failed')
         raise
     finally:
         os.close(fd)

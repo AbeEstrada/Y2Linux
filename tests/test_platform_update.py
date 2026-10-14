@@ -456,11 +456,18 @@ class UpdateTests(unittest.TestCase):
                 payload.write_bytes(original[:-10])
                 with self.assertRaisesRegex(ValueError,'incomplete_download'):
                     stage(ctx,source)
+                self.assertEqual(json.loads((self.root/'run/y2/update-progress.json').read_text())['phase'],'failed')
                 self.assertFalse((self.base/'state.json').exists())
                 payload.write_bytes(original)
             self.assertEqual(stage(ctx,source)['state'],'Queued')
             progress=json.loads((self.base/'download.json').read_text())
             self.assertEqual(progress['state'],'Verified')
+            # OTA-48: live progress for Reborn in RAM, and the one decoding
+            # check (the queue's) reports its own percentage.
+            live=json.loads((self.root/'run/y2/update-progress.json').read_text())
+            self.assertEqual((live['phase'],live['bytes_done']),('done',live['bytes_total']))
+            self.assertGreater(live['bytes_total'],0)
+            self.assertEqual((self.root/'run/y2/update-check-progress').read_text(),'100 check\n')
             # The platform reads the core's own journal (schema 2) as the queued update.
             from y2_platform.update import status
             self.assertEqual(status(ctx)['state'],'Queued')

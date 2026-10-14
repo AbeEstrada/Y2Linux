@@ -8082,3 +8082,22 @@ the DSI correctly. Not proven causal (no clean A/B yet).
 
 **Gate decision:** READY for candidate 47; device qualification by repeated restart-entered recovery probes with the
 owner's OK.
+
+## OTA-48 download screen: progress, speed, completion scope audit — 2026-10-16
+
+**Boundary:** owner after downloading 47 over Wi-Fi: "rework the download screen … the animation is very laggy and it
+does not show progress and does not take the user back / says download is finished … show progress and download
+speed". Read-only evidence from that download (pending files and journal times): manifest 19:30:17, payloads done
+19:30:35 (58.7 MB, ≈3.3 MB/s), queued 19:30:59 — 24 s of two full decoding checks (`check`, then `queue`) with
+nothing new on screen. Reborn: the platform refresh is skipped while any platform task runs (`busy.is_none()`), so
+the percentage never moved; the stage reply showed nothing; the spinner is a 48-step ring at the calm frame rate.
+No hardware or memory scope change.
+
+| Row | Classification | Evidence and plan |
+| --- | --- | --- |
+| Live progress | CHANGED | `/run/y2/update-progress.json` (RAM, ≤4/s: bytes, 4-s speed, seconds left, phase) and `/run/y2/update-check-progress` from the queue's decoding check; per-MiB durable journal writes removed. |
+| Check | CHANGED | One decoding check (the queue's; it keeps refusing a wrong-slot boot image) instead of `check` + `queue`: about 12 s less. |
+| Priority | CHANGED | Download and check run at nice 10. |
+| Reborn | CHANGED | Download screen: step, percentage, gliding bar, MB of MB, speed, time left; check step with its own bar; at the end the page turns to Ready to Install and a notice says so wherever the owner is. |
+
+**Gate decision:** READY for candidate 48. The new screen first shows when 48 downloads the next release.

@@ -71,6 +71,11 @@ downgrades; a development key may downgrade only with a signed manifest flag.
    copies are never touched. If that is not enough, the download is refused with `needed_bytes` in
    `download.json` and Reborn says how much system space the update needs. The same cleanup makes room
    for the manifest itself, so a check works on a nearly full volume. Cancel deletes the package.
+   Progress (OTA-48): the download writes `/run/y2/update-progress.json` (RAM, four times a second:
+   phase `download`/`verify`/`done`/`failed`, bytes, speed over the last four seconds, seconds left);
+   the one decoding check (the queue's) writes `/run/y2/update-check-progress` (`<percent> check`).
+   Reborn reads both directly, because the download task answers only when it is finished. Download
+   and check run at nice 10. The journal on Y2DATA records only the start and the result.
 3. **Install** (`Restart to Install`): needs the charger or ≥ 50 % battery. The core writes a newer
    RECOVERY image from the package first (BOOTIMG is untouched by that), reads it back, checks that
    RECOVERY holds a Y2 recovery image, then writes `boot-recovery` / `recovery\n--y2-update\n` to MISC.
