@@ -293,6 +293,12 @@
       "patch": "0067-y2-pm-sync-device-suspend.patch",
       "base_sha256": "f8eb032af1f0f295f5deb133ae7a8da43636e44e8bd32312b4293072656bcef8",
       "result_sha256": "77c5e5de25b52be965ed03e1e7bbf8103516e49d3dccdbaec757805f5c49214e"
+    },
+    {
+      "path": "fs/exfat/dir.c",
+      "patch": "0068-exfat-dir-readahead-plug.patch",
+      "base_sha256": "a6fd5c83ebf83b42a89b5ee92daf8b7d25842dfc66ac9694bd78ecfe93961979",
+      "result_sha256": "41be4f88b930b7b366b03ebfcce20a0432535d0ba7e5c00b1373f7a19a909149"
     }
   ]
 }
