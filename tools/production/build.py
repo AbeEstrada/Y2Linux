@@ -123,8 +123,13 @@ def build_userspace(PROJECT,out,source,run,public=False):
     run(br+['y2_production_defconfig'],'buildroot-configure.log')
     if public:
         # Public codec set: SBC, AAC (fdk-aac-free), LDAC; no aptX/aptX HD.
-        run([str(source/'utils/config'),'--file',str(out/'buildroot/.config'),'--disable','BR2_PACKAGE_Y2_CODEC_APTX'],'buildroot-public-codecs.log')
+        # Kconfig keeps a library once selected; turn both off explicitly.
+        run([str(source/'utils/config'),'--file',str(out/'buildroot/.config'),
+             '--disable','BR2_PACKAGE_Y2_CODEC_APTX','--disable','BR2_PACKAGE_LIBFREEAPTX'],'buildroot-public-codecs.log')
         run(br+['olddefconfig'],'buildroot-public-codecs.log')
+        config=(out/'buildroot/.config').read_text()
+        if 'BR2_PACKAGE_LIBFREEAPTX=y' in config or 'BR2_PACKAGE_Y2_CODEC_APTX=y' in config:
+            raise SystemExit('public build: aptX still configured')
     (out/'codec-variant').write_text(('public' if public else 'private')+'\n')
     # Buildroot never removes files of dropped or replaced packages from its
     # target directory (a reused workspace kept libfreeaptx and the full FDK
