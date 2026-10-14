@@ -16,6 +16,9 @@ OCV_CHARGER_POINTS = 31
 # Stock mt_battery_update_status: at Full the display counts up one point per
 # 10-s battery-thread tick to 100 (100Percent tracking).
 FULL_STEP_SECONDS = 10
+# Stock oam_run integrates over getrawmonotonic, i.e. awake time only. Longer
+# gaps are suspend: the voltage after them is rested and taken directly.
+OAM_MAX_STEP_SECONDS = 60
 # The charger tops off at 4.175 V (28: 70 mA finish stage), so the curve's top
 # point is never seen at rest. The kernel reports Full only after a hold that
 # rests at or above 4.07 V; 4.0 V is the plausibility floor for that claim.
@@ -63,6 +66,16 @@ def ascending_table(points, lower, upper, increasing):
             return False
         previous = point
     return True
+
+
+def voltage_at(points, percent):
+    """Inverse of interpolate() on the ascending voltage/SOC curve."""
+    if percent <= points[0][1]:
+        return float(points[0][0])
+    for (low, a), (high, b) in zip(points, points[1:]):
+        if percent <= b:
+            return low + (high - low) * (percent - a) / (b - a)
+    return float(points[-1][0])
 
 
 def interpolate(points, uv):
@@ -186,6 +199,16 @@ class Soc:
                     target = ocv
             self.percent = target
             self.restore(target)
+        elif (status == 'Discharging' and not hybrid and table is not None and
+              p.get('design_capacity_uah') and 0 < dt <= OAM_MAX_STEP_SECONDS):
+            # POWER-FINAL-29: stock oam_run on battery. The model current is
+            # (OCV(SOC) - V) / R(V); integrated over awake time it follows the
+            # real drain instead of settling at the loaded-voltage SOC, which
+            # sits I*R (about 50 mV, 4-5 points) low whenever the Y2 is busy.
+            model_ma = (voltage_at(p['voltage_soc'], self.percent) - self.filtered) / \
+                interpolate(table, self.filtered)
+            self.percent -= model_ma * dt / 36. / (p['design_capacity_uah'] / 1000.)
+            self.percent = max(0., min(100., self.percent))
         else:
             # Positive net current is unknown unless measured. A charging state
             # permits recovery but never itself proves a full battery.

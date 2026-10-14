@@ -24,13 +24,23 @@
  * 0xc03a2208, batt_cust_data 0xc09d2d68), computed as (ISENSE - BATSNS +
  * offset) * 1000 / 68 (battery_meter_get_charging_current): a 10.2-mV net
  * sense drop, whatever the true sense resistance. Y2 keeps its 4.175 V target
- * and 4.2 V guard: the first 4.175 V sample at a higher current only steps the
- * cycle down to the 70 mA selector (finish stage); at 70 mA the cycle completes
- * on 4.175 V or on the stock taper rule. Stock recharges below 4.110 V; Y2 does
+ * and 4.2 V guard: a 4.175 V sample at a higher current only steps the cycle
+ * down (finish stage, see 29 below); at 70 mA the cycle completes on 4.175 V,
+ * on the stock taper rule or on a plateau. Stock recharges below 4.110 V; Y2 does
  * so too, but never within 30 mV of the voltage the last Full rested at (the
  * 70-s restart loop seen when the rest was below 4.11 V). */
 #define Y2_FINISH_UA 70000U
 #define Y2_TAPER_DROP_UV 10200
+/* POWER-FINAL-29: 28 on the device (archive 126) stepped 450 -> 70 mA and the
+ * pack fell back to 4.09 V: an awake Y2 on USB draws about what 70 mA supplies
+ * (ISENSE est. 90 mA, screen off). The finish now steps 450/650 -> 200 -> 70 mA
+ * at successive 4.175 V samples, and at 70 mA a voltage that has not risen
+ * 5 mV in 10 min completes the cycle (the pack is as full as an awake Y2 gets
+ * it); Full still needs the >= 4.07 V rest. As stock BAT_TopOffModeAction, the
+ * 3-h top-off budget ends a finishing cycle as complete, not as a fault. */
+#define Y2_FINISH_STEP_UA 200000U
+#define Y2_PLATEAU_RISE_UV 5000
+#define Y2_PLATEAU_SECONDS 600
 #define Y2_STOCK_RECHARGE_UV 4110000
 #define Y2_RECHARGE_MARGIN_UV 30000
 /* Actual Y2 LK uses 3.2 V for ordinary boot, and modes 8/9 for charging
@@ -193,7 +203,10 @@ struct y2_charge_cycle {
 	/* 28: inputs set by the caller each run (0 = unknown, 26 behaviour) and
 	 * the finish stage / last Full rest voltage they drive. */
 	unsigned charge_ua;
-	int net_drop_uv, finish, full_rest_uv;
+	int net_drop_uv, full_rest_uv;
+	/* 29: finish = current cap of the finish stage in uA (0: none). */
+	int finish, plateau_uv, topoff_done;
+	unsigned long long plateau_at;
 };
 
 static inline int y2_recharge_uv(const struct y2_charge_cycle *c)
@@ -212,9 +225,12 @@ static inline void y2_charge_account(struct y2_charge_cycle *c,
 	if (uv <= Y2_PRECHARGE_UV) c->precharge += elapsed;
 	if (uv > Y2_TOPOFF_UV) c->topoff = 1;
 	if (c->topoff) c->cv += elapsed;
-	if (c->total >= Y2_CHARGE_MAX_SECONDS || c->cv >= Y2_CV_MAX_SECONDS ||
-	    c->precharge >= Y2_PRECHARGE_MAX_SECONDS)
+	if (c->total >= Y2_CHARGE_MAX_SECONDS || c->precharge >= Y2_PRECHARGE_MAX_SECONDS)
 		c->timed_out = 1;
+	if (c->cv >= Y2_CV_MAX_SECONDS) {
+		if (c->finish) c->topoff_done = 1;
+		else c->timed_out = 1;
+	}
 }
 
 static inline int y2_charge_termination(struct y2_charge_cycle *c,
@@ -229,22 +245,36 @@ static inline int y2_charge_termination(struct y2_charge_cycle *c,
 	 * or a taper-current claim. CV status remains observable separately. */
 	if (!c->hold) {
 		int finishing = c->finish && active && c->charge_ua && c->charge_ua <= Y2_FINISH_UA;
-		if (uv < Y2_CHARGE_UV) {
-			/* Stock taper rule, only in the 70 mA finish stage. */
-			if (!finishing || c->net_drop_uv > Y2_TAPER_DROP_UV) {
+		if (c->topoff_done && c->finish) {
+			/* Stock: the 3-h top-off budget completes the cycle. */
+		} else if (uv < Y2_CHARGE_UV) {
+			if (!finishing) {
 				c->taper_samples = 0;
 				return 0;
 			}
-			if (c->taper_samples && now < c->taper_at + 10) return 0;
-			c->taper_at = now;
-			if (++c->taper_samples < 6) return 0;
-		} else if (active && !c->finish && c->charge_ua > Y2_FINISH_UA) {
-			/* First target sample at the normal current: finish at 70 mA. */
-			c->finish = 1;
+			if (!c->plateau_uv || uv >= c->plateau_uv + Y2_PLATEAU_RISE_UV) {
+				c->plateau_uv = uv;
+				c->plateau_at = now;
+			}
+			if (now < c->plateau_at + Y2_PLATEAU_SECONDS) {
+				/* Stock taper rule, only in the 70 mA finish stage. */
+				if (c->net_drop_uv > Y2_TAPER_DROP_UV) {
+					c->taper_samples = 0;
+					return 0;
+				}
+				if (c->taper_samples && now < c->taper_at + 10) return 0;
+				c->taper_at = now;
+				if (++c->taper_samples < 6) return 0;
+			}
+		} else if (active && c->charge_ua > Y2_FINISH_UA) {
+			/* A target sample above 70 mA steps the finish stage down. */
+			c->finish = c->charge_ua > Y2_FINISH_STEP_UA ? Y2_FINISH_STEP_UA : Y2_FINISH_UA;
 			c->taper_samples = 0;
+			c->plateau_uv = 0;
 			return 1;
 		}
 		c->taper_samples = 0;
+		c->plateau_uv = 0;
 		c->hold = 1;
 		c->full = 0;
 		c->completing = active;
@@ -277,7 +307,7 @@ static inline int y2_charge_termination(struct y2_charge_cycle *c,
 	c->full = !resume;
 	c->completing = 0;
 	if (c->full) c->full_rest_uv = uv;
-	if (resume) { c->cv = 0; c->topoff = 0; c->finish = 0; }
+	if (resume) { c->cv = 0; c->topoff = 0; c->finish = 0; c->topoff_done = 0; }
 	return 1;
 }
 #endif

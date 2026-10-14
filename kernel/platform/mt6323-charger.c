@@ -229,8 +229,8 @@ static unsigned y2_charger_target(struct y2_charger *c)
 	 * an explicit, adequately powered boot. */
 	unsigned target = y2_charge_decide(&c->decision, c->source, c->input_ua, c->uv,
 					   c->thermal_level, c->charge_ceiling_ua);
-	/* 28: the finish stage tops off at the 70 mA selector (charger-policy.h). */
-	if (target > Y2_FINISH_UA && c->cycle.finish) target = Y2_FINISH_UA;
+	/* 28/29: the finish stage caps the current (charger-policy.h). */
+	if (c->cycle.finish && target > (unsigned)c->cycle.finish) target = c->cycle.finish;
 	return target;
 }
 
@@ -347,7 +347,7 @@ static void y2_charger_run(struct y2_charger *c)
 			/* At the target with no current: a finishing cycle is complete. */
 			c->cycle.charge_ua = 0;
 			y2_charge_termination(&c->cycle, ktime_get_boottime_seconds(), c->uv,
-					      c->cycle.finish);
+					      !!c->cycle.finish);
 			goto inhibit;
 		}
 		if (!ret && ktime_to_ms(ktime_get_boottime()) - c->last_pet_ms >= Y2_PET_LATE_MS)
@@ -606,7 +606,7 @@ static ssize_t charging_state_show(struct device *dev, struct device_attribute *
 		"battery_uv=%d baton_raw=%d isense_raw=%d pmic_die_mc=%d input_budget_ua=%d\n"
 		"chr_con0=0x%04x cv_status=0x%04x battery_ovp=0x%04x baton=0x%04x watchdog=0x%04x thermal=0x%04x\n"
 		"watchdog_pets=%llu last_pet_ms=%llu total_seconds=%llu cv_seconds=%llu precharge_seconds=%llu hold=%d full=%d timeout=%d\n"
-		"finish=%d taper_samples=%u full_rest_uv=%d recharge_uv=%d\n"
+		"finish=%d taper_samples=%u plateau_uv=%d topoff_done=%d full_rest_uv=%d recharge_uv=%d\n"
 		"first_fault=0x%x at_ms=%llu battery_uv=%d sample_error=%d chr=0x%x cv=0x%x ovp=0x%x watchdog=0x%x thermal=0x%x\n"
 		"dormant_blocked=%u check_reg=%#x check_mask=%#x check_expected=%#x check_actual=%#x check_error=%d\n"
 		"selector=%u stock_request_ua=%u class_ceiling_ua=%u thermal_level=%u thermal_cap_ua=%u owner_ceiling_ua=%u vendor_max_ua=%u\n"
@@ -616,7 +616,8 @@ static ssize_t charging_state_show(struct device *dev, struct device_attribute *
 		c->uv, c->baton_raw, c->isense_raw, c->die_mc, c->input_ua,
 		c->con0, c->con4, c->ov, c->baton_con, c->wdt, c->thr,
 		c->pets, c->last_pet_ms, c->cycle.total, c->cycle.cv, c->cycle.precharge, c->cycle.hold, c->cycle.full, c->cycle.timed_out,
-		c->cycle.finish, c->cycle.taper_samples, c->cycle.full_rest_uv, y2_recharge_uv(&c->cycle),
+		c->cycle.finish, c->cycle.taper_samples, c->cycle.plateau_uv, c->cycle.topoff_done,
+		c->cycle.full_rest_uv, y2_recharge_uv(&c->cycle),
 		c->first_fault, c->first_fault_ms, c->first_uv, c->first_sample_error,
 		c->first_con0, c->first_cv, c->first_ov, c->first_wdt, c->first_thr,
 		y2_charger_dormant_blocked(), c->mismatch_reg, c->mismatch_mask,

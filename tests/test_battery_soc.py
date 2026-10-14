@@ -227,6 +227,24 @@ class BatterySoc(unittest.TestCase):
         junk = Soc(p, {'ui_percent': 'x', 'anchor_percent': 7}).observe(0, 3779000, 1, 'Discharging')
         self.assertEqual((junk['percent'], junk['anchor_percent']), (50, None))
 
+    def test_awake_load_follows_the_drain_not_the_loaded_voltage(self):
+        # 28 boot 8f43c71e: started at 89 % from the power-on OCV, then the old
+        # estimator pulled toward the loaded 3.95-3.98 V and showed 85 within
+        # 3.5 minutes. Stock oam_run integrates the model current instead.
+        soc = Soc(load_profile(self.ctx))
+        value = soc.observe(0, 3946069, 1, 'Discharging', boot_ocv=4022000)
+        self.assertEqual(value['percent'], 89)
+        for now in range(1, 211):
+            value = soc.observe(now, 3970000, 1, 'Discharging')
+        self.assertGreaterEqual(value['percent'], 88)
+        # That model current is a real drain: sustained load still discharges.
+        for now in range(211, 3811):
+            value = soc.observe(now, 3940000, 1, 'Discharging')
+        self.assertLess(value['percent'], 85)
+        # A rested voltage after a suspend gap is still taken directly.
+        after = soc.observe(3811 + 1800, 3800000, 1, 'Discharging')
+        self.assertLess(after['estimate_percent'], value['estimate_percent'])
+
     def test_service_persists_the_display_value(self):
         source = (ROOT / 'tools/platform/y2_platform/power.py').read_text()
         self.assertIn("soc = Soc(load_profile(ctx), ctx.json(UI_STATE, None))", source)

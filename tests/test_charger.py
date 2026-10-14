@@ -238,19 +238,24 @@ int main(void){
  assert(!y2_charge_termination(&c,152,3999999,0));
  for(unsigned t=153;t<212;t++)assert(!y2_charge_termination(&c,t,3999999,0));
  assert(y2_charge_termination(&c,212,3999999,0) && !c.hold);
- /* 28 finish stage: the first 4.175 V sample at 450 mA steps to 70 mA, no hold. */
+ /* 29 finish stage: 4.175 V at 450 mA steps to 200 mA, at 200 mA to 70 mA. */
  c=(struct y2_charge_cycle){0};
  c.charge_ua=450000;
- assert(y2_charge_termination(&c,0,4175000,1) && c.finish && !c.hold);
+ assert(y2_charge_termination(&c,0,4175000,1) && c.finish==200000 && !c.hold);
+ c.charge_ua=200000;
+ assert(!y2_charge_termination(&c,5,4150000,1) && !c.hold);
+ assert(y2_charge_termination(&c,10,4175000,1) && c.finish==70000 && !c.hold);
+ c.charge_ua=650000; c.finish=0;
+ assert(y2_charge_termination(&c,11,4175000,1) && c.finish==200000);
  /* At 70 mA the 4.175 V target completes the cycle exactly as before. */
- c=(struct y2_charge_cycle){0}; c.finish=1; c.charge_ua=70000;
+ c=(struct y2_charge_cycle){0}; c.finish=70000; c.charge_ua=70000;
  assert(y2_charge_termination(&c,0,4175000,1) && c.hold && c.completing && !c.full);
  for(unsigned t=1;t<60;t++)assert(!y2_charge_termination(&c,t,4150000,0));
  assert(y2_charge_termination(&c,60,4150000,0) && c.full && c.full_rest_uv==4150000);
  assert(y2_recharge_uv(&c)==4110000);
  /* Stock taper rule at 70 mA under hardware CV: net drop <= 10.2 mV for six
   * samples at least 10 s apart (BAT_TopOffModeAction: 150 mA * 68 mOhm). */
- c=(struct y2_charge_cycle){0}; c.finish=1; c.charge_ua=70000;
+ c=(struct y2_charge_cycle){0}; c.finish=70000; c.charge_ua=70000;
  c.net_drop_uv=15000;
  for(unsigned t=0;t<100;t+=10)assert(!y2_charge_termination(&c,t,4170000,1) && !c.hold);
  c.net_drop_uv=10200;
@@ -258,7 +263,7 @@ int main(void){
  assert(!y2_charge_termination(&c,145,4170000,1));          /* too soon after the 5th */
  assert(y2_charge_termination(&c,150,4170000,1) && c.hold && c.completing);
  /* One higher-drop sample restarts the six-sample window. */
- c=(struct y2_charge_cycle){0}; c.finish=1; c.charge_ua=70000; c.net_drop_uv=9000;
+ c=(struct y2_charge_cycle){0}; c.finish=70000; c.charge_ua=70000; c.net_drop_uv=9000;
  for(unsigned t=0;t<50;t+=10)assert(!y2_charge_termination(&c,t,4170000,1));
  c.net_drop_uv=10201; assert(!y2_charge_termination(&c,50,4170000,1) && !c.taper_samples);
  /* The taper rule never applies at a normal current or without a finish stage. */
@@ -266,13 +271,33 @@ int main(void){
  for(unsigned t=0;t<200;t+=10)assert(!y2_charge_termination(&c,t,4100000,1) && !c.hold);
  c=(struct y2_charge_cycle){0}; c.charge_ua=70000; c.net_drop_uv=0;
  for(unsigned t=0;t<200;t+=10)assert(!y2_charge_termination(&c,t,4100000,1) && !c.hold);
+ /* 29 plateau: archive 126 sat at 70 mA, 4.09 V, ~90 mA estimated, the awake Y2
+  * consuming it. No 5 mV rise in 10 min completes the cycle (Full needs the rest). */
+ c=(struct y2_charge_cycle){0}; c.finish=70000; c.charge_ua=70000; c.net_drop_uv=17900;
+ for(unsigned t=0;t<600;t+=30)assert(!y2_charge_termination(&c,t,4089550+(t%60?1000:0),1) && !c.hold);
+ assert(y2_charge_termination(&c,600,4090000,1) && c.hold && c.completing);
+ /* A real rise restarts the plateau window. */
+ c=(struct y2_charge_cycle){0}; c.finish=70000; c.charge_ua=70000; c.net_drop_uv=17900;
+ for(unsigned t=0;t<1200;t+=30)assert(!y2_charge_termination(&c,t,4090000+t*10,1) && !c.hold);
+ /* Not in the finish stage: no plateau completion. */
+ c=(struct y2_charge_cycle){0}; c.charge_ua=450000; c.net_drop_uv=90000;
+ for(unsigned t=0;t<2000;t+=30)assert(!y2_charge_termination(&c,t,4090000,1) && !c.hold);
+ /* Stock 3-h top-off: a finishing cycle completes, a normal one still faults. */
+ c=(struct y2_charge_cycle){0}; c.finish=200000;
+ y2_charge_account(&c,1,4100000); y2_charge_account(&c,10800,4100000);
+ assert(c.topoff_done && !c.timed_out);
+ c.charge_ua=200000; c.net_drop_uv=40000;
+ assert(y2_charge_termination(&c,0,4120000,1) && c.hold && c.completing);
+ c=(struct y2_charge_cycle){0};
+ y2_charge_account(&c,1,4100000); y2_charge_account(&c,10800,4100000);
+ assert(c.timed_out && !c.topoff_done);
  /* Unknown current (0): 26 behaviour, the first target sample holds. */
- c=(struct y2_charge_cycle){0}; c.finish=1;
+ c=(struct y2_charge_cycle){0}; c.finish=70000;
  assert(y2_charge_termination(&c,0,4175000,1) && c.hold && c.completing);
  /* A resumed maintenance cycle starts without the finish stage. */
  c.full=1; c.full_rest_uv=4150000; c.completing=0;
  for(unsigned t=1;t<61;t++)assert(!y2_charge_termination(&c,t,4100000,0));
- assert(y2_charge_termination(&c,61,4100000,0) && !c.hold && !c.finish);
+ assert(y2_charge_termination(&c,61,4100000,0) && !c.hold && !c.finish && !c.topoff_done);
  reset(); /* reference fixture functions under -Werror */
  assert(!io.read(io.context,0,&operations));
 }
