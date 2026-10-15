@@ -446,6 +446,10 @@ def storage(ctx):
             'sd_bus_parameters': ctx.read('/sys/kernel/debug/mmc1/ios')}
 
 
+# A confirmed lease is re-probed every 300 s (network.DnsProbeSchedule); this
+# keeps Online across one slow or skipped re-check.
+DNS_FRESH_S = 420
+
 def wifi_state(radio, wpa, address, route, dns, dhcp_error=None):
     if not radio:
         return 'Off', 'radio_off'
@@ -497,7 +501,7 @@ def wifi(ctx, signal_cache=None):
     dns_ready = (isinstance(dns_time, (int, float)) and dns.get('ok') is True and dns.get('boot_id') == boot and
                  bool(epoch) and dns.get('epoch') == epoch and
                  dns.get('address') in addresses and dns.get('bssid') == properties.get('bssid') and
-                 0 <= time.monotonic() - dns_time < 120)
+                 0 <= time.monotonic() - dns_time < DNS_FRESH_S)
     dhcp = ctx.json('/run/y2/dhcp.json', {})
     error = dhcp.get('error') if dhcp.get('boot_id') == boot and dhcp.get('epoch') == ctx.read('/run/y2/wifi-epoch') else None
     state, reason = wifi_state(radio, properties, addresses, default_route, dns_ready, error)

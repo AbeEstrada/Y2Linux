@@ -21,6 +21,15 @@ def publish(ctx, name, value):
     return value
 
 
+def wlan_switched_off(ctx):
+    """True while Wi-Fi is soft-blocked: sleep or the owner turned it off."""
+    for entry in sorted(ctx.path('/sys/class/rfkill').glob('rfkill*')):
+        name = '/sys/class/rfkill/' + entry.name
+        if ctx.read(name + '/type') == 'wlan' and ctx.read(name + '/soft') == '1':
+            return True
+    return False
+
+
 def lease_event(ctx, event):
     runtime = private_directory(ctx.path('/run/y2'))
     fd = os.open(runtime / 'dhcp.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
@@ -46,11 +55,13 @@ def _lease_event(ctx, event):
     # Keep their historical raw counts, but count a real loss only once after
     # a known connection. Unknown queries never enter this lifecycle.
     old.setdefault('link_counts_since_s', time.monotonic())
-    for name in ('real_disconnects', 'reconnects'):
+    for name in ('real_disconnects', 'reconnects', 'radio_off_disconnects'):
         value = old.get(name, 0)
         old[name] = value if isinstance(value, int) and value >= 0 else 0
     if event == 'DISCONNECTED' and active:
-        old['real_disconnects'] += 1
+        # Sleep switches the radio off: that is not a lost link (Beta 1
+        # counted every sleep as a real disconnect).
+        old['radio_off_disconnects' if wlan_switched_off(ctx) else 'real_disconnects'] += 1
     if event == 'CONNECTED' and not active and old.get('connected', 0):
         old['reconnects'] += 1
     old['association_active'] = event == 'CONNECTED'
@@ -164,10 +175,21 @@ def probe_dns(ctx, observed):
 
 
 class DnsProbeSchedule:
-    """Probe newly usable leases immediately; bound retries on the same lease."""
+    """Probe newly usable leases immediately; bound retries on the same lease.
+
+    A confirmed lease is re-checked every five minutes, not every 30 s: each
+    probe starts a Python resolver (≈260 ms CPU on the Y2) and a radio
+    exchange. observe.DNS_FRESH_S keeps Online across one late re-check.
+    """
+    RETRY_S = 30
+    CONFIRMED_S = 300
+
     def __init__(self):
         self.key = None
         self.deadline = 0
+
+    def confirmed(self, now):
+        self.deadline = now + self.CONFIRMED_S
 
     def due(self, observed, epoch, now):
         if (observed.get('association') != 'COMPLETED' or not epoch or
@@ -178,7 +200,7 @@ class DnsProbeSchedule:
             self.key, self.deadline = key, 0
         if now < self.deadline:
             return False
-        self.deadline = now + 30
+        self.deadline = now + self.RETRY_S
         return True
 
 

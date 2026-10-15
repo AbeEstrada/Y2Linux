@@ -20,6 +20,7 @@
 #include "reconnect-policy.h"
 
 #define SINK "0000110b-0000-1000-8000-00805f9b34fb"
+#define CONNECT_DEADLINE_MS 45000
 static GDBusConnection *bus;
 static GDBusObjectManager *manager;
 static guint evaluation_source;
@@ -267,8 +268,12 @@ static gboolean evaluate_devices(gpointer unused)
 		if(!inhibited && timestamp>=control_until && y2_reconnect_attempt(&budget,timestamp)) {
 			pending=TRUE;
 			total_attempts++;record();
+			/* BlueZ answers an absent peer with "Host is down" after the
+			 * page timeout plus its own setup. The old 10 s deadline fired
+			 * first (BlueZ took ~18 s, archive 155), which made the attempt
+			 * look unknown and inhibited every later reconnect. */
 			g_dbus_connection_call(bus,owner,candidate,"org.bluez.Device1","ConnectProfile",
-				g_variant_new("(s)",SINK),NULL,G_DBUS_CALL_FLAGS_NONE,10000,NULL,connection_done,NULL);
+				g_variant_new("(s)",SINK),NULL,G_DBUS_CALL_FLAGS_NONE,CONNECT_DEADLINE_MS,NULL,connection_done,NULL);
 		} else flock(operation_lock,LOCK_UN);
 	}
 	gboolean has_candidate=candidate!=NULL;

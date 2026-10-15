@@ -50,20 +50,28 @@ static irqreturn_t y2_btif_irq(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 	mutex_lock(&c->dma_rx);
-	pointer = readl(c->rxdma + WRITE_PTR) & 0x1ffff;
-	offset = c->rxptr & 0xffff;
-	if ((pointer & 0xffff) >= Y2_CONN_DMA_SIZE || offset >= Y2_CONN_DMA_SIZE) goto corrupt;
-	available = (pointer & 0xffff) - offset;
-	if ((pointer ^ c->rxptr) & 0x10000) available += Y2_CONN_DMA_SIZE;
-	if (available > Y2_CONN_DMA_SIZE) goto corrupt;
-	dma_rmb();
-	first = min(available, Y2_CONN_DMA_SIZE - offset);
-	if (first) y2_stp_receive(c, c->rxbuf + offset, first);
-	if (available > first) y2_stp_receive(c, c->rxbuf, available - first);
-	c->rxptr = advance(c->rxptr, available);
-	dma_wmb(); writel(c->rxptr, c->rxdma + READ_PTR);
+	/* Acknowledge BEFORE reading the write pointer. The RX status is not
+	 * level-triggered: clearing it after the drain dropped the interrupt of
+	 * bytes that landed in between, and they sat unread until other traffic
+	 * arrived (every BTIF timeout on record: RX flag=0 valid=2..7, the WMT
+	 * reply). Bytes landing after the last read below raise it again. */
 	writel(3, c->rxdma + INT_FLAG);
 	readl(c->btif + 0x4c); /* clear legacy BTIF RX timeout */
+	for (unsigned pass = 0; pass < 8; pass++) {
+		pointer = readl(c->rxdma + WRITE_PTR) & 0x1ffff;
+		if (pointer == c->rxptr) break;
+		offset = c->rxptr & 0xffff;
+		if ((pointer & 0xffff) >= Y2_CONN_DMA_SIZE || offset >= Y2_CONN_DMA_SIZE) goto corrupt;
+		available = (pointer & 0xffff) - offset;
+		if ((pointer ^ c->rxptr) & 0x10000) available += Y2_CONN_DMA_SIZE;
+		if (available > Y2_CONN_DMA_SIZE) goto corrupt;
+		dma_rmb();
+		first = min(available, Y2_CONN_DMA_SIZE - offset);
+		if (first) y2_stp_receive(c, c->rxbuf + offset, first);
+		if (available > first) y2_stp_receive(c, c->rxbuf, available - first);
+		c->rxptr = advance(c->rxptr, available);
+		dma_wmb(); writel(c->rxptr, c->rxdma + READ_PTR);
+	}
 	mutex_unlock(&c->dma_rx);
 	return IRQ_HANDLED;
 corrupt:

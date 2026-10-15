@@ -179,6 +179,84 @@ int main(void){
 }
 ''')
 
+    def test_actual_btif_rx_never_loses_bytes_that_land_during_the_drain(self):
+        # Every BTIF timeout on record (archives incl. 155) showed RX flag=0
+        # with valid=2..7: the WMT reply arrived while the handler drained
+        # and its interrupt was cleared afterwards.
+        source=(ROOT/'kernel/platform/connectivity/btif.c').read_text()
+        body='\n'.join(function(source,n) for n in ('advance','y2_btif_irq'))
+        defines='\n'.join(l for l in source.splitlines() if l.startswith('#define '))
+        run_c(r'''
+#include <assert.h>
+#include <errno.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+#define Y2_CONN_DMA_SIZE 8192
+#define READ_ONCE(x) (x)
+#define min(a,b) ((a)<(b)?(a):(b))
+#define dma_wmb() ((void)0)
+#define dma_rmb() ((void)0)
+#define IRQ_NONE 0
+#define IRQ_HANDLED 1
+typedef int irqreturn_t;
+struct y2_conn {
+ bool transport_on;int dma_tx,dma_rx,tx_wait,irq[4],failure;
+ unsigned txptr,rxptr;void *txdma,*rxdma,*btif;unsigned char *txbuf,*rxbuf;
+};
+static uint32_t rx[32],btif[32];
+static unsigned char ring[8192],got[8192];
+static unsigned got_size,wptr_reads,arrive_on_read,arrive_bytes;
+static void mutex_lock(int *l){assert(!*l);*l=1;}
+static void mutex_unlock(int *l){assert(*l);*l=0;}
+static void wake_up_all(int *w){(void)w;}
+static void y2_conn_failed(struct y2_conn *c,int e){c->failure=e;}
+static void y2_stp_receive(struct y2_conn *c,const unsigned char *p,unsigned n){
+ (void)c;memcpy(got+got_size,p,n);got_size+=n;}
+''' + defines + r'''
+static void arrive(unsigned n){
+ unsigned w=rx[WRITE_PTR/4];
+ for(unsigned i=0;i<n;i++)ring[((w&0xffff)+i)%8192]=(unsigned char)(0x40+i);
+ unsigned next=(w&0xffff)+n;
+ rx[WRITE_PTR/4]=(next%8192)|((w^(next>=8192?0x10000:0))&0x10000);
+ rx[INT_FLAG/4]|=2; /* RX done/timeout status: set on arrival, not level */
+}
+static unsigned readl(void *p){
+ uint32_t *r=p;
+ if(r==&rx[WRITE_PTR/4] && ++wptr_reads==arrive_on_read){uint32_t v=*r;arrive(arrive_bytes);return v;}
+ return *r;
+}
+static void writel(unsigned v,void *p){
+ uint32_t *r=p;
+ if(r==&rx[INT_FLAG/4]){*r&=~v;return;} /* write-one-to-clear */
+ *r=v;
+}
+''' + body + r'''
+static void reset(struct y2_conn *c,unsigned pointer){
+ memset(c,0,sizeof(*c));memset(rx,0,sizeof(rx));memset(btif,0,sizeof(btif));
+ c->transport_on=true;c->rxdma=rx;c->btif=btif;c->rxbuf=ring;c->rxptr=pointer;c->irq[1]=71;c->irq[3]=73;
+ rx[WRITE_PTR/4]=rx[READ_PTR/4]=pointer;got_size=wptr_reads=arrive_on_read=arrive_bytes=0;
+}
+int main(void){
+ struct y2_conn c;
+ /* The observed case: a 7-byte reply lands right after the pointer read. */
+ reset(&c,0);arrive(5);arrive_on_read=1;arrive_bytes=7;
+ assert(y2_btif_irq(70,&c)==IRQ_HANDLED);
+ assert(got_size==12 && rx[READ_PTR/4]==c.rxptr && c.rxptr==rx[WRITE_PTR/4] && !c.failure);
+ /* Bytes after the final pointer read keep their interrupt pending. */
+ reset(&c,8190);arrive(4);arrive_on_read=2;arrive_bytes=3;
+ assert(y2_btif_irq(70,&c)==IRQ_HANDLED);
+ assert(got_size==4 && c.rxptr!=rx[WRITE_PTR/4] && (rx[INT_FLAG/4]&2));
+ assert(y2_btif_irq(70,&c)==IRQ_HANDLED);
+ assert(got_size==7 && c.rxptr==rx[WRITE_PTR/4] && c.rxptr==0x10005);
+ /* A spurious interrupt with nothing new is harmless. */
+ assert(y2_btif_irq(70,&c)==IRQ_HANDLED && got_size==7 && !c.failure);
+ /* A corrupt write pointer still fails the transport. */
+ reset(&c,0);rx[WRITE_PTR/4]=9000;
+ assert(y2_btif_irq(70,&c)==IRQ_HANDLED && c.failure && !c.dma_rx);
+}
+''')
+
     def test_actual_stp_mandatory_bootstrap_and_full_mode_transition(self):
         source=(ROOT/'kernel/platform/connectivity/stp.c').read_text()
         source=source.replace('int y2_stp_send(', 'static int y2_stp_send(')

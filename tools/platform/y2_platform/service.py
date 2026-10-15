@@ -178,7 +178,8 @@ def serve(ctx):
             else:
                 associating_since = None
             if dns_schedule.due(value, ctx.read('/run/y2/wifi-epoch'), before):
-                probe_dns(ctx, value)
+                if (probe_dns(ctx, value) or {}).get('ok') is True:
+                    dns_schedule.confirmed(before)
                 value = wifi(ctx, signal_cache=value)
             if value.get('radio_present') and value.get('supplicant_observation', {}).get('ok') is False:
                 query_failures += 1

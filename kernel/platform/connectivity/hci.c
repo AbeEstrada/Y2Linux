@@ -4,6 +4,7 @@
  * No EDR restriction or invented LE feature/command bits are installed. */
 #include <crypto/sha2.h>
 #include <linux/etherdevice.h>
+#include <linux/unaligned.h>
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h>
 #include "conn.h"
@@ -61,6 +62,30 @@ static int setup(struct hci_dev *hdev)
 	if (!ret) controller_quirks(c);
 	memzero_explicit(candidate, sizeof(candidate)); memzero_explicit(wire, sizeof(wire));
 	return ret;
+}
+/* Linux keeps BlueZ's [BREDR] PageTimeout (def_page_timeout) but never sends
+ * it, so the controller default applied. With an absent headset BlueZ reported
+ * "Host is down" only ~18 s after a reconnect began (archive 155, three wakes):
+ * longer than y2-bt-reconnect's call deadline and overlapping Wi-Fi's start
+ * on the shared 2.4 GHz radio. Program the specification default 0x2000 slots
+ * (5.12 s) after the core's init and Reset; report the value it replaced. */
+#define Y2_HCI_READ_PAGE_TIMEOUT 0x0c17
+#define Y2_PAGE_TIMEOUT_SLOTS 0x2000
+static int post_init(struct hci_dev *hdev)
+{
+	struct sk_buff *reply = __hci_cmd_sync(hdev, Y2_HCI_READ_PAGE_TIMEOUT, 0, NULL, HCI_CMD_TIMEOUT);
+	__le16 slots = cpu_to_le16(Y2_PAGE_TIMEOUT_SLOTS);
+	unsigned previous = 0;
+	if (!IS_ERR(reply)) {
+		if (reply->len == 3 && !reply->data[0]) previous = get_unaligned_le16(reply->data + 1);
+		kfree_skb(reply);
+	}
+	/* Best effort: a refused write keeps the controller's own default. */
+	if (command(hdev, HCI_OP_WRITE_PG_TIMEOUT, sizeof(slots), &slots))
+		bt_dev_warn(hdev, "page timeout unchanged (%u slots)", previous);
+	else if (previous != Y2_PAGE_TIMEOUT_SLOTS)
+		bt_dev_info(hdev, "page timeout %u -> %u slots", previous, Y2_PAGE_TIMEOUT_SLOTS);
+	return 0;
 }
 static void tx_work(struct work_struct *work)
 {
@@ -158,7 +183,7 @@ int y2_hci_register(struct y2_conn *c)
 	c->hdev = hdev; hci_set_drvdata(hdev, c); SET_HCIDEV_DEV(hdev, c->dev);
 	hdev->bus = HCI_VIRTUAL; /* Integrated BTIF has no separate HCI bus enum. */
 	hdev->open=open; hdev->close=close; hdev->flush=flush; hdev->send=send;
-	hdev->setup=setup; hdev->hw_error=hw_error;
+	hdev->setup=setup; hdev->post_init=post_init; hdev->hw_error=hw_error;
 	/* Function power-off loses volatile controller setup; repeat before init. */
 	hci_set_quirk(hdev, HCI_QUIRK_NON_PERSISTENT_SETUP);
 	skb_queue_head_init(&c->hci_tx); INIT_WORK(&c->hci_work, tx_work);

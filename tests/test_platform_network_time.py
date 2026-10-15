@@ -66,6 +66,21 @@ class NetworkTime(unittest.TestCase):
         self.assertEqual(events['real_disconnects'], 0)
         self.assertEqual(events['reconnects'], 0)
 
+    def test_sleep_radio_off_is_not_a_real_link_loss(self):
+        self.put('/sys/class/rfkill/rfkill0/type', 'bluetooth')
+        self.put('/sys/class/rfkill/rfkill0/soft', '1')
+        self.put('/sys/class/rfkill/rfkill1/type', 'wlan')
+        self.put('/sys/class/rfkill/rfkill1/soft', '1')
+        lease_event(self.ctx, 'CONNECTED')
+        lease_event(self.ctx, 'DISCONNECTED')
+        events = self.ctx.json('/run/y2/wifi-events.json')
+        self.assertEqual((events['real_disconnects'], events['radio_off_disconnects']), (0, 1))
+        self.put('/sys/class/rfkill/rfkill1/soft', '0')
+        lease_event(self.ctx, 'CONNECTED')
+        lease_event(self.ctx, 'DISCONNECTED')
+        events = self.ctx.json('/run/y2/wifi-events.json')
+        self.assertEqual((events['real_disconnects'], events['radio_off_disconnects']), (1, 1))
+
     def test_classless_routes_and_untrusted_dhcp_syntax(self):
         epoch = lease_event(self.ctx, 'CONNECTED')['epoch']
         env = dict(interface='wlan0', Y2_DHCP_GENERATION=epoch, ip='192.0.2.2',
@@ -111,6 +126,24 @@ class NetworkTime(unittest.TestCase):
         self.assertFalse(schedule.due(dict(link, association=None), 'second', 135))
         self.assertTrue(schedule.due(dict(link, ip_addresses=['192.0.2.3']), 'second', 136))
         self.assertFalse(schedule.due(dict(link, default_route=[]), 'third', 137))
+
+    def test_confirmed_dns_is_rechecked_every_five_minutes_not_every_30_s(self):
+        # Live Beta 1: the probe re-ran every 30 s forever after success.
+        from y2_platform.observe import DNS_FRESH_S
+        schedule = DnsProbeSchedule()
+        link = dict(association='COMPLETED', association_id='one',
+                    ip_addresses=['192.0.2.2'], default_route=[{}])
+        self.assertTrue(schedule.due(link, 'lease', 100))
+        schedule.confirmed(100)
+        self.assertFalse(schedule.due(link, 'lease', 131))
+        self.assertFalse(schedule.due(link, 'lease', 399))
+        self.assertTrue(schedule.due(link, 'lease', 400))
+        # A failed re-check retries after 30 s; freshness outlasts one miss.
+        self.assertFalse(schedule.due(link, 'lease', 429))
+        self.assertTrue(schedule.due(link, 'lease', 430))
+        self.assertGreater(DNS_FRESH_S, schedule.CONFIRMED_S + schedule.RETRY_S)
+        # A new lease is still probed at once.
+        self.assertTrue(schedule.due(link, 'next', 431))
 
     def test_event_wait_wakes_for_real_supplicant_event(self):
         import socket

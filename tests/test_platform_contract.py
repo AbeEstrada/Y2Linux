@@ -117,7 +117,7 @@ class PlatformContract(unittest.TestCase):
                   'monotonic_s': time.monotonic()}
         self.put('/run/y2/dns.json', json.dumps(record))
         self.assertEqual(wifi(self.ctx)['state'], 'Online')
-        record['monotonic_s'] -= 121
+        record['monotonic_s'] -= 421
         self.put('/run/y2/dns.json', json.dumps(record))
         self.assertFalse(wifi(self.ctx)['dns_ready'])
         record.update(monotonic_s=time.monotonic(), bssid='peer2')
