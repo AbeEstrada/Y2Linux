@@ -313,11 +313,26 @@ def prune(keep=2, dry_run=False):
         kept_releases += packages[:keep - len(kept_releases)]
     doomed += [path for path in releases[keep:] + legacy if path not in kept_releases]
     # One pass per kept build: which other build folders does it still name?
+    # Plain Python: no dependency on the host grep (the locked one lacks -I/-o).
+    pattern = re.compile(re.escape(os.fsencode(OUT)) + rb'/([A-Za-z0-9._-]+-build)/')
+    needle = os.fsencode(OUT) + b'/'
     referenced = {}
     for build in kept:
-        found = subprocess.run(['grep', '-rhoIE', '--exclude-dir=.git', re.escape(str(OUT)) + '/[A-Za-z0-9._-]+-build/', '.'],
-                               cwd=build, capture_output=True, text=True).stdout
-        for name in {line[len(str(OUT)) + 1:-1] for line in found.split()}:
+        names = set()
+        for directory, folders, files in os.walk(build):
+            folders[:] = [name for name in folders if name != '.git']
+            for name in files:
+                path = Path(directory) / name
+                try:
+                    if path.is_symlink():
+                        data = os.fsencode(os.readlink(path)) + b'/'
+                    else:
+                        data = path.read_bytes()
+                except OSError:
+                    continue
+                if needle in data:
+                    names.update(match.decode() for match in pattern.findall(data))
+        for name in names:
             referenced.setdefault(name, []).append(build.name)
     removed, skipped = [], []
     for path in sorted(set(doomed)):
