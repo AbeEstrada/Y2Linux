@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 6, Baseline 57 — 2026-10-15 (latest, published)
+## Y2Linux 1.0 Beta 6.1, Baseline 58 — 2026-10-16 (latest, published)
+
+Release `1.0.0-beta.6.1` (Reborn `1.0.0-beta.6.1`), tag `baseline-58`, Linux `faf85ba`, Reborn `78e36db`. Reborn fixes: sound
+after pause/resume on Bluetooth (drain instead of BlueALSA pause), Next/Previous while a song starts, SD card songs listed twice
+under a pre-CID source id (Y2Reborn #15, #14). Details: [Beta 6.1 report](validation/Y2-LINUX-1.0-BETA-6.1.md).
+
+## Y2Linux 1.0 Beta 6, Baseline 57 — 2026-10-15 (published)
 
 Release `1.0.0-beta.6` (Reborn `1.0.0-beta.6`), tag `baseline-57`, Linux `45d3696`, Reborn `544d3c9`. Reborn: Playlists (the
 .m3u8 file is the playlist; made and changed on the player; Favorites with a heart), pause in place (instant resume, wired and

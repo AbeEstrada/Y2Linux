@@ -6,22 +6,22 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Y2Linux 1.0 Beta 6 (Baseline 57, 2026-10-15), public beta.** It runs every day
+> **Status: Y2Linux 1.0 Beta 6.1 (Baseline 58, 2026-10-16), public beta.** It runs every day
 > on the maintainer's Y2. Install it once from the ready-made images of the
 > [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases) with SP Flash Tool
 > ([INSTALL](docs/INSTALL.md)); after that the player updates itself over Wi-Fi. Only one
 > hardware revision has been tested (see [Supported hardware](#supported-hardware)). Read
 > [Known issues](#known-issues) before you flash: battery life in sleep is not yet stock-like.
 
-| | 1.0 Beta 6 (Baseline 57) |
+| | 1.0 Beta 6.1 (Baseline 58) |
 | --- | --- |
-| Git tag (both repositories) | `baseline-57` (previous: `baseline-56`); the GitHub release carries the first-install images, the signed over-the-air update and the GPL sources |
-| Release / kernel | `1.0.0-beta.6` / `6.18.56-y2linux-1.0.0-beta.6` (Linux 6.18 long-term line) |
-| Root filesystem | `2026.08-platform-v1.87` (Buildroot 2026.08) |
-| Player | Y2Reborn 1.0.0-beta.6 (Rust 1.99) with Cover Flow, Genres and 15 themes |
+| Git tag (both repositories) | `baseline-58` (previous: `baseline-57`); the GitHub release carries the first-install images, the signed over-the-air update and the GPL sources |
+| Release / kernel | `1.0.0-beta.6.1` / `6.18.56-y2linux-1.0.0-beta.6.1` (Linux 6.18 long-term line) |
+| Root filesystem | `2026.08-platform-v1.88` (Buildroot 2026.08) |
+| Player | Y2Reborn 1.0.0-beta.6.1 (Rust 1.99) with Cover Flow, Genres and 15 themes |
 | Bluetooth codecs | SBC, AAC (fdk-aac-free) and LDAC |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 |
-| Images built from | Y2Linux `45d3696`, Y2Reborn `544d3c9` ([Beta 6 report](docs/validation/Y2-LINUX-1.0-BETA-6.md)) |
+| Images built from | Y2Linux `faf85ba`, Y2Reborn `78e36db` ([Beta 6.1 report](docs/validation/Y2-LINUX-1.0-BETA-6.1.md)) |
 
 ## Getting started
 

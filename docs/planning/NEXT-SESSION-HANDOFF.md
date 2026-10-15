@@ -1,6 +1,12 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 6 (BASELINE 57) PUBLISHED — PLAYLISTS, INSTANT PAUSE.** Release `1.0.0-beta.6`, tag `baseline-57`, sequence 5600, Linux `45d3696` + docs, Reborn `544d3c9`; report `docs/validation/Y2-LINUX-1.0-BETA-6.md`, audit BETA-6.
+> **START HERE (2026-10-16 local, latest): Y2LINUX 1.0 BETA 6.1 (BASELINE 58) PUBLISHED — BETA 6 FIXES.** Release `1.0.0-beta.6.1`, tag `baseline-58`, sequence 5650, Linux `faf85ba` + docs, Reborn `78e36db`; report `docs/validation/Y2-LINUX-1.0-BETA-6.1.md`, audit BETA-6.1.
+>
+> - **Reborn:** BlueALSA pause → drain/prepare (`rb_sink_pause(s, on, device_pause)`, `AlsaSink::pause`); Next/Previous/Play-Pause during `pending_reconfiguration` handled in `Runtime::effect` (step + hold + `seek_until`); `retire_pre_cid_copy` in `reborn-library` scan finish (#15); PR #14 merged (`playlist_index` online-first); review commit `0e14a3e`.
+> - **Owed on the device:** AirPods sound after pause/resume (the drain path is unverified on BlueALSA), skipping during a start, no SD duplicates after a scan; plus the Beta 6 checks.
+> - **Next: FM radio (Beta 7)**, audit first. Owner-parked: station logos Cover Flow for radio favorites.
+
+> Previous entry: **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 6 (BASELINE 57) PUBLISHED — PLAYLISTS, INSTANT PAUSE.** Release `1.0.0-beta.6`, tag `baseline-57`, sequence 5600, Linux `45d3696` + docs, Reborn `544d3c9`; report `docs/validation/Y2-LINUX-1.0-BETA-6.md`, audit BETA-6.
 >
 > - **Reborn:** playlists (`reborn_core::playlist`, `reborn_platform::playlists`, `reborn_ui::{playlist_index, playlists_ui, views_playlists}`, worker `app/reborn/src/playlists.rs`; owner: anywhere in music, edit the file itself, Favorites with heart, Move with the wheel); pause in place (`Playback::hold`, `AudioSink::pause`/`rb_sink_pause`, `HOLD_LIMIT` 3 min) and collected seeking (`SEEK_SETTLE` 350 ms).
 > - **Owed on the device:** the Beta 6 report's checks; plus earlier betas'.

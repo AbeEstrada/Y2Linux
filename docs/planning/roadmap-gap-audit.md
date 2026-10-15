@@ -8288,3 +8288,22 @@ on Internal Storage and the SD card (atomic, only on the owner's edits) and hold
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.6 / Reborn 1.0.0-beta.6** (Baseline 57, sequence 5600) as a public beta at
 the owner's request; next evidence boundary: the owner's OTA install and the Beta 6 report's device checks.
+
+
+## BETA-6.1 (Baseline 58) Beta 6 fixes: milestone gap audit — 2026-10-16
+
+**Boundary:** owner: Bluetooth resume silent and "Couldn't complete that" on skipping after Beta 6; Y2Reborn issue #15 / PR #14
+("yes do both and publish as beta 6.1"). A public release is a milestone boundary. No hardware, memory-model or platform change;
+Reborn only. New: a Bluetooth pause drains instead of pausing the PCM; a complete scan of an SD card marks its pre-CID rows
+deleted (database rows only, never files).
+
+| Area | State for Beta 6.1 | Evidence / gap |
+| --- | --- | --- |
+| Bluetooth pause/resume | BUILT, device check owed | Device log of the silent resume; drain/prepare path not yet heard on the device. |
+| Skipping while starting | BUILT, device check owed | Runtime path has no host harness; device test. |
+| SD duplicates (#15) | BUILT, host-tested | `a_card_scanned_under_its_cid_id_retires_its_pre_cid_copy`; owner's database has 2 such rows. |
+| Playlist matching (#14) | MERGED | PR test plus existing matcher tests. |
+| FM radio | NOT STARTED | Beta 7, own audit first. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.6.1 / Reborn 1.0.0-beta.6.1** (Baseline 58, sequence 5650) as a public beta
+at the owner's request; next evidence boundary: the owner's OTA install and the Beta 6.1 report's device checks.
