@@ -265,6 +265,22 @@ class NetworkTime(unittest.TestCase):
         self.assertEqual(bootstrap(self.ctx, floor+200)['source'], 'retained_rtc')
         self.assertTrue(status(self.ctx, floor+200)['tls_ready'])
 
+    def test_tls_clock_stays_ready_across_suspend(self):
+        floor = 1790000000
+        self.put('/etc/y2linux/build-epoch', str(floor))
+        anchor = ntp_event(self.ctx, 'stratum', {'stratum': '2'}, now=floor + 100)
+        mono, boot = anchor['monotonic_s'], anchor['boottime_s']
+        # One hour asleep: wall clock and CLOCK_BOOTTIME advance, CLOCK_MONOTONIC
+        # only by the few awake seconds. Beta 4 refused update checks here.
+        self.assertTrue(status(self.ctx, floor + 3705, monotonic=mono + 5, elapsed=boot + 3605)['tls_ready'])
+        # Someone stepping the wall clock is still caught.
+        self.assertFalse(status(self.ctx, floor + 7305, monotonic=mono + 5, elapsed=boot + 3605)['tls_ready'])
+        # An anchor written before this change keeps the monotonic comparison.
+        old = {k: v for k, v in anchor.items() if k != 'boottime_s'}
+        self.put('/run/y2/time.json', __import__('json').dumps(old))
+        self.assertTrue(status(self.ctx, floor + 105, monotonic=mono + 5, elapsed=boot + 3605)['tls_ready'])
+        self.assertFalse(status(self.ctx, floor + 3705, monotonic=mono + 5, elapsed=boot + 3605)['tls_ready'])
+
     def test_qualification_never_passes_invalid_iperf_output_or_offline_wifi(self):
         with patch('y2_platform.network_check.snapshot', return_value={'wifi': {'state':'Off'}}):
             self.assertEqual(network_check(self.ctx, '192.0.2.10')['record']['result'], 'FAILED')

@@ -20,7 +20,7 @@ from .timekeeping import status as time_status
 # the only owner of mount/unmount work; it is now started only when its own
 # no-op condition (unchanged SD inventory, no retry) is false.
 INTERVAL_S = 3
-DARK_INTERVAL_S = 10  # Reborn treats network.json older than 15 s as stale
+DARK_INTERVAL_S = 10  # Reborn: network.json stale after 15 s (an Online record after 45 s)
 MAINTENANCE_S = 30
 DARK_MAINTENANCE_S = 300
 

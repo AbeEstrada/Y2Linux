@@ -21,16 +21,30 @@ def entropy_ready():
         return False
 
 
-def status(ctx, now=None, monotonic=None):
+def boottime():
+    """Elapsed time including suspend, like the wall clock."""
+    return time.clock_gettime(time.CLOCK_BOOTTIME)
+
+
+def status(ctx, now=None, monotonic=None, elapsed=None):
     now = time.time() if now is None else now
     monotonic = time.monotonic() if monotonic is None else monotonic
+    elapsed = boottime() if elapsed is None else elapsed
     floor = ctx.integer('/etc/y2linux/build-epoch')
     valid = plausible(now, floor)
     anchor = ctx.json('/run/y2/time.json', {})
     stamp, wall = anchor.get('monotonic_s'), anchor.get('epoch')
+    # The wall clock keeps running in suspend, CLOCK_MONOTONIC does not: after
+    # any sleep over 60 s the monotonic comparison called a correct clock
+    # incoherent and every update check failed until ntpd's next callback
+    # (Beta 4: "Connect to Wi-Fi" after sleep). Compare with CLOCK_BOOTTIME.
+    since = anchor.get('boottime_s')
+    drift = (now - wall - (elapsed - since) if isinstance(since, (int, float)) and isinstance(wall, (int, float))
+             else now - wall - (monotonic - stamp) if isinstance(stamp, (int, float)) and isinstance(wall, (int, float))
+             else math.inf)
     coherent = (anchor.get('boot_id') == ctx.read('/proc/sys/kernel/random/boot_id') and
                 isinstance(stamp, (int, float)) and isinstance(wall, (int, float)) and
-                0 <= monotonic - stamp <= 86400 and abs(now - wall - (monotonic - stamp)) <= 60)
+                0 <= monotonic - stamp <= 86400 and abs(drift) <= 60)
     ready = valid and coherent and anchor.get('source') in ('ntp', 'retained_rtc')
     return {'schema': 1, 'clock_sane': valid, 'tls_ready': bool(ready),
             'reason': 'reasonable_clock' if ready else 'clock_not_established',
@@ -61,7 +75,7 @@ def bootstrap(ctx, now=None):
             if result['ok']:
                 now = target
     value = {'schema': 1, 'boot_id': ctx.read('/proc/sys/kernel/random/boot_id'),
-             'epoch': now, 'monotonic_s': time.monotonic(), 'source': source}
+             'epoch': now, 'monotonic_s': time.monotonic(), 'boottime_s': boottime(), 'source': source}
     atomic_json(runtime / 'time.json', value)
     return value
 
@@ -79,7 +93,7 @@ def ntp_event(ctx, event, env, now=None):
         if event == 'unsync' or not 1 <= stratum < 16 or not plausible(now, ctx.integer('/etc/y2linux/build-epoch')):
             return {'state': 'Unavailable', 'reason': 'ntp_unsynchronized_or_implausible'}
         value = {'schema': 1, 'boot_id': ctx.read('/proc/sys/kernel/random/boot_id'),
-                 'epoch': now, 'monotonic_s': time.monotonic(), 'source': 'ntp',
+                 'epoch': now, 'monotonic_s': time.monotonic(), 'boottime_s': boottime(), 'source': 'ntp',
                  'stratum': stratum, 'authenticated': False, 'event': event}
         atomic_json(runtime / 'time.json', value)
         # Durable floor at most once an hour, plus the first sync. No seeds or
