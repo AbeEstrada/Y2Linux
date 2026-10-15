@@ -350,8 +350,12 @@ def prune(keep=2, dry_run=False):
             shutil.rmtree(path)
     # Reborn changes version every release and Buildroot builds it in a new
     # folder each time (~325 MB): keep only the current version's.
-    version = re.search(r'^version = "([^"]+)"$', (REBORN / 'Cargo.toml').read_text(), re.M).group(1)
-    for path in sorted((WORKSPACE / 'buildroot/build').glob('reborn-*')):
+    # (Without the Reborn checkout, as in the build container, nothing goes.)
+    try:
+        version = re.search(r'^version = "([^"]+)"$', (REBORN / 'Cargo.toml').read_text(), re.M).group(1)
+    except (OSError, AttributeError):
+        version = None
+    for path in sorted((WORKSPACE / 'buildroot/build').glob('reborn-*')) if version else []:
         if path.is_dir() and path.name != f'reborn-{version}':
             removed.append(f'{WORKSPACE.name}/buildroot/build/{path.name}')
             if not dry_run:
