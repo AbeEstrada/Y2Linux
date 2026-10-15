@@ -348,6 +348,14 @@ def prune(keep=2, dry_run=False):
         removed.append(path.name)
         if not dry_run:
             shutil.rmtree(path)
+    # Reborn changes version every release and Buildroot builds it in a new
+    # folder each time (~325 MB): keep only the current version's.
+    version = re.search(r'^version = "([^"]+)"$', (REBORN / 'Cargo.toml').read_text(), re.M).group(1)
+    for path in sorted((WORKSPACE / 'buildroot/build').glob('reborn-*')):
+        if path.is_dir() and path.name != f'reborn-{version}':
+            removed.append(f'{WORKSPACE.name}/buildroot/build/{path.name}')
+            if not dry_run:
+                shutil.rmtree(path)
     # Locked build environments: only the base and the one of the current lock.
     lock = hashlib.sha256((PROJECT / 'tools/build/inputs.lock.json').read_bytes() +
                           (PROJECT / 'tools/build/connectivity-host.lock.json').read_bytes()).hexdigest()
