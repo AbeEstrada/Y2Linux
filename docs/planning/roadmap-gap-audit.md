@@ -8250,3 +8250,22 @@ image changes only by the Reborn package and the release identity). FM radio mov
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.5 / Reborn 1.0.0-beta.5** (Baseline 55, sequence 5450) as a public beta at
 the owner's request; next evidence boundary: the owner's OTA install and the device checks in the Beta 5 report.
+
+
+## BETA-5.1 (Baseline 56) live search and radio section: milestone gap audit — 2026-10-15
+
+**Boundary:** owner: live search with a performance pass, a premium radio section with logos and details, A-to-Z with each
+country's top 10 on top; "yes" to publishing. A public release is a milestone boundary. No hardware, memory-model or platform
+change: Reborn only, plus a native image function in Reborn's media library (`rb_media_logo_file`, same decoders and bounds as
+covers) and outbound logo downloads by the player's existing `curl` (≤300 kB, http(s) only).
+
+| Area | State for Beta 5.1 | Evidence / gap |
+| --- | --- | --- |
+| Live search and index | BUILT, device check owed | 20 000-song host benchmark; tests for navigation into results. |
+| Radio section and logos | BUILT, device check owed | Real directory logos tiled on the host (21/24); image built with the new native symbol verified in `libreborn_media.so`. |
+| Logo downloads | NEW network use | Bounded size/time, http(s) only, cached; decoded by the existing image decoders. |
+| FM radio | NOT STARTED | Beta 6, own audit first. |
+| Power, display, USB, install | unchanged | Sleep ≈9.4 mA. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.5.1 / Reborn 1.0.0-beta.5.1** (Baseline 56, sequence 5500) as a public beta
+at the owner's request; next evidence boundary: the owner's OTA install and the device checks in the Beta 5.1 report.

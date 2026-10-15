@@ -1,6 +1,12 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 5 (BASELINE 55) PUBLISHED — KEYBOARD, SEARCH, UI PASS.** Release `1.0.0-beta.5`, tag `baseline-55`, sequence 5450, Linux `5dd995f` + docs, Reborn `84df9ae`; report `docs/validation/Y2-LINUX-1.0-BETA-5.md`, audit BETA-5.
+> **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 5.1 (BASELINE 56) PUBLISHED — LIVE SEARCH, RADIO SECTION.** Release `1.0.0-beta.5.1`, tag `baseline-56`, sequence 5500, Linux `e9ac2a5` + docs, Reborn `35e333d`; report `docs/validation/Y2-LINUX-1.0-BETA-5.1.md`, audit BETA-5.1.
+>
+> - **Reborn:** live search (`keyboard::LIVE_ROWS`, `Ui::show_live_results`), search index (`search::Index`, benchmark `cargo test -p reborn-ui --release -- --ignored --nocapture speed`), radio section `views_radio` (logos via `radio::fetch_logo` → `LogoFetcher` in main → `artwork::Art::Logo` → `rb_media_logo_file` + `art::logo_tile`; live logo check `REBORN_LOGO_OUT=dir cargo test -p reborn -- --ignored live_logos`), ranked top 10 (`RadioView::set_stations_ranked`), Station Info (`Screen::RadioInfo`), zapping (`Runtime::zap`).
+> - **Owed on the device:** logos in lists/Now Playing, top 10 + A–Z, Station Info, Previous/Next between stations, live search; plus the Beta 5 and 4.1 checks.
+> - **Next: FM radio (Beta 6)**, audit first.
+
+> Previous entry: **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 5 (BASELINE 55) PUBLISHED — KEYBOARD, SEARCH, UI PASS.** Release `1.0.0-beta.5`, tag `baseline-55`, sequence 5450, Linux `5dd995f` + docs, Reborn `84df9ae`; report `docs/validation/Y2-LINUX-1.0-BETA-5.md`, audit BETA-5.
 >
 > - **What changed (Reborn):** `reborn_ui::keyboard` (QWERTY, pages, owner: Back = up / hold Back = leave), `ActionRouter::set_keyboard` (buttons as arrows, wheel inert), `reborn_ui::search` + `Screen::Search` (Home → Search), UI pass (Title Case rule, toasts in the status bar, opaque power hold). Previews: `cargo run --bin reborn-preview -- DIR` + `tools/preview/render_previews.py`.
 > - **Owed on the device:** password join, radio and library search, held-button repeat speed, hold Back cancel, playback while typing; plus the Beta 4.1 checks below.

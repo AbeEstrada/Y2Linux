@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 5, Baseline 55 — 2026-10-15 (latest, published)
+## Y2Linux 1.0 Beta 5.1, Baseline 56 — 2026-10-15 (latest, published)
+
+Release `1.0.0-beta.5.1` (Reborn `1.0.0-beta.5.1`), tag `baseline-56`, Linux `e9ac2a5`, Reborn `35e333d`. Reborn: live library
+search with a ~130× faster index, and Radio as its own section (station logos, Station Info, LIVE badges, A–Z lists with
+each country's top 10 on top, Previous/Next between stations). Details: [Beta 5.1 report](validation/Y2-LINUX-1.0-BETA-5.1.md).
+
+## Y2Linux 1.0 Beta 5, Baseline 55 — 2026-10-15 (published)
 
 Release `1.0.0-beta.5` (Reborn `1.0.0-beta.5`), tag `baseline-55`, Linux `5dd995f`, Reborn `84df9ae`. Reborn only: a
 full-screen keyboard driven by the buttons (Wi-Fi password, station search, library search), library search (Home → Search)
