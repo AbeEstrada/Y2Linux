@@ -272,10 +272,10 @@ def build(args):
         prune(args.keep)
 
 
-def previous_package(current):
-    """The sealed update package of the newest earlier release output."""
+def previous_package(current=None):
+    """The sealed update package of the newest published release: what players run."""
     finished = sorted((path for path in OUT.glob('release-*') if path != current and
-                       (path / 'summary.json').exists() and (path / 'update/manifest.json').exists()),
+                       (path / 'published.json').exists() and (path / 'update/manifest.json').exists()),
                       key=lambda path: path.stat().st_mtime, reverse=True)
     legacy = sorted((path for path in OUT.glob('y2linux-*-update') if (path / 'manifest.json').exists()),
                     key=lambda path: path.stat().st_mtime, reverse=True)
@@ -307,10 +307,14 @@ def prune(keep=2, dry_run=False):
     # The workspace is the only build; older per-release build folders go.
     kept, doomed = builds[:1], builds[1:]
     kept_releases = releases[:keep]
-    if len(kept_releases) < keep:
-        # Until two releases exist in the new layout, keep the newest legacy update package.
-        packages = newest(path for path in legacy if (path / 'manifest.json').exists() and path.name.endswith('-update'))
-        kept_releases += packages[:keep - len(kept_releases)]
+    try:
+        # The next release's base: the newest published one, never pruned.
+        base = previous_package()
+        base = base.parent if base.name == 'update' else base
+        if base not in kept_releases:
+            kept_releases = kept_releases[:keep - 1] + [base]
+    except SystemExit:
+        pass
     doomed += [path for path in releases[keep:] + legacy if path not in kept_releases]
     # One pass per kept build: which other build folders does it still name?
     # Plain Python: no dependency on the host grep (the locked one lacks -I/-o).
@@ -410,6 +414,7 @@ def publish(args):
                             capture_output=True, check=True).stdout
     if served != (assets / 'manifest.json').read_bytes():
         raise SystemExit('releases/latest does not serve this manifest yet')
+    (release / 'published.json').write_text(json.dumps({'tag': tag, 'title': args.title}) + '\n')
     print(f'published {tag}: uploaded {len(upload)}, linked {len(linked)}; latest serves it')
 
 

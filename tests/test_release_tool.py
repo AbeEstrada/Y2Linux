@@ -24,7 +24,8 @@ class ReleaseTool(unittest.TestCase):
             for number, age in (('34', 1), ('50', 2), ('51', 3)):
                 folder(f'power-final-{number}-build', age)
             for label, age in (('52', 4), ('53', 5), ('54', 6)):
-                folder(f'release-{label}', age, [('summary.json', '{}'), ('update/manifest.json', '{}')])
+                folder(f'release-{label}', age, [('summary.json', '{}'), ('update/manifest.json', '{}')]
+                       + [('published.json', '{}')] * (label != '54'))
             folder('y2linux-1.0.0-beta.2-update', 3, [('manifest.json', '{}')])
             folder('y2linux-platform-v1-power-final-candidate-49', 2)
             folder('release-51-assets', 3)
@@ -32,7 +33,8 @@ class ReleaseTool(unittest.TestCase):
                 folder(keep, 0)
             with patch.object(release, 'OUT', out), patch.object(release, 'WORKSPACE', out / 'build'):
                 removed, skipped = release.prune(2)
-                self.assertEqual(release.previous_package(out / 'release-55'), out / 'release-54/update')
+                # 54 was built but not published: the base stays the published 53.
+                self.assertEqual(release.previous_package(out / 'release-55'), out / 'release-53/update')
             left = sorted(path.name for path in out.iterdir())
             self.assertEqual(left, ['build', 'deep-sleep-final', 'power-final-34-build', 'rea',
                                     'release-53', 'release-54', 'screenshots'])
