@@ -8325,3 +8325,19 @@ licence entry in the Reborn package. New: one redraw per minute while the screen
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.6.2 / Reborn 1.0.0-beta.6.2** (Baseline 59, sequence 5700) as a public beta
 at the owner's request; next evidence boundary: the owner's OTA install and the Beta 6.2 report's device checks.
+
+
+## BETA-6.3 (Baseline 60) sleep while paused: milestone gap audit — 2026-10-16
+
+**Boundary:** owner: Power while paused stayed awake ("finishing another task"); "yes" to publish. A public release is a
+milestone boundary. No hardware, memory-model or platform change; one Reborn runtime change (a held pause is released before a
+sleep request) and one log event.
+
+| Area | State for Beta 6.3 | Evidence / gap |
+| --- | --- | --- |
+| Sleep while paused | BUILT, device check owed | Device journal: four refusals `activity_operation:808/reborn`; cause in the report; runtime path has no host harness. |
+| Pause in place | UNCHANGED otherwise | Still instant within 3 minutes; after a sleep request Play restarts at the same place. |
+| FM radio | NOT STARTED | Beta 7, own audit first. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.6.3 / Reborn 1.0.0-beta.6.3** (Baseline 60, sequence 5750) as a public beta
+at the owner's request; next evidence boundary: the owner's OTA install and the Beta 6.3 report's device checks.

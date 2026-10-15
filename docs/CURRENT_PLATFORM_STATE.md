@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 6.2, Baseline 59 — 2026-10-16 (latest, published)
+## Y2Linux 1.0 Beta 6.3, Baseline 60 — 2026-10-16 (latest, published)
+
+Release `1.0.0-beta.6.3` (Reborn `1.0.0-beta.6.3`), tag `baseline-60`, Linux `b20404c`, Reborn `b18d98c`. Reborn fix: Power while
+paused was refused ("finishing another task") because the held sink's activity lease blocked the platform's lock check; a sleep
+request now releases the held pause first. Details: [Beta 6.3 report](validation/Y2-LINUX-1.0-BETA-6.3.md).
+
+## Y2Linux 1.0 Beta 6.2, Baseline 59 — 2026-10-16 (published)
 
 Release `1.0.0-beta.6.2` (Reborn `1.0.0-beta.6.2`), tag `baseline-59`, Linux `8e07f47`, Reborn `f0f1091`. Reborn: a status-bar
 clock with a Time Zone setting (PR #10), the clock and today's screens (radio, Station Info, keyboard, Favorites heart) in every

@@ -1,12 +1,13 @@
 # Y2Linux documentation
 
-**Y2Linux 1.0 Beta 6.2 (Baseline 59, 2026-10-16)** is the current published state (sixth
+**Y2Linux 1.0 Beta 6.3 (Baseline 60, 2026-10-16)** is the current published state (sixth
 public beta with fixes, a clock and a new skin): ready-made images on the [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases),
 installed once with SP Flash Tool, then updated over Wi-Fi by the player itself
 ([recovery and updates](RECOVERY-AND-UPDATES.md)). No image carries MediaTek's radio firmware: each
 player takes it from its owner's Innioasis package ([INSTALL](INSTALL.md)). What works, what does not
 and the latest hardware results: [current platform state](CURRENT_PLATFORM_STATE.md); the beta's
-evidence and open gaps: [1.0 Beta 6.2 report](validation/Y2-LINUX-1.0-BETA-6.2.md),
+evidence and open gaps: [1.0 Beta 6.3 report](validation/Y2-LINUX-1.0-BETA-6.3.md),
+[1.0 Beta 6.2 report](validation/Y2-LINUX-1.0-BETA-6.2.md),
 [1.0 Beta 6.1 report](validation/Y2-LINUX-1.0-BETA-6.1.md),
 [1.0 Beta 6 report](validation/Y2-LINUX-1.0-BETA-6.md),
 [1.0 Beta 5.1 report](validation/Y2-LINUX-1.0-BETA-5.1.md),

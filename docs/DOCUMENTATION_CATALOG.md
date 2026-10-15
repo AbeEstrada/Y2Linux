@@ -332,7 +332,8 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [Y2Linux 1.0 Beta 5.1 (Baseline 56)](validation/Y2-LINUX-1.0-BETA-5.1.md) | Live search, radio section with logos |
 | [Y2Linux 1.0 Beta 6 (Baseline 57)](validation/Y2-LINUX-1.0-BETA-6.md) | Playlists, pause in place, seeking |
 | [Y2Linux 1.0 Beta 6.1 (Baseline 58)](validation/Y2-LINUX-1.0-BETA-6.1.md) | Bluetooth resume, skipping while starting, SD duplicates |
-| [Y2Linux 1.0 Beta 6.2 (Baseline 59)](validation/Y2-LINUX-1.0-BETA-6.2.md) | Current entry: clock, skins for the newer screens, Bunny Bow |
+| [Y2Linux 1.0 Beta 6.2 (Baseline 59)](validation/Y2-LINUX-1.0-BETA-6.2.md) | Clock, skins for the newer screens, Bunny Bow |
+| [Y2Linux 1.0 Beta 6.3 (Baseline 60)](validation/Y2-LINUX-1.0-BETA-6.3.md) | Current entry: sleep while paused |
 | [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |
 | [POWER-FINAL-32 — deep idle during screen-off playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) | Sealed candidate report (in 33) |
 | [POWER-FINAL-31 — folder-first artwork and metadata formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) | Sealed candidate report (in 33) |
