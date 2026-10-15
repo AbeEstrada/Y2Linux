@@ -83,7 +83,7 @@ def bump(args):
     prefix, minor = identity['rootfs_version'].rsplit('.', 1)
     identity.update(release_version=args.version,
                     rootfs_version=f'{prefix}.{int(minor) + 1}',
-                    build_id='Y2LINUX-' + args.version.upper().replace('.', '-'),
+                    build_id='Y2LINUX-' + re.sub(r'-([A-Z]+)\.(\d+)$', r'-\1-\2', args.version.upper()),  # Y2LINUX-1.0.0-BETA-3
                     update_sequence=args.sequence or identity['update_sequence'] + 100)
     release.write_text(json.dumps(identity, indent=2) + '\n')
     config = PROJECT / 'kernel/config/production.config'
