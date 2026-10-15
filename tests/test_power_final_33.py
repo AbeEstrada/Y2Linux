@@ -22,7 +22,8 @@ class ShippedSkins(unittest.TestCase):
         self.assertIn('skins/classic/fonts/OpenSans-OFL.txt', self.mk)
         # POWER-FINAL-34: the example skins add Noto fonts.
         self.assertIn('skins/paper/fonts/Noto-OFL.txt', self.mk)
-        self.assertIn('Noto fonts of the shipped skins', self.mk)
+        self.assertIn('Noto and Pixelify Sans fonts of the shipped skins', self.mk)
+        self.assertIn('skins/bunny-bow/fonts/PixelifySans-OFL.txt', self.mk)
 
 
 if __name__ == '__main__':
