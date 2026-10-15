@@ -296,7 +296,8 @@ def build(args):
     deterministic_tar(assets / f'Y2Linux-{version}-sources-buildroot-legal-info.tar', legal_info,
                       [path.name for path in legal_info.iterdir() if path.name not in ('sources', 'host-sources')]
                       + [f'sources/{name}' for name in own], epoch)
-    linux = sorted((PROJECT / '.cache/downloads').glob('linux-*.tar.xz'))[-1]
+    # The exact kernel release the images carry, e.g. linux-6.18.56.tar.xz.
+    linux = PROJECT / '.cache/downloads' / f"linux-{versions['kernel_version'].split('-', 1)[0]}.tar.xz"
     shutil.copy2(linux, assets / linux.name)
     sums = ''.join(f'{sha256(path)}  {path.name}\n' for path in sorted(assets.iterdir()) if path.name != 'SHA256SUMS')
     (assets / 'SHA256SUMS').write_text(sums)
