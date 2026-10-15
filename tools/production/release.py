@@ -2,14 +2,18 @@
 """One command per release step: bump the identity, build and seal, publish.
 
     release.py bump --version 1.0.0-beta.3
-    release.py build --label 52            # copy of the newest build, or --clean
+    release.py build --label 52            # resumes out/build; --clean starts over
     release.py publish --label 52 --title "Y2Linux 1.0 Beta 3" --notes notes.md --yes
+    release.py prune --dry-run
 
-`build` never touches GitHub or a device. It copies the newest build folder
-(btrfs reflink), rewrites the absolute build paths in it to the new folder,
-resumes the build at the kernel, runs the release checks in parallel lanes,
-signs the over-the-air update, scans every image for MediaTek firmware and
-assembles the assets under out/release-<label>/. `publish` tags and pushes
+`build` never touches GitHub or a device. It resumes the one build workspace
+out/build at the kernel (a missing workspace, or --clean, builds from
+scratch), runs the release checks in parallel lanes, signs the over-the-air
+update, scans every image for MediaTek firmware and assembles everything a
+release needs under out/release-<label>/; afterwards only the two newest
+release outputs stay (prune). Build folders are never copied: a copy keeps
+absolute paths, symlinks and library search paths of its origin (Beta 2's
+build still used libraries of build 34). `publish` tags and pushes
 both repositories and creates the GitHub release; it re-uploads the large
 third-party source archive and the Linux source only when they changed and
 links the identical files of the release that carries them otherwise.
@@ -36,8 +40,7 @@ REPO = 'SchulzCode/Y2Linux'
 KEY = Path.home() / '.local/share/y2linux/signing/platform-v1-release-20261015.key'
 KEY_ID = 'platform-v1-release-20261015'
 STOCK = Path(os.environ.get('Y2_STOCK_PACKAGE', '/home/luca/Dokumente/Code/Y2Player/y2_v3.2.0_FM-20260813'))
-# An absolute path of any build folder under out/ (not out/x-build.stdout).
-BUILD_PATH = re.compile(re.escape(os.fsencode(OUT)) + rb'/[A-Za-z0-9._-]+-build(?![A-Za-z0-9._-])')
+WORKSPACE = OUT / 'build'
 
 
 def git(repo, *args):
@@ -105,54 +108,6 @@ def bump(args):
 
 # ---------------------------------------------------------------- build
 
-def newest_build():
-    candidates = []
-    for folder in OUT.glob('power-final-*-build'):
-        config = folder / 'buildroot/.config'
-        if (folder / 'versions.json').exists() and config.exists() and \
-                'BR2_PER_PACKAGE_DIRECTORIES=y' in config.read_text():
-            candidates.append((folder.stat().st_mtime, folder))
-    if not candidates:
-        raise SystemExit('no build with per-package directories to copy; run with --clean once')
-    return max(candidates)[1]
-
-
-def relocate(folder):
-    """Point every absolute build path in text files at `folder`.
-
-    Copies inherit absolute paths (.la, .pc, *-config, Makefiles, CMake and
-    libtool files) of the folder they came from, and of that folder's origin:
-    Beta 2 still read pkg-config files and libraries of build 34. Like
-    Buildroot's relocate-sdk.sh, only text files are rewritten.
-    """
-    target = os.fsencode(folder)
-    needle = os.fsencode(OUT) + b'/'
-    changed = 0
-    for directory, folders, files in os.walk(folder):
-        folders[:] = [name for name in folders if name != '.git']
-        for name in files:
-            path = Path(directory) / name
-            if path.is_symlink():
-                continue
-            try:
-                data = path.read_bytes()
-            except OSError:
-                continue
-            # Text files only (as grep -I): binaries keep their bytes.
-            if needle not in data or b'\0' in data[:8192]:
-                continue
-            rewritten = BUILD_PATH.sub(target, data)
-            if rewritten != data:
-                stat = path.stat()
-                if not stat.st_mode & 0o200:  # e.g. read-only installed scripts
-                    os.chmod(path, stat.st_mode | 0o200)
-                path.write_bytes(rewritten)
-                os.chmod(path, stat.st_mode)
-                os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
-                changed += 1
-    return changed
-
-
 def firmware_free(images, stock_system):
     sys.path.insert(0, str(PROJECT / 'tools/platform'))
     from y2_platform import radiofw
@@ -189,40 +144,32 @@ def build(args):
     for repo in (PROJECT, REBORN):
         if git(repo, 'status', '--porcelain'):
             raise SystemExit(f'{repo.name}: commit the reviewed source first')
-    folder = OUT / f'power-final-{args.label}-build'
+    folder = WORKSPACE
     release = OUT / f'release-{args.label}'
-    if args.resume_failed:
-        if not (folder / 'buildroot/.config').exists():
-            raise SystemExit(f'--continue needs an existing {folder.name}')
-        shutil.rmtree(release, ignore_errors=True)
-    elif folder.exists() or release.exists():
-        raise SystemExit(f'{folder.name} or {release.name} already exists')
+    if (release / 'summary.json').exists():
+        raise SystemExit(f'{release.name} is a finished release output; pick another label')
+    shutil.rmtree(release, ignore_errors=True)  # a failed attempt
     release.mkdir(parents=True)
     logs = release / 'receipts'
     logs.mkdir()
     steps = Steps(logs)
     started = time.monotonic()
 
-    previous = None if args.clean or args.resume_failed else (args.source.resolve() if args.source else newest_build())
-    if previous:
-        steps.run('copy', ['cp', '-a', '--reflink=auto', previous, folder])
-    if previous or args.resume_failed:
-        # Outputs of the copied (or failed) run must not pass for this one's.
+    fresh = args.clean or not (folder / 'buildroot/.config').exists()
+    if fresh:
+        shutil.rmtree(folder, ignore_errors=True)
+    else:
+        # Outputs of the previous run must not pass for this one's.
         for stale in [*folder.glob('*.log'), folder / 'release-inventory.json', *folder.glob('data-seed-*')]:
             stale.unlink(missing_ok=True) if stale.is_file() else shutil.rmtree(stale, ignore_errors=True)
         shutil.rmtree(folder / 'buildroot/legal-info', ignore_errors=True)
-    if previous:
-        moment = time.monotonic()
-        changed = relocate(folder)
-        steps.durations['relocate'] = round(time.monotonic() - moment, 1)
-        (logs / 'relocate.log').write_text(f'{previous} -> {folder}: {changed} text files rewritten\n')
     command = ['python3', 'tools/production/build.py', '--output', folder.relative_to(PROJECT), '--public']
-    if previous or args.resume_failed:
+    if not fresh:
         command += ['--resume', 'kernel']
     steps.run('build', command, log='build.log')
     versions = json.loads((folder / 'versions.json').read_text())
     version = versions['release_version']
-    base = args.base_package.resolve() if args.base_package else previous_package(folder, previous, version)
+    base = args.base_package.resolve() if args.base_package else previous_package(release)
 
     update, first = release / 'update', release / 'first-install'
     builder = ['python3', 'tools/build/run.py', '--output', folder.relative_to(PROJECT), '--']
@@ -310,7 +257,7 @@ def build(args):
     summary = {'label': args.label, 'release_version': version, 'kernel_version': versions['kernel_version'],
                'update_sequence': versions['update_sequence'], 'linux_commit': versions['build_git_commit'],
                'reborn_commit': versions['reborn_source_commit'], 'build': str(folder.relative_to(PROJECT)),
-               'copied_from': str(previous.relative_to(PROJECT)) if previous else None,
+               'clean_build': fresh,
                'base_package': str(base), 'production_tests': ran, 'firmware_found': scan,
                'images': {path.name: sha256(path) for path in images},
                'assets': {path.name: path.stat().st_size for path in sorted(assets.iterdir())},
@@ -325,35 +272,40 @@ def build(args):
         prune(args.keep)
 
 
-def previous_package(folder, previous, version):
-    """The sealed update package of the build this one was copied from."""
-    if previous:
-        label = re.fullmatch(r'power-final-(.+)-build', previous.name).group(1)
-        old = json.loads((previous / 'versions.json').read_text())['release_version']
-        for candidate in (OUT / f'release-{label}/update', OUT / f'y2linux-{old}-update'):
-            if (candidate / 'manifest.json').exists():
-                return candidate
+def previous_package(current):
+    """The sealed update package of the newest earlier release output."""
+    finished = sorted((path for path in OUT.glob('release-*') if path != current and
+                       (path / 'summary.json').exists() and (path / 'update/manifest.json').exists()),
+                      key=lambda path: path.stat().st_mtime, reverse=True)
+    legacy = sorted((path for path in OUT.glob('y2linux-*-update') if (path / 'manifest.json').exists()),
+                    key=lambda path: path.stat().st_mtime, reverse=True)
+    for candidate in [path / 'update' for path in finished] + legacy:
+        return candidate
     raise SystemExit('pass --base-package: the sealed update package of the previous release')
 
 
 # ---------------------------------------------------------------- prune
 
 def prune(keep=2, dry_run=False):
-    """Keep only the `keep` newest builds and release outputs in out/.
+    """Keep the build workspace and the `keep` newest release outputs in out/.
 
-    Builds are out/power-final-*-build; release outputs are out/release-* and
-    the older names (y2linux-*, release-NN-assets, candidate packages). Archives
-    (deep-sleep-final), REA work and screenshots are never touched. A build
-    that a kept build still references by absolute path is not deleted.
+    Older build folders are out/power-final-*-build; release outputs are
+    out/release-* and the older names (y2linux-*, release-NN-assets, candidate
+    packages). Archives (deep-sleep-final), REA work and screenshots are never
+    touched. A build that a kept build still references by absolute path is
+    not deleted.
     """
     def newest(paths):
         return sorted(paths, key=lambda path: path.stat().st_mtime, reverse=True)
-    builds = newest(path for path in OUT.glob('power-final-*-build') if path.is_dir())
+    older = newest(path for path in OUT.glob('power-final-*-build') if path.is_dir())
+    # Before the first workspace build, the newest older build is the one kept.
+    builds = ([WORKSPACE] if WORKSPACE.is_dir() else []) + older
     releases = newest(path for path in OUT.glob('release-*') if path.is_dir() and
                       (path / 'summary.json').exists())
     legacy = [path for pattern in ('y2linux-*', 'release-*-assets', 'release-*')
               for path in OUT.glob(pattern) if path.is_dir() and not (path / 'summary.json').exists()]
-    kept, doomed = builds[:keep], builds[keep:]
+    # The workspace is the only build; older per-release build folders go.
+    kept, doomed = builds[:1], builds[1:]
     kept_releases = releases[:keep]
     if len(kept_releases) < keep:
         # Until two releases exist in the new layout, keep the newest legacy update package.
@@ -454,15 +406,12 @@ def main():
     p.add_argument('--sequence', type=int, help='update sequence (default: previous + 100)')
     p = sub.add_parser('build', help='build, check, sign and assemble a release (local only)')
     p.add_argument('--label', required=True, help='baseline number, e.g. 52')
-    p.add_argument('--clean', action='store_true', help='build from scratch instead of copying the newest build')
-    p.add_argument('--continue', dest='resume_failed', action='store_true',
-                   help='resume this label\'s existing build folder after a failure')
-    p.add_argument('--source', type=Path, help='build folder to copy (default: the newest)')
+    p.add_argument('--clean', action='store_true', help='rebuild the workspace out/build from scratch')
     p.add_argument('--base-package', type=Path, help='sealed update package of the previous release')
     p.add_argument('--key', type=Path, default=KEY)
     p.add_argument('--notes', default='', help='notes inside the signed manifest')
-    p.add_argument('--keep', type=int, default=2, help='builds and release outputs kept afterwards')
-    p.add_argument('--no-prune', action='store_true', help='keep every older build this time')
+    p.add_argument('--keep', type=int, default=2, help='release outputs kept afterwards')
+    p.add_argument('--no-prune', action='store_true', help='keep every older output this time')
     p = sub.add_parser('prune', help='remove all but the newest builds and release outputs')
     p.add_argument('--keep', type=int, default=2)
     p.add_argument('--dry-run', action='store_true')
