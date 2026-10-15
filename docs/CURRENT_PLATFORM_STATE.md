@@ -1,6 +1,13 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 4, Baseline 53 — 2026-10-15 (latest, published)
+## Y2Linux 1.0 Beta 4.1, Baseline 54 — 2026-10-15 (latest, published)
+
+Release `1.0.0-beta.4.1` (Reborn `1.0.0-beta.4.1`), tag `baseline-54`, Linux `929ea0d`, Reborn `d0008dd`. Fixes from Beta 4 on
+the player: stopping or pausing a station no longer hangs playback ("playback command queue full"); Wi-Fi no longer shows as
+not connected after screen-off (late platform record); update checks work right after deep sleep (TLS clock compared with
+`CLOCK_BOOTTIME`). Details: [Beta 4.1 report](validation/Y2-LINUX-1.0-BETA-4.1.md).
+
+## Y2Linux 1.0 Beta 4, Baseline 53 — 2026-10-15 (published)
 
 Release `1.0.0-beta.4` (Reborn `1.0.0-beta.4`), tag `baseline-53`, Linux `d681990`, Reborn `94eae20`. Internet radio in
 Reborn (radio-browser.info directory, own `.m3u`/`.pls` lists, favorites, search, live song titles); the player's `curl`

@@ -326,7 +326,8 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [Y2Linux 1.0 Beta 1 (Baseline 50)](validation/Y2-LINUX-1.0-BETA-1.md) | First public beta release; installed over Wi-Fi, overnight archive 155 |
 | [Y2Linux 1.0 Beta 2 (Baseline 51)](validation/Y2-LINUX-1.0-BETA-2.md) | Bluetooth/Wi-Fi fixes, automatic audio output |
 | [Y2Linux 1.0 Beta 3 (Baseline 52)](validation/Y2-LINUX-1.0-BETA-3.md) | AAC quality and adaptive rate, first release via release.py |
-| [Y2Linux 1.0 Beta 4 (Baseline 53)](validation/Y2-LINUX-1.0-BETA-4.md) | Current entry: internet radio |
+| [Y2Linux 1.0 Beta 4 (Baseline 53)](validation/Y2-LINUX-1.0-BETA-4.md) | Internet radio |
+| [Y2Linux 1.0 Beta 4.1 (Baseline 54)](validation/Y2-LINUX-1.0-BETA-4.1.md) | Current entry: radio stop hang, Wi-Fi after screen-off, update clock after sleep |
 | [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |
 | [POWER-FINAL-32 — deep idle during screen-off playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) | Sealed candidate report (in 33) |
 | [POWER-FINAL-31 — folder-first artwork and metadata formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) | Sealed candidate report (in 33) |

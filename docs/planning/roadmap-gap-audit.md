@@ -8212,3 +8212,22 @@ Y2Player 2.5 evidence) is a new hardware subsystem and gets its own audit before
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.4 / Reborn 1.0.0-beta.4** (Baseline 53, sequence 5300) as a public beta; next
 evidence boundary: the owner's OTA install and radio use on the device.
+
+
+## BETA-4.1 (Baseline 54) radio and Wi-Fi fixes: milestone gap audit — 2026-10-15
+
+**Boundary:** owner, after installing Beta 4: "playback command queue full", Wi-Fi shown as unavailable after screen-off or
+sleep until restarted (radio and updates), "do 4.1". A public release is a milestone boundary. No hardware, memory or
+production scope change: fixes in Reborn's radio/Wi-Fi status handling and the platform's TLS clock check.
+
+| Area | State for Beta 4.1 | Evidence / gap |
+| --- | --- | --- |
+| Internet radio | FIXED, device check owed | Stop deadlock reproduced by a host test (hangs without the fix); Beta 4 Reborn log and zombie `curl` on the player. |
+| Wi-Fi status | FIXED, device check owed | `network.json` ages up to 12.0 s measured with the screen dark (limit was 15 s); three owner Wi-Fi restarts after screen-off in the Reborn log. |
+| Update clock | FIXED, device check owed | Monotonic-vs-wall comparison fails after any suspend over 60 s; host test simulates one hour asleep. |
+| Bluetooth after wake | OPEN | Owner suspicion; no log evidence yet. |
+| FM radio | NOT STARTED | Beta 5, own audit first. |
+| Power, display, USB, install | unchanged | Sleep ≈9.4 mA. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.4.1 / Reborn 1.0.0-beta.4.1** (Baseline 54, sequence 5350) as a public beta
+at the owner's request; next evidence boundary: the owner's OTA install and the device checks in the Beta 4.1 report.

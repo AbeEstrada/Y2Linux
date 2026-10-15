@@ -1,6 +1,12 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 4 (BASELINE 53) PUBLISHED — INTERNET RADIO.** Release `1.0.0-beta.4`, tag `baseline-53`, sequence 5300, Linux `d681990` + docs, Reborn `94eae20`; report `docs/validation/Y2-LINUX-1.0-BETA-4.md`, audit BETA-4.
+> **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 4.1 (BASELINE 54) PUBLISHED — RADIO/WI-FI FIXES.** Release `1.0.0-beta.4.1`, tag `baseline-54`, sequence 5350, Linux `929ea0d` + docs, Reborn `d0008dd`; report `docs/validation/Y2-LINUX-1.0-BETA-4.1.md`, audit BETA-4.1.
+>
+> - **Fixed:** radio `Stream::drop` deadlock ("playback command queue full"); radio availability per loop pass; Reborn accepts an Online `network.json` up to 45 s and falls back to the supplicant; TLS clock coherence via `CLOCK_BOOTTIME` (updates after sleep). `release.py bump` takes point betas.
+> - **Owed on the device:** station stop/pause/switch; Wi-Fi + Radio after 10+ min screen-off without a Wi-Fi restart; Check for Updates right after deep sleep; Bluetooth after wake (owner suspects a problem, no evidence yet).
+> - **Then FM radio (Beta 5)** as planned below.
+
+> Previous entry: **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 4 (BASELINE 53) PUBLISHED — INTERNET RADIO.** Release `1.0.0-beta.4`, tag `baseline-53`, sequence 5300, Linux `d681990` + docs, Reborn `94eae20`; report `docs/validation/Y2-LINUX-1.0-BETA-4.md`, audit BETA-4.
 >
 > - **Internet radio** (Reborn `reborn_platform::radio`, `Decoder::open_stream`, screens Radio/RadioStations/RadioCategories): radio-browser.info directory, own `.m3u`/`.pls` in a `Radio` folder, favorites `/data/reborn/state/radio.json`, curl fetcher + ICY + reconnect; FFmpeg still network-free.
 > - **Owed on the device after the OTA install:** play Popular stations, titles, favorites after restart, search, Wi-Fi drop reconnect, CPU/battery while streaming, Bluetooth while streaming. "Another pass" if needed (owner).
