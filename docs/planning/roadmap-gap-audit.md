@@ -8185,7 +8185,7 @@ safety check (no further device writes).
 | Area | State for Beta 3 | Evidence / gap |
 | --- | --- | --- |
 | AAC quality | BUILT, device check owed | Afterburner, peer rate capped to one packet per frame; host-tested arithmetic; listening comparison owed. |
-| AAC stability | BUILT, device check owed | Adaptive CBR rate (patch 0002) host-tested; range/Wi-Fi-load test with  owed. |
+| AAC stability | BUILT, device check owed | Adaptive CBR rate (patch 0002) host-tested; range/Wi-Fi-load test with `aac_abr_level` owed. |
 | SBC XQ | READY (owner choice) | Ungated; default unchanged. |
 | Coexistence | NO CHANGE NEEDED | Stock shared-antenna setting already sent. |
 | Power, display, USB, install | unchanged from BETA-2 | Sleep ≈9.4 mA vs ≈1.3 mA stock. |
