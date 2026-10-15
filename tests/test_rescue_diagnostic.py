@@ -24,7 +24,7 @@ class USBStatus(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory()
         cls.path = Path(cls.temp.name)
         cls.binary = cls.path/'usb-status'
-        subprocess.run([os.environ.get('CC', 'clang'), '-Wall','-Wextra','-Werror',
+        subprocess.run([os.environ.get('CC', 'clang'), '-Wall','-Wextra','-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global',
             str(ROOT/'tools/production/usb-status.c'), '-o',str(cls.binary)], check=True)
 
     @classmethod

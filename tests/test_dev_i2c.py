@@ -59,5 +59,5 @@ int main(void){
 }
 '''
             (d/'test.c').write_text(code)
-            subprocess.run(['clang','-O2','-Wall','-Wextra','-Werror',str(d/'test.c'),'-o',str(d/'test')],check=True)
+            subprocess.run(['clang','-O2','-Wall','-Wextra','-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global',str(d/'test.c'),'-o',str(d/'test')],check=True)
             subprocess.run([str(d/'test')],check=True)

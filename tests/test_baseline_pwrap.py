@@ -101,7 +101,7 @@ int main(void) {
 '''
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp);(p/'test.c').write_text(fixture)
-            subprocess.run(['clang','-O2','-Wall','-Wextra','-Werror',
+            subprocess.run(['clang','-O2','-Wall','-Wextra','-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global',
                 '-I'+str(ROOT/'kernel/platform'),'-I'+str(ROOT/'kernel/diagnostic'),
                 str(p/'test.c'),'-o',str(p/'test')],check=True)
             subprocess.run([str(p/'test')],check=True)

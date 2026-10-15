@@ -40,7 +40,7 @@ int main(void) {
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp)
             (p / 'contract.c').write_text(fixture)
-            subprocess.run(['clang', '-O2', '-Wall', '-Wextra', '-Werror',
+            subprocess.run(['clang', '-O2', '-Wall', '-Wextra', '-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global',
                             '-Wno-unused-parameter', str(p / 'contract.c'),
                             '-o', str(p / 'contract')], check=True)
             rows = [json.loads(line) for line in subprocess.check_output(

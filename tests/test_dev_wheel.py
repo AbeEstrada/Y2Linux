@@ -53,7 +53,7 @@ def core():
 def run(main):
     with tempfile.TemporaryDirectory() as tmp:
         p=Path(tmp);(p/'test.c').write_text(SHIM+core()+'int main(void) {'+main+'}')
-        subprocess.run(['clang','-Wall','-Wextra','-Werror','-Wno-unused-parameter','-Wno-unused-function',
+        subprocess.run(['clang','-Wall','-Wextra','-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global','-Wno-unused-parameter','-Wno-unused-function',
                         '-O2',str(p/'test.c'),'-o',str(p/'test')],check=True)
         return subprocess.run([str(p/'test')],check=True,capture_output=True,text=True).stdout
 

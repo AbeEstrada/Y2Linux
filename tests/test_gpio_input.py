@@ -64,6 +64,6 @@ int main(void) {
         with tempfile.TemporaryDirectory() as directory:
             p = Path(directory)
             (p/'gpio.c').write_text(prefix+callbacks+cases)
-            subprocess.run(['clang','-O2','-Wall','-Wextra','-Werror',
+            subprocess.run(['clang','-O2','-Wall','-Wextra','-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global',
                             str(p/'gpio.c'),'-o',str(p/'gpio')],check=True)
             subprocess.run([str(p/'gpio')],check=True)

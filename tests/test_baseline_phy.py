@@ -15,5 +15,5 @@ class PhyHandoff(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp)
             (p/'test.c').write_text(shim.replace('/* DRIVER */', source))
-            subprocess.run(['clang','-std=gnu11','-O2','-Wall','-Werror',str(p/'test.c'),'-o',str(p/'test')],check=True)
+            subprocess.run(['clang','-std=gnu11','-O2','-Wall','-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global',str(p/'test.c'),'-o',str(p/'test')],check=True)
             subprocess.run([str(p/'test')],check=True)

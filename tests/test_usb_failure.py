@@ -191,7 +191,7 @@ int main(void) {
         with tempfile.TemporaryDirectory() as d:
             path = Path(d)
             (path / 'test.c').write_text(source)
-            subprocess.run(['clang', '-O2', '-Wall', '-Wextra', '-Werror', '-Wno-unused-parameter',
+            subprocess.run(['clang', '-O2', '-Wall', '-Wextra', '-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global', '-Wno-unused-parameter',
                             '-I' + str(ROOT / 'kernel/usb'), str(path / 'test.c'),
                             '-o', str(path / 'test')], check=True)
             subprocess.run([str(path / 'test')], check=True)

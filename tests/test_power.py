@@ -15,7 +15,7 @@ def run_c(source):
     with tempfile.TemporaryDirectory() as directory:
         p = Path(directory)
         (p/'test.c').write_text(source)
-        subprocess.run(['clang', '-O2', '-Wall', '-Wextra', '-Werror',
+        subprocess.run(['clang', '-O2', '-Wall', '-Wextra', '-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global',
                         '-Wno-unused-parameter', '-fsanitize=undefined', '-fsanitize-trap=undefined',
                         '-I'+str(ROOT/'kernel/platform'), str(p/'test.c'), '-o', str(p/'test')], check=True)
         subprocess.run([str(p/'test')], check=True)

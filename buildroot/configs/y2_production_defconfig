@@ -6,6 +6,12 @@ BR2_TOOLCHAIN_EXTERNAL=y
 BR2_TOOLCHAIN_EXTERNAL_BOOTLIN=y
 BR2_TOOLCHAIN_EXTERNAL_BOOTLIN_ARMV7_EABIHF_GLIBC_STABLE=y
 BR2_REPRODUCIBLE=y
+# Packages build in parallel (each in its own host/target view), and compiler
+# output is cached across clean builds and build folders. A clean userspace
+# build was ≈20 min of strictly serial package work.
+BR2_PER_PACKAGE_DIRECTORIES=y
+BR2_CCACHE=y
+BR2_CCACHE_DIR="$(BR2_EXTERNAL_Y2LINUX_PATH)/../.cache/ccache"
 BR2_TARGET_GENERIC_HOSTNAME="y2linux"
 BR2_TARGET_GENERIC_ISSUE="Y2Linux Platform v1 Candidate (Buildroot)"
 BR2_TARGET_GENERIC_ROOT_PASSWD="!"

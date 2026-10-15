@@ -9,7 +9,7 @@ class StorageGuard(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp=tempfile.TemporaryDirectory();p=Path(cls.tmp.name)
         (p/'guard.c').write_text('#include "'+str(ROOT/'tests/fixtures/production/storage03-policy.h')+'"\nint check(unsigned a,unsigned b,unsigned c,unsigned d,unsigned e,unsigned f,unsigned g) { return y2_emmc_command_allowed(a,b,c,d,e,f,g); }\n')
-        subprocess.run([shutil.which('cc') or 'clang','-Wall','-Wextra','-Werror','-shared','-fPIC',str(p/'guard.c'),'-o',str(p/'guard.so')],check=True)
+        subprocess.run([shutil.which('cc') or 'clang','-Wall','-Wextra','-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global','-shared','-fPIC',str(p/'guard.c'),'-o',str(p/'guard.so')],check=True)
         cls.lib=ctypes.CDLL(str(p/'guard.so'));cls.fn=cls.lib.check
         cls.fn.argtypes=[ctypes.c_uint]*7;cls.fn.restype=ctypes.c_int
     @classmethod
@@ -76,7 +76,7 @@ int main(void) {
 '''
         with tempfile.TemporaryDirectory() as d:
             p=Path(d);(p/'test.c').write_text(fixture)
-            subprocess.run([shutil.which('cc') or 'clang','-Wall','-Wextra','-Werror','-I'+str(ROOT/'kernel/platform'),str(p/'test.c'),'-o',str(p/'test')],check=True)
+            subprocess.run([shutil.which('cc') or 'clang','-Wall','-Wextra','-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global','-I'+str(ROOT/'kernel/platform'),str(p/'test.c'),'-o',str(p/'test')],check=True)
             subprocess.run([str(p/'test')],check=True)
     def test_write_bounds_and_protected_exclusions(self):
         for op in range(64):

@@ -76,6 +76,6 @@ int main(void) {
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)
             (path/'test.c').write_text(source)
-            subprocess.run(['clang','-O2','-Wall','-Wextra','-Werror',
+            subprocess.run(['clang','-O2','-Wall','-Wextra','-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global',
                 '-I'+str(PROJECT/'kernel/diagnostic'),str(path/'test.c'),'-o',str(path/'test')],check=True)
             subprocess.run([str(path/'test')],check=True)

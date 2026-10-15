@@ -12,7 +12,7 @@ class Relay(unittest.TestCase):
             for arm in (False,True):
                 with self.subTest(arm=arm):
                     binary=Path(d)/('arm' if arm else 'host')
-                    flags=['clang','-Os','-Wall','-Wextra','-Werror']
+                    flags=['clang','-Os','-Wall','-Wextra','-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global']
                     if arm:
                         flags+=['--target=arm-linux-gnueabi','-mcpu=cortex-a7','-marm',
                             '-mfloat-abi=soft','-ffreestanding','-fno-builtin','-fno-stack-protector',

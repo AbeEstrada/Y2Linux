@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Build an isolated production candidate. No physical devices or deployment."""
-import argparse, json, os, re, shutil, subprocess
+import argparse, hashlib, json, os, re, shutil, subprocess
 from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
@@ -11,6 +11,7 @@ from tools.production.application import (source_version as reborn_source_versio
 from tools.production.modernize_buildroot import apply as apply_buildroot_modernization
 PROJECT=Path(__file__).resolve().parents[2]
 REBORN=PROJECT.parent/'Y2Reborn'
+JOBS=str(os.cpu_count() or 4)
 
 def dirty_source(path):
     """Return reviewed source changes, excluding reference-only inputs."""
@@ -84,6 +85,9 @@ def main():
             p.error('cannot package a retained rootfs without an identifiable Reborn version')
         versions['reborn_version']=installed_reborn_version
         versions['reborn_source_commit']=installed_reborn_commit
+    config=out/'buildroot/.config'
+    if a.resume and not a.reuse_userspace and config.exists() and 'BR2_PER_PACKAGE_DIRECTORIES=y' not in config.read_text():
+        p.error('this build folder predates per-package directories; start a clean build (no --resume)')
     if a.resume in ('buildroot','artifacts') and (not (out/'kernel-source-commit').exists() or (out/'kernel-source-commit').read_text().strip()!=commit):p.error('kernel source commit changed; resume kernel first')
     (out/'versions.json').write_text(json.dumps(versions,indent=2)+'\n')
     environment(PROJECT)
@@ -104,7 +108,7 @@ def main():
     builder=['python3','tools/build/run.py','--output',str(out.relative_to(PROJECT)),'--']
     stage=['kernel','buildroot','artifacts'].index(a.resume or 'kernel')
     if stage<=0:
-        run(builder+['sh','-c','make -C /src O=/build/kernel KCONFIG_ALLCONFIG=/project/kernel/config/production.config allnoconfig && python3 /project/tools/build/check_config.py /build/kernel/.config /project/kernel/config/production.config && make -C /src O=/build/kernel -j12 Image zImage modules && sh /project/tools/build/dev_observer.sh'],'kernel-build.log')
+        run(builder+['sh','-c','make -C /src O=/build/kernel KCONFIG_ALLCONFIG=/project/kernel/config/production.config allnoconfig && python3 /project/tools/build/check_config.py /build/kernel/.config /project/kernel/config/production.config && make -C /src O=/build/kernel -j'+JOBS+' Image zImage modules && sh /project/tools/build/dev_observer.sh'],'kernel-build.log')
         (out/'kernel-source-commit').write_text(commit+'\n')
     if stage<=1:
         if a.reuse_userspace:
@@ -133,27 +137,73 @@ def build_userspace(PROJECT,out,source,run,public=False):
     (out/'codec-variant').write_text(('public' if public else 'private')+'\n')
     # Buildroot never removes files of dropped or replaced packages from its
     # target directory (a reused workspace kept libfreeaptx and the full FDK
-    # in a public image). Re-install every package into an empty target; the
-    # compiled packages themselves are reused.
+    # in a public image). With per-package directories the image is assembled
+    # afresh from the current packages' own target views, so an empty target
+    # suffices; the legacy shared target re-installs every package instead.
+    ppd='BR2_PER_PACKAGE_DIRECTORIES=y' in (out/'buildroot/.config').read_text()
     target=out/'buildroot/target'
     if target.exists():
         shutil.rmtree(target)
-        for stamp in (out/'buildroot/build').glob('*/.stamp_target_installed'):
-            stamp.unlink()
+        if not ppd:
+            for stamp in (out/'buildroot/build').glob('*/.stamp_target_installed'):
+                stamp.unlink()
     # Buildroot's local-package stamps do not track edits in this repository.
-    # Rebuild these small native helpers when resuming an existing workspace;
-    # the codec packages follow the public/private variant and the AAC source.
-    run(br+['y2-connectivity-dirclean','y2-gpu-check-dirclean','y2-update-dirclean','y2-mtp-dirclean','reborn-dirclean',
-            'fdk-aac-dirclean','bluez-alsa-dirclean'],'local-package-rebuild.log')
-    run(br+['-j12','toolchain'],'buildroot-toolchain.log')
-    cc=str(out/'buildroot/host/bin/arm-linux-gcc')
+    # Our small native helpers are always rebuilt (under a second each). The
+    # three expensive ones (Reborn ≈13 s, bluez-alsa ≈7 s, fdk-aac ≈4 s) are
+    # rebuilt only when their recorded inputs changed; the codec packages
+    # follow the public/private variant and the AAC source.
+    inputs=expensive_package_inputs(PROJECT,out,public)
+    stamp=out/'buildroot/.y2-package-inputs.json'
+    try: previous=json.loads(stamp.read_text())
+    except (OSError,ValueError): previous={}
+    stale=[name for name,key in inputs.items() if previous.get(name)!=key or not any((out/'buildroot/build').glob(name+'-*'))]
+    stamp.unlink(missing_ok=True) # A failed build below must not look current.
+    rebuild=['y2-connectivity','y2-gpu-check','y2-update','y2-mtp',*stale]
+    if ppd and (out/'buildroot/build').is_dir():
+        # Each package's view holds copies of its dependencies: a rebuilt
+        # package must also rebuild everything that depends on it.
+        shown=subprocess.run(br+[name+'-show-recursive-rdepends' for name in rebuild],cwd=PROJECT,
+                             check=True,capture_output=True,text=True).stdout.split()
+        rebuild=sorted(set(rebuild)|{name for name in shown if (out/'buildroot/per-package'/name).exists()})
+    run(br+[name+'-dirclean' for name in rebuild],'local-package-rebuild.log')
+    with (out/'local-package-rebuild.log').open('a') as f:
+        f.write('rebuilt: '+' '.join(rebuild)+'\n')
+    run(br+['-j'+JOBS,'toolchain'],'buildroot-toolchain.log')
+    # Until host-finalize assembles host/, the cross compiler lives in the
+    # toolchain package's own view.
+    cc=next((str(path) for path in (out/'buildroot/per-package/toolchain-external-bootlin/host/bin/arm-linux-gcc',
+                                    out/'buildroot/host/bin/arm-linux-gcc') if path.exists()),'arm-linux-gcc')
     for name,extra in [('fbtest',[]),('abi-check',['-mcpu=cortex-a7','-mfpu=neon-vfpv4','-mfloat-abi=hard','-marm','-pthread'])]:
         run([cc,'-Os','-Wall','-Wextra','-Werror',*extra,'tools/development/'+name+'.c','-o',str(out/('y2-'+name))],name+'-build.log')
     run([cc,'-Os','-Wall','-Wextra','-Werror','tools/production/usb-status.c','-o',str(out/'y2-usb-status')],'usb-status-build.log')
     run([cc,'-Os','-Wall','-Wextra','-Werror','tools/production/platform-start.c','-o',str(out/'y2-platform-start')],'platform-start-build.log')
     run([cc,'-Os','-Wall','-Wextra','-Werror','tools/production/offline-charge.c','-o',str(out/'y2-offline-charge')],'offline-charge-build.log')
     run(['python3','tools/development/audio-fixtures.py',str(out/'audio')],'audio-fixtures.log')
-    run(br+['-j12','all'],'buildroot-build.log')
+    run(br+['-j'+JOBS,'all'],'buildroot-build.log')
     run(['python3','tools/production/verify-ffmpeg.py','--buildroot-output',str(out/'buildroot')],
         'ffmpeg-verify.log')
+    stamp.write_text(json.dumps(inputs,indent=2,sort_keys=True)+'\n')
+
+def expensive_package_inputs(PROJECT,out,public):
+    """Identity of everything the expensive packages are built from."""
+    def git(repo,spec):
+        return subprocess.check_output(['git','rev-parse',spec],cwd=repo,text=True).strip()
+    # Any configuration, pinned input or Buildroot modernisation change
+    # rebuilds them all. The git-describe lines change with every commit.
+    config=''.join(line for line in (out/'buildroot/.config').read_text().splitlines(True)
+                   if not line.startswith(('# Buildroot ','BR2_EXTERNAL_Y2LINUX_VERSION=')))
+    common=[hashlib.sha256(config.encode()).hexdigest()]+[
+        hashlib.sha256((PROJECT/name).read_bytes()).hexdigest() for name in
+        ('buildroot/inputs.lock.json','tools/production/modernize_buildroot.py','tools/production/ffmpeg9.py','tools/production/build.py')]
+    variant='public' if public else 'private'
+    def key(*parts):
+        return hashlib.sha256('\n'.join([*common,*parts]).encode()).hexdigest()
+    return {
+        # REBORN_BUILD_ID is the Reborn commit; reborn-splash.c and the
+        # package's install files live in this repository.
+        'reborn':key(git(REBORN,'HEAD'),git(PROJECT,'HEAD:buildroot/package/reborn'),
+                     git(PROJECT,'HEAD:tools/graphics/reborn-splash.c')),
+        'fdk-aac':key(variant),
+        'bluez-alsa':key(variant,git(PROJECT,'HEAD:buildroot/patches/bluez-alsa')),
+    }
 if __name__=='__main__':main()

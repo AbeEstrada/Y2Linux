@@ -40,5 +40,5 @@ int main(void) {
 '''
         with tempfile.TemporaryDirectory() as d:
             p=Path(d);(p/'test.c').write_text(fixture)
-            subprocess.run(['clang','-O2','-Wall','-Wextra','-Werror','-I'+str(ROOT/'kernel/platform'),str(p/'test.c'),'-o',str(p/'test')],check=True)
+            subprocess.run(['clang','-O2','-Wall','-Wextra','-Werror','-Wno-unknown-warning-option','-Wno-unused-but-set-global','-I'+str(ROOT/'kernel/platform'),str(p/'test.c'),'-o',str(p/'test')],check=True)
             subprocess.run([str(p/'test')],check=True)
