@@ -104,14 +104,16 @@ public release, and its Firmware-drive install was tested on the device):
   over many wakes. Power off and on if USB stays silent.
 - **Bluetooth:** Beta 2 fixes the reconnect that gave up when the headphones were absent at a wake
   and the transport race behind the radio-start timeouts; both await their device check. AAC is
-  negotiated with AirPods but not yet confirmed by listening. There is no wired-headphone detection:
-  the jack is used whenever no Bluetooth headphones are connected.
+  negotiated with AirPods but not yet confirmed by listening. Beta 6.1 changes how Bluetooth pauses
+  (Beta 6 resumed silently on AirPods); the fix awaits its listening check. There is no
+  wired-headphone detection: the jack is used whenever no Bluetooth headphones are connected.
 - **Install:** the full path from stock has been run on the maintainer's player only. A kernel that
   hangs before its rescue system runs can only be fixed with SP Flash Tool.
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for [1.0 Beta 1](docs/validation/Y2-LINUX-1.0-BETA-1.md),
+reports for 1.0 Beta [6.2](docs/validation/Y2-LINUX-1.0-BETA-6.2.md), [6.1](docs/validation/Y2-LINUX-1.0-BETA-6.1.md), [6](docs/validation/Y2-LINUX-1.0-BETA-6.md), [5.1](docs/validation/Y2-LINUX-1.0-BETA-5.1.md), [5](docs/validation/Y2-LINUX-1.0-BETA-5.md), [4.1](docs/validation/Y2-LINUX-1.0-BETA-4.1.md), [4](docs/validation/Y2-LINUX-1.0-BETA-4.md), [3](docs/validation/Y2-LINUX-1.0-BETA-3.md), [2](docs/validation/Y2-LINUX-1.0-BETA-2.md) and
+[1](docs/validation/Y2-LINUX-1.0-BETA-1.md),
 [49](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-49.md) (firmware-free images, flash package, codecs),
 [48](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-48.md) (download screen),
 [47](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-47.md) (DSI clock gating),
