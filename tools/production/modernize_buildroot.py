@@ -61,7 +61,11 @@ BUMPS = (
     ("expat", (("EXPAT_VERSION = 2.8.4", "EXPAT_VERSION = 2.9.0"),),
      "expat-2.8.4.tar.xz", "expat-2.9.0.tar.xz",
      "1e6371862cc31999b368c3b89b49994f0677e1bab5f1b2b85ae3741f5d803051", ()),
-    ("exfatprogs", (("EXFATPROGS_VERSION = 1.2.9", "EXFATPROGS_VERSION = 1.4.3"),),
+    # 1.4 needs libblkid; undeclared, a serial build only worked because
+    # util-linux happened to come first (the parallel build found it).
+    ("exfatprogs", (("EXFATPROGS_VERSION = 1.2.9", "EXFATPROGS_VERSION = 1.4.3"),
+                    ("$(eval $(autotools-package))",
+                     "EXFATPROGS_DEPENDENCIES = host-pkgconf util-linux\n$(eval $(autotools-package))")),
      "exfatprogs-1.2.9.tar.xz", "exfatprogs-1.4.3.tar.xz",
      "57226a8ec1bfbce06d68a42cde8cd980414a9457882e691fbce4a4f86c8d5f08", ()),
     ("iperf3", (("IPERF3_VERSION = 3.21", "IPERF3_VERSION = 3.22"),),
