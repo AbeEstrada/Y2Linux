@@ -35,7 +35,8 @@ foundation checks and bounded C3 trials. See
 [UART01 hardware](../docs/validation/Y2-CPU-C3-UART-PHYSICAL.md).
 
 
-`tools/production/tests.sh` is the release-facing production-profile runner.
+`tools/production/tests.sh` is the release-facing production-profile runner. `tools/development/host-tests.sh`
+runs the same module list on the host for a quick check (it does not replace the container run).
 Run it inside the locked, device-isolated environment with
 `tools/build/prepare.py` and `tools/build/run.py`. It generates the pinned
 Linux UAPI headers needed by native host checks, runs the curated production

@@ -31,7 +31,15 @@ class ReleaseTool(unittest.TestCase):
             folder('release-51-assets', 3)
             for keep in ('deep-sleep-final', 'rea', 'screenshots'):
                 folder(keep, 0)
-            with patch.object(release, 'OUT', out), patch.object(release, 'WORKSPACE', out / 'build'):
+            project = Path(temporary)
+            (project / 'tools/build').mkdir(parents=True)
+            (project / 'tools/build/inputs.lock.json').write_text('{}')
+            (project / 'tools/build/connectivity-host.lock.json').write_text('[]')
+            active = 'environment-m5-' + hashlib.sha256(b'{}[]').hexdigest()[:12]
+            for name in ('environment', active, 'environment-m5-0123456789ab', 'environment-alpine-retired'):
+                (project / '.cache' / name).mkdir(parents=True)
+            with patch.object(release, 'OUT', out), patch.object(release, 'WORKSPACE', out / 'build'), \
+                    patch.object(release, 'PROJECT', project):
                 removed, skipped = release.prune(2)
                 # 54 was built but not published: the base stays the published 53.
                 self.assertEqual(release.previous_package(out / 'release-55'), out / 'release-53/update')
@@ -39,6 +47,7 @@ class ReleaseTool(unittest.TestCase):
             self.assertEqual(left, ['build', 'deep-sleep-final', 'power-final-34-build', 'rea',
                                     'release-53', 'release-54', 'screenshots'])
             self.assertIn('power-final-34-build', skipped[0])  # the workspace still uses it
+            self.assertEqual(sorted(path.name for path in (project / '.cache').iterdir()), ['environment', active])
 
     def test_source_archives_are_reproducible(self):
         with tempfile.TemporaryDirectory() as temporary:

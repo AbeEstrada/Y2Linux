@@ -348,6 +348,14 @@ def prune(keep=2, dry_run=False):
         removed.append(path.name)
         if not dry_run:
             shutil.rmtree(path)
+    # Locked build environments: only the base and the one of the current lock.
+    lock = hashlib.sha256((PROJECT / 'tools/build/inputs.lock.json').read_bytes() +
+                          (PROJECT / 'tools/build/connectivity-host.lock.json').read_bytes()).hexdigest()
+    for path in sorted((PROJECT / '.cache').glob('environment-*')):
+        if path.is_dir() and path.name != 'environment-m5-' + lock[:12]:
+            removed.append('.cache/' + path.name)
+            if not dry_run:
+                shutil.rmtree(path)
     print(('would remove: ' if dry_run else 'removed: ') + (', '.join(removed) or 'nothing'))
     if skipped:
         print('kept, still in use: ' + '; '.join(skipped))

@@ -9,7 +9,8 @@ the log.
 
 ## 1. Host requirements
 
-- Linux x86_64 with about **15 GB free disk** (download cache about 4 GB, build about 5 GB).
+- Linux x86_64 with about **15 GB free disk** (download cache about 4 GB, build about 7 GB,
+  compiler cache up to 5 GB).
 - **Python 3.12 or newer**.
 - **bubblewrap** (`bwrap`) and unprivileged user namespaces. The kernel build runs in a
   locked, network-isolated Alpine userspace that the tools download and hash-check.
@@ -97,9 +98,14 @@ On the first run this:
    9.0.2 and Y2Reborn (offline, from its vendored crates).
 4. Builds the initramfs and device tree, and validates the artifacts.
 
-The first build takes a long time because Buildroot compiles its own toolchain.
-Later builds reuse `.cache/` and can resume a stage with
-`--resume kernel|buildroot|artifacts`. Logs for each stage are in `out/y2-build/*.log`.
+A first build takes about 8–10 minutes on a 16-thread machine (kernel ≈2 min, Buildroot ≈6 min
+with the Bootlin cross toolchain). Buildroot builds packages in parallel (per-package
+directories) and keeps compiler output in `.cache/ccache`, so a later clean build is faster.
+Resume a stage of an existing build with `--resume kernel|buildroot|artifacts`: about 1 minute,
+because only packages whose inputs changed are rebuilt (Reborn, fdk-aac and bluez-alsa are
+tracked by their inputs; this project's small helpers always rebuild). Logs for each stage are in
+`out/y2-build/*.log`. Don't copy or move a build folder: it contains absolute paths, symlinks and
+library search paths of its own location; resume it in place or build afresh.
 The result is `out/y2-build/BOOTIMG.img` (kernel and rescue initramfs) and
 `out/y2-build/buildroot/images/` (root filesystem).
 
@@ -109,10 +115,16 @@ The result is `out/y2-build/BOOTIMG.img` (kernel and rescue initramfs) and
 python3 tools/build/run.py --output out/y2-build -- sh /project/tools/production/tests.sh
 ```
 
-This runs the platform test suite inside the locked environment. 1.0 Beta 1
-passed 728 cases there. Running the same tests directly on the host gives some
-errors that only depend on the host (missing `qemu-arm`, `pyelftools`); use the
-container.
+This runs the platform test suite inside the locked environment (1.0 Beta 2: 731
+cases, about 30 s). For a quick check while working, run the same test modules on the host in
+about 45 s (needs `clang`, `pyelftools` and `qemu-arm`; Arch: `python-pyelftools qemu-user`):
+
+```sh
+tools/development/host-tests.sh
+```
+
+`python3 -m unittest discover` also collects retained historical tests that are not part of the
+release gate ([tests/README](../tests/README.md)).
 
 Y2Reborn's own tests run on the host (see the Y2Reborn README):
 
@@ -153,6 +165,35 @@ The package must be created in `out/` from the exact commit you built, with a
 clean tree. `Y2DATA.img` carries your SSH public key, so it is personal: don't share it.
 
 Continue with [INSTALL.md](INSTALL.md).
+
+## 7. Releases (maintainer)
+
+`tools/production/release.py` does a release in three commands. Nothing reaches GitHub or a
+player before `publish`.
+
+```sh
+python3 tools/production/release.py bump --version 1.0.0-beta.3   # identity in both repositories
+# review, run the checks, commit Y2Linux and Y2Reborn
+python3 tools/production/release.py build --label 52               # ≈1.5 min
+# write the report and docs, commit them (only docs/ and readme.md may change after the build)
+python3 tools/production/release.py publish --label 52 --title "Y2Linux 1.0 Beta 3" \
+    --notes notes.md --yes
+```
+
+`build` resumes the one build workspace `out/build` (`--clean` rebuilds it from scratch), runs
+the container suite, the update package with its validation and privacy check, the ELF and
+installed-ARM checks, the release inventory, the first-install package and legal-info in parallel
+(≈30 s instead of ≈80 s one after another), signs the update with the release key, checks that no
+image contains MediaTek firmware and puts everything under `out/release-<label>/` (`summary.json`
+lists hashes, test count and the time of every step). The third-party package sources go into a
+reproducible archive named after its hash; `publish` uploads it and the Linux source archive only
+when no earlier release carries the identical file, and links that file otherwise. The base for
+the next update package is always the newest **published** release.
+
+After every successful `build`, `out/` keeps only the workspace, the two newest release outputs
+(always including the newest published one) and the archives (`deep-sleep-final`, `rea`,
+`screenshots`); unused locked build environments in `.cache` go too. A build folder that the
+workspace still uses is never deleted. Preview with `release.py prune --dry-run`.
 
 ## Reference
 
