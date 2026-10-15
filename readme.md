@@ -6,22 +6,22 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Y2Linux 1.0 Beta 3 (Baseline 52, 2026-10-15), public beta.** It runs every day
+> **Status: Y2Linux 1.0 Beta 4 (Baseline 53, 2026-10-15), public beta.** It runs every day
 > on the maintainer's Y2. Install it once from the ready-made images of the
 > [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases) with SP Flash Tool
 > ([INSTALL](docs/INSTALL.md)); after that the player updates itself over Wi-Fi. Only one
 > hardware revision has been tested (see [Supported hardware](#supported-hardware)). Read
 > [Known issues](#known-issues) before you flash: battery life in sleep is not yet stock-like.
 
-| | 1.0 Beta 3 (Baseline 52) |
+| | 1.0 Beta 4 (Baseline 53) |
 | --- | --- |
-| Git tag (both repositories) | `baseline-52` (previous: `baseline-51`); the GitHub release carries the first-install images, the signed over-the-air update and the GPL sources |
-| Release / kernel | `1.0.0-beta.3` / `6.18.56-y2linux-1.0.0-beta.3` (Linux 6.18 long-term line) |
-| Root filesystem | `2026.08-platform-v1.82` (Buildroot 2026.08) |
-| Player | Y2Reborn 1.0.0-beta.3 (Rust 1.99) with Cover Flow, Genres and 15 themes |
+| Git tag (both repositories) | `baseline-53` (previous: `baseline-52`); the GitHub release carries the first-install images, the signed over-the-air update and the GPL sources |
+| Release / kernel | `1.0.0-beta.4` / `6.18.56-y2linux-1.0.0-beta.4` (Linux 6.18 long-term line) |
+| Root filesystem | `2026.08-platform-v1.83` (Buildroot 2026.08) |
+| Player | Y2Reborn 1.0.0-beta.4 (Rust 1.99) with Cover Flow, Genres and 15 themes |
 | Bluetooth codecs | SBC, AAC (fdk-aac-free) and LDAC |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 |
-| Images built from | Y2Linux `2731169`, Y2Reborn `8cd4362` ([Beta 3 report](docs/validation/Y2-LINUX-1.0-BETA-3.md)) |
+| Images built from | Y2Linux `d681990`, Y2Reborn `94eae20` ([Beta 4 report](docs/validation/Y2-LINUX-1.0-BETA-4.md)) |
 
 ## Getting started
 
@@ -65,7 +65,8 @@ public release, and its Firmware-drive install was tested on the device):
   Bluetooth headphones take over from the jack when they connect, the jack when they leave.
   AAC runs in the encoder's high-quality mode at the highest rate the headphones accept (AirPods:
   256 kbit/s) and steps down by itself on a weak link.
-- Wi-Fi (2.4 GHz).
+- Wi-Fi (2.4 GHz) and **internet radio** (Home → Radio): the radio-browser.info directory
+  (popular, by country, by genre, search), favorites and your own `.m3u`/`.pls` lists.
 - USB: MTP (internal storage and SD card), and SSH/SFTP over USB Ethernet for developers.
 - microSD card for music (`/media/sd`). Optionally, the stock FAT partition can be turned into
   a 5.4 GiB ext4 music partition (`y2-platform internal-media provision`).

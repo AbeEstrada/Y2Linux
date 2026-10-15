@@ -8193,3 +8193,22 @@ safety check (no further device writes).
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.3 / Reborn 1.0.0-beta.3** (Baseline 52, update sequence 5200) as a
 public beta at the owner's request; next evidence boundary: the owner's OTA install and an AirPods listening/range check.
+
+
+## BETA-4 (Baseline 53) internet radio: milestone gap audit — 2026-10-15
+
+**Boundary:** owner: FM radio and internet radio for Beta 4, internet radio first; "yes publish so i can update and see on the
+device". A public release is a milestone boundary. Internet radio adds no hardware subsystem: it uses Wi-Fi, the existing
+decoder and `curl`. FM radio (MT6627 in the CONSYS combo; firmware from the owner's `system.img`; indirect audio path per the
+Y2Player 2.5 evidence) is a new hardware subsystem and gets its own audit before implementation.
+
+| Area | State for Beta 4 | Evidence / gap |
+| --- | --- | --- |
+| Internet radio | BUILT, device check owed | Host tests incl. reconnect through real curl; live directory + two real stations decoded on the host; player curl HTTPS verified. |
+| Decoder security | UNCHANGED | FFmpeg `--disable-network`, `file`-only protocols; streams arrive through a pipe. |
+| Bluetooth | unchanged from BETA-3 | Range hardware-limited (stock too); A/B tests (Wi-Fi off, Standard AAC) owed. |
+| FM radio | NOT STARTED | New hardware subsystem: audit, owner-approved device experiments. |
+| Power, display, USB, install | unchanged | Sleep ≈9.4 mA. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.4 / Reborn 1.0.0-beta.4** (Baseline 53, sequence 5300) as a public beta; next
+evidence boundary: the owner's OTA install and radio use on the device.

@@ -1,6 +1,13 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 3 (BASELINE 52) PUBLISHED — BLUETOOTH QUALITY.** Release `1.0.0-beta.3`, tag `baseline-52`, sequence 5200, Linux `2731169` + docs, Reborn `8cd4362`; report `docs/validation/Y2-LINUX-1.0-BETA-3.md`, audit BETA-3. Built with `release.py build --label 52` in 119 s.
+> **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 4 (BASELINE 53) PUBLISHED — INTERNET RADIO.** Release `1.0.0-beta.4`, tag `baseline-53`, sequence 5300, Linux `d681990` + docs, Reborn `94eae20`; report `docs/validation/Y2-LINUX-1.0-BETA-4.md`, audit BETA-4.
+>
+> - **Internet radio** (Reborn `reborn_platform::radio`, `Decoder::open_stream`, screens Radio/RadioStations/RadioCategories): radio-browser.info directory, own `.m3u`/`.pls` in a `Radio` folder, favorites `/data/reborn/state/radio.json`, curl fetcher + ICY + reconnect; FFmpeg still network-free.
+> - **Owed on the device after the OTA install:** play Popular stations, titles, favorites after restart, search, Wi-Fi drop reconnect, CPU/battery while streaming, Bluetooth while streaming. "Another pass" if needed (owner).
+> - **FM radio next** (Beta 5): owner decision — hide FM where a scan finds no station. Plan: audit first (new hardware subsystem); evidence in `Y2Player/docs/FM_RADIO_FEASIBILITY.md`; firmware `mt6627_fm_v1_patch.bin`/`_coeff.bin` + `mt6627_fm_cust.cfg` from the owner's `system.img`; donor driver `drivers/misc/mediatek-consys/fmradio`; device experiments need the owner's OK.
+> - **Bluetooth range** (Beta 3 follow-up): owner hears dropouts at 2–4 m, stock is bad too (hardware). Owed A/B: Wi-Fi off; AAC Standard; SBC.
+
+> Previous entry: **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 3 (BASELINE 52) PUBLISHED — BLUETOOTH QUALITY.** Release `1.0.0-beta.3`, tag `baseline-52`, sequence 5200, Linux `2731169` + docs, Reborn `8cd4362`; report `docs/validation/Y2-LINUX-1.0-BETA-3.md`, audit BETA-3. Built with `release.py build --label 52` in 119 s.
 >
 > - **What changed:** AAC afterburner up to the peer's rate capped to one packet per frame (`y2_aac_mtu_bitrate`), adaptive CBR AAC rate (BlueALSA `buildroot/patches/bluez-alsa/0002-y2-aac-adaptive-bitrate.patch`, `--aac-abr`), settings `aac_quality` (high default) / `aac_abr` (on), EncoderStats for AAC → status `aac_abr_level`/`aac_abr_adjustments`; SBC XQ ungated; Reborn rows AAC Quality / AAC Auto Rate (service menu).
 > - **Device check owed (after OTA, read-only):** `y2-platform status bluetooth` → `encoder.bitrate_bps` (expect 256000 or MTU-capped), `aac_abr_adjustments` 0 at close range; bluealsad CPU vs ≈9 %; owner listening High vs Standard; walk-away test watching `aac_abr_level`.

@@ -1,6 +1,13 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 3, Baseline 52 — 2026-10-15 (latest, published)
+## Y2Linux 1.0 Beta 4, Baseline 53 — 2026-10-15 (latest, published)
+
+Release `1.0.0-beta.4` (Reborn `1.0.0-beta.4`), tag `baseline-53`, Linux `d681990`, Reborn `94eae20`. Internet radio in
+Reborn (radio-browser.info directory, own `.m3u`/`.pls` lists, favorites, search, live song titles); the player's `curl`
+receives streams and FFmpeg stays built without networking. Device checks owed after the OTA install. FM radio next.
+Details: [Beta 4 report](validation/Y2-LINUX-1.0-BETA-4.md).
+
+## Y2Linux 1.0 Beta 3, Baseline 52 — 2026-10-15 (published)
 
 Release `1.0.0-beta.3` (Reborn `1.0.0-beta.3`), tag `baseline-52`, Linux `2731169`, Reborn `8cd4362`. AAC with the FDK
 afterburner up to the peer's rate within one packet per frame (AirPods 256 kbit/s; Beta 2: 220 kbit/s CBR) and an
