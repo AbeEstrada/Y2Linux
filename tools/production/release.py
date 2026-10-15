@@ -144,7 +144,10 @@ def relocate(folder):
             rewritten = BUILD_PATH.sub(target, data)
             if rewritten != data:
                 stat = path.stat()
+                if not stat.st_mode & 0o200:  # e.g. read-only installed scripts
+                    os.chmod(path, stat.st_mode | 0o200)
                 path.write_bytes(rewritten)
+                os.chmod(path, stat.st_mode)
                 os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
                 changed += 1
     return changed
