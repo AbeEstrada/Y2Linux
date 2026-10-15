@@ -203,9 +203,12 @@ def build(args):
     previous = None if args.clean or args.resume_failed else (args.source.resolve() if args.source else newest_build())
     if previous:
         steps.run('copy', ['cp', '-a', '--reflink=auto', previous, folder])
+    if previous or args.resume_failed:
+        # Outputs of the copied (or failed) run must not pass for this one's.
         for stale in [*folder.glob('*.log'), folder / 'release-inventory.json', *folder.glob('data-seed-*')]:
             stale.unlink(missing_ok=True) if stale.is_file() else shutil.rmtree(stale, ignore_errors=True)
         shutil.rmtree(folder / 'buildroot/legal-info', ignore_errors=True)
+    if previous:
         moment = time.monotonic()
         changed = relocate(folder)
         steps.durations['relocate'] = round(time.monotonic() - moment, 1)
