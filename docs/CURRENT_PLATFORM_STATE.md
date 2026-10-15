@@ -1,6 +1,16 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 1, Baseline 50 — 2026-10-16 (latest, published: first public beta)
+## Y2Linux 1.0 Beta 2, Baseline 51 — 2026-10-15 (latest, published)
+
+Release `1.0.0-beta.2` (Reborn `1.0.0-beta.2`), tag `baseline-51`, Linux `fc1f5ea`, Reborn `009cd32`. Bluetooth/Wi-Fi
+review of Beta 1 (archive `20261016/155` and the live player): BTIF receive acknowledges before draining (every BTIF
+timeout on record had the WMT reply unread in the ring); the controller page timeout is set to 5.12 s; `y2-bt-reconnect`
+waits 45 s for BlueZ instead of inhibiting all reconnects after a 10 s client timeout; DNS re-check every 5 min instead of
+30 s; sleep no longer counts as a Wi-Fi link loss; Bluetooth class Portable Audio. Reborn: the output follows the
+headphones (Bluetooth wins over the jack); Wi-Fi passwords with `\` or `"` work. Published without a device test first
+(owner: OTA only). Details: [Beta 2 report](validation/Y2-LINUX-1.0-BETA-2.md).
+
+## Y2Linux 1.0 Beta 1, Baseline 50 — 2026-10-16 (published: first public beta)
 
 Release `1.0.0-beta.1` (Reborn `1.0.0-beta.1`), tag `baseline-50`: first-install images, the signed update and the
 GPL sources on GitHub. 49 plus the firmware watcher and radio restart fixes and Reborn's cancel/failure precedence fix.

@@ -6,22 +6,22 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Y2Linux 1.0 Beta 1 (Baseline 50, 2026-10-16), public beta.** It runs every day
+> **Status: Y2Linux 1.0 Beta 2 (Baseline 51, 2026-10-15), public beta.** It runs every day
 > on the maintainer's Y2. Install it once from the ready-made images of the
 > [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases) with SP Flash Tool
 > ([INSTALL](docs/INSTALL.md)); after that the player updates itself over Wi-Fi. Only one
 > hardware revision has been tested (see [Supported hardware](#supported-hardware)). Read
 > [Known issues](#known-issues) before you flash: battery life in sleep is not yet stock-like.
 
-| | 1.0 Beta 1 (Baseline 50) |
+| | 1.0 Beta 2 (Baseline 51) |
 | --- | --- |
-| Git tag (both repositories) | `baseline-50` (previous: `baseline-49`); the GitHub release carries the first-install images, the signed over-the-air update and the GPL sources |
-| Release / kernel | `1.0.0-beta.1` / `6.18.56-y2linux-1.0.0-beta.1` (Linux 6.18 long-term line) |
-| Root filesystem | `2026.08-platform-v1.80` (Buildroot 2026.08) |
-| Player | Y2Reborn 1.0.0-beta.1 (Rust 1.99) with Cover Flow, Genres and 15 themes |
+| Git tag (both repositories) | `baseline-51` (previous: `baseline-50`); the GitHub release carries the first-install images, the signed over-the-air update and the GPL sources |
+| Release / kernel | `1.0.0-beta.2` / `6.18.56-y2linux-1.0.0-beta.2` (Linux 6.18 long-term line) |
+| Root filesystem | `2026.08-platform-v1.81` (Buildroot 2026.08) |
+| Player | Y2Reborn 1.0.0-beta.2 (Rust 1.99) with Cover Flow, Genres and 15 themes |
 | Bluetooth codecs | SBC, AAC (fdk-aac-free) and LDAC |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 |
-| Images built from | Y2Linux `5ac955f`, Y2Reborn `e394c38` ([Beta 1 report](docs/validation/Y2-LINUX-1.0-BETA-1.md)) |
+| Images built from | Y2Linux `fc1f5ea`, Y2Reborn `009cd32` ([Beta 2 report](docs/validation/Y2-LINUX-1.0-BETA-2.md)) |
 
 ## Getting started
 
@@ -61,7 +61,8 @@ public release, and its Firmware-drive install was tested on the device):
   names), the embedded picture when the folder has none.
 - Wired headphone audio (CS43131 DAC), S16 stereo at 44.1/48 kHz; higher-rate files are converted.
 - Bluetooth audio; the codec is chosen automatically (SBC, or AAC/aptX/LDAC when the
-  headphones support them and BlueALSA offers them).
+  headphones support them and BlueALSA offers them). The output follows the headphones:
+  Bluetooth headphones take over from the jack when they connect, the jack when they leave.
 - Wi-Fi (2.4 GHz).
 - USB: MTP (internal storage and SD card), and SSH/SFTP over USB Ethernet for developers.
 - microSD card for music (`/media/sd`). Optionally, the stock FAT partition can be turned into
@@ -84,7 +85,7 @@ public release, and its Firmware-drive install was tested on the device):
 
 ## Known issues
 
-- **Battery life in sleep is not yet stock-like.** About 8.3 mA asleep (stock: about 1.3 mA,
+- **Battery life in sleep is not yet stock-like.** About 8.3–9.4 mA asleep (stock: about 1.3 mA,
   ≈0.1 points/h); several stock-parity measures since then still await their overnight
   measurement. The percentage is estimated from voltage; there is no current sensor.
 - **Rarely a slow display start.** The display controller sometimes answers register reads one
@@ -92,9 +93,10 @@ public release, and its Firmware-drive install was tested on the device):
   hold Power for 10 s and start again.
 - **USB after a wake from deep sleep** has worked on every wake since 16, but is not yet confirmed
   over many wakes. Power off and on if USB stays silent.
-- **Bluetooth:** saved headphones are not always reconnected after a start or wake (connect them
-  once from Settings → Bluetooth); AAC with the new free library is not yet confirmed with AirPods;
-  playing to a saved but disconnected output fails instead of connecting it.
+- **Bluetooth:** Beta 2 fixes the reconnect that gave up when the headphones were absent at a wake
+  and the transport race behind the radio-start timeouts; both await their device check. AAC is
+  negotiated with AirPods but not yet confirmed by listening. There is no wired-headphone detection:
+  the jack is used whenever no Bluetooth headphones are connected.
 - **Install:** the full path from stock has been run on the maintainer's player only. A kernel that
   hangs before its rescue system runs can only be fixed with SP Flash Tool.
 

@@ -8147,3 +8147,27 @@ Firmware-drive install on the owner's player (archive 154), restart and restart-
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.1 / Reborn 1.0.0-beta.1** (Baseline 50, update sequence 5000) as a
 public beta with the gaps above stated in the release notes and readmes. Not a final 1.0: power parity, AAC
 confirmation and a second-device install remain.
+
+
+## BETA-2 (Baseline 51) Bluetooth/Wi-Fi fixes: milestone gap audit — 2026-10-15
+
+**Boundary:** owner: "fix everything, also add a automatic output reconission … do a full build and release as 51",
+version `1.0.0-beta.2`, "publish directly, i want to update only over ota in the future". A public release is a
+milestone boundary (standing rule). Hardware evidence used (read-only, no device write): archive `20261016/155`
+(Beta 1 overnight and morning wake), the live Beta 1 player on 2026-10-15 over USB SSH (AirPods Pro connected, AAC
+44.1 kHz negotiated, reconnect `Connected`, 41 processes/min with the screen dark, DNS probe every 30 s), and the BTIF
+timeout lines of every archived system log (4 of 4 with RX `flag=0 valid>0`).
+
+| Area | State for Beta 2 | Evidence / gap |
+| --- | --- | --- |
+| Radio transport | FIX BUILT, device check owed | BTIF RX race reproduced by a host test that fails on Beta 1's handler; fix acknowledges first and drains until stable. Count radio-start timeouts over many wakes after the OTA install. |
+| Bluetooth reconnect | FIX BUILT, device check owed | 10 s client deadline vs ~18 s BlueZ answer → Inhibited (155, 26 nights). Now 45 s, and 5.12 s page timeout from the HCI driver (logs the replaced value). Check: AirPods away at wake → not Inhibited; connect when taken out. |
+| Audio output | NEW, device check owed | Reborn routes to Bluetooth headphones once per connection; jack otherwise; no jack detection on this board. |
+| Wi-Fi | READY | No real link drops on 2026-10-15 (all disconnects were sleep). DNS re-check 5 min. Open: 7.5–22 s to Online after a wake; power save stays off (owner decision). |
+| Power, display, USB, install | unchanged from BETA-1 | Sleep ≈9.4 mA (155) vs stock ≈1.3; `wake_event_in_progress` race open. |
+| Distribution | READY | `--public`, no MediaTek firmware in any image, legal-info and Linux sources attached. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.2 / Reborn 1.0.0-beta.2** (Baseline 51, update sequence 5100) as a
+public beta, published before its device check at the owner's request; the owed checks are listed in the
+[Beta 2 report](../validation/Y2-LINUX-1.0-BETA-2.md). Next evidence boundary: the first OTA install of 51 on the
+owner's player. Not a final 1.0.
