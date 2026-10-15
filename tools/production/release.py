@@ -126,20 +126,27 @@ def relocate(folder):
     Buildroot's relocate-sdk.sh, only text files are rewritten.
     """
     target = os.fsencode(folder)
-    listed = subprocess.run(['grep', '-rIlZE', '--exclude-dir=.git', str(PROJECT / 'out') + '/[A-Za-z0-9._-]+-build', '.'],
-                            cwd=folder, capture_output=True)
+    needle = os.fsencode(OUT) + b'/'
     changed = 0
-    for name in filter(None, listed.stdout.split(b'\0')):
-        path = folder / os.fsdecode(name)
-        if path.is_symlink() or not path.is_file():
-            continue
-        data = path.read_bytes()
-        rewritten = BUILD_PATH.sub(target, data)
-        if rewritten != data:
-            stat = path.stat()
-            path.write_bytes(rewritten)
-            os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
-            changed += 1
+    for directory, folders, files in os.walk(folder):
+        folders[:] = [name for name in folders if name != '.git']
+        for name in files:
+            path = Path(directory) / name
+            if path.is_symlink():
+                continue
+            try:
+                data = path.read_bytes()
+            except OSError:
+                continue
+            # Text files only (as grep -I): binaries keep their bytes.
+            if needle not in data or b'\0' in data[:8192]:
+                continue
+            rewritten = BUILD_PATH.sub(target, data)
+            if rewritten != data:
+                stat = path.stat()
+                path.write_bytes(rewritten)
+                os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+                changed += 1
     return changed
 
 
