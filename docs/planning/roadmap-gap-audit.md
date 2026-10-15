@@ -8171,3 +8171,25 @@ timeout lines of every archived system log (4 of 4 with RX `flag=0 valid>0`).
 public beta, published before its device check at the owner's request; the owed checks are listed in the
 [Beta 2 report](../validation/Y2-LINUX-1.0-BETA-2.md). Next evidence boundary: the first OTA install of 51 on the
 owner's player. Not a final 1.0.
+
+
+## BETA-3 (Baseline 52) Bluetooth quality and stability: milestone gap audit — 2026-10-15
+
+**Boundary:** owner: "work on the bluetooth quality and stability improvements", then "publish this as beta 3 and new
+tag". Evidence (read-only, Beta 2 player with AirPods Pro): AAC 44.1 kHz at BlueALSA's 220 kbit/s CBR while the AirPods
+advertise VBR up to 256 kbit/s; a 60-s HCI capture at close range (median ack 46 ms, max 78 ms, ≤ 4 in flight); encoder
+≈9 % of one core; WMT coexistence setting identical to stock; the controller's page timeout already 5.12 s. One live
+BlueALSA restart with test options was undone by the connectivity supervisor; a second was refused by the session's
+safety check (no further device writes).
+
+| Area | State for Beta 3 | Evidence / gap |
+| --- | --- | --- |
+| AAC quality | BUILT, device check owed | Afterburner, peer rate capped to one packet per frame; host-tested arithmetic; listening comparison owed. |
+| AAC stability | BUILT, device check owed | Adaptive CBR rate (patch 0002) host-tested; range/Wi-Fi-load test with  owed. |
+| SBC XQ | READY (owner choice) | Ungated; default unchanged. |
+| Coexistence | NO CHANGE NEEDED | Stock shared-antenna setting already sent. |
+| Power, display, USB, install | unchanged from BETA-2 | Sleep ≈9.4 mA vs ≈1.3 mA stock. |
+| Distribution | READY | `--public`, firmware scan clean, sources attached or linked. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.3 / Reborn 1.0.0-beta.3** (Baseline 52, update sequence 5200) as a
+public beta at the owner's request; next evidence boundary: the owner's OTA install and an AirPods listening/range check.

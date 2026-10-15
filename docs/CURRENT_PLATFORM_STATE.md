@@ -1,6 +1,15 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 2, Baseline 51 — 2026-10-15 (latest, published)
+## Y2Linux 1.0 Beta 3, Baseline 52 — 2026-10-15 (latest, published)
+
+Release `1.0.0-beta.3` (Reborn `1.0.0-beta.3`), tag `baseline-52`, Linux `2731169`, Reborn `8cd4362`. AAC with the FDK
+afterburner up to the peer's rate within one packet per frame (AirPods 256 kbit/s; Beta 2: 220 kbit/s CBR) and an
+adaptive AAC bit rate (BlueALSA patch 0002, 256 → 128 kbit/s under congestion); AAC encoder state in the platform
+status; SBC XQ without the experimental switch; service-menu rows AAC Quality / AAC Auto Rate. First release through
+`tools/production/release.py` (119 s). Device listening and range checks owed. Details:
+[Beta 3 report](validation/Y2-LINUX-1.0-BETA-3.md).
+
+## Y2Linux 1.0 Beta 2, Baseline 51 — 2026-10-15 (published)
 
 Release `1.0.0-beta.2` (Reborn `1.0.0-beta.2`), tag `baseline-51`, Linux `fc1f5ea`, Reborn `009cd32`. Bluetooth/Wi-Fi
 review of Beta 1 (archive `20261016/155` and the live player): BTIF receive acknowledges before draining (every BTIF
