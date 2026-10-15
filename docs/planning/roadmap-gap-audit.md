@@ -8307,3 +8307,21 @@ deleted (database rows only, never files).
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.6.1 / Reborn 1.0.0-beta.6.1** (Baseline 58, sequence 5650) as a public beta
 at the owner's request; next evidence boundary: the owner's OTA install and the Beta 6.1 report's device checks.
+
+
+## BETA-6.2 (Baseline 59) clock, skins, Bunny Bow: milestone gap audit — 2026-10-16
+
+**Boundary:** owner: PR #10 clock fitting all skins, optimised; skins updated for the day's screens; a cute pixel skin; "yes
+publish". A public release is a milestone boundary. No hardware, memory-model or platform change; Reborn and its skins, plus a
+licence entry in the Reborn package. New: one redraw per minute while the screen is on (no new wakeups).
+
+| Area | State for Beta 6.2 | Evidence / gap |
+| --- | --- | --- |
+| Clock and Time Zone | BUILT, device check owed | Host tests (zones parse, DST, picker, status bar); per-minute caches measured on the host. |
+| Skins for the newer screens | BUILT, device check owed | Previews of all 16 skins; Reborn's own look pixel-identical (110/110); shipped-skin test. |
+| Bunny Bow | BUILT, device check owed | Loads without warnings (contrast included); previews; OFL font licence in legal-info. |
+| Power | WATCH | One frame per minute with the screen on; none with it off. |
+| FM radio | NOT STARTED | Beta 7, own audit first. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.6.2 / Reborn 1.0.0-beta.6.2** (Baseline 59, sequence 5700) as a public beta
+at the owner's request; next evidence boundary: the owner's OTA install and the Beta 6.2 report's device checks.

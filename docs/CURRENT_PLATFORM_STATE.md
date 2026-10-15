@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 6.1, Baseline 58 — 2026-10-16 (latest, published)
+## Y2Linux 1.0 Beta 6.2, Baseline 59 — 2026-10-16 (latest, published)
+
+Release `1.0.0-beta.6.2` (Reborn `1.0.0-beta.6.2`), tag `baseline-59`, Linux `8e07f47`, Reborn `f0f1091`. Reborn: a status-bar
+clock with a Time Zone setting (PR #10), the clock and today's screens (radio, Station Info, keyboard, Favorites heart) in every
+skin, and a sixteenth skin, Bunny Bow (pixel art, Pixelify Sans). Details: [Beta 6.2 report](validation/Y2-LINUX-1.0-BETA-6.2.md).
+
+## Y2Linux 1.0 Beta 6.1, Baseline 58 — 2026-10-16 (published)
 
 Release `1.0.0-beta.6.1` (Reborn `1.0.0-beta.6.1`), tag `baseline-58`, Linux `faf85ba`, Reborn `78e36db`. Reborn fixes: sound
 after pause/resume on Bluetooth (drain instead of BlueALSA pause), Next/Previous while a song starts, SD card songs listed twice
