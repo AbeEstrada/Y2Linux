@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 4.1, Baseline 54 — 2026-10-15 (latest, published)
+## Y2Linux 1.0 Beta 5, Baseline 55 — 2026-10-15 (latest, published)
+
+Release `1.0.0-beta.5` (Reborn `1.0.0-beta.5`), tag `baseline-55`, Linux `5dd995f`, Reborn `84df9ae`. Reborn only: a
+full-screen keyboard driven by the buttons (Wi-Fi password, station search, library search), library search (Home → Search)
+and a UI pass over every screen. Details: [Beta 5 report](validation/Y2-LINUX-1.0-BETA-5.md).
+
+## Y2Linux 1.0 Beta 4.1, Baseline 54 — 2026-10-15 (published)
 
 Release `1.0.0-beta.4.1` (Reborn `1.0.0-beta.4.1`), tag `baseline-54`, Linux `929ea0d`, Reborn `d0008dd`. Fixes from Beta 4 on
 the player: stopping or pausing a station no longer hangs playback ("playback command queue full"); Wi-Fi no longer shows as

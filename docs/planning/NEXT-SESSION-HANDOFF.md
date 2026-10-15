@@ -1,6 +1,12 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 4.1 (BASELINE 54) PUBLISHED — RADIO/WI-FI FIXES.** Release `1.0.0-beta.4.1`, tag `baseline-54`, sequence 5350, Linux `929ea0d` + docs, Reborn `d0008dd`; report `docs/validation/Y2-LINUX-1.0-BETA-4.1.md`, audit BETA-4.1.
+> **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 5 (BASELINE 55) PUBLISHED — KEYBOARD, SEARCH, UI PASS.** Release `1.0.0-beta.5`, tag `baseline-55`, sequence 5450, Linux `5dd995f` + docs, Reborn `84df9ae`; report `docs/validation/Y2-LINUX-1.0-BETA-5.md`, audit BETA-5.
+>
+> - **What changed (Reborn):** `reborn_ui::keyboard` (QWERTY, pages, owner: Back = up / hold Back = leave), `ActionRouter::set_keyboard` (buttons as arrows, wheel inert), `reborn_ui::search` + `Screen::Search` (Home → Search), UI pass (Title Case rule, toasts in the status bar, opaque power hold). Previews: `cargo run --bin reborn-preview -- DIR` + `tools/preview/render_previews.py`.
+> - **Owed on the device:** password join, radio and library search, held-button repeat speed, hold Back cancel, playback while typing; plus the Beta 4.1 checks below.
+> - **Next: FM radio (now Beta 6)** — audit first (new hardware subsystem), see the Beta 4 entry. Ideas parked by the owner: station logos / Cover Flow for radio favorites.
+
+> Previous entry: **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 4.1 (BASELINE 54) PUBLISHED — RADIO/WI-FI FIXES.** Release `1.0.0-beta.4.1`, tag `baseline-54`, sequence 5350, Linux `929ea0d` + docs, Reborn `d0008dd`; report `docs/validation/Y2-LINUX-1.0-BETA-4.1.md`, audit BETA-4.1.
 >
 > - **Fixed:** radio `Stream::drop` deadlock ("playback command queue full"); radio availability per loop pass; Reborn accepts an Online `network.json` up to 45 s and falls back to the supplicant; TLS clock coherence via `CLOCK_BOOTTIME` (updates after sleep). `release.py bump` takes point betas.
 > - **Owed on the device:** station stop/pause/switch; Wi-Fi + Radio after 10+ min screen-off without a Wi-Fi restart; Check for Updates right after deep sleep; Bluetooth after wake (owner suspects a problem, no evidence yet).

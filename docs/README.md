@@ -1,12 +1,13 @@
 # Y2Linux documentation
 
-**Y2Linux 1.0 Beta 4.1 (Baseline 54, 2026-10-15)** is the current published state (fourth
-public beta, internet radio, with fixes from its first days on the player): ready-made images on the [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases),
+**Y2Linux 1.0 Beta 5 (Baseline 55, 2026-10-15)** is the current published state (fifth
+public beta: button keyboard, library search, UI pass): ready-made images on the [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases),
 installed once with SP Flash Tool, then updated over Wi-Fi by the player itself
 ([recovery and updates](RECOVERY-AND-UPDATES.md)). No image carries MediaTek's radio firmware: each
 player takes it from its owner's Innioasis package ([INSTALL](INSTALL.md)). What works, what does not
 and the latest hardware results: [current platform state](CURRENT_PLATFORM_STATE.md); the beta's
-evidence and open gaps: [1.0 Beta 4.1 report](validation/Y2-LINUX-1.0-BETA-4.1.md),
+evidence and open gaps: [1.0 Beta 5 report](validation/Y2-LINUX-1.0-BETA-5.md),
+[1.0 Beta 4.1 report](validation/Y2-LINUX-1.0-BETA-4.1.md),
 [1.0 Beta 4 report](validation/Y2-LINUX-1.0-BETA-4.md),
 [1.0 Beta 3 report](validation/Y2-LINUX-1.0-BETA-3.md),
 [1.0 Beta 2 report](validation/Y2-LINUX-1.0-BETA-2.md),

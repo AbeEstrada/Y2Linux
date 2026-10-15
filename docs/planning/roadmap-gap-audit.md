@@ -8231,3 +8231,22 @@ production scope change: fixes in Reborn's radio/Wi-Fi status handling and the p
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.4.1 / Reborn 1.0.0-beta.4.1** (Baseline 54, sequence 5350) as a public beta
 at the owner's request; next evidence boundary: the owner's OTA install and the device checks in the Beta 4.1 report.
+
+
+## BETA-5 (Baseline 55) keyboard, search and UI pass: milestone gap audit — 2026-10-15
+
+**Boundary:** owner: a full-screen button keyboard for every text entry and a UI pass, "push as beta 5". A public release is a
+milestone boundary. No hardware, memory, platform or production scope change: Reborn UI and input routing only (the platform
+image changes only by the Reborn package and the release identity). FM radio moves to Beta 6.
+
+| Area | State for Beta 5 | Evidence / gap |
+| --- | --- | --- |
+| Keyboard and button routing | BUILT, device check owed | Host tests for layout, movement, pages, limits and router keyboard mode (held buttons, keyboard closed while held); previews in Reborn's look and skins. Repeat speed and comfort need the owner's hands. |
+| Library search | BUILT, device check owed | Matching tests (word beginnings, accents, articles, offline tracks); previews. |
+| UI pass | DONE on host | 95 preview states reviewed; capitalization, toast placement, power hold, password title fixed. |
+| Beta 4.1 fixes | device check owed | Radio stop, Wi-Fi after screen-off, update after sleep. |
+| FM radio | NOT STARTED | Beta 6, own audit first. |
+| Power, display, USB, install | unchanged | Sleep ≈9.4 mA. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.5 / Reborn 1.0.0-beta.5** (Baseline 55, sequence 5450) as a public beta at
+the owner's request; next evidence boundary: the owner's OTA install and the device checks in the Beta 5 report.
