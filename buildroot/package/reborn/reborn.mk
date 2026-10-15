@@ -20,7 +20,7 @@ define REBORN_BUILD_CMDS
 		$(TARGET_LDFLAGS) -Wl,-z,relro,-z,now -ldrm -o $(@D)/reborn-splash
 	cd $(@D) && PATH="$(dir $(REBORN_CARGO)):$(BR_PATH)" \
 		REBORN_BUILD_ID="$(shell git -C $(REBORN_SITE) rev-parse HEAD)" \
-		Y2_BUILDROOT_OUTPUT="$(BASE_DIR)" \
+		Y2_BUILDROOT_OUTPUT="$(BASE_DIR)" Y2_BUILDROOT_HOST="$(HOST_DIR)" \
 		sh tools/build/cross.sh
 endef
 

@@ -8,6 +8,14 @@
 set -eu
 cd "$(dirname "$0")/../.."
 modules=$(grep -o 'tests\.test_[a-z0-9_]*' tools/production/tests.sh | sort -u)
+# As in the container (/build): the newest completed build, unless given.
+if [ -z "${Y2_ARTIFACT_TEST_ROOT:-}" ]; then
+    Y2_ARTIFACT_TEST_ROOT=$(ls -td "$PWD"/out/power-final-*-build 2>/dev/null | while read -r build; do
+        [ -f "$build/kernel/.config" ] && [ -f "$build/y2.dtb" ] && { echo "$build"; break; }; done)
+fi
+[ -n "$Y2_ARTIFACT_TEST_ROOT" ] || { echo 'host-tests: no completed build in out/; build first' >&2; exit 2; }
+export Y2_ARTIFACT_TEST_ROOT Y2_PRODUCTION_TEST=1
+echo "host-tests: build $Y2_ARTIFACT_TEST_ROOT" >&2
 missing=
 python3 -c 'import elftools' 2>/dev/null || missing="$missing pyelftools"
 [ -z "$missing" ] || echo "host-tests: missing$missing (Arch/CachyOS: python-pyelftools); its tests will error" >&2

@@ -181,7 +181,11 @@ def build(args):
             raise SystemExit(f'{repo.name}: commit the reviewed source first')
     folder = OUT / f'power-final-{args.label}-build'
     release = OUT / f'release-{args.label}'
-    if folder.exists() or release.exists():
+    if args.resume_failed:
+        if not (folder / 'buildroot/.config').exists():
+            raise SystemExit(f'--continue needs an existing {folder.name}')
+        shutil.rmtree(release, ignore_errors=True)
+    elif folder.exists() or release.exists():
         raise SystemExit(f'{folder.name} or {release.name} already exists')
     release.mkdir(parents=True)
     logs = release / 'receipts'
@@ -189,7 +193,7 @@ def build(args):
     steps = Steps(logs)
     started = time.monotonic()
 
-    previous = None if args.clean else (args.source.resolve() if args.source else newest_build())
+    previous = None if args.clean or args.resume_failed else (args.source.resolve() if args.source else newest_build())
     if previous:
         steps.run('copy', ['cp', '-a', '--reflink=auto', previous, folder])
         for stale in [*folder.glob('*.log'), folder / 'release-inventory.json', *folder.glob('data-seed-*')]:
@@ -200,7 +204,7 @@ def build(args):
         steps.durations['relocate'] = round(time.monotonic() - moment, 1)
         (logs / 'relocate.log').write_text(f'{previous} -> {folder}: {changed} text files rewritten\n')
     command = ['python3', 'tools/production/build.py', '--output', folder.relative_to(PROJECT), '--public']
-    if previous:
+    if previous or args.resume_failed:
         command += ['--resume', 'kernel']
     steps.run('build', command, log='build.log')
     versions = json.loads((folder / 'versions.json').read_text())
@@ -298,7 +302,13 @@ def build(args):
                'assets': {path.name: path.stat().st_size for path in sorted(assets.iterdir())},
                'durations_s': steps.durations}
     (release / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+    # Small receipts outlive the pruned build (archive convention since 13).
+    receipts = OUT / f'deep-sleep-final/build{args.label}-receipts'
+    shutil.copytree(logs, receipts, dirs_exist_ok=True)
+    shutil.copy2(release / 'summary.json', receipts / 'summary.json')
     print(json.dumps(summary, indent=2))
+    if not args.no_prune:
+        prune(args.keep)
 
 
 def previous_package(folder, previous, version):
@@ -310,6 +320,53 @@ def previous_package(folder, previous, version):
             if (candidate / 'manifest.json').exists():
                 return candidate
     raise SystemExit('pass --base-package: the sealed update package of the previous release')
+
+
+# ---------------------------------------------------------------- prune
+
+def prune(keep=2, dry_run=False):
+    """Keep only the `keep` newest builds and release outputs in out/.
+
+    Builds are out/power-final-*-build; release outputs are out/release-* and
+    the older names (y2linux-*, release-NN-assets, candidate packages). Archives
+    (deep-sleep-final), REA work and screenshots are never touched. A build
+    that a kept build still references by absolute path is not deleted.
+    """
+    def newest(paths):
+        return sorted(paths, key=lambda path: path.stat().st_mtime, reverse=True)
+    builds = newest(path for path in OUT.glob('power-final-*-build') if path.is_dir())
+    releases = newest(path for path in OUT.glob('release-*') if path.is_dir() and
+                      (path / 'summary.json').exists())
+    legacy = [path for pattern in ('y2linux-*', 'release-*-assets', 'release-*')
+              for path in OUT.glob(pattern) if path.is_dir() and not (path / 'summary.json').exists()]
+    kept, doomed = builds[:keep], builds[keep:]
+    kept_releases = releases[:keep]
+    if len(kept_releases) < keep:
+        # Until two releases exist in the new layout, keep the newest legacy update package.
+        packages = newest(path for path in legacy if (path / 'manifest.json').exists() and path.name.endswith('-update'))
+        kept_releases += packages[:keep - len(kept_releases)]
+    doomed += [path for path in releases[keep:] + legacy if path not in kept_releases]
+    # One pass per kept build: which other build folders does it still name?
+    referenced = {}
+    for build in kept:
+        found = subprocess.run(['grep', '-rhoIE', '--exclude-dir=.git', re.escape(str(OUT)) + '/[A-Za-z0-9._-]+-build/', '.'],
+                               cwd=build, capture_output=True, text=True).stdout
+        for name in {line[len(str(OUT)) + 1:-1] for line in found.split()}:
+            referenced.setdefault(name, []).append(build.name)
+    removed, skipped = [], []
+    for path in sorted(set(doomed)):
+        if path in builds:
+            users = [user for user in referenced.get(path.name, []) if user != path.name]
+            if users:
+                skipped.append(f'{path.name} (still referenced by {", ".join(users)})')
+                continue
+        removed.append(path.name)
+        if not dry_run:
+            shutil.rmtree(path)
+    print(('would remove: ' if dry_run else 'removed: ') + (', '.join(removed) or 'nothing'))
+    if skipped:
+        print('kept, still in use: ' + '; '.join(skipped))
+    return removed, skipped
 
 
 # ---------------------------------------------------------------- publish
@@ -384,16 +441,26 @@ def main():
     p = sub.add_parser('build', help='build, check, sign and assemble a release (local only)')
     p.add_argument('--label', required=True, help='baseline number, e.g. 52')
     p.add_argument('--clean', action='store_true', help='build from scratch instead of copying the newest build')
+    p.add_argument('--continue', dest='resume_failed', action='store_true',
+                   help='resume this label\'s existing build folder after a failure')
     p.add_argument('--source', type=Path, help='build folder to copy (default: the newest)')
     p.add_argument('--base-package', type=Path, help='sealed update package of the previous release')
     p.add_argument('--key', type=Path, default=KEY)
     p.add_argument('--notes', default='', help='notes inside the signed manifest')
+    p.add_argument('--keep', type=int, default=2, help='builds and release outputs kept afterwards')
+    p.add_argument('--no-prune', action='store_true', help='keep every older build this time')
+    p = sub.add_parser('prune', help='remove all but the newest builds and release outputs')
+    p.add_argument('--keep', type=int, default=2)
+    p.add_argument('--dry-run', action='store_true')
     p = sub.add_parser('publish', help='tag, push and create the GitHub release')
     p.add_argument('--label', required=True)
     p.add_argument('--title', required=True)
     p.add_argument('--notes', required=True, help='release notes (Markdown file)')
     p.add_argument('--yes', action='store_true')
     args = parser.parse_args()
+    if args.command == 'prune':
+        prune(args.keep, args.dry_run)
+        return
     {'bump': bump, 'build': build, 'publish': publish}[args.command](args)
 
 
