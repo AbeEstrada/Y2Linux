@@ -1,6 +1,12 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 5.1 (BASELINE 56) PUBLISHED — LIVE SEARCH, RADIO SECTION.** Release `1.0.0-beta.5.1`, tag `baseline-56`, sequence 5500, Linux `e9ac2a5` + docs, Reborn `35e333d`; report `docs/validation/Y2-LINUX-1.0-BETA-5.1.md`, audit BETA-5.1.
+> **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 6 (BASELINE 57) PUBLISHED — PLAYLISTS, INSTANT PAUSE.** Release `1.0.0-beta.6`, tag `baseline-57`, sequence 5600, Linux `45d3696` + docs, Reborn `544d3c9`; report `docs/validation/Y2-LINUX-1.0-BETA-6.md`, audit BETA-6.
+>
+> - **Reborn:** playlists (`reborn_core::playlist`, `reborn_platform::playlists`, `reborn_ui::{playlist_index, playlists_ui, views_playlists}`, worker `app/reborn/src/playlists.rs`; owner: anywhere in music, edit the file itself, Favorites with heart, Move with the wheel); pause in place (`Playback::hold`, `AudioSink::pause`/`rb_sink_pause`, `HOLD_LIMIT` 3 min) and collected seeking (`SEEK_SETTLE` 350 ms).
+> - **Owed on the device:** the Beta 6 report's checks; plus earlier betas'.
+> - **Next: FM radio (now Beta 7)**, audit first. Possible later: in-place seek in the decoder (a seek still restarts playback, ≈1 s on Bluetooth); the timing-sensitive radio reconnect test (`stream_strips_titles_and_reconnects_after_a_drop`) failed once under a parallel full run.
+
+> Previous entry: **START HERE (2026-10-15 local, latest): Y2LINUX 1.0 BETA 5.1 (BASELINE 56) PUBLISHED — LIVE SEARCH, RADIO SECTION.** Release `1.0.0-beta.5.1`, tag `baseline-56`, sequence 5500, Linux `e9ac2a5` + docs, Reborn `35e333d`; report `docs/validation/Y2-LINUX-1.0-BETA-5.1.md`, audit BETA-5.1.
 >
 > - **Reborn:** live search (`keyboard::LIVE_ROWS`, `Ui::show_live_results`), search index (`search::Index`, benchmark `cargo test -p reborn-ui --release -- --ignored --nocapture speed`), radio section `views_radio` (logos via `radio::fetch_logo` → `LogoFetcher` in main → `artwork::Art::Logo` → `rb_media_logo_file` + `art::logo_tile`; live logo check `REBORN_LOGO_OUT=dir cargo test -p reborn -- --ignored live_logos`), ranked top 10 (`RadioView::set_stations_ranked`), Station Info (`Screen::RadioInfo`), zapping (`Runtime::zap`).
 > - **Owed on the device:** logos in lists/Now Playing, top 10 + A–Z, Station Info, Previous/Next between stations, live search; plus the Beta 5 and 4.1 checks.

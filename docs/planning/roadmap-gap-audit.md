@@ -8269,3 +8269,22 @@ covers) and outbound logo downloads by the player's existing `curl` (≤300 kB, 
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.5.1 / Reborn 1.0.0-beta.5.1** (Baseline 56, sequence 5500) as a public beta
 at the owner's request; next evidence boundary: the owner's OTA install and the device checks in the Beta 5.1 report.
+
+
+## BETA-6 (Baseline 57) playlists, pause in place, seeking: milestone gap audit — 2026-10-15
+
+**Boundary:** owner: a playlist section ("yes" to publish as Beta 6), instant pause/resume and the seek error fixed. A public
+release is a milestone boundary. No hardware, memory-model or platform change; Reborn only. New: Reborn writes playlist files
+on Internal Storage and the SD card (atomic, only on the owner's edits) and holds an open, paused audio device for up to
+3 minutes after Pause (released before sleep).
+
+| Area | State for Beta 6 | Evidence / gap |
+| --- | --- | --- |
+| Playlists | BUILT, device check owed | Host tests (encodings, paths, edits, worker, UI); previews; 20k-entry benchmark. |
+| Pause in place | BUILT, device check owed | Engine test: held pause writes nothing, never reopens; image contains the code. Whether the wired codec pauses itself shows in the log. |
+| Seeking | BUILT, device check owed | Coalesced; no restart during a pending one. |
+| Power while paused | WATCH | A held pause keeps the device open ≤3 min, released before sleep. |
+| FM radio | NOT STARTED | Beta 7, own audit first. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.6 / Reborn 1.0.0-beta.6** (Baseline 57, sequence 5600) as a public beta at
+the owner's request; next evidence boundary: the owner's OTA install and the Beta 6 report's device checks.

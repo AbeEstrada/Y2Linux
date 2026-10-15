@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 5.1, Baseline 56 — 2026-10-15 (latest, published)
+## Y2Linux 1.0 Beta 6, Baseline 57 — 2026-10-15 (latest, published)
+
+Release `1.0.0-beta.6` (Reborn `1.0.0-beta.6`), tag `baseline-57`, Linux `45d3696`, Reborn `544d3c9`. Reborn: Playlists (the
+.m3u8 file is the playlist; made and changed on the player; Favorites with a heart), pause in place (instant resume, wired and
+Bluetooth) and collected seeking. Details: [Beta 6 report](validation/Y2-LINUX-1.0-BETA-6.md).
+
+## Y2Linux 1.0 Beta 5.1, Baseline 56 — 2026-10-15 (published)
 
 Release `1.0.0-beta.5.1` (Reborn `1.0.0-beta.5.1`), tag `baseline-56`, Linux `e9ac2a5`, Reborn `35e333d`. Reborn: live library
 search with a ~130× faster index, and Radio as its own section (station logos, Station Info, LIVE badges, A–Z lists with
