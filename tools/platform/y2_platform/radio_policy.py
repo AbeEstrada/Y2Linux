@@ -88,9 +88,15 @@ def codec_runtime(ctx, record=False):
         if cap.get('compiled_locally') is True:
             args.append('--codec=' + ('' if eligible else '-') + name)
     quality = policy.get('sbc_quality', 'high')
-    if quality not in ('high', 'xq', 'xq+') or (quality != 'high' and not experimental):
-        raise ValueError('sbc_quality_requires_experimental_gate')
+    if quality not in ('high', 'xq', 'xq+'):
+        raise ValueError('invalid_sbc_quality')
     args.append('--sbc-quality=' + quality)
+    if '--codec=AAC' in args:
+        # The patched encoder caps this by the peer and by one packet per frame.
+        if policy.get('aac_quality', 'high') == 'high':
+            args += ['--aac-afterburner', '--aac-bitrate=320000']
+        if policy.get('aac_abr', True) is True:
+            args.append('--aac-abr')
     ldac = policy.get('ldac_quality', 'standard')
     if ldac not in ('mobile', 'standard', 'high'):
         raise ValueError('invalid_ldac_quality')

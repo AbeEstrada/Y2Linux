@@ -4,7 +4,11 @@ import fcntl
 import os
 from .common import atomic_json
 
-DEFAULTS = {'sbc_quality': 'high', 'ldac_quality': 'standard', 'ldac_abr': True}
+# AAC "high": FDK afterburner and up to the peer's maximum rate where a frame
+# still fits one packet (AirPods: 256 kbit/s); "standard" is BlueALSA's tested
+# 220 kbit/s. Adaptive rate steps CBR AAC down while the link backs up.
+DEFAULTS = {'sbc_quality': 'high', 'ldac_quality': 'standard', 'ldac_abr': True,
+            'aac_quality': 'high', 'aac_abr': True}
 
 
 def requested(ctx):
@@ -18,12 +22,14 @@ def requested(ctx):
 
 
 def validate(value):
-    if type(value.get('experimental')) is not bool or type(value.get('ldac_abr')) is not bool:
+    if any(type(value.get(key)) is not bool for key in ('experimental', 'ldac_abr', 'aac_abr')):
         raise ValueError('invalid_codec_boolean')
+    # SBC XQ is an owner choice (some SBC-only headphones sound much better,
+    # a few refuse it); the default stays "high".
     if value.get('sbc_quality') not in ('high', 'xq', 'xq+'):
         raise ValueError('invalid_sbc_quality')
-    if value['sbc_quality'] != 'high' and value['experimental'] is not True:
-        raise ValueError('sbc_quality_requires_experimental_gate')
+    if value.get('aac_quality') not in ('standard', 'high'):
+        raise ValueError('invalid_aac_quality')
     if value.get('ldac_quality') not in ('mobile', 'standard', 'high'):
         raise ValueError('invalid_ldac_quality')
     return value
@@ -45,7 +51,9 @@ def status(ctx):
             'effective': effective, 'effective_scope': 'daemon_start_arguments',
             'pending_restart': effective != policy,
             'apply_action': 'restart_player',
-            'supported': {'sbc_quality': ['high', 'xq', 'xq+'] if policy['experimental'] else ['high'],
+            'supported': {'sbc_quality': ['high', 'xq', 'xq+'],
+                          'aac_quality': ['standard', 'high'] if inventory.get('codecs', {}).get('AAC', {}).get('compiled_locally') else [],
+                          'aac_abr': inventory.get('codecs', {}).get('AAC', {}).get('compiled_locally') is True,
                           'ldac_quality': ['mobile', 'standard', 'high'] if inventory.get('codecs', {}).get('LDAC', {}).get('compiled_locally') else [],
                           'ldac_abr': inventory.get('codecs', {}).get('LDAC', {}).get('compiled_locally') is True}}
 
@@ -63,6 +71,8 @@ def configure(ctx, **changes):
         caps = status(ctx)['supported']
         if any(key.startswith('ldac_') for key in changes) and not caps['ldac_quality']:
             raise ValueError('ldac_encoder_not_compiled')
+        if any(key.startswith('aac_') for key in changes) and not caps['aac_quality']:
+            raise ValueError('aac_encoder_not_compiled')
         atomic_json(ctx.path('/data/bluetooth/codec-policy.json'), value, durable=True)
     finally:
         os.close(lock)

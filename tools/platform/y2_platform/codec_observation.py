@@ -16,7 +16,9 @@ def quality(codec, pcm, settings):
              'sbc_quality': None, 'sbc_bitpool': None, 'sbc_xq_peer_mode': None,
              'ldac_quality_index': None, 'ldac_nominal_choices_kbps': None,
              'ldac_abr_enabled': None, 'ldac_abr_adjustments': None,
-             'ldac_abr_adaptation_observed': False, 'encoder_errors': observed('Errors')}
+             'ldac_abr_adaptation_observed': False,
+             'aac_abr_enabled': None, 'aac_abr_level': None, 'aac_abr_adjustments': None,
+             'encoder_errors': observed('Errors')}
     if codec == 'SBC':
         if len(config) == 4:
             # A2DP SBC: 44.1kHz dual-channel, 16 blocks, 8 subbands, loudness.
@@ -35,7 +37,14 @@ def quality(codec, pcm, settings):
         value['ldac_abr_enabled'] = bool(enabled) if enabled is not None else None
         value['ldac_abr_adjustments'] = observed('AbrAdjustments')
         value['ldac_abr_adaptation_observed'] = enabled == 1 and (value['ldac_abr_adjustments'] or 0) > 0
-    if codec in ('SBC', 'LDAC'):
+    elif codec == 'AAC':
+        # BlueALSA patch 0002: CBR rate actually in use, ABR level 0 = full
+        # rate (3 = half), and how often the link forced a change.
+        enabled = observed('AbrEnabled', 0, 1)
+        value['aac_abr_enabled'] = bool(enabled) if enabled is not None else None
+        value['aac_abr_level'] = observed('QualityIndex', 0, 3)
+        value['aac_abr_adjustments'] = observed('AbrAdjustments')
+    if codec in ('SBC', 'LDAC', 'AAC'):
         bitrate = observed('BitrateKbps', 1, 2000)
         value['bitrate_bps'] = bitrate * 1000 if bitrate else None
     return value

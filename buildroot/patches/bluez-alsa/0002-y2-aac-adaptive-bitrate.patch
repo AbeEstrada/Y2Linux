@@ -1,0 +1,243 @@
+Adaptive bit rate for CBR AAC and frames that fit one packet (Y2Linux).
+
+BlueALSA keeps a three-packet Bluetooth socket buffer and blocks while the
+radio cannot deliver; only LDAC adapts its rate. AAC kept its full CBR rate on
+a weak link and the headphones ran dry. With --aac-abr the encoder steps down
+(8/8, 6/8, 5/8, 4/8 of the rate, not below 128 kbit/s) when two packets are
+queued or a write had to wait, and back up after ~10 s with an empty queue.
+The configured CBR rate is also capped so a 1024-sample frame fits one packet
+of the link's MTU: some headsets cannot reassemble fragmented AAC frames, the
+reason BlueALSA defaults to 220 kbit/s. EncoderStats reports AAC bit rate,
+ABR level and adjustments (patch 0001). Decisions: src/y2-aac-abr.h.
+
+--- a/src/ba-config.h
++++ b/src/ba-config.h
+@@ -165,6 +165,8 @@
+ 	bool aac_afterburner;
+ 	bool aac_prefer_vbr;
+ 	bool aac_true_bps;
++	/* Y2: adaptive CBR bit rate (y2-aac-abr.h) */
++	bool aac_abr;
+ 	unsigned int aac_bitrate;
+ 	unsigned int aac_latm_version;
+ #endif
+--- a/src/ba-config.c
++++ b/src/ba-config.c
+@@ -104,6 +104,8 @@
+ 	/* Do not enable true "bit per second" bit rate by default because it
+ 	 * violates A2DP AAC specification. */
+ 	.aac_true_bps = false,
++	/* Y2: adaptive bit rate for CBR AAC is opt-in (--aac-abr). */
++	.aac_abr = false,
+ 	/* For CBR mode the 220 kbps bitrate should result in an A2DP frame equal
+ 	 * to 651 bytes. Such frame size should fit within writing MTU of most BT
+ 	 * headsets, so it will prevent RTP fragmentation which seems not to be
+--- a/src/main.c
++++ b/src/main.c
+@@ -191,6 +191,7 @@
+ 		{ "aac-latm-version", required_argument, NULL, 15 },
+ 		{ "aac-true-bps", no_argument, NULL, 18 },
+ 		{ "aac-vbr", no_argument, NULL, 19 },
++		{ "aac-abr", no_argument, NULL, 200 },
+ #endif
+ #if ENABLE_LC3PLUS
+ 		{ "lc3plus-bitrate", required_argument, NULL, 20 },
+@@ -345,6 +346,7 @@
+ 					"      --aac-latm-version=NUM\tselect AAC LATM syntax version; default: %u\n"
+ 					"      --aac-true-bps\t\tenable true bit-per-second bit rate for AAC codec\n"
+ 					"      --aac-vbr\t\t\tprefer AAC VBR mode over CBR mode for A2DP source\n"
++					"      --aac-abr\t\t\tadapt the AAC CBR bit rate to the link (Y2)\n"
+ #endif
+ #if ENABLE_LC3PLUS
+ 					"      --lc3plus-bitrate=BPS\tset LC3plus encoder CBR bitrate; default: %u\n"
+@@ -648,6 +650,9 @@
+ 		case 19 /* --aac-vbr */ :
+ 			config.aac_prefer_vbr = true;
+ 			break;
++		case 200 /* --aac-abr */ :
++			config.aac_abr = true;
++			break;
+ #endif
+ 
+ #if ENABLE_LC3PLUS
+--- a/src/a2dp-aac.c
++++ b/src/a2dp-aac.c
+@@ -12,12 +12,15 @@
+ #include <stdbool.h>
+ #include <stddef.h>
+ #include <stdint.h>
++#include <stdlib.h>
+ #include <string.h>
++#include <sys/ioctl.h>
+ #include <sys/param.h>
+ #include <sys/types.h>
+ 
+ #include <fdk-aac/aacdecoder_lib.h>
+ #include <fdk-aac/aacenc_lib.h>
++#include <glib.h>
+ #define AACENCODER_LIB_VERSION LIB_VERSION( \
+ 		AACENCODER_LIB_VL0, AACENCODER_LIB_VL1, AACENCODER_LIB_VL2)
+ 
+@@ -34,6 +37,7 @@
+ #include "shared/ffb.h"
+ #include "shared/log.h"
+ #include "shared/rt.h"
++#include "y2-aac-abr.h"
+ 
+ static const struct a2dp_bit_mapping a2dp_aac_channels[] = {
+ 	{ AAC_CHANNEL_MODE_MONO, .ch = { 1, a2dp_channel_map_mono } },
+@@ -156,10 +160,26 @@
+ 	AACENC_ERROR err;
+ 
+ 	const a2dp_aac_t * configuration = &t->media.a2dp.configuration.aac;
+-	const unsigned int bitrate = A2DP_AAC_GET_BITRATE(*configuration);
++	unsigned int bitrate = A2DP_AAC_GET_BITRATE(*configuration);
+ 	const unsigned int channels = t_pcm->channels;
+ 	const unsigned int rate = t_pcm->rate;
+ 
++	/* Y2: CBR frames stay within one packet (y2-aac-abr.h): a higher
++	 * configured rate is used only where the link's MTU allows it. */
++	const unsigned int mtu_bitrate = y2_aac_mtu_bitrate(t->mtu_write, rate);
++	if (!configuration->vbr && mtu_bitrate > 0 && bitrate > mtu_bitrate)
++		bitrate = mtu_bitrate;
++	struct y2_aac_abr abr;
++	y2_aac_abr_init(&abr, bitrate, config.aac_abr && !configuration->vbr);
++	unsigned int current_bitrate = bitrate;
++	g_atomic_int_set(&t_pcm->encoder_active, 0);
++	g_atomic_int_set(&t_pcm->encoder_adjustments, 0);
++	g_atomic_int_set(&t_pcm->encoder_errors, 0);
++	g_atomic_int_set(&t_pcm->encoder_bitpool, 0);
++	g_atomic_int_set(&t_pcm->encoder_abr, abr.enabled);
++	g_atomic_int_set(&t_pcm->encoder_quality, 0);
++	g_atomic_int_set(&t_pcm->encoder_bitrate_kbps, bitrate / 1000);
++
+ 	/* create AAC encoder without the Meta Data module */
+ 	if ((err = aacEncOpen(&handle, 0x0F, channels)) != AACENC_OK) {
+ 		error("Couldn't open AAC encoder: %s", aacenc_strerror(err));
+@@ -346,6 +366,12 @@
+ 
+ 			if (out_args.numOutBytes > 0) {
+ 
++				/* Y2: socket queue before this frame, as for LDAC ABR. */
++				int queued_bytes = 0;
++				if (ioctl(t->bt_fd, TIOCOUTQ, &queued_bytes) != -1)
++					queued_bytes = abs(t->media.bt_fd_coutq_init - queued_bytes);
++				errno = 0;
++
+ 				size_t payload_len_max = t->mtu_write - RTP_HEADER_LEN;
+ 				size_t payload_len = out_args.numOutBytes;
+ 
+@@ -390,6 +416,26 @@
+ 
+ 				}
+ 
++				/* io_bt_write() leaves EAGAIN when it had to wait for room. */
++				const unsigned int next = y2_aac_abr_update(&abr,
++						(unsigned int)queued_bytes / t->mtu_write, errno == EAGAIN);
++				if (next != 0) {
++					if (aacEncoder_SetParam(handle, AACENC_BITRATE, next) != AACENC_OK
++#if AACENCODER_LIB_VERSION >= 0x03041600 /* 3.4.22 */
++							|| (!config.aac_true_bps &&
++								aacEncoder_SetParam(handle, AACENC_PEAK_BITRATE, next) != AACENC_OK)
++#endif
++							)
++						g_atomic_int_inc(&t_pcm->encoder_errors);
++					else {
++						current_bitrate = next;
++						g_atomic_int_inc(&t_pcm->encoder_adjustments);
++					}
++				}
++				g_atomic_int_set(&t_pcm->encoder_quality, abr.level);
++				g_atomic_int_set(&t_pcm->encoder_bitrate_kbps, current_bitrate / 1000);
++				g_atomic_int_set(&t_pcm->encoder_active, 1);
++
+ 			}
+ 
+ 			const size_t pcm_frames = out_args.numInSamples / info.inputChannels;
+--- /dev/null
++++ b/src/y2-aac-abr.h
+@@ -0,0 +1,84 @@
++/*
++ * Y2Linux: adaptive bit rate for CBR AAC, the counterpart of LDAC ABR.
++ *
++ * BlueALSA keeps a three-packet socket buffer and otherwise blocks while the
++ * radio cannot deliver, so a weak link starved the headphones of audio at a
++ * full bit rate. This steps the encoder down while the socket queue backs up
++ * and back up after a quiet stretch. Pure decisions, no I/O: unit-tested.
++ *
++ * This file is free software; you can redistribute it and/or modify it under
++ * the terms of the MIT license. See the COPYING file for details.
++ */
++#ifndef Y2_AAC_ABR_H_
++#define Y2_AAC_ABR_H_
++
++#include <stdbool.h>
++
++#define Y2_AAC_ABR_LEVELS 4
++/* Lowest rate used, comparable to common SBC "high" quality. */
++#define Y2_AAC_ABR_FLOOR 128000u
++/* Never step twice within this many frames (~0.2 s at 44.1 kHz). */
++#define Y2_AAC_ABR_HOLD 8
++/* Frames with an empty socket queue before stepping up (~10 s). */
++#define Y2_AAC_ABR_CALM 430
++/* RTP header plus LATM mux config and payload length bytes. */
++#define Y2_AAC_FRAME_OVERHEAD 28
++
++struct y2_aac_abr {
++	bool enabled;
++	unsigned int level;
++	unsigned int rates[Y2_AAC_ABR_LEVELS];
++	unsigned int calm;
++	unsigned int since_change;
++};
++
++/* Highest CBR rate whose 1024-sample frames fit one packet of `mtu` bytes:
++ * some headsets cannot reassemble fragmented AAC frames. */
++static inline unsigned int y2_aac_mtu_bitrate(unsigned int mtu, unsigned int rate) {
++	if (mtu <= Y2_AAC_FRAME_OVERHEAD || rate == 0)
++		return 0;
++	return (unsigned int)((unsigned long long)(mtu - Y2_AAC_FRAME_OVERHEAD) * 8 * rate / 1024);
++}
++
++static inline void y2_aac_abr_init(struct y2_aac_abr *abr, unsigned int bitrate, bool enabled) {
++	static const unsigned int eighths[Y2_AAC_ABR_LEVELS] = { 8, 6, 5, 4 };
++	abr->level = abr->calm = abr->since_change = 0;
++	for (unsigned int i = 0; i < Y2_AAC_ABR_LEVELS; i++) {
++		unsigned int value = (unsigned int)((unsigned long long)bitrate * eighths[i] / 8);
++		if (value < Y2_AAC_ABR_FLOOR)
++			value = bitrate < Y2_AAC_ABR_FLOOR ? bitrate : Y2_AAC_ABR_FLOOR;
++		abr->rates[i] = value;
++	}
++	/* Nothing to adapt when every level is the same rate. */
++	abr->enabled = enabled && abr->rates[Y2_AAC_ABR_LEVELS - 1] < abr->rates[0];
++}
++
++/* Call once per encoded frame with the socket queue depth (in packets) seen
++ * before writing it and whether the write had to wait. Returns the new bit
++ * rate when the level changes, otherwise 0. */
++static inline unsigned int y2_aac_abr_update(struct y2_aac_abr *abr,
++		unsigned int queued_packets, bool blocked) {
++	if (!abr->enabled)
++		return 0;
++	if (abr->since_change < Y2_AAC_ABR_HOLD)
++		abr->since_change++;
++	if (blocked || queued_packets >= 2) {
++		abr->calm = 0;
++		if (abr->level + 1 < Y2_AAC_ABR_LEVELS && abr->since_change >= Y2_AAC_ABR_HOLD) {
++			abr->level++;
++			abr->since_change = 0;
++			return abr->rates[abr->level];
++		}
++		return 0;
++	}
++	abr->calm = queued_packets == 0 ? abr->calm + 1 : 0;
++	if (abr->level > 0 && abr->calm >= Y2_AAC_ABR_CALM) {
++		abr->level--;
++		abr->calm = 0;
++		abr->since_change = 0;
++		return abr->rates[abr->level];
++	}
++	return 0;
++}
++
++#endif

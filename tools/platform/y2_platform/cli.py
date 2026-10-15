@@ -44,6 +44,8 @@ def main():
     codec_settings.add_argument('--sbc-quality', choices=['high', 'xq', 'xq+'])
     codec_settings.add_argument('--ldac-quality', choices=['mobile', 'standard', 'high'])
     codec_settings.add_argument('--ldac-abr', choices=['on', 'off'])
+    codec_settings.add_argument('--aac-quality', choices=['standard', 'high'])
+    codec_settings.add_argument('--aac-abr', choices=['on', 'off'])
     sub.add_parser('wifi-power-policy')
     sub.add_parser('ssh-daemon')
     transfer = sub.add_parser('transfer')
@@ -139,7 +141,9 @@ def main():
         from .codec_controls import configure
         try:
             result = configure(ctx, sbc_quality=args.sbc_quality, ldac_quality=args.ldac_quality,
-                               ldac_abr=None if args.ldac_abr is None else args.ldac_abr == 'on')
+                               ldac_abr=None if args.ldac_abr is None else args.ldac_abr == 'on',
+                               aac_quality=args.aac_quality,
+                               aac_abr=None if args.aac_abr is None else args.aac_abr == 'on')
         except (ValueError, OSError) as error:
             print(json.dumps({'schema': 'org.y2linux.codec-settings/v1', 'failure': str(error)}))
             return 1
