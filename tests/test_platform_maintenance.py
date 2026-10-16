@@ -54,6 +54,23 @@ class Maintenance(unittest.TestCase):
         self.assertEqual(m.purge(self.ctx,plan['id'],plan['confirmation'])['state'],'Complete')
         self.assertFalse(self.ctx.path('/data/system/platform/maintenance-pending').exists())
 
+    def test_settings_reset_forgets_the_lastfm_sign_in_and_its_waiting_plays(self):
+        for name in m.LASTFM:
+            self.ctx.path('/data/'+name).write_text('{"name":"luca","key":"k"}\n')
+        plan=m.plan(self.ctx,'settings')
+        self.assertEqual(sorted(t['path'] for t in plan['targets']),sorted([m.SETTINGS,*m.LASTFM]))
+        result=m.execute(self.ctx,plan['confirmation'])
+        self.assertEqual(result['state'],'Complete')
+        for name in m.LASTFM:
+            self.assertFalse(self.ctx.path('/data/'+name).exists())
+        # The session file keeps its queue and only gets default settings.
+        session=json.loads(self.ctx.path('/data/'+m.SETTINGS).read_text())
+        self.assertEqual(session['model']['settings'],{'volume':35})
+        self.assertEqual(session['model']['queue'],self.session['model']['queue'])
+        # Without an account there is nothing extra to plan.
+        m.purge(self.ctx,plan['id'],plan['confirmation'])
+        self.assertEqual([t['path'] for t in m.plan(self.ctx,'settings')['targets']],[m.SETTINGS])
+
     def test_process_source_and_mount_guards_and_full_reset_explicitness(self):
         process=self.ctx.path('/proc/999');process.mkdir()
         (process/'cmdline').write_bytes(b'/usr/bin/reborn\0')

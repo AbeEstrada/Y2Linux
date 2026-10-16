@@ -25,6 +25,9 @@ from .update import free, status as update_status
 
 SCOPES = ('settings', 'network', 'bluetooth-bonds', 'library', 'caches', 'full-user')
 SETTINGS = 'reborn/state/session.json'
+# The Last.fm sign-in and the plays waiting for it are settings too: a
+# settings reset forgets them (quarantined like other reset targets).
+LASTFM = ('reborn/state/lastfm.json', 'reborn/state/scrobbles.jsonl')
 
 
 def identity(meta):
@@ -109,7 +112,7 @@ def child_paths(ctx, relative):
 
 def paths(ctx, scope):
     if scope == 'settings':
-        return [SETTINGS]
+        return [SETTINGS, *LASTFM]
     if scope == 'network':
         return ['network']
     if scope == 'bluetooth-bonds':
@@ -235,7 +238,7 @@ def execute(ctx, confirmation, erase_music=False, resume=False):
                 old = identity(os.stat(saved, dir_fd=quarantine, follow_symlinks=False))
             except FileNotFoundError:
                 old = None
-            if value['scope'] == 'settings':
+            if value['scope'] == 'settings' and relative == SETTINGS:
                 if source != expected and not (resume and old and old['inode'] == expected['inode']):
                     # Settings backup is a copy, handled by completed hash below.
                     record = json_read(location/'settings-result.json', {})
