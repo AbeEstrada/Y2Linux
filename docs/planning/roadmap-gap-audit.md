@@ -8341,3 +8341,24 @@ sleep request) and one log event.
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.6.3 / Reborn 1.0.0-beta.6.3** (Baseline 60, sequence 5750) as a public beta
 at the owner's request; next evidence boundary: the owner's OTA install and the Beta 6.3 report's device checks.
+
+## UI-V4 (Reborn Product UI v4) one strict system: milestone activation audit — 2026-10-16
+
+**Boundary:** owner: since playlists, search and radio the UI "looks kind full", the default look is "still a little rough";
+make it consistent, for listeners rather than developers, removing what users do not need. Activating a milestone is a
+boundary. Planning only: no build, flash or hardware experiment; no platform, memory-model or hardware-scope change.
+Evidence: device capture on Beta 6.3 (`baseline-59-2-gb20404c` running, Settings, matches the host render) and all 92
+interactive `reborn-preview` states from Reborn `0ab9953`. Plan and owner decisions:
+[Reborn Product UI v4](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/ui/REBORN-PRODUCT-UI-V4.md).
+
+| Area | State | Evidence / gap |
+| --- | --- | --- |
+| Visual consistency | PLANNED | Three focus styles, four button styles, cover accent outside Now Playing, four empty-state forms; rules fixed in the plan. |
+| Home / navigation | PLANNED | Ten Home items; owner chose a Music submenu with a Home Menu pinning setting. Skins need a `music` layout. |
+| Content trims, hints | PLANNED | Developer facts (codec, bitrate, ranks, free space) and permanent hint lines leave lists; hold menus name the actions. |
+| Beta 6.x device checks | OWED | Unchanged; the Beta 6.3 report's checks still stand. |
+| FM radio | NOT STARTED | Beta 7 moves behind UI v4; its own audit first. |
+
+**Gate decision:** UI v4 ACTIVE at phase 0 (spec, preview fixture titles, "before" previews); phase 1 (components and
+tokens) is ready to start. Each phase ships as its own beta after host previews; next evidence boundary: the device
+walk-through with screen capture while the owner presses the buttons.
