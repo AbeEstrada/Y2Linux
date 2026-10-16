@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 7.2, Baseline 63 — 2026-10-16 (latest, published)
+## Y2Linux 1.0 Beta 7.3, Baseline 64 — 2026-10-16 (latest, published)
+
+Release `1.0.0-beta.7.3` (Reborn `1.0.0-beta.7.3`), tag `baseline-64`, Linux `cbab171`, Reborn `7175c76`. A computer
+connecting shows a message and a USB symbol in the status bar instead of a screen that covered the player.
+Details: [Beta 7.3 report](validation/Y2-LINUX-1.0-BETA-7.3.md).
+
+## Y2Linux 1.0 Beta 7.2, Baseline 63 — 2026-10-16 (published)
 
 Release `1.0.0-beta.7.2` (Reborn `1.0.0-beta.7.2`), tag `baseline-63`, Linux `78b548b`, Reborn `846da2d`. Reborn motion at
 60 fps (gliding focus, smooth lists, screen slides, sheets, fades, switches) and a travelling wave for the Now Playing

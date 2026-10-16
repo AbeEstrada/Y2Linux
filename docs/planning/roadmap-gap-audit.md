@@ -8414,3 +8414,18 @@ continuously while playing and visible (Interactive lease); every other motion e
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.7.2 / Reborn 1.0.0-beta.7.2** (Baseline 63, sequence 5900) as a public beta
 at the owner's request; next evidence boundary: the owner's OTA install and a frame-rate sample on the device.
+
+## BETA-7.3 (Baseline 64) USB message instead of a screen: milestone gap audit — 2026-10-16
+
+**Boundary:** owner: the locked computer screen blocked the player (and the 7.2 frame-rate measurement); "push a new
+version" with a message and a USB symbol instead. A release is a milestone boundary; Reborn presentation only.
+Supersedes Beta 7.1's lock decision (owner).
+
+| Area | State for Beta 7.3 | Evidence / gap |
+| --- | --- | --- |
+| USB indication | BUILT, device check owed | Message + status-bar symbol; lock, dismiss state and developer switch removed; host tests. |
+| Beta 7.2 motion fps | OWED | Sampling becomes possible with the cable in. |
+| FM radio | NOT STARTED | Beta 8. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.7.3 / Reborn 1.0.0-beta.7.3** (Baseline 64, sequence 5950) as a public beta
+at the owner's request; next evidence boundary: OTA install, then the 7.2 frame-rate sample.
