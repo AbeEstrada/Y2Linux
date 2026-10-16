@@ -1,6 +1,14 @@
 # Next-session handoff — Y2Linux 1.0 Beta 7.6 (latest entry first; started 2026-10-09 as the deep-sleep continuation)
 
-> **START HERE (2026-10-16 night, latest): BETA 8 = FM RADIO — KICKOFF FOR A FRESH SESSION (owner: "lets start with fm radio for beta 8 but with a new fresh session").** Nothing for FM is built, planned in detail or authorised on hardware yet. The released state is Beta 7.6 (entry below).
+> **START HERE (2026-10-16, latest): LAST.FM SCROBBLING ON `main` — PHASES 1–3 BUILT, KEY + DEVICE TEST OWED.** Owner: ship
+> scrobbling separately from FM; FM stays on branch `beta8-fm` (implemented there, device test owed — see that branch's
+> handoff). Plan/security: [LASTFM-SCROBBLE-PLAN](LASTFM-SCROBBLE-PLAN.md), audits LASTFM. Reborn `main` 60bea96 (rules,
+> queue, `.scrobbler.log`, Last.fm client, Settings → Last.fm with QR sign-in), Y2Linux adfb5c9 (key file into images,
+> privacy). Next: owner puts `~/.local/share/y2linux/lastfm-api.json` (0600, api_key + shared_secret); bump a version
+> above 6100 on `main` (FM's test sequences 6110/6120 were never installed), build, owner installs, sign in by QR, play
+> past half a song, check last.fm, offline queue across sleep; then release on the owner's word.
+>
+> Previous entry: **(2026-10-16 night) BETA 8 = FM RADIO — KICKOFF FOR A FRESH SESSION (owner: "lets start with fm radio for beta 8 but with a new fresh session").** Nothing for FM is built, planned in detail or authorised on hardware yet. The released state is Beta 7.6 (entry below).
 >
 > - **Rule first (AGENTS.md):** FM is a new hardware subsystem and opens the Beta 8 milestone, so the first deliverable is the roadmap/gap audit ([standing procedure](roadmap-gap-audit.md#standing-milestone-boundary-rule)) with real hardware evidence, written as a BETA-8-FM audit row plus a plan; no build, flash or tuner power-up before the owner agrees to the plan. Device access over USB SSH (`root@10.42.0.1`, key `~/.ssh/y2linux_ed25519`, HostKeyAlias `y2linux-production-v1`) is read-only unless the owner OKs an experiment; the owner presses the buttons.
 > - **What is known (Android-era evidence, `../Y2Player/docs/FM_RADIO_FEASIBILITY.md`, 2026-08-01…03):** the tuner is the **MT6627 FM core in the CONSYS combo** (chip id 0x6627), reached on stock Android through `/dev/fm` (MediaTek `fmradio` driver; vendor call sequence `opendev, powerup, tune, setmute, switchAntenna, autoscan, powerdown`). It opened, tuned and played on headphones, **audio only via the HAL's indirect path** (FM → I2S → AFE → DAC; the direct analog path was silent). **Reception was the problem:** the headphone cable is the aerial and the owner's unit received essentially nothing; register 0x61 bit 4 (antenna type) stays at the long-aerial default. §9 of that document lists the controls still owed (correct band sweep, cable/no-cable comparison, stock FM app as control, Y1/Y2 driver comparison).
