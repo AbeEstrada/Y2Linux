@@ -1,7 +1,8 @@
 # Y2Linux 1.0 Beta 7 (Baseline 61)
 
-Status: **BUILT, not yet published** (2026-10-16). Release `1.0.0-beta.7`, Reborn `1.0.0-beta.7`, kernel
-`6.18.56-y2linux-1.0.0-beta.7`, update sequence 5800, Linux `7c0ee9f`, Reborn `7ade64b`. Built with
+Status: **PUBLISHED as GitHub release `baseline-61`** (2026-10-16). Release `1.0.0-beta.7`, Reborn `1.0.0-beta.7`, kernel
+`6.18.56-y2linux-1.0.0-beta.7`, update sequence 5800, Linux `7c0ee9f`, Reborn `7ade64b`, git tag `baseline-61` in both
+repositories. Built with
 `tools/production/release.py` in 94 s: container suite **743 OK**, all seal checks PASS, no MediaTek firmware in any
 image. Milestone audit: UI-V4 and BETA-7 in [roadmap-gap-audit](../planning/roadmap-gap-audit.md).
 

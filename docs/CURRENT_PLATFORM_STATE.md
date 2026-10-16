@@ -1,6 +1,6 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 7, Baseline 61 — 2026-10-16 (latest)
+## Y2Linux 1.0 Beta 7, Baseline 61 — 2026-10-16 (latest, published)
 
 Release `1.0.0-beta.7` (Reborn `1.0.0-beta.7`), tag `baseline-61`, Linux `7c0ee9f`, Reborn `7ade64b`. Reborn UI v4: one fixed
 accent, one focus row, button and empty state; Home with a Music menu and Home Menu pins; hint lines and developer details

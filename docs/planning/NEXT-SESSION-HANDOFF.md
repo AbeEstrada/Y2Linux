@@ -1,6 +1,6 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-16 evening, latest): Y2LINUX 1.0 BETA 7 (BASELINE 61) BUILT — UI V4 + CPU THERMAL AFTER SLEEP + SLEEP RETRY. PUBLISH WAITS FOR THE OWNER.**
+> **START HERE (2026-10-16 evening, latest): Y2LINUX 1.0 BETA 7 (BASELINE 61) PUBLISHED — UI V4 + CPU THERMAL AFTER SLEEP + SLEEP RETRY.** GitHub release `baseline-61` (latest), both repos pushed and tagged; Reborn docs added after publishing. The publish lines below are done.
 >
 > - Release `1.0.0-beta.7`, label 61, sequence 5800, Linux `7c0ee9f` (+ docs), Reborn `7ade64b`; `out/release-61` (container suite 743 OK, no firmware, OTA signed). Report `docs/validation/Y2-LINUX-1.0-BETA-7.md` (hashes), audits UI-V4 and BETA-7. Release notes ready: `out/release-61/release-notes.md`.
 > - Publish (owner's word first): `python3 tools/production/release.py publish --label 61 --title "Y2Linux 1.0 Beta 7" --notes out/release-61/release-notes.md --yes` with the GIT_AUTHOR_*/GIT_COMMITTER_* environment (Luca, noreply). Then set the report's status to PUBLISHED and add Reborn's readme/CURRENT_REBORN_STATE entry for 1.0.0-beta.7 (Reborn docs go in after publishing: publish needs Reborn's HEAD = `7ade64b`).
