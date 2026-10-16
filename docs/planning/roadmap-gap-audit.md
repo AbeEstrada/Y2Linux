@@ -8561,3 +8561,19 @@ request), so this audit precedes any implementation. Plan: [INTERNAL-STORAGE-SET
 
 **Gate decision:** PLAN ACCEPTED FOR IMPLEMENTATION once the owner approves the plan; release only after the device
 end-to-end run (case 2 at least) and the owner's word.
+
+## BETA-7.9 (Baseline 72) Internal Storage for every player, #39, #44: milestone gap audit — 2026-10-17
+
+**Boundary:** owner: "plan is ok … update the code build and publish, and i update OTA and we see". Public release
+crossing the STORAGE-SETUP boundary (row above). Real-hardware evidence: owner's player prepared with the stock FAT
+restored from the 2026-10-10 backup (hash-identical), Internal Storage backed up twice.
+
+| Area | State for Beta 7.9 | Evidence / gap |
+| --- | --- | --- |
+| Automatic Internal Storage | BUILT, device run owed | 792 host tests incl. resume/refusals (mutation-checked), real mkfs layout; files verified inside Y2ROOT. |
+| Radio firmware location (#39) | BUILT | Host tests; device: not needed on the owner's player (firmware present). |
+| SD dirty bit (#44) | BUILT | Real dosfstools tests. |
+| FM radio | ON BRANCH | Device test owed. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.7.9 / Reborn 1.0.0-beta.7.9** (Baseline 72, sequence 6250) at the
+owner's request; next evidence: the owner's OTA install and restart (case 2 on real hardware).

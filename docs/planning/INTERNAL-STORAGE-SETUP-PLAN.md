@@ -1,6 +1,11 @@
 # Internal Storage for every player — plan (2026-10-16)
 
-**Status: PLAN, owner review.** Nothing built, nothing run on a device. Ships with Beta 7.9 together with the fixes for
+**Status (2026-10-17): IMPLEMENTED and released as Beta 7.9 (Linux 5d2801c, Reborn 93be94f); device run on the
+owner's player owed** (p8 restored to the stock FAT from the 2026-10-10 backup, evidence 20261016/
+internal-storage-backup-before-stock-test). Deviations from the plan: start-screen progress in words (the boot screen
+never shows numbers: *Keeping your old files*, *Preparing Internal Storage*, *Moving your old files*); after *Set Up
+Now* the player restarts; the MTP responder needed two lines to pin Old Storage at its start; the Firmware drive's
+copies were already refused before writing when too large (only the message was missing). Ships with Beta 7.9 together with the fixes for
 issues #44 (done on `main`) and #39. Owner decisions 2026-10-16: automatic setup with three cases; about 400 MB as the
 "keep automatically" limit; kept files in `Old Player Files`; progress on the start screen while files are copied;
 every player gets exactly the same storage layout.

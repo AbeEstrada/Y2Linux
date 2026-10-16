@@ -63,20 +63,27 @@ Stock Android and its user data are erased. The internal FAT music storage is le
    partition-table (PMT) change, or shows different addresses.
 4. **Click Download**, then connect the **switched-off** Y2 by USB. After about a minute SP
    Flash Tool shows a green tick ("Download OK").
-5. **Unplug and press Power.** Y2Linux and the Reborn player start, and music works. Wi-Fi and
-   Bluetooth say they still need the radio firmware.
-6. **Connect the Y2 to the computer again.** It appears like a USB stick (MTP) with a drive
-   called **Firmware** (next to *SD Card* if a card is in).
-7. **From the Innioasis package, copy the file `system.img` to that Firmware drive** (about
+5. **Unplug and press Power.** On the first start the player shows *Setting up storage* for a
+   few seconds: the player's old Innioasis storage becomes **Internal Storage** (5.4 GB for
+   music; see [Internal Storage](#internal-storage) for what happens to files that were on it).
+   Then Reborn starts, and music works. Wi-Fi and Bluetooth say they still need the radio
+   firmware.
+6. **Connect the Y2 to the computer again.** It appears like a USB stick (MTP) with
+   **Internal Storage** (and *SD Card* if a card is in). Internal Storage contains a folder
+   **Firmware**.
+7. **From the Innioasis package, copy the file `system.img` into that Firmware folder** (about
    520 MB). Copy, don't move: the player deletes its copy afterwards, and you need the
    original to go back to stock. (If it was moved, unpack it again from the Innioasis zip.)
 8. **Wait a few seconds.** The player checks the file, keeps the five radio files, deletes the
    big copy and starts Wi-Fi and Bluetooth; Reborn says *Wi-Fi and Bluetooth are ready*. The
-   Firmware drive disappears. That's it.
+   Firmware folder disappears. That's it.
 
 If Reborn says *That File Isn't the Y2 Firmware*, the file was not `system.img` of the v3.2.0
-package: delete it on the Firmware drive and copy the right one. The file can also go into a
-folder named `Firmware` on the SD card.
+package: delete it and copy the right one. The file can also go into a folder named `Firmware`
+on the SD card. On a player whose Internal Storage is not set up yet (a large old library, see
+below) the computer shows a separate **Firmware** drive instead; it has room for the file from
+the zip, but not for an unpacked copy (about 860 MB): Reborn then says *Not Enough Space for That
+File*, and the SD card's `Firmware` folder is the way.
 
 From now on, updates come over Wi-Fi: Settings → About & Updates → Check for Updates →
 **Update Now** (Beta 7.1 and later; on Beta 7 and earlier: Download Update → Restart and
@@ -121,20 +128,31 @@ cat /etc/y2linux/versions.json
 
 ## Music
 
-- **MTP:** the player appears in any MTP client with *SD Card* and, once the internal music
-  partition is converted (below), *Internal Storage*. Copy music there.
+- **MTP:** the player appears in any MTP client with *Internal Storage* and *SD Card*. Copy
+  music there.
 - **SD card:** FAT, exFAT and ext4 cards mount at `/media/sd`. `y2-media status` shows the
   card; `y2-media format --confirm-cid <CID>` reformats it as ext4 (it erases the card).
-- **Internal music partition (optional):** the stock FAT music partition can become a 5.4 GiB
-  ext4 partition at `/media/internal`, exported over MTP as *Internal Storage*. This **erases
-  that FAT partition**.
 
-  ```sh
-  y2-platform internal-media status                         # shows the FAT serial
-  y2-platform internal-media provision --confirm-serial XXXX-XXXX
-  ```
+### Internal Storage
 
-  Then restart the player.
+Every player has the same layout: system (`Y2ROOT`), settings and library (`Y2DATA`) and
+**Internal Storage** (`Y2MEDIA`, 5.4 GiB ext4, `/media/internal`). Internal Storage replaces the
+stock player's own storage partition. Since Beta 7.9 the player sets it up by itself at start
+(also on players updated from an earlier beta, at the first restart after the update):
+
+| The old Innioasis storage holds | What happens |
+| --- | --- |
+| nothing, or only leftovers (empty folders, thumbnail caches) | set up at once |
+| your files, up to about 400 MB | they are kept: afterwards they are in *Internal Storage → Old Player Files* |
+| more (a real music library) | nothing changes. Reborn asks once; over USB the old files show up **read-only** as *Old Storage* so you can copy them to a computer. **Settings → Storage → Set Up Internal Storage** then sets it up and **erases** them |
+
+It waits for a later start while an update is still being checked or the battery is low.
+Every step is recorded, so a power loss in the middle continues at the next start.
+
+```sh
+y2-platform internal-media status        # layout, filesystem, mount
+cat /run/y2/internal-media-setup.json    # what the setup did at this start
+```
 
 ## Updating
 

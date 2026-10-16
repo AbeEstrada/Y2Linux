@@ -1,7 +1,9 @@
 # Internal storage and removable media (POWER-FINAL-08)
 
 <!-- knowledge-base-scope: current-production-policy -->
-2026-10-10. Source-complete and offline-tested; **provisioning not yet run on a device**.
+2026-10-10 (provisioning run on the owner's player that day). **Since Beta 7.9 (2026-10-17) every player sets
+Internal Storage up by itself at start** (STORAGE-SETUP, [plan](../planning/INTERNAL-STORAGE-SETUP-PLAN.md)); the
+command below stays for developers.
 
 ## Layout
 
@@ -23,6 +25,26 @@ protected/NVRAM partitions and the hidden tail remain unwritable.
 * Reborn follows the platform's record: Y2Media when `/run/y2/internal-media.json` says Ready for this boot and this
   mount, `/data/music` before that (an unprovisioned device keeps working).
 * Factory reset does not erase Y2Media music; delete files over MTP.
+
+## Automatic setup (Beta 7.9)
+
+`S02y2-media` runs `y2-platform internal-media setup --automatic` before USB and Reborn. It acts only on the stock
+FAT at the exact p8 geometry, after the read-only check (issue #44 rules), from a read-only mount at
+`/run/y2/old-storage`:
+
+* nothing but leftovers (empty folders, thumbnail caches, computer clutter) → format at once;
+* user files ≤ 400 MB with ≥ 150 MB left on Y2DATA → copied to `/data/system/internal-media-kept` with SHA-256,
+  format, moved to `music/Old Player Files` with SHA-256 (then `/data/music` as before);
+* more, or unreadable → `Waiting`: nothing changes, the old storage stays mounted read-only and is exported over MTP
+  as *Old Storage*; Reborn asks once, Settings → Storage → *Set Up Internal Storage* runs
+  `internal-media setup --confirm-shown` (the serial this boot reported) and erases it, then the player restarts.
+
+`/data/system/internal-media-setup.json` (phase `staging` → `formatting` → `migrating`) makes every step resumable;
+only that record allows formatting a p8 that an interrupted format left unreadable. Skipped (`Pending`) while an
+update waits for its health check, below 3.70 V on battery, or with an unknown battery. The filesystem is created with
+every setting named (`internal_media.MKFS`), identical to the first Y2MEDIA. This boot's result:
+`/run/y2/internal-media-setup.json` and `storage.internal_setup` in `y2-platform status`. Start screen phases
+`media_setup*`.
 
 ## Commands (root, over USB SSH)
 

@@ -1,6 +1,17 @@
 # Next-session handoff — Y2Linux 1.0 Beta 7.6 (latest entry first; started 2026-10-09 as the deep-sleep continuation)
 
-> **START HERE (2026-10-16, latest): Y2LINUX 1.0 BETA 7.8 (BASELINE 71) PUBLISHED — LAST.FM FIXES.** Release
+> **START HERE (2026-10-17, latest): Y2LINUX 1.0 BETA 7.9 (BASELINE 72) PUBLISHED — INTERNAL STORAGE FOR EVERY
+> PLAYER, #39, #44.** Release `1.0.0-beta.7.9`, sequence 6250, Linux `2ac6abd` (code `5d2801c`, `3110f3a`), Reborn `926ef45`
+> (code `93be94f`, `b023daf`), report `docs/validation/Y2-LINUX-1.0-BETA-7.9.md`, audits STORAGE-SETUP and BETA-7.9, plan
+> `docs/planning/INTERNAL-STORAGE-SETUP-PLAN.md`. **Owner's player is prepared for the device test:** p8 is the stock FAT
+> again (serial 3F93-07E6, 512 files from the 2026-10-10 backup, hash-identical); the old Internal Storage skins (138 files)
+> are backed up in `out/deep-sleep-final/evidence/20261016/internal-storage-backup-before-stock-test/internal-music.tar`
+> and `/media/sd/.y2-backup-20261016/`. Next: owner installs 7.9 over the air, restarts once after it is confirmed → case 2
+> must run (check `/run/y2/internal-media-setup.json`, Y2MEDIA identical, Old Player Files = backup hashes), then copy the
+> skins back into `/media/internal/music/Themes`. Next free label 73, sequence above 6250. Workspace `out/build`,
+> `out/release-71`, `out/release-72`.
+>
+> Previous entry: **START HERE (2026-10-16, latest): Y2LINUX 1.0 BETA 7.8 (BASELINE 71) PUBLISHED — LAST.FM FIXES.** Release
 > `1.0.0-beta.7.8`, sequence 6200, Linux `21d5ba0`, Reborn `35a3d56` (fixes `e417ecb` log subsystems, `8bd1452` Now Playing
 > after pause/repeat/failure, error-6 split, clock gate, one sign-in), report `docs/validation/Y2-LINUX-1.0-BETA-7.8.md`,
 > audit BETA-7.8. Device checks owed after the owner's OTA install: Now Playing after a pause; offline play sent after sleep

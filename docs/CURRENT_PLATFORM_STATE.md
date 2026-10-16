@@ -1,6 +1,13 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 7.8, Baseline 71 — 2026-10-16 (latest, published)
+## Y2Linux 1.0 Beta 7.9, Baseline 72 — 2026-10-17 (latest, published)
+
+Release `1.0.0-beta.7.9`, tag `baseline-72`, Linux `2ac6abd`, Reborn `926ef45`. Every player gets Internal Storage
+(Y2MEDIA) by itself at start, keeping up to 400 MB of old files in *Old Player Files* (a larger library waits, shown
+read-only as *Old Storage*); the radio firmware copy goes into Internal Storage's Firmware folder (#39); pulled FAT
+SD cards mount again (#44). Details: [Beta 7.9 report](validation/Y2-LINUX-1.0-BETA-7.9.md).
+
+## Y2Linux 1.0 Beta 7.8, Baseline 71 — 2026-10-16 (published)
 
 Release `1.0.0-beta.7.8` (Reborn `1.0.0-beta.7.8`), tag `baseline-71`, Linux `21d5ba0`, Reborn `35a3d56`. Beta 7.7's
 scrobbling worked on the owner's player (QR sign-in, real scrobble on last.fm). Fixes: Now Playing again after a pause or

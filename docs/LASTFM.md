@@ -92,7 +92,7 @@ Last.fm gives the player a **session key** for your account. It is stored in one
 player's private data partition, readable only by the system:
 
 - it is **not reachable over USB** (the computer only sees Internal Storage, the SD card and,
-  when needed, the Firmware drive);
+  when needed, the Firmware drive or the read-only Old Storage);
 - it is **never** written to logs, diagnostics or update images (the release checks refuse any
   image that contains it);
 - it only allows what Last.fm allows apps: scrobbling, Now Playing and similar music actions.
