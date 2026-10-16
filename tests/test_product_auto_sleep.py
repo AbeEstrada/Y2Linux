@@ -160,7 +160,7 @@ class ProductAutoSleep(unittest.TestCase):
         self.assertEqual(receipt['product']['wake_reason'], 'rtc')
         self.assertEqual(self.rpc, ['sleep_prepare', 'sleep_restore'])
 
-    def test_new_wakeup_after_maintenance_read_still_cancels_entry(self):
+    def test_power_press_after_maintenance_read_still_cancels_entry(self):
         entries = []
         stores = []
         original_write = pm.control_write
@@ -169,7 +169,9 @@ class ProductAutoSleep(unittest.TestCase):
             if name == '/sys/power/wakeup_count':
                 stores.append(value.strip())
                 if len(stores) == 2:
-                    self.write(name, '10')  # event after the fresh read
+                    self.write(name, '10')  # Power pressed after the fresh read
+                    self.power += 1
+                    self.irqs()
                 if value.strip() != ctx.read(name):
                     raise OSError(errno.EINVAL, 'new wakeup before entry')
             original_write(ctx, name, value)
@@ -183,6 +185,71 @@ class ProductAutoSleep(unittest.TestCase):
             self.assertEqual(self.run_sleep(enter), 2)
         self.assertEqual(len(entries), 1)
         self.assertEqual(len(stores), 2)
+        receipt = self.ctx.json('/data/system/platform/suspend-last.json')
+        self.assertEqual(receipt['product']['reason'], 'wake_event_in_progress')
+        self.assertEqual(self.rpc, ['sleep_prepare', 'sleep_restore'])
+
+    def test_battery_notification_during_preparation_takes_a_fresh_count(self):
+        # Archive 156, 10:31: Power to sleep; a BAT0 notification during the
+        # ≈6 s preparation invalidated the first count and the sleep was refused.
+        stores = []
+        original_write = pm.control_write
+
+        def kernel_control(ctx, name, value):
+            if name == '/sys/power/wakeup_count':
+                stores.append(value.strip())
+                if value.strip() != ctx.read(name):
+                    raise OSError(errno.EINVAL, 'intervening battery notification')
+            original_write(ctx, name, value)
+
+        def preparation(ctx, op):
+            if op == 'sleep_prepare':
+                self.write('/sys/power/wakeup_count', '9')
+            return self.application(ctx, op)
+
+        with patch.object(pm, 'control_write', side_effect=kernel_control), \
+                patch('y2_platform.suspend_record.application_rpc', side_effect=preparation):
+            self.assertEqual(self.run_sleep(lambda ctx: self.returned()), 0)
+        self.assertEqual(stores, ['8', '9'])
+        self.assertEqual(self.ctx.json('/data/system/platform/suspend-last.json')['product']['wake_reason'], 'power')
+        self.assertEqual(self.rpc, ['sleep_prepare', 'sleep_restore'])
+
+    def test_cable_during_preparation_cancels_instead_of_retrying(self):
+        original_write = pm.control_write
+
+        def kernel_control(ctx, name, value):
+            if name == '/sys/power/wakeup_count' and value.strip() != ctx.read(name):
+                raise OSError(errno.EINVAL, 'cable event')
+            original_write(ctx, name, value)
+
+        def preparation(ctx, op):
+            if op == 'sleep_prepare':
+                self.write('/sys/power/wakeup_count', '9')
+                self.write('/sys/class/power_supply/y2-usb-presence/online', '1')
+                self.write('/sys/class/power_supply/BAT0/status', 'Charging')
+            return self.application(ctx, op)
+
+        with patch.object(pm, 'control_write', side_effect=kernel_control), \
+                patch('y2_platform.suspend_record.application_rpc', side_effect=preparation):
+            self.assertEqual(self.run_sleep(lambda ctx: self.fail('slept with a cable')), 2)
+        receipt = self.ctx.json('/data/system/platform/suspend-last.json')
+        self.assertEqual(receipt['product']['reason'], 'charger_or_usb_active')
+        self.assertEqual(self.rpc, ['sleep_prepare', 'sleep_restore'])
+
+    def test_continuous_events_refuse_after_bounded_retries(self):
+        stores = []
+        original_write = pm.control_write
+
+        def kernel_control(ctx, name, value):
+            if name == '/sys/power/wakeup_count':
+                stores.append(value.strip())
+                self.write(name, str(int(value) + 1))  # an event before every store
+                raise OSError(errno.EINVAL, 'busy wake source')
+            original_write(ctx, name, value)
+
+        with patch.object(pm, 'control_write', side_effect=kernel_control):
+            self.assertEqual(self.run_sleep(lambda ctx: self.fail('entered while busy')), 2)
+        self.assertEqual(len(stores), pm.STALE_COUNT_RETRIES + 1)
         receipt = self.ctx.json('/data/system/platform/suspend-last.json')
         self.assertEqual(receipt['product']['reason'], 'wake_event_in_progress')
         self.assertEqual(self.rpc, ['sleep_prepare', 'sleep_restore'])

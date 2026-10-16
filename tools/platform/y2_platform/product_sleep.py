@@ -194,6 +194,9 @@ def command(ctx, argv):
 
 
 RADIO_QUIESCE_SECONDS = 25
+# Fresh wakeup_count handshakes after an event that was neither Power, RTC nor
+# a cable change, before the entry is refused as a wake in progress.
+STALE_COUNT_RETRIES = 2
 
 
 def quiesce_radio(ctx, radio):
@@ -317,6 +320,7 @@ def execute_owned(ctx, fd, enter, locks):
             if time.monotonic() >= deadline:
                 raise Refused('radio_power_down')
             time.sleep(.1)
+        stale_counts = 0
         while True:
             # Reading can block until an event finishes. The write rejects
             # any intervening Power/RTC/USB wake before the kernel entry.
@@ -337,7 +341,17 @@ def execute_owned(ctx, fd, enter, locks):
             try:
                 control_write(ctx, '/sys/power/wakeup_count', count + '\n')
             except OSError as error:
-                raise Refused('wake_event_in_progress') from error
+                # An event completed since the count was read. Archives 155
+                # (06:38 self-wake) and 156 (refused Power sleep): a routine
+                # BAT0 notification during preparation. The next pass reads a
+                # fresh count and repeats the Power/RTC IRQ and cable checks,
+                # so a real wake still cancels entry.
+                stale_counts += 1
+                if stale_counts > STALE_COUNT_RETRIES:
+                    raise Refused('wake_event_in_progress') from error
+                count = None
+                continue
+            stale_counts = 0
             restored_kernel = False
             attempted = True
             try:
