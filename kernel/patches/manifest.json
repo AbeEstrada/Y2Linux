@@ -280,7 +280,7 @@
       "path": "drivers/usb/musb/musb_gadget.c",
       "patch": "0065-y2-musb-pio-progress.patch",
       "base_sha256": "c0948905903b9e2998408d01adefbb69195bd493f165c209b350e019760a97a4",
-      "result_sha256": "8b1c57ca95d1da852612412af6a5159382494ab3251e8b47996debf9d09206d0"
+      "result_sha256": "647766a69d9933c32b97bb121c8a452b87c4be250f2568a56ebc95cd6f7d9664"
     },
     {
       "path": "drivers/base/regmap/regcache.c",

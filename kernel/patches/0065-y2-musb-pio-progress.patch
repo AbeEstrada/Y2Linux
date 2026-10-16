@@ -17,7 +17,23 @@
  #include "musb_trace.h"
  
  
-@@ -86,7 +96,13 @@
+@@ -41,6 +51,15 @@
+ 	if (!is_dma_capable() || !musb_ep->dma)
+ 		return;
+ 
++	/* A zero-length request carries no data: FunctionFS gives it the
++	 * kmalloc(0) result ZERO_SIZE_PTR as its buffer (an MTP transfer that
++	 * ends on a packet boundary is closed with such a ZLP), and mapping that
++	 * address made dma_map_single() maintain the cache of a page that does
++	 * not exist (kernel oops in dma_cache_maint_page). txstate()/rxstate()
++	 * never use DMA without data, so leave it unmapped. */
++	if (!request->request.length)
++		return;
++
+ 	/* Check if DMA engine can handle this request.
+ 	 * DMA code must reject the USB request explicitly.
+ 	 * Default behaviour is to map the request.
+@@ -86,7 +105,13 @@
  {
  	struct musb_ep *musb_ep = request->ep;
  
@@ -32,7 +48,7 @@
  		return;
  
  	if (request->request.dma == DMA_ADDR_INVALID) {
-@@ -386,6 +402,9 @@
+@@ -386,6 +411,9 @@
  		musb_write_fifo(musb_ep->hw_ep, fifo_count,
  				(u8 *) (request->buf + request->actual));
  		request->actual += fifo_count;
@@ -42,7 +58,7 @@
  		csr |= MUSB_TXCSR_TXPKTRDY;
  		csr &= ~MUSB_TXCSR_P_UNDERRUN;
  		musb_writew(epio, MUSB_TXCSR, csr);
-@@ -516,7 +535,7 @@
+@@ -516,7 +544,7 @@
  /*
   * Context: controller locked, IRQs blocked, endpoint selected
   */
@@ -51,16 +67,16 @@
  {
  	const u8		epnum = req->epnum;
  	struct usb_request	*request = &req->request;
-@@ -541,6 +560,8 @@
- 						musb_ep->end_point.name);
+@@ -542,6 +570,8 @@
  		return;
  	}
-+
-+	Y2_RXEV(Y2_RX_STATE, epnum, csr, (late ? 0x10000 : 0) | dma_channel_status(musb_ep->dma));
  
++	Y2_RXEV(Y2_RX_STATE, epnum, csr, (late ? 0x10000 : 0) | dma_channel_status(musb_ep->dma));
++
  	/* We shouldn't get here while DMA is active, but we do... */
  	if (dma_channel_status(musb_ep->dma) == MUSB_DMA_STATUS_BUSY) {
-@@ -599,6 +620,17 @@
+ 		musb_dbg(musb, "DMA pending...");
+@@ -599,6 +629,17 @@
  			if (!is_buffer_mapped(req))
  				goto buffer_aint_mapped;
  
@@ -78,7 +94,7 @@
  			if (musb_dma_inventra(musb)) {
  				struct dma_controller	*c;
  				struct dma_channel	*channel;
-@@ -723,6 +755,9 @@
+@@ -723,6 +764,9 @@
  					return;
  			}
  
@@ -88,7 +104,7 @@
  			len = request->length - request->actual;
  			musb_dbg(musb, "%s OUT/RX pio fifo %d/%d, maxpacket %d",
  					musb_ep->end_point.name,
-@@ -767,6 +802,10 @@
+@@ -767,6 +811,10 @@
  			musb_read_fifo(musb_ep->hw_ep, fifo_count, (u8 *)
  					(request->buf + request->actual));
  			request->actual += fifo_count;
@@ -99,7 +115,7 @@
  
  			/* REVISIT if we left anything in the fifo, flush
  			 * it and report -EOVERFLOW
-@@ -807,8 +846,10 @@
+@@ -807,8 +855,10 @@
  	musb_ep_select(mbase, epnum);
  
  	req = next_request(musb_ep);
@@ -111,7 +127,7 @@
  
  	trace_musb_req_rx(req);
  	request = &req->request;
-@@ -844,6 +885,7 @@
+@@ -844,6 +894,7 @@
  		/* "should not happen"; likely RXPKTRDY pending for DMA */
  		musb_dbg(musb, "%s busy, csr %04x",
  			musb_ep->end_point.name, csr);
@@ -119,7 +135,7 @@
  		return;
  	}
  
-@@ -855,6 +897,7 @@
+@@ -855,6 +906,7 @@
  			MUSB_RXCSR_P_WZC_BITS | csr);
  
  		request->actual += musb_ep->dma->actual_len;
@@ -127,7 +143,7 @@
  
  #if defined(CONFIG_USB_INVENTRA_DMA) || defined(CONFIG_USB_TUSB_OMAP_DMA) || \
  	defined(CONFIG_USB_UX500_DMA)
-@@ -901,7 +944,7 @@
+@@ -901,7 +953,7 @@
  exit:
  #endif
  	/* Analyze request */
@@ -136,7 +152,7 @@
  }
  
  /* ------------------------------------------------------------ */
-@@ -1171,17 +1214,36 @@
+@@ -1171,17 +1223,36 @@
  		txstate(musb, req);
  	} else {
  		csr = musb_readw(epio, MUSB_RXCSR);
