@@ -68,13 +68,14 @@ The recovery that installs an update is always the one built with that update.
    `manifest.json` and its signature from the GitHub release and checks them against the
    built-in release key (Ed25519). A release with a lower or equal version number is refused, so
    nobody can push an old, vulnerable version back.
-2. **Download**: the three payloads (system, boot image, recovery image), each checked against
-   the SHA-256 the signed manifest pins, then decoded once to prove they are complete. It makes
-   room first if needed (old logs only; never music or settings). The page shows progress,
-   speed and time left.
-3. **Restart and Install**: needs the charger or at least half a battery. The normal system
-   writes the new recovery image into RECOVERY, reads it back, sets `boot-recovery` in MISC and
-   restarts.
+2. **Update Now** (one step since Beta 7.1) needs the charger or at least half a battery; the
+   player says so before it downloads anything. **Download**: the three payloads (system, boot
+   image, recovery image), each checked against the SHA-256 the signed manifest pins, then
+   decoded once to prove they are complete (**Check**). It makes room first if needed (old logs
+   only; never music or settings). One screen shows the steps Download · Check · Install with
+   progress, speed and time left; Cancel stops the download and changes nothing.
+3. **Install**: right after the check the normal system writes the new recovery image into
+   RECOVERY, reads it back, sets `boot-recovery` in MISC and restarts by itself.
 4. **In the recovery** (the screen shows *Installing Update*, step and time left):
    - verifies the package again;
    - keeps the radio firmware on the data partition (players that ran an image before 49 had it

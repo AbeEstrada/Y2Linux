@@ -79,7 +79,8 @@ package: delete it on the Firmware drive and copy the right one. The file can al
 folder named `Firmware` on the SD card.
 
 From now on, updates come over Wi-Fi: Settings → About & Updates → Check for Updates →
-Download Update → **Restart and Install**. The radio firmware stays on the player and is kept
+**Update Now** (Beta 7.1 and later; on Beta 7 and earlier: Download Update → Restart and
+Install). The radio firmware stays on the player and is kept
 across every update. How that works: [Recovery and updates](RECOVERY-AND-UPDATES.md).
 
 ## First boot
@@ -137,10 +138,12 @@ cat /etc/y2linux/versions.json
 
 ## Updating
 
-**Over Wi-Fi (recommended):** Settings → About & Updates → Check for Updates → Download Update
-→ **Restart and Install**. Use the charger or at least half a battery. The player restarts,
-installs (about a minute), restarts into the new version and confirms it; on any failure it
-restores the previous one. Details: [Recovery and updates](RECOVERY-AND-UPDATES.md).
+**Over Wi-Fi (recommended):** Settings → About & Updates → Check for Updates → **Update Now**.
+Use the charger or at least half a battery (the player says so before it downloads anything).
+One screen shows Download, Check and Install; Cancel stops the download. The player then
+restarts, installs (about a minute), restarts into the new version and confirms it; on any
+failure it restores the previous one. (Beta 7 and earlier: Download Update → Restart and
+Install.) Details: [Recovery and updates](RECOVERY-AND-UPDATES.md).
 
 **With a computer:** flash a newer release or your own package with
 **`MT6582_preserve_data_scatter.txt`**. Only **BOOTIMG** and **ANDROID** are ticked; **never

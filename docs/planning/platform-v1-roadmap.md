@@ -1,5 +1,22 @@
 # Platform v1 roadmap
 
+## Current state — 2026-10-16: Y2Linux 1.0 Beta 7.6 (Baseline 67)
+
+The public beta line is current: **1.0 Beta 7.6** (`baseline-67`, update sequence 6100) is the latest GitHub release;
+players update themselves over Wi-Fi (Settings → About & Updates → Update Now). Per-release evidence: the
+[1.0 Beta 7.6 report](../validation/Y2-LINUX-1.0-BETA-7.6.md) (earlier ones in [docs/README](../README.md)) and the milestone rows BETA-1 … BETA-7.6 in
+[roadmap-gap-audit](roadmap-gap-audit.md); what works and what does not: [current platform state](../CURRENT_PLATFORM_STATE.md).
+
+| Next | Scope | State |
+| --- | --- | --- |
+| Device checks for 7.4–7.6 | Status bar/Skin look, update-screen fps on the next OTA, Now Playing clock/temperature on battery | Owed (owner installs) |
+| **Beta 8: FM radio** | Needs its own milestone audit first (`../Y2Player/docs/FM_RADIO_FEASIBILITY.md`) | Not started |
+| Sleep current | ≈7.8 mA vs stock 1.3 mA (archive 156) | Open |
+| Wired headphones | No jack detection yet | Open |
+
+The sections below are the history of how the platform got here (deep-sleep work, POWER-FINAL candidates); their "latest"
+labels refer to their own dates.
+
 ## Current deep-sleep investigation — 2026-10-07
 
 **POWER-FINAL-06 bring-up candidate (2026-10-09, latest, source + offline only):** vendor `infra_pdn=1` (INFRASYS/DDRPHY power-down) on the already-present
