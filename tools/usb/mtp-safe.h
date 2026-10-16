@@ -21,5 +21,7 @@ struct y2_upload *y2_upload_begin(const char *path, uint64_t size);
 int y2_upload_write(struct y2_upload *upload, const void *data, size_t length);
 int y2_upload_finish(struct y2_upload *upload);
 void y2_upload_abort(struct y2_upload *upload);
+/* A regular file copied like an upload (reserve, temporary name, fsync, no replace). */
+int y2_copy_file(const char *from, const char *to);
 void y2_transfer_activity(int active, int error);
 #endif

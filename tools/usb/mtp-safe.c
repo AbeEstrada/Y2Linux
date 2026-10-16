@@ -331,3 +331,35 @@ void y2_upload_abort(struct y2_upload *u)
     free(u->name); free(u);
     event(0, 0, 0);
 }
+
+/* One regular file copied the way an upload arrives (MTP CopyObject, and
+ * MoveObject between storages): the space reserve, a hidden temporary name,
+ * fsync and a publish that never replaces an existing name. The source keeps
+ * its modification time. Nothing is left behind on failure. */
+int y2_copy_file(const char *from, const char *to)
+{
+    int in = y2_open(from, O_RDONLY, 0);
+    if (in < 0) return -1;
+    struct stat64 st;
+    if (fstat64(in, &st) || !S_ISREG(st.st_mode)) { close(in); errno = EACCES; return -1; }
+    /* The upload size field reserves UINT32_MAX for "unknown"; nothing that
+     * large is copied on the device (a computer copies it instead). */
+    if ((uint64_t)st.st_size >= UINT32_MAX) { close(in); errno = EFBIG; return -1; }
+    struct y2_upload *u = y2_upload_begin(to, (uint64_t)st.st_size);
+    if (!u) { int error = errno; close(in); errno = error; return -1; }
+    static char buffer[64 * 1024];
+    uint64_t copied = 0;
+    while (copied < (uint64_t)st.st_size) {
+        ssize_t n = read(in, buffer, sizeof buffer);
+        if (n < 0 && errno == EINTR) continue;
+        if (n <= 0 || y2_upload_write(u, buffer, (size_t)n)) {
+            int error = n < 0 ? errno : (n == 0 ? EIO : errno);
+            y2_upload_abort(u); close(in); errno = error; return -1;
+        }
+        copied += (uint64_t)n;
+    }
+    close(in);
+    struct timespec times[2] = {st.st_atim, st.st_mtim};
+    futimens(u->fd, times);
+    return y2_upload_finish(u);
+}

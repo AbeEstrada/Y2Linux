@@ -415,6 +415,13 @@ class USBFiles(unittest.TestCase):
             subprocess.run([str(binary),str(media)],check=True,timeout=5)
             self.assertFalse(list(media.glob('.y2-mtp-*')))
 
+    @unittest.skipUnless(shutil.which('cc') and Path('/usr/include/libmtp.h').exists(), 'libmtp headers required')
+    def test_host_file_operations_tool_builds(self):
+        """tools/usb/mtp-file-ops.c drives a connected player (copy, rename, move, copy, delete)."""
+        with tempfile.TemporaryDirectory() as temporary:
+            subprocess.run(['cc','-O2','-Wall','-Wextra','-Werror','-o',str(Path(temporary)/'ops'),
+                            str(ROOT/'tools/usb/mtp-file-ops.c'),'-lmtp'],check=True)
+
     def test_real_atomic_files_and_fault_injection(self):
         with tempfile.TemporaryDirectory() as temporary:
             base=Path(temporary); media=base/'media'; media.mkdir()
