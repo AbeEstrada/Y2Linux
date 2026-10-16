@@ -6,6 +6,12 @@
 > audit BETA-7.8. Device checks owed after the owner's OTA install: Now Playing after a pause; offline play sent after sleep
 > with USB **unplugged**; Last.fm events in the log. Next free label 72, sequence above 6200 (FM on `beta8-fm` must rebase;
 > its fm.1 output `out/release-68` was pruned by this build). Workspace: `out/build`, `out/release-70`, `out/release-71`.
+> **Unreleased on `main` since 7.8:** issue #44 (SD card pulled while mounted never mounted again): Linux `3110f3a`
+> (`media.read_only_check`/`fat_unclean_only`: a failed `fsck.fat -n` whose only findings are the dirty bit and the boot
+> backup difference at offset 37/65 is admitted; still no repair; failed-run output not kept; `observe.refused_card` reports
+> a refused, still-inserted card as Degraded/filesystem_check_failed), Reborn `b023daf` (`SdCard::NeedsRepair`, "Needs
+> repair · Check it on a computer"). exFAT (fsck ignores the dirty flag in -n) and ext4 (journal keeps VALID_FS) were never
+> affected. Open owner decision: an explicit Repair action on Settings → Storage (`fsck.fat -a`, writes to the card).
 >
 > Previous entry: **START HERE (2026-10-16, latest): Y2LINUX 1.0 BETA 7.7 (BASELINE 70) PUBLISHED — LAST.FM SCROBBLING.** Release
 > `1.0.0-beta.7.7`, sequence 6150, Linux `bcb7815`, Reborn `f117586`, report `docs/validation/Y2-LINUX-1.0-BETA-7.7.md`, audit
