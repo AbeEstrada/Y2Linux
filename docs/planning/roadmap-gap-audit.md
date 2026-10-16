@@ -8380,3 +8380,21 @@ plus a kernel resume callback (`thermal.c`) and a retry in the platform's sleep 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.7 / Reborn 1.0.0-beta.7** (Baseline 61, sequence 5800) once the build's
 checks pass; publishing waits for the owner's word. Next evidence boundary: the owner's OTA install and the device checks of
 the Beta 7 report.
+
+## BETA-7.1 (Baseline 62) one-step update, USB screen, automatic time zone: milestone gap audit — 2026-10-16
+
+**Boundary:** owner requests on Beta 7 (time zone list, late/missing and leavable USB screen, late update answers, a
+one-step update); "publish it when the build is done". A release is a milestone boundary. No hardware-scope or memory-model
+change: Reborn behaviour plus a SIGTERM path in the platform's download. New outward traffic: the automatic time zone asks
+ipapi.co (fallback ipwho.is) once per Wi-Fi network (owner decision), default only where no zone was chosen.
+
+| Area | State for Beta 7.1 | Evidence / gap |
+| --- | --- | --- |
+| USB screen latency/lock | BUILT, device check owed | Cause found on the device (status refreshed only on Settings screens; platform already `Ready`); live sysfs + RAM receipt every 0.5 s; lock with developer switch. Platform-side time from plug to `Ready` still unmeasured. |
+| Update flow | BUILT, device check owed | Check answer at once; one-step run with up-front charge rule; Cancel via SIGTERM before the commit point (host test). The first real one-step run needs the next release (Beta 8). |
+| Automatic time zone | BUILT, device check owed | Lookup validated against the zone table; country picker from tz tables. |
+| UI v4 tour, thermal, sleep retry | OWED | From Beta 7. |
+| FM radio | NOT STARTED | Beta 8; its own audit first. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.7.1 / Reborn 1.0.0-beta.7.1** (Baseline 62, sequence 5850) as a public beta
+at the owner's request; next evidence boundary: the owner's OTA install and the Beta 7.1 report's device checks.

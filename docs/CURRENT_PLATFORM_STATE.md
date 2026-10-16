@@ -1,6 +1,13 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 7, Baseline 61 — 2026-10-16 (latest, published)
+## Y2Linux 1.0 Beta 7.1, Baseline 62 — 2026-10-16 (latest, published)
+
+Release `1.0.0-beta.7.1` (Reborn `1.0.0-beta.7.1`), tag `baseline-62`, Linux `e9427a9`, Reborn `81a907e`. One-step update
+(Update Now: download, check, restart; Cancel during the download), Check for Updates answers at once, the computer screen
+follows the cable on every screen and stays while connected, automatic time zone over Wi-Fi with a country-first picker.
+Details: [Beta 7.1 report](validation/Y2-LINUX-1.0-BETA-7.1.md).
+
+## Y2Linux 1.0 Beta 7, Baseline 61 — 2026-10-16 (published)
 
 Release `1.0.0-beta.7` (Reborn `1.0.0-beta.7`), tag `baseline-61`, Linux `7c0ee9f`, Reborn `7ade64b`. Reborn UI v4: one fixed
 accent, one focus row, button and empty state; Home with a Music menu and Home Menu pins; hint lines and developer details
