@@ -8398,3 +8398,19 @@ ipapi.co (fallback ipwho.is) once per Wi-Fi network (owner decision), default on
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.7.1 / Reborn 1.0.0-beta.7.1** (Baseline 62, sequence 5850) as a public beta
 at the owner's request; next evidence boundary: the owner's OTA install and the Beta 7.1 report's device checks.
+
+## BETA-7.2 (Baseline 63) motion and the Now Playing wave: milestone gap audit — 2026-10-16
+
+**Boundary:** owner: more animation at 60 fps and a wave progress bar; "publish it when the build is done". A release is a
+milestone boundary. No hardware-scope or memory-model change: Reborn drawing only. Power note: Now Playing redraws
+continuously while playing and visible (Interactive lease); every other motion ends within ≈0.2 s.
+
+| Area | State for Beta 7.2 | Evidence / gap |
+| --- | --- | --- |
+| UI motion | BUILT, device fps owed | Host tests and mid-animation captures; frame rate on the Mali-400/CPU path to be sampled (`graphics_frames`). |
+| Now Playing wave | BUILT, device fps and battery check owed | Continuous redraw while playing and visible. |
+| Beta 7.1 / 7 checks | OWED | Unchanged. |
+| FM radio | NOT STARTED | Beta 8; its own audit first. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.7.2 / Reborn 1.0.0-beta.7.2** (Baseline 63, sequence 5900) as a public beta
+at the owner's request; next evidence boundary: the owner's OTA install and a frame-rate sample on the device.

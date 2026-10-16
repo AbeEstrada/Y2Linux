@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 7.1, Baseline 62 — 2026-10-16 (latest, published)
+## Y2Linux 1.0 Beta 7.2, Baseline 63 — 2026-10-16 (latest, published)
+
+Release `1.0.0-beta.7.2` (Reborn `1.0.0-beta.7.2`), tag `baseline-63`, Linux `78b548b`, Reborn `846da2d`. Reborn motion at
+60 fps (gliding focus, smooth lists, screen slides, sheets, fades, switches) and a travelling wave for the Now Playing
+progress. Device frame rate to be measured. Details: [Beta 7.2 report](validation/Y2-LINUX-1.0-BETA-7.2.md).
+
+## Y2Linux 1.0 Beta 7.1, Baseline 62 — 2026-10-16 (published)
 
 Release `1.0.0-beta.7.1` (Reborn `1.0.0-beta.7.1`), tag `baseline-62`, Linux `e9427a9`, Reborn `81a907e`. One-step update
 (Update Now: download, check, restart; Cancel during the download), Check for Updates answers at once, the computer screen
