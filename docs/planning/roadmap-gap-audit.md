@@ -8526,3 +8526,19 @@ unchanged since BETA-7.6; FM radio stays on `beta8-fm`.
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.7.7 / Reborn 1.0.0-beta.7.7** (Baseline 70, sequence 6150) as a public beta
 at the owner's request; next evidence boundary: the owner's OTA install, QR sign-in and first real scrobble.
+
+## BETA-7.8 (Baseline 71) Last.fm fixes: milestone gap audit — 2026-10-16
+
+**Boundary:** owner: "yes" (release the fixes), "do 7.8". A public release is a milestone boundary. Reborn fixes only; no
+hardware, kernel, update-format or memory-model change. Real-hardware evidence: Beta 7.7 on the owner's player (QR
+sign-in, first real scrobble on last.fm; Now Playing lost after a pause; Last.fm events missing from the log).
+
+| Area | State for Beta 7.8 | Evidence / gap |
+| --- | --- | --- |
+| Last.fm scrobbling | DEVICE-CONFIRMED (7.7), fixes BUILT | Real scrobble on last.fm; 512 Reborn tests incl. Now Playing decision, error-6 split, log guard. |
+| Offline queue across sleep | NOT_RUN on device | Needs the player unplugged (ChargerActive refuses sleep). |
+| Log | FIXED | radio/clock/platform/lastfm/scrobble events recorded again. |
+| FM radio | ON BRANCH | Device test owed (BETA-8-FM rows). |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.7.8 / Reborn 1.0.0-beta.7.8** (Baseline 71, sequence 6200) as a public beta
+at the owner's request; next evidence boundary: Now Playing after a pause and the offline test on the owner's player.

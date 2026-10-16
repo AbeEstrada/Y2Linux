@@ -1,6 +1,13 @@
 # Next-session handoff — Y2Linux 1.0 Beta 7.6 (latest entry first; started 2026-10-09 as the deep-sleep continuation)
 
-> **START HERE (2026-10-16, latest): Y2LINUX 1.0 BETA 7.7 (BASELINE 70) PUBLISHED — LAST.FM SCROBBLING.** Release
+> **START HERE (2026-10-16, latest): Y2LINUX 1.0 BETA 7.8 (BASELINE 71) PUBLISHED — LAST.FM FIXES.** Release
+> `1.0.0-beta.7.8`, sequence 6200, Linux `21d5ba0`, Reborn `35a3d56` (fixes `e417ecb` log subsystems, `8bd1452` Now Playing
+> after pause/repeat/failure, error-6 split, clock gate, one sign-in), report `docs/validation/Y2-LINUX-1.0-BETA-7.8.md`,
+> audit BETA-7.8. Device checks owed after the owner's OTA install: Now Playing after a pause; offline play sent after sleep
+> with USB **unplugged**; Last.fm events in the log. Next free label 72, sequence above 6200 (FM on `beta8-fm` must rebase;
+> its fm.1 output `out/release-68` was pruned by this build). Workspace: `out/build`, `out/release-70`, `out/release-71`.
+>
+> Previous entry: **START HERE (2026-10-16, latest): Y2LINUX 1.0 BETA 7.7 (BASELINE 70) PUBLISHED — LAST.FM SCROBBLING.** Release
 > `1.0.0-beta.7.7`, sequence 6150, Linux `bcb7815`, Reborn `f117586`, report `docs/validation/Y2-LINUX-1.0-BETA-7.7.md`, audit
 > BETA-7.7. Device checks owed after the owner's OTA install: QR sign-in, a real scrobble and Now Playing, an offline play
 > sent after sleep and Wi-Fi; 7.6 update fps on this download. Next free label 71, sequence above 6150 (FM on `beta8-fm`

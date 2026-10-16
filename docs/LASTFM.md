@@ -149,6 +149,6 @@ secret into `~/.local/share/y2linux/lastfm-api.json` as
 the permissions and installs it as `/usr/share/reborn/lastfm-api.json` (root, mode 0600). Never
 commit this file. Details: [BUILDING](BUILDING.md); design and evidence:
 [Last.fm plan](planning/LASTFM-SCROBBLE-PLAN.md) and the
-[Beta 7.7 report](validation/Y2-LINUX-1.0-BETA-7.7.md). The code is in Y2Reborn:
+[Beta 7.7](validation/Y2-LINUX-1.0-BETA-7.7.md) and [Beta 7.8](validation/Y2-LINUX-1.0-BETA-7.8.md) reports. The code is in Y2Reborn:
 `crates/reborn-core/src/scrobble.rs` (rules), `crates/reborn-platform/src/scrobble.rs` (queue and
 log), `crates/reborn-platform/src/lastfm.rs` (Last.fm API) and `app/reborn/src/scrobbling.rs`.

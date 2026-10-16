@@ -1,6 +1,13 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 7.7, Baseline 70 — 2026-10-16 (latest, published)
+## Y2Linux 1.0 Beta 7.8, Baseline 71 — 2026-10-16 (latest, published)
+
+Release `1.0.0-beta.7.8` (Reborn `1.0.0-beta.7.8`), tag `baseline-71`, Linux `21d5ba0`, Reborn `35a3d56`. Beta 7.7's
+scrobbling worked on the owner's player (QR sign-in, real scrobble on last.fm). Fixes: Now Playing again after a pause or
+repeat, an invalid play no longer blocks sending, sign-in waits for a trusted clock, Last.fm/radio/clock/platform events
+reach the log again. Details: [Beta 7.8 report](validation/Y2-LINUX-1.0-BETA-7.8.md).
+
+## Y2Linux 1.0 Beta 7.7, Baseline 70 — 2026-10-16 (published)
 
 Release `1.0.0-beta.7.7` (Reborn `1.0.0-beta.7.7`), tag `baseline-70`, Linux `bcb7815`, Reborn `f117586`. Last.fm
 scrobbling: sign-in by QR code, offline queue, Now Playing, optional `.scrobbler.log`. Details:
