@@ -8362,3 +8362,21 @@ interactive `reborn-preview` states from Reborn `0ab9953`. Plan and owner decisi
 **Gate decision:** UI v4 ACTIVE at phase 0 (spec, preview fixture titles, "before" previews); phase 1 (components and
 tokens) is ready to start. Each phase ships as its own beta after host previews; next evidence boundary: the device
 walk-through with screen capture while the owner presses the buttons.
+
+## BETA-7 (Baseline 61) UI v4 and two platform fixes: milestone gap audit — 2026-10-16
+
+**Boundary:** owner: "commit everything and start the release build" after UI v4 phases 1–3 ("we do a new build after all ui
+work is finished"). A release is a milestone boundary. No hardware-scope or memory-model change: Reborn presentation only,
+plus a kernel resume callback (`thermal.c`) and a retry in the platform's sleep helper.
+
+| Area | State for Beta 7 | Evidence / gap |
+| --- | --- | --- |
+| UI v4 | BUILT, device tour owed | Phases 1–3 on the host: 479 tests, previews of 114 states and 16 skins by eye. Phase 4 = the owner's on-device tour with screen capture. |
+| CPU thermal after sleep | BUILT, device check owed | Archive 156: zone disabled at 06:43 after INFRA power-down wiped the monitor; resume re-programs it. Check `thermal_zone1` after a night. |
+| Sleep refusal by BAT0 | BUILT, device check owed | Archive 156 10:31 and archive 155 06:38; bounded fresh-count retry with the Power/RTC/cable checks repeated; 3 host tests. |
+| Overnight drain | MEASURED on 6.3 | ≈7.8 mA, 14 h; stock ≈1.3 mA remains the open gap. |
+| FM radio | NOT STARTED | Now Beta 8; its own audit first. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.7 / Reborn 1.0.0-beta.7** (Baseline 61, sequence 5800) once the build's
+checks pass; publishing waits for the owner's word. Next evidence boundary: the owner's OTA install and the device checks of
+the Beta 7 report.

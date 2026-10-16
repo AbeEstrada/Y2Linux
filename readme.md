@@ -6,22 +6,22 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Y2Linux 1.0 Beta 6.3 (Baseline 60, 2026-10-16), public beta.** It runs every day
+> **Status: Y2Linux 1.0 Beta 7 (Baseline 61, 2026-10-16), public beta.** It runs every day
 > on the maintainer's Y2. Install it once from the ready-made images of the
 > [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases) with SP Flash Tool
 > ([INSTALL](docs/INSTALL.md)); after that the player updates itself over Wi-Fi. Only one
 > hardware revision has been tested (see [Supported hardware](#supported-hardware)). Read
 > [Known issues](#known-issues) before you flash: battery life in sleep is not yet stock-like.
 
-| | 1.0 Beta 6.3 (Baseline 60) |
+| | 1.0 Beta 7 (Baseline 61) |
 | --- | --- |
-| Git tag (both repositories) | `baseline-60` (previous: `baseline-59`); the GitHub release carries the first-install images, the signed over-the-air update and the GPL sources |
-| Release / kernel | `1.0.0-beta.6.3` / `6.18.56-y2linux-1.0.0-beta.6.3` (Linux 6.18 long-term line) |
-| Root filesystem | `2026.08-platform-v1.90` (Buildroot 2026.08) |
-| Player | Y2Reborn 1.0.0-beta.6.3 (Rust 1.99) with Cover Flow, Genres, a clock and 16 themes |
+| Git tag (both repositories) | `baseline-61` (previous: `baseline-60`); the GitHub release carries the first-install images, the signed over-the-air update and the GPL sources |
+| Release / kernel | `1.0.0-beta.7` / `6.18.56-y2linux-1.0.0-beta.7` (Linux 6.18 long-term line) |
+| Root filesystem | `2026.08-platform-v1.91` (Buildroot 2026.08) |
+| Player | Y2Reborn 1.0.0-beta.7 (Rust 1.99) with the UI v4 design, Cover Flow, Genres, a clock and 16 themes |
 | Bluetooth codecs | SBC, AAC (fdk-aac-free) and LDAC |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 |
-| Images built from | Y2Linux `b20404c`, Y2Reborn `b18d98c` ([Beta 6.3 report](docs/validation/Y2-LINUX-1.0-BETA-6.3.md)) |
+| Images built from | Y2Linux `7c0ee9f`, Y2Reborn `7ade64b` ([Beta 7 report](docs/validation/Y2-LINUX-1.0-BETA-7.md)) |
 
 ## Getting started
 
@@ -112,7 +112,7 @@ public release, and its Firmware-drive install was tested on the device):
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for 1.0 Beta [6.3](docs/validation/Y2-LINUX-1.0-BETA-6.3.md), [6.2](docs/validation/Y2-LINUX-1.0-BETA-6.2.md), [6.1](docs/validation/Y2-LINUX-1.0-BETA-6.1.md), [6](docs/validation/Y2-LINUX-1.0-BETA-6.md), [5.1](docs/validation/Y2-LINUX-1.0-BETA-5.1.md), [5](docs/validation/Y2-LINUX-1.0-BETA-5.md), [4.1](docs/validation/Y2-LINUX-1.0-BETA-4.1.md), [4](docs/validation/Y2-LINUX-1.0-BETA-4.md), [3](docs/validation/Y2-LINUX-1.0-BETA-3.md), [2](docs/validation/Y2-LINUX-1.0-BETA-2.md) and
+reports for 1.0 Beta [7](docs/validation/Y2-LINUX-1.0-BETA-7.md), [6.3](docs/validation/Y2-LINUX-1.0-BETA-6.3.md), [6.2](docs/validation/Y2-LINUX-1.0-BETA-6.2.md), [6.1](docs/validation/Y2-LINUX-1.0-BETA-6.1.md), [6](docs/validation/Y2-LINUX-1.0-BETA-6.md), [5.1](docs/validation/Y2-LINUX-1.0-BETA-5.1.md), [5](docs/validation/Y2-LINUX-1.0-BETA-5.md), [4.1](docs/validation/Y2-LINUX-1.0-BETA-4.1.md), [4](docs/validation/Y2-LINUX-1.0-BETA-4.md), [3](docs/validation/Y2-LINUX-1.0-BETA-3.md), [2](docs/validation/Y2-LINUX-1.0-BETA-2.md) and
 [1](docs/validation/Y2-LINUX-1.0-BETA-1.md),
 [49](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-49.md) (firmware-free images, flash package, codecs),
 [48](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-48.md) (download screen),

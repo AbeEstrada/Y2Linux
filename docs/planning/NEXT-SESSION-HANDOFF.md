@@ -1,6 +1,13 @@
 # Next-session handoff — deep-sleep continuation, 2026-10-09 local
 
-> **START HERE (2026-10-16 afternoon, latest): UNRELEASED WORK ON TOP OF BETA 6.3 — UI V4 ACTIVE, PHASES 1–3 DONE; TWO PLATFORM FIXES. NO BUILD UNTIL ALL UI PHASES ARE DONE (owner).**
+> **START HERE (2026-10-16 evening, latest): Y2LINUX 1.0 BETA 7 (BASELINE 61) BUILT — UI V4 + CPU THERMAL AFTER SLEEP + SLEEP RETRY. PUBLISH WAITS FOR THE OWNER.**
+>
+> - Release `1.0.0-beta.7`, label 61, sequence 5800, Linux `7c0ee9f` (+ docs), Reborn `7ade64b`; `out/release-61` (container suite 743 OK, no firmware, OTA signed). Report `docs/validation/Y2-LINUX-1.0-BETA-7.md` (hashes), audits UI-V4 and BETA-7. Release notes ready: `out/release-61/release-notes.md`.
+> - Publish (owner's word first): `python3 tools/production/release.py publish --label 61 --title "Y2Linux 1.0 Beta 7" --notes out/release-61/release-notes.md --yes` with the GIT_AUTHOR_*/GIT_COMMITTER_* environment (Luca, noreply). Then set the report's status to PUBLISHED and add Reborn's readme/CURRENT_REBORN_STATE entry for 1.0.0-beta.7 (Reborn docs go in after publishing: publish needs Reborn's HEAD = `7ade64b`).
+> - After the owner's OTA install: UI v4 phase 4 device tour with screen capture (owner presses buttons), `thermal_zone1` enabled after a night, Power-sleep right after a wake. FM radio is Beta 8.
+> - Workspace: `out/build`, `out/release-60`, `out/release-61`. Next free: label 62, sequence above 5800. Lesson: never edit the tree while `release.py build` runs (packaging checks a clean tree at the end).
+
+> Previous entry: **(2026-10-16 afternoon) UNRELEASED WORK ON TOP OF BETA 6.3 — UI V4 ACTIVE, PHASES 1–3 DONE; TWO PLATFORM FIXES. NO BUILD UNTIL ALL UI PHASES ARE DONE (owner).**
 >
 > - **Overnight drain of 6.3** (archive `out/deep-sleep-final/evidence/20261016/156-beta63-overnight-drain`): ≈7.8 mA, 14 h asleep, all SPM/INFRA/PMIC counters clean.
 > - **Fix 1, CPU thermal zone dead after the first sleep:** `kernel/platform/thermal.c` programmed the 1100b000 monitor only in probe; INFRA power-down wipes it (monitor/period/filter/poll read 0), `y2_soc_temp` returned -ENODATA and the thermal core disabled `cpu-thermal` (trips 110/120 °C). Seen in archives 124/125/155/156. Now `y2_thermal_init` runs again in `y2_thermal_resume` when the monitor is off. Compiles against `out/build` (W=1); device check owed: `/sys/class/thermal/thermal_zone1/mode` stays enabled with a temperature after a night.
