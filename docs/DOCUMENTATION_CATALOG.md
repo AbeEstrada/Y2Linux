@@ -338,7 +338,8 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [Y2Linux 1.0 Beta 7.1 (Baseline 62)](validation/Y2-LINUX-1.0-BETA-7.1.md) | One-step update, USB screen, automatic time zone |
 | [Y2Linux 1.0 Beta 7.2 (Baseline 63)](validation/Y2-LINUX-1.0-BETA-7.2.md) | Motion at 60 fps, the Now Playing wave |
 | [Y2Linux 1.0 Beta 7.3 (Baseline 64)](validation/Y2-LINUX-1.0-BETA-7.3.md) | USB message and symbol instead of a screen |
-| [Y2Linux 1.0 Beta 7.4 (Baseline 65)](validation/Y2-LINUX-1.0-BETA-7.4.md) | Current entry: status-bar messages, cooler wave |
+| [Y2Linux 1.0 Beta 7.4 (Baseline 65)](validation/Y2-LINUX-1.0-BETA-7.4.md) | Status-bar messages, cooler wave |
+| [Y2Linux 1.0 Beta 7.5 (Baseline 66)](validation/Y2-LINUX-1.0-BETA-7.5.md) | Current entry: larger status bar, Home header, Skin in Settings |
 | [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |
 | [POWER-FINAL-32 — deep idle during screen-off playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) | Sealed candidate report (in 33) |
 | [POWER-FINAL-31 — folder-first artwork and metadata formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) | Sealed candidate report (in 33) |

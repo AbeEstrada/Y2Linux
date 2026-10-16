@@ -6,22 +6,22 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Y2Linux 1.0 Beta 7.4 (Baseline 65, 2026-10-16), public beta.** It runs every day
+> **Status: Y2Linux 1.0 Beta 7.5 (Baseline 66, 2026-10-16), public beta.** It runs every day
 > on the maintainer's Y2. Install it once from the ready-made images of the
 > [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases) with SP Flash Tool
 > ([INSTALL](docs/INSTALL.md)); after that the player updates itself over Wi-Fi. Only one
 > hardware revision has been tested (see [Supported hardware](#supported-hardware)). Read
 > [Known issues](#known-issues) before you flash: battery life in sleep is not yet stock-like.
 
-| | 1.0 Beta 7.4 (Baseline 65) |
+| | 1.0 Beta 7.5 (Baseline 66) |
 | --- | --- |
-| Git tag (both repositories) | `baseline-65` (previous: `baseline-64`); the GitHub release carries the first-install images, the signed over-the-air update and the GPL sources |
-| Release / kernel | `1.0.0-beta.7.4` / `6.18.56-y2linux-1.0.0-beta.7.4` (Linux 6.18 long-term line) |
-| Root filesystem | `2026.08-platform-v1.95` (Buildroot 2026.08) |
-| Player | Y2Reborn 1.0.0-beta.7.4 (Rust 1.99) with the UI v4 design, Cover Flow, Genres, a clock and 16 themes |
+| Git tag (both repositories) | `baseline-66` (previous: `baseline-65`); the GitHub release carries the first-install images, the signed over-the-air update and the GPL sources |
+| Release / kernel | `1.0.0-beta.7.5` / `6.18.56-y2linux-1.0.0-beta.7.5` (Linux 6.18 long-term line) |
+| Root filesystem | `2026.08-platform-v1.96` (Buildroot 2026.08) |
+| Player | Y2Reborn 1.0.0-beta.7.5 (Rust 1.99) with the UI v4 design, Cover Flow, Genres, a clock and 16 skins |
 | Bluetooth codecs | SBC, AAC (fdk-aac-free) and LDAC |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 |
-| Images built from | Y2Linux `d909231`, Y2Reborn `8c0f8c4` ([Beta 7.4 report](docs/validation/Y2-LINUX-1.0-BETA-7.4.md)) |
+| Images built from | Y2Linux `2ec56d2`, Y2Reborn `0291d69` ([Beta 7.5 report](docs/validation/Y2-LINUX-1.0-BETA-7.5.md)) |
 
 ## Getting started
 
@@ -49,11 +49,11 @@ public release, and its Firmware-drive install was tested on the device):
 
 - Boots from internal eMMC: stock preloader and LK, then Linux 6.18 and Buildroot. No SD card needed.
 - Display with GPU (DRM + Lima), buttons, click wheel and the Reborn player UI.
-- **Themes:** Settings → Display → Theme switches between Reborn's own look and 16 shipped
-  themes that restyle every screen (Classic, Nano Glass, Walkman, Terminal, Winamp, Paper,
+- **Skins:** Settings → Skin switches between Reborn's own look and 16 shipped
+  skins that restyle every screen (Classic, Nano Glass, Walkman, Terminal, Winamp, Paper,
   Big Type, Cassette, Neon Night, Zune, Bunny Bow, five Mini colours). A status-bar clock
   follows the zone chosen under Settings → Display → Time Zone. More can be added by copying a
-  theme folder into `Themes` on the player over MTP. Authoring guide:
+  skin folder into `Skins` on the player over MTP (an existing `Themes` folder still works). Authoring guide:
   [Reborn skins](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/skins.md).
 - Albums in **Cover Flow** (perspective covers with reflections, the cover flies into the
   album page; the grid stays available in Settings → Display), and **Genres** in the main list
@@ -112,7 +112,7 @@ public release, and its Firmware-drive install was tested on the device):
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for 1.0 Beta [7.4](docs/validation/Y2-LINUX-1.0-BETA-7.4.md), [7.3](docs/validation/Y2-LINUX-1.0-BETA-7.3.md), [7.2](docs/validation/Y2-LINUX-1.0-BETA-7.2.md), [7.1](docs/validation/Y2-LINUX-1.0-BETA-7.1.md), [7](docs/validation/Y2-LINUX-1.0-BETA-7.md), [6.3](docs/validation/Y2-LINUX-1.0-BETA-6.3.md), [6.2](docs/validation/Y2-LINUX-1.0-BETA-6.2.md), [6.1](docs/validation/Y2-LINUX-1.0-BETA-6.1.md), [6](docs/validation/Y2-LINUX-1.0-BETA-6.md), [5.1](docs/validation/Y2-LINUX-1.0-BETA-5.1.md), [5](docs/validation/Y2-LINUX-1.0-BETA-5.md), [4.1](docs/validation/Y2-LINUX-1.0-BETA-4.1.md), [4](docs/validation/Y2-LINUX-1.0-BETA-4.md), [3](docs/validation/Y2-LINUX-1.0-BETA-3.md), [2](docs/validation/Y2-LINUX-1.0-BETA-2.md) and
+reports for 1.0 Beta [7.5](docs/validation/Y2-LINUX-1.0-BETA-7.5.md), [7.4](docs/validation/Y2-LINUX-1.0-BETA-7.4.md), [7.3](docs/validation/Y2-LINUX-1.0-BETA-7.3.md), [7.2](docs/validation/Y2-LINUX-1.0-BETA-7.2.md), [7.1](docs/validation/Y2-LINUX-1.0-BETA-7.1.md), [7](docs/validation/Y2-LINUX-1.0-BETA-7.md), [6.3](docs/validation/Y2-LINUX-1.0-BETA-6.3.md), [6.2](docs/validation/Y2-LINUX-1.0-BETA-6.2.md), [6.1](docs/validation/Y2-LINUX-1.0-BETA-6.1.md), [6](docs/validation/Y2-LINUX-1.0-BETA-6.md), [5.1](docs/validation/Y2-LINUX-1.0-BETA-5.1.md), [5](docs/validation/Y2-LINUX-1.0-BETA-5.md), [4.1](docs/validation/Y2-LINUX-1.0-BETA-4.1.md), [4](docs/validation/Y2-LINUX-1.0-BETA-4.md), [3](docs/validation/Y2-LINUX-1.0-BETA-3.md), [2](docs/validation/Y2-LINUX-1.0-BETA-2.md) and
 [1](docs/validation/Y2-LINUX-1.0-BETA-1.md),
 [49](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-49.md) (firmware-free images, flash package, codecs),
 [48](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-48.md) (download screen),

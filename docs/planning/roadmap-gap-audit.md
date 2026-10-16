@@ -8444,3 +8444,19 @@ hardware or memory-model change. Thermal note recorded: no regression under the 
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.7.4 / Reborn 1.0.0-beta.7.4** (Baseline 65, sequence 6000) as a public beta;
 next evidence boundary: the Now Playing clock/temperature check on battery.
+
+## BETA-7.5 (Baseline 66) larger status bar, Skin in Settings: milestone gap audit — 2026-10-16
+
+**Boundary:** owner chose status bar layout C, a Home header, Skin as its own Settings place and asked for the release; a
+release is a milestone boundary. Reborn only; no hardware, kernel or memory-model change. Real-hardware evidence unchanged
+since BETA-7.4 (7.3 fps sample, 7.4 temperatures); nothing here depends on new hardware behaviour.
+
+| Area | State for Beta 7.5 | Evidence / gap |
+| --- | --- | --- |
+| Status bar / Home header | BUILT, device look owed | Four rendered variants, owner chose C; host tests, previews, three skins. |
+| Skin place | BUILT, device check owed | Settings fits seven rows; Display without scrolling; `Skins` and `Themes` folders read. |
+| Now Playing heat | BUILT (7.4), device check owed | 598 MHz expected while the wave plays. |
+| FM radio | NOT STARTED | Beta 8. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.7.5 / Reborn 1.0.0-beta.7.5** (Baseline 66, sequence 6050) as a public beta
+at the owner's request; next evidence boundary: the device look at the new bar.

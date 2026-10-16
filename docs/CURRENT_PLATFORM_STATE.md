@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 7.4, Baseline 65 — 2026-10-16 (latest, published)
+## Y2Linux 1.0 Beta 7.5, Baseline 66 — 2026-10-16 (latest, published)
+
+Release `1.0.0-beta.7.5` (Reborn `1.0.0-beta.7.5`), tag `baseline-66`, Linux `2ec56d2`, Reborn `0291d69`. Larger status bar
+with the screen's name beside the back arrow, a Home header, larger messages; Theme is now Settings → Skin. Details:
+[Beta 7.5 report](validation/Y2-LINUX-1.0-BETA-7.5.md).
+
+## Y2Linux 1.0 Beta 7.4, Baseline 65 — 2026-10-16 (published)
 
 Release `1.0.0-beta.7.4` (Reborn `1.0.0-beta.7.4`), tag `baseline-65`, Linux `d909231`, Reborn `8c0f8c4`. Messages as a slim
 pill in the status bar with an icon; the playing wave no longer holds the CPU lease. Motion measured on 7.3: 62 fps median
