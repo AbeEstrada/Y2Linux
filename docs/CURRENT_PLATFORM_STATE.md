@@ -1,6 +1,13 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 7.9, Baseline 72 — 2026-10-17 (latest, published)
+## Y2Linux 1.0 Beta 7.10, Baseline 73 — 2026-10-17 (latest, published)
+
+Release `1.0.0-beta.7.10`, tag `baseline-73`, Linux `72a565d`, Reborn `511dbf0`. USB file operations: the musb crash on
+packet-aligned MTP transfers (zero-length packet, Beta 7.9 oops) is fixed; moving and copying on the player (MoveObject,
+CopyObject) for Windows Explorer and libmtp hosts. Beta 7.9's automatic Internal Storage passed on the owner's player.
+Details: [Beta 7.10 report](validation/Y2-LINUX-1.0-BETA-7.10.md).
+
+## Y2Linux 1.0 Beta 7.9, Baseline 72 — 2026-10-17 (published)
 
 Release `1.0.0-beta.7.9`, tag `baseline-72`, Linux `2ac6abd`, Reborn `926ef45`. Every player gets Internal Storage
 (Y2MEDIA) by itself at start, keeping up to 400 MB of old files in *Old Player Files* (a larger library waits, shown

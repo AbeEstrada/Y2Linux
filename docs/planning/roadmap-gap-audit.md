@@ -8577,3 +8577,20 @@ restored from the 2026-10-10 backup (hash-identical), Internal Storage backed up
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.7.9 / Reborn 1.0.0-beta.7.9** (Baseline 72, sequence 6250) at the
 owner's request; next evidence: the owner's OTA install and restart (case 2 on real hardware).
+
+## BETA-7.10 (Baseline 73) USB file operations pass: milestone gap audit — 2026-10-17
+
+**Boundary:** owner: "copying, moving and deleting files when connected over usb [should] work without errors and dont
+crash the player or hang … it should work for windows, mac and linux, please all fixes together". USB transfer subsystem
+change (kernel musb + MTP responder) and a public release. Real-hardware evidence: Beta 7.9 oops on the owner's player
+(pstore, decoded to ZERO_SIZE_PTR), Beta 7.9 storage setup confirmed on hardware.
+
+| Area | State for Beta 7.10 | Evidence / gap |
+| --- | --- | --- |
+| ZLP DMA oops | FIXED | Root cause from registers + disassembly; musb skips mapping zero-length requests. Device confirmation owed (stress tool). |
+| MoveObject / CopyObject | BUILT | Real responder protocol tests incl. between storages, read-only, refusals; mutation-checked. Windows Explorer run owed. |
+| Internal Storage setup (7.9) | DEVICE-CONFIRMED | Owner's player, 509 files hash-identical, layout identical. |
+| FM radio | ON BRANCH | Device test owed. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.7.10 / Reborn 1.0.0-beta.7.10** (Baseline 73, sequence 6300) at the owner's
+word; next evidence: `mtp-file-ops` on the owner's player, then Windows Explorer and a macOS MTP app.

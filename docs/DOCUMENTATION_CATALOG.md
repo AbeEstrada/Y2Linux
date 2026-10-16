@@ -343,7 +343,8 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [Y2Linux 1.0 Beta 7.6 (Baseline 67)](validation/Y2-LINUX-1.0-BETA-7.6.md) | Smooth update screens, step tracker |
 | [Y2Linux 1.0 Beta 7.7 (Baseline 70)](validation/Y2-LINUX-1.0-BETA-7.7.md) | Last.fm scrobbling |
 | [Y2Linux 1.0 Beta 7.8 (Baseline 71)](validation/Y2-LINUX-1.0-BETA-7.8.md) | Last.fm fixes (Now Playing after a pause, log) |
-| [Y2Linux 1.0 Beta 7.9 (Baseline 72)](validation/Y2-LINUX-1.0-BETA-7.9.md) | Current entry: Internal Storage for every player, radio firmware space (#39), pulled SD cards (#44) |
+| [Y2Linux 1.0 Beta 7.9 (Baseline 72)](validation/Y2-LINUX-1.0-BETA-7.9.md) | Internal Storage for every player, radio firmware space (#39), pulled SD cards (#44) |
+| [Y2Linux 1.0 Beta 7.10 (Baseline 73)](validation/Y2-LINUX-1.0-BETA-7.10.md) | Current entry: USB file operations (crash fix, move and copy on the player) |
 | [Internal Storage setup plan](planning/INTERNAL-STORAGE-SETUP-PLAN.md) | Automatic Internal Storage: cases, safety, layout |
 | [Last.fm scrobbling](LASTFM.md) | User guide: set-up, what counts, offline, privacy and security |
 | [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |

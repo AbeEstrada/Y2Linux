@@ -1,6 +1,15 @@
 # Next-session handoff — Y2Linux 1.0 Beta 7.6 (latest entry first; started 2026-10-09 as the deep-sleep continuation)
 
-> **START HERE (2026-10-17, latest): Y2LINUX 1.0 BETA 7.9 (BASELINE 72) PUBLISHED — INTERNAL STORAGE FOR EVERY
+> **START HERE (2026-10-17, latest): Y2LINUX 1.0 BETA 7.10 (BASELINE 73) — USB FILE OPERATIONS.** Release
+> `1.0.0-beta.7.10`, sequence 6300, Linux `72a565d` (code `da0917d` musb ZLP fix, `4c0a54d` MoveObject/CopyObject + tool), Reborn
+> `511dbf0`, report `docs/validation/Y2-LINUX-1.0-BETA-7.10.md`, audit BETA-7.10. 7.9's automatic Internal Storage PASSED on the
+> owner's player (509 kept files hash-identical). Next: owner installs 7.10, then run
+> `cc -O2 -Wall -o /tmp/ops tools/usb/mtp-file-ops.c -lmtp && /tmp/ops` with the player connected (MTP); then Windows
+> Explorer / macOS app checks by the owner. Owner still to decide: automatic restart after an update when the storage setup
+> waits; restore the skins backup (`out/deep-sleep-final/evidence/20261016/internal-storage-backup-before-stock-test`).
+> Next free label 74, sequence above 6300.
+>
+> Previous entry: **START HERE (2026-10-17, latest): Y2LINUX 1.0 BETA 7.9 (BASELINE 72) PUBLISHED — INTERNAL STORAGE FOR EVERY
 > PLAYER, #39, #44.** Release `1.0.0-beta.7.9`, sequence 6250, Linux `2ac6abd` (code `5d2801c`, `3110f3a`), Reborn `926ef45`
 > (code `93be94f`, `b023daf`), report `docs/validation/Y2-LINUX-1.0-BETA-7.9.md`, audits STORAGE-SETUP and BETA-7.9, plan
 > `docs/planning/INTERNAL-STORAGE-SETUP-PLAN.md`. **Owner's player is prepared for the device test:** p8 is the stock FAT
