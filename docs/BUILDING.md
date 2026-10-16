@@ -109,6 +109,13 @@ library search paths of its own location; resume it in place or build afresh.
 The result is `out/y2-build/BOOTIMG.img` (kernel and rescue initramfs) and
 `out/y2-build/buildroot/images/` (root filesystem).
 
+### Last.fm app key (optional)
+
+Last.fm needs an API account (last.fm/api/account/create). Put its key and shared secret, never in the source, into
+`~/.local/share/y2linux/lastfm-api.json` as `{"api_key": "…", "shared_secret": "…"}` with `chmod 600`. The build copies it
+into the image as `/usr/share/reborn/lastfm-api.json` (mode 0600); without it Settings → Last.fm says the build has no key
+and only the `.scrobbler.log` file works.
+
 ## 5. Test (optional, recommended)
 
 ```sh

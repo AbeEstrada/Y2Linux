@@ -8494,3 +8494,19 @@ Real-hardware evidence unchanged since BETA-7.6 (device on 1.0.0-beta.7.6).
 
 **Gate decision:** phase 1 READY (host only); live Last.fm runs wait for the owner's API account; a release waits for
 the owner's device check and word.
+
+## LASTFM implementation boundary — 2026-10-16
+
+**Boundary:** phases 1–3 of [LASTFM-SCROBBLE-PLAN](LASTFM-SCROBBLE-PLAN.md) on `main` (Reborn 60bea96 + Y2Linux release
+plumbing). Host evidence only; no image built, nothing installed.
+
+| Area | State | Evidence / gap |
+| --- | --- | --- |
+| Counting rules, queue, log, clock | BUILT, host-tested | Unit tests: thresholds, pause, seek, repeat, gapless, untagged, unknown clock, torn queue line. |
+| Last.fm client | BUILT, stand-in tested | MD5 RFC 1321 vectors, signature, no secret in argv, error classes, batches, stale drop. Live run owed. |
+| Settings → Last.fm, QR | BUILT, host-tested | UI tests (password never drawn or printed), zbar decodes the encoder and the rendered page. |
+| App key handling | BUILT, host-tested | 0600 checks, exact format, privacy names; key file from the owner still OWED. |
+| Device | NOT_RUN | Real scrobbles, offline queue across sleep, sending after Wi-Fi returns. |
+
+**Gate decision:** ready for a test build once the owner's key file exists; a release from `main` follows the device check
+and the owner's word. FM stays on `beta8-fm`.

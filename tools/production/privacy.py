@@ -25,6 +25,7 @@ def check_name(name):
     if (PROTECTED.fullmatch(path.name) or low.startswith(PRIVATE_TREES)
             or low == 'etc/wpa_supplicant.conf'
             or path.name in ('authorized_keys', 'authorized_keys2', 'library.db', 'session.json',
+                             'lastfm.json', 'scrobbles.jsonl', '.scrobbler.log',
                              '.ash_history', '.bash_history', '.python_history')
             or re.fullmatch(r'(?:id_(?:rsa|dsa|ecdsa|ed25519)|ssh_host_.*_key|dropbear_.*_host_key)', path.name)):
         raise ValueError('private_state_path:'+name)

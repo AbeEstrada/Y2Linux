@@ -74,6 +74,11 @@ set -- "$Y2_ARTIFACT_DIR"/buildroot/build/openssh-[0-9]*/sftp-server
 install -m 755 "$1" "$target/usr/libexec/y2-sftp-server"
 install -m 644 "$project/tools/update/trust.json" "$target/etc/y2linux/update-trust.json"
 install -m 644 "$project/tools/update/channel.json" "$target/etc/y2linux/update-channel.json"
+# Last.fm: the owner's app key when the build has one (tools/production/build.py).
+rm -f "$target/usr/share/reborn/lastfm-api.json"
+if [ -f "$Y2_ARTIFACT_DIR/lastfm-api.json" ]; then
+    install -D -m 600 "$Y2_ARTIFACT_DIR/lastfm-api.json" "$target/usr/share/reborn/lastfm-api.json"
+fi
 python3 - "$target/etc/y2linux" <<'PYUPDATE'
 import json, pathlib, sys
 root=pathlib.Path(sys.argv[1]); versions=json.loads((root/'versions.json').read_text())

@@ -28,6 +28,40 @@ class Privacy(unittest.TestCase):
         self.assertFalse(result['public_distribution_ready'])
         self.assertEqual(len(result['blockers']), 2)
 
+    def test_lastfm_listener_state_never_ships_and_the_app_key_is_checked(self):
+        # The listener's session, waiting plays and log belong to Y2DATA/storage.
+        for name in ('data/reborn/state/lastfm.json', 'lastfm.json', 'usr/share/reborn/scrobbles.jsonl',
+                     'media/internal/music/.scrobbler.log'):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                p.check_name(name)
+        p.check_name('usr/share/reborn/lastfm-api.json')
+        import os
+        from tools.production.build import lastfm_key
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            out = tmp / 'out'
+            out.mkdir()
+            source = tmp / 'lastfm-api.json'
+            self.assertFalse(lastfm_key(out, source))           # no key: no Last.fm
+            key = '0123456789abcdef0123456789abcdef'
+            source.write_text(json.dumps({'api_key': key, 'shared_secret': key}))
+            source.chmod(0o644)
+            with self.assertRaisesRegex(SystemExit, 'chmod 600'):
+                lastfm_key(out, source)
+            source.chmod(0o600)
+            self.assertTrue(lastfm_key(out, source))
+            self.assertEqual(oct((out / 'lastfm-api.json').stat().st_mode & 0o777), '0o600')
+            self.assertEqual(json.loads((out / 'lastfm-api.json').read_text())['api_key'], key)
+            source.write_text(json.dumps({'api_key': key, 'shared_secret': key, 'extra': 1}))
+            with self.assertRaisesRegex(SystemExit, 'exactly'):
+                lastfm_key(out, source)
+            self.assertFalse((out / 'lastfm-api.json').exists())  # a bad key leaves none behind
+            source.unlink()
+            self.assertFalse(lastfm_key(out, source))
+            self.assertFalse((out / 'lastfm-api.json').exists())
+        post = (Path(__file__).resolve().parents[1] / 'buildroot/board/y2/post-build-production.sh').read_text()
+        self.assertIn('install -D -m 600 "$Y2_ARTIFACT_DIR/lastfm-api.json" "$target/usr/share/reborn/lastfm-api.json"', post)
+
     def test_public_gate_requires_complete_typed_codec_inventory(self):
         manifest = {'owner_firmware': {'redistribution_permission_established': True}}
         records = {name: {'compiled_locally': name == 'SBC', 'distribution_approved': name == 'SBC'}

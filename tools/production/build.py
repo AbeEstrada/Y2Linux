@@ -41,6 +41,32 @@ def kernel_release_base(project):
     return '{VERSION}.{PATCHLEVEL}.{SUBLEVEL}'.format(**fields)
 
 
+# The app's Last.fm key (owner's API account; never in the source). Copied
+# 0600 into the build folder for post-build, which installs it as
+# /usr/share/reborn/lastfm-api.json; without it the image has no Last.fm.
+LASTFM_KEY = Path.home() / '.local/share/y2linux/lastfm-api.json'
+
+
+def lastfm_key(out, source=None):
+    source = LASTFM_KEY if source is None else source
+    target = out / 'lastfm-api.json'
+    target.unlink(missing_ok=True)
+    if not source.is_file():
+        print('lastfm: no app key (%s); the image has no Last.fm' % source, flush=True)
+        return False
+    if source.stat().st_mode & 0o077:
+        raise SystemExit('lastfm: %s must be readable by its owner only (chmod 600)' % source)
+    value = json.loads(source.read_text())
+    if set(value) != {'api_key', 'shared_secret'} or not all(
+            isinstance(v, str) and re.fullmatch(r'[0-9a-f]{32}', v) for v in value.values()):
+        raise SystemExit('lastfm: %s must hold exactly api_key and shared_secret (32 hex digits)' % source)
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, 'w') as f:
+        json.dump(value, f)
+    print('lastfm: app key included', flush=True)
+    return True
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output',default='out/y2linux-platform-v1-build')
@@ -96,6 +122,7 @@ def main():
     if not a.reuse_userspace:
         apply_buildroot_modernization(source)
         apply_ffmpeg9(source, PROJECT/'.cache/buildroot-dl')
+    lastfm_key(out)
     env=os.environ.copy();env.pop('Y2_PUBLIC_KEY_FILE',None)
     env.pop('Y2_OWNER_FIRMWARE',None)
     build_id = versions.get('build_id', 'Y2LINUX-REBORN-PREMIUM-' + versions['rootfs_version'].rsplit('.', 1)[-1].zfill(2))

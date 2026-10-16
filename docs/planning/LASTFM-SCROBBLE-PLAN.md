@@ -1,6 +1,8 @@
 # Last.fm scrobbling on the player — plan (2026-10-16)
 
-**Status: ACTIVE on `main` (Y2Linux, Y2Reborn), separate from FM radio (FM stays on `beta8-fm`).** Owner decisions
+**Status (2026-10-16): phases 1–3 IMPLEMENTED on `main` (Reborn 60bea96; Y2Linux release plumbing); phase 4 owed — the
+owner's API key file, one live sign-in/scrobble run, the device test and the release.** Separate from FM radio (FM stays on
+`beta8-fm`). Owner decisions
 2026-10-16 ("go with your recommendations… ship this separate from fm… i will register a api key as long as this is
 secure"): the owner registers one Last.fm API account; sign-in by QR approval on a phone (password typing only as a
 fallback); library tracks only; Now Playing updates on; an optional Rockbox-format `.scrobbler.log`; ListenBrainz later;
@@ -48,7 +50,18 @@ code, no new Y2Linux service.
 | 3 | Settings → Last.fm, QR code (own encoder), status-bar message | UI tests, previews |
 | 4 | Release plumbing (key file into the image, privacy check), device test, beta release from `main` | Owner's player: real scrobbles, offline queue across sleep, sending after reconnect |
 
-## Open (not blocking phase 1)
+## Implemented
+
+- `reborn_core::scrobble` (rules), `reborn_platform::scrobble` (queue, log, clock trust, CLOCK_BOOTTIME),
+  `reborn_platform::lastfm` (MD5, signing, curl with the form on stdin, sign-in, Now Playing, batches, errors, back-off),
+  `app/reborn/src/scrobbling.rs` (tracking, worker replies, polling, sending), Settings → Last.fm with an own QR encoder
+  (decoded by zbar in `app/reborn/tests/qr_reader.rs`; the rendered preview decodes too). 508 Reborn tests, strict Clippy.
+- Y2Linux: `tools/production/build.py` copies `~/.local/share/y2linux/lastfm-api.json` (must be 0600, exactly `api_key` and
+  `shared_secret`, 32 hex each) into the build folder; `post-build-production.sh` installs it 0600 as
+  `/usr/share/reborn/lastfm-api.json`; without the file the image has no Last.fm. The privacy check refuses `lastfm.json`,
+  `scrobbles.jsonl` and `.scrobbler.log` in any image (`data/reborn/` was already refused). 771 host tests.
+
+## Open
 
 The owner's API account (application name "Y2Reborn", callback URL left empty): put the API key and shared secret into
 `~/.local/share/y2linux/lastfm-api.json` as `{"api_key": "…", "shared_secret": "…"}` with mode 0600 before phase 2's
