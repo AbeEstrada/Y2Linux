@@ -5,6 +5,12 @@
 > BETA-7.7. Device checks owed after the owner's OTA install: QR sign-in, a real scrobble and Now Playing, an offline play
 > sent after sleep and Wi-Fi; 7.6 update fps on this download. Next free label 71, sequence above 6150 (FM on `beta8-fm`
 > must rebase and use a sequence above the newest published one). Key file: `~/.local/share/y2linux/lastfm-api.json`.
+> **Device result (owner's OTA install):** QR sign-in and the first real scrobble worked (account confirmed on last.fm);
+> Now Playing vanished after a pause (sent only once per song). **Fixed on Reborn `main`, not released (candidate 7.7.1):**
+> `e417ecb` (radio/clock/platform/lastfm/scrobble events were dropped by the log allowlist; guard test), `8bd1452` (Now
+> Playing again after a pause/repeat/failed attempt, ≤ every 30 s; a play Last.fm refuses with error 6 no longer blocks
+> the queue; sign-in and Now Playing wait for a trusted clock; one sign-in request at a time). Still owed: the offline
+> test (Wi-Fi off, play past half, sleep **unplugged** — the charger refuses sleep — wake, Wi-Fi on, play appears).
 >
 > Previous entry: **(2026-10-16) LAST.FM SCROBBLING ON `main` — PHASES 1–3 BUILT, KEY + DEVICE TEST OWED.** Owner: ship
 > scrobbling separately from FM; FM stays on branch `beta8-fm` (implemented there, device test owed — see that branch's

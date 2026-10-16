@@ -20,7 +20,7 @@ Settings → Last.fm then shows your account and:
 | Setting | What it does |
 | --- | --- |
 | **Scrobble** | Send counted plays (on by default). |
-| **Show Now Playing** | Show the song you are listening to on your profile while it plays (on by default). |
+| **Show Now Playing** | Show the song you are listening to on your profile while it plays (on by default). It is sent again when you continue after a pause or play the song again. |
 | **Send Now** | Send waiting plays at once; the line shows how many are waiting. |
 | **Also Write .scrobbler.log** | Also keep a classic scrobbler log file (below); works without an account. |
 | **Disconnect** | Sign out; forgets the sign-in and the plays still waiting. |
@@ -51,6 +51,7 @@ Reborn follows Last.fm's rules:
   never sent with a wrong date.
 - If Last.fm is unreachable, the player waits and tries again: 1 minute, then 2, 4 … up to an hour,
   with a little random extra so that players do not all retry in the same second after an outage.
+- A play Last.fm refuses as invalid is left out, so it cannot hold back the plays after it.
 
 ## The scrobbler log (`.scrobbler.log`)
 
@@ -121,7 +122,8 @@ new one (players then sign in again).
 
 ## Limits
 
-Normal listening makes about **two requests per song** (Now Playing and the scrobble); a backlog
+Normal listening makes about **two requests per song** (Now Playing and the scrobble), plus one
+Now Playing when you continue after a pause (at most every 30 seconds); a backlog
 is sent 50 plays per request; signing in asks Last.fm every 3 seconds for at most 15 minutes,
 only while the code is shown. That is far below what Last.fm allows, and every player has its own
 budget. Y2Linux is free, non-commercial software, as Last.fm's API terms require.
@@ -132,6 +134,7 @@ budget. Y2Linux is free, non-commercial software, as Last.fm's API terms require
 | --- | --- |
 | *Last.fm Isn't Available* | This build has no Last.fm key (for example your own build); the scrobbler log still works. |
 | *Connect to Wi-Fi first* | Signing in needs Wi-Fi; plays are counted offline once you are signed in. |
+| *The clock isn't set yet* | Right after Wi-Fi connects the player may still be setting its clock (secure connections need the right date); try again in a moment. |
 | *N plays waiting* | They go out when Wi-Fi is connected; **Send Now** tries at once. |
 | *Sign in to Last.fm again* | Last.fm ended the sign-in (for example you revoked it); waiting plays are kept for the same account. |
 | *The Last.fm sign-in timed out* | The code was not approved within 15 minutes; start again. |
