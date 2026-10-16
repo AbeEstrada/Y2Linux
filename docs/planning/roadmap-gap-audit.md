@@ -8594,3 +8594,17 @@ change (kernel musb + MTP responder) and a public release. Real-hardware evidenc
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.7.10 / Reborn 1.0.0-beta.7.10** (Baseline 73, sequence 6300) at the owner's
 word; next evidence: `mtp-file-ops` on the owner's player, then Windows Explorer and a macOS MTP app.
+
+## USB-RX-DMA multi-packet receive DMA: milestone gap audit — 2026-10-17
+
+**Boundary:** owner: "i would like to do multi packet and fix the kernel". Kernel USB driver change in the area where
+receive DMA once lost data. Plan: [USB-RX-DMA-MODE1-PLAN](USB-RX-DMA-MODE1-PLAN.md).
+
+| Area | State | Real-hardware evidence / gap |
+| --- | --- | --- |
+| Upload ceiling | MEASURED | 8.7–10.3 MB/s up vs 37.7 down (Beta 7.10, owner's player); RX all PIO (`dma_rx_programs=0`). |
+| Ceiling cause | PROVEN | One core 96–100 % busy at ≈21–24 k interrupts/s regardless of core (live affinity test, restored). |
+| Storage headroom | MEASURED (candidate 11) | eMMC write 30 MiB/s, SD 26 MiB/s. |
+| Mode-1 RX DMA | NOT BUILT | Stock MTK reference (REA) owed; device integrity tests owed. |
+
+**Gate decision:** plan for owner review; implementation only after approval; default on only after the device tests.
