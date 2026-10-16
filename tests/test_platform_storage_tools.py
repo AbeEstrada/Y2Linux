@@ -262,6 +262,69 @@ class StorageTools(unittest.TestCase):
         args = next(c for c in calls if c[0] == 'mount')
         self.assertEqual(args[args.index('-o') + 1], 'rw,nosuid,nodev,noexec,noatime,fmask=0177,dmask=0077,utf8=1')
 
+    PULLED_FAT = ('fsck.fat 4.2 (2021-01-31)\n'
+                  'There are differences between boot sector and its backup.\n'
+                  'This is mostly harmless. Differences: (offset:original/backup)\n'
+                  '  65:01/00\n'
+                  '  Not automatically fixing this.\n'
+                  'Dirty bit is set. Fs was not properly unmounted and some data may be corrupt.\n'
+                  ' Automatically removing dirty bit.\n'
+                  'Leaving filesystem unchanged.\n'
+                  '/dev/mmcblk1p1: 13383 files, 1397005/1907917 clusters')
+
+    def fat_card_checked_as(self, output):
+        calls = self.card_fixture()
+        runner = self.ctx.runner
+        def fat(argv, **kwargs):
+            if argv[0] == 'fsck.fat':
+                calls.append(argv)
+                self.assertTrue(kwargs.get('failure_output'))
+                return {'ok': False, 'reason': 'command_failed', 'output': output}
+            result = runner(argv, **kwargs)
+            if argv[0] == 'blkid':
+                result['output'] = result['output'].replace('exfat', 'vfat')
+            if argv[0] == 'mount':
+                self.put('/proc/self/mountinfo', '51 1 179:9 / /media/sd rw - vfat /dev/mmcblk1p1 rw')
+            return result
+        self.ctx.runner = fat
+        return calls
+
+    def test_fat_card_pulled_while_mounted_is_mounted_again(self):
+        # Issue #44: fsck.fat -n exits 1 on the dirty bit alone.
+        calls = self.fat_card_checked_as(self.PULLED_FAT)
+        result = operation(self.ctx, 'mount')
+        self.assertEqual(result['state'], 'Ready')
+        self.assertEqual(result['filesystem_check']['finding'], 'unclean_unmount')
+        self.assertIn(['fsck.fat', '-n', '/dev/mmcblk1p1'], calls)
+        self.assertTrue(any(c[0] == 'mount' for c in calls))
+        # Admission still never repairs: no -a/-w/-r run.
+        self.assertFalse(any(c[0] == 'fsck.fat' and set(c) & {'-a', '-w', '-r', '-y'} for c in calls))
+        self.assertEqual(storage(self.ctx)['volumes'][2]['state'], 'Ready')
+
+    def test_fat_card_with_real_findings_stays_out_and_the_status_says_why(self):
+        damaged = self.PULLED_FAT.replace(
+            'Dirty bit', '/Music/Song.flac\n  File size is 4194304 bytes, cluster chain length is 1048576 bytes.\n'
+            '  Truncating file to 1048576 bytes.\nDirty bit')
+        calls = self.fat_card_checked_as(damaged)
+        result = operation(self.ctx, 'mount')
+        self.assertEqual((result['state'], result['reason']), ('Degraded', 'filesystem_check_failed'))
+        self.assertFalse(any(c[0] == 'mount' for c in calls))
+        # Checker output can name files: it is not kept.
+        self.assertIsNone(result['filesystem_check']['output'])
+        self.assertNotIn('Song.flac', self.ctx.path('/run/y2/media.json').read_text())
+        sd = storage(self.ctx)['volumes'][2]
+        self.assertEqual((sd['state'], sd['reason'], sd['filesystem']),
+                         ('Degraded', 'filesystem_check_failed', 'vfat'))
+        # Removed or reinserted (a new disk sequence number): no longer this card's verdict.
+        self.ctx.path('/sys/devices/platform/11240000.mmc/block/mmcblk1/diskseq').write_text('18')
+        sd = storage(self.ctx)['volumes'][2]
+        self.assertEqual((sd['state'], sd['reason']), ('Unavailable', 'not_uniquely_mounted'))
+
+    def test_fat_dirty_bit_with_other_boot_differences_stays_out(self):
+        calls = self.fat_card_checked_as(self.PULLED_FAT.replace('65:01/00', '65:01/00, 19:00/40'))
+        self.assertEqual(operation(self.ctx, 'mount')['reason'], 'filesystem_check_failed')
+        self.assertFalse(any(c[0] == 'mount' for c in calls))
+
     def test_fsck_is_read_only_and_never_checks_mounted_media(self):
         calls = self.card_fixture()
         self.assertEqual(operation(self.ctx, 'check')['state'], 'Ready')

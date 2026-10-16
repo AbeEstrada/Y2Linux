@@ -85,7 +85,9 @@ public release, and its Firmware-drive install was tested on the device):
 - Playlists (.m3u/.m3u8 from Internal Storage and the SD card, also from a computer) made and
   changed on the player, with a Favorites playlist and a heart; pause and play continue at once.
 - USB: MTP (internal storage and SD card), and SSH/SFTP over USB Ethernet for developers.
-- microSD card for music (`/media/sd`). Optionally, the stock FAT partition can be turned into
+- microSD card for music (`/media/sd`): FAT32, exFAT or ext4. Each card is checked read-only
+  before use; a card that was only pulled out while in use is used again, a damaged one is left
+  untouched and Settings → Storage says *Needs repair · Check it on a computer*. Optionally, the stock FAT partition can be turned into
   a 5.4 GiB ext4 music partition (`y2-platform internal-media provision`).
 - Charging over USB (conservative 650 mA default ceiling) with the stock top-off: the battery
   is charged until really full, shows 100 % then counts down 99, 98, …, and keeps its

@@ -6,7 +6,11 @@ import shutil
 import struct
 import subprocess
 import tempfile
+import sys
 import unittest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools/platform'))
+from y2_platform.media import fat_unclean_only  # noqa: E402
 
 
 class Filesystems(unittest.TestCase):
@@ -58,6 +62,35 @@ class Filesystems(unittest.TestCase):
             self.assertIn('Dirty bit is set', checked.stdout)
             self.assertNotEqual(checked.returncode, 0)
             self.assertEqual(self.digest(image), dirty)
+            # Issue #44: the Linux driver also sets the boot sector's dirty
+            # flag (offset 65), so it differs from its backup. A card left
+            # like this (pulled while mounted) is admitted; checker output as
+            # the platform runs it (LC_ALL=C).
+            with image.open('r+b') as stream:
+                stream.seek(65)
+                stream.write(b'\x01')
+            unclean = subprocess.run(['fsck.fat', '-n', str(image)], capture_output=True, text=True, errors='replace',
+                                     env={**os.environ, 'LC_ALL': 'C'}, timeout=30)
+            self.assertEqual(unclean.returncode, 1)
+            self.assertIn('65:01/00', unclean.stdout)
+            self.assertTrue(fat_unclean_only(unclean.stdout), unclean.stdout)
+            # A real finding on top (a file longer than its clusters) is not.
+            with image.open('r+b') as stream:
+                boot = stream.read(512)
+                sector = struct.unpack_from('<H', boot, 11)[0]
+                reserved = struct.unpack_from('<H', boot, 14)[0]
+                fat_sectors = struct.unpack_from('<I', boot, 36)[0]
+                root = (reserved + boot[16] * fat_sectors) * sector
+                stream.seek(root)
+                entries = stream.read(sector * boot[13])
+                index = next(i for i in range(0, len(entries), 32)
+                             if entries[i + 11] not in (0x0F, 0x08) and entries[i] not in (0, 0xE5))
+                stream.seek(root + index + 28)
+                stream.write(struct.pack('<I', 4 * 1024**2))
+            broken = subprocess.run(['fsck.fat', '-n', str(image)], capture_output=True, text=True, errors='replace',
+                                    env={**os.environ, 'LC_ALL': 'C'}, timeout=30)
+            self.assertNotEqual(broken.returncode, 0)
+            self.assertFalse(fat_unclean_only(broken.stdout), broken.stdout)
 
     @unittest.skipUnless(shutil.which('mkfs.exfat') and shutil.which('fsck.exfat'),
                          'native exFAT tools required')

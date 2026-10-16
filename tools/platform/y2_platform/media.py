@@ -4,6 +4,7 @@ import fcntl
 import json
 import os
 import hashlib
+import re
 import struct
 import time
 from .common import atomic_json, read
@@ -25,6 +26,49 @@ def media_identity(entry, filesystem, uuid):
     identity = dict(cid=cid, geometry=geometry, filesystem=filesystem, uuid=uuid)
     identity['id'] = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
     return identity
+
+
+# fsck.fat -n exits 1 whenever it would change anything, including only the
+# dirty bit a FAT card keeps after it was pulled out while mounted (Android,
+# Windows and macOS mount such a card; issue #44). A run that found nothing
+# else prints only these lines. The boot sector may then differ from its
+# backup only in the byte holding that same flag (offset 37 on FAT12/16, 65
+# on FAT32). Any other line is a real finding and keeps the card out.
+FAT_UNCLEAN_LINES = [re.compile(p) for p in (
+    r'fsck\.fat \S+ \(.*\)',
+    r'There are differences between boot sector and its backup\.',
+    r'This is mostly harmless\. Differences: \(offset:original/backup\)',
+    r'(?:37|65):[0-9a-f]{2}/[0-9a-f]{2}',
+    r'Not automatically fixing this\.',
+    r'Dirty bit is set\. Fs was not properly unmounted and some data may be corrupt\.',
+    r'Automatically removing dirty bit\.',
+    r'Leaving filesystem unchanged\.',
+    r'\S+: \d+ files, \d+/\d+ clusters',
+)]
+FAT_DIRTY_LINE = 'Dirty bit is set. Fs was not properly unmounted and some data may be corrupt.'
+
+
+def fat_unclean_only(output):
+    """True when a failed `fsck.fat -n` reported nothing but an unclean unmount."""
+    lines = [line.strip() for line in (output or '').splitlines() if line.strip()]
+    return (FAT_DIRTY_LINE in lines and
+            all(any(p.fullmatch(line) for p in FAT_UNCLEAN_LINES) for line in lines))
+
+
+def read_only_check(ctx, card, force=False):
+    """The admission check, never a repair. The record keeps no checker
+    output from a failed run (it can name files); an unclean unmount alone
+    passes with `finding`."""
+    argv = {'ext4': ['e2fsck', '-f', '-n'] if force else ['e2fsck', '-n'],
+            'vfat': ['fsck.fat', '-n'], 'exfat': ['fsck.exfat', '-n']}[card['filesystem']]
+    result = ctx.command(argv + [card['device']], timeout=60,
+                         failure_output=card['filesystem'] == 'vfat')
+    check = {'ok': result['ok'], 'reason': result['reason'],
+             'output': result['output'] if result['ok'] else None}
+    if (not result['ok'] and result['reason'] == 'command_failed' and card['filesystem'] == 'vfat'
+            and fat_unclean_only(result['output'])):
+        check.update(ok=True, finding='unclean_unmount')
+    return check
 
 
 def candidates(ctx):
@@ -157,18 +201,15 @@ def operation(ctx, action):
                 card = available[0]
                 state.update(card)
                 if action == 'check':
-                    argv = {'ext4': ['e2fsck', '-f', '-n'], 'vfat': ['fsck.fat', '-n'],
-                            'exfat': ['fsck.exfat', '-n']}[card['filesystem']]
-                    result = ctx.command(argv + [card['device']], timeout=60)
+                    result = read_only_check(ctx, card, force=True)
+                    state['filesystem_check'] = result
                     state.update(state='Ready' if result['ok'] else 'Degraded',
                                  reason='read_only_check_passed' if result['ok'] else result['reason'])
                 else:
                     # Read-only admission never authorizes checker repairs.
                     # Large/unhealthy media may time out;
                     # the owner must see that failure rather than a RW mount.
-                    argv = {'ext4': ['e2fsck', '-n'], 'vfat': ['fsck.fat', '-n'],
-                            'exfat': ['fsck.exfat', '-n']}[card['filesystem']]
-                    result = ctx.command(argv + [card['device']], timeout=60)
+                    result = read_only_check(ctx, card)
                     state['filesystem_check'] = result
                     if not result['ok']:
                         state.update(state='Degraded', reason='filesystem_check_failed')

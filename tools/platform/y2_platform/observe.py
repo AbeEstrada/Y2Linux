@@ -352,6 +352,21 @@ def storage_mode(text):
     return mode
 
 
+def refused_card(ctx):
+    """The card still inserted that the last mount refused (its check failed),
+    so the player can say so instead of "no card" (issue #44); {} otherwise.
+    A removed or reinserted card has another disk sequence number."""
+    last = ctx.json('/run/y2/media.json', None)
+    if not isinstance(last, dict) or last.get('reason') != 'filesystem_check_failed':
+        return {}
+    instance = last.get('source_instance')
+    parts = instance.split(':') if isinstance(instance, str) else []
+    if len(parts) != 5 or device_instance(ctx, ':'.join(parts[1:3])) != instance:
+        return {}
+    return {'state': 'Degraded', 'reason': 'filesystem_check_failed',
+            'filesystem': last.get('filesystem')}
+
+
 def storage(ctx):
     mounts = mountinfo(ctx.read('/proc/self/mountinfo'))
     boot_id = ctx.read('/proc/sys/kernel/random/boot_id')
@@ -361,8 +376,11 @@ def storage(ctx):
         found = [m for m in mounts if m['path'] == target]
         # Stacked mounts are ambiguous to consumers; fail closed.
         if len(found) != 1:
-            volumes.append({'path': target, 'state': 'Unavailable', 'reason': 'not_uniquely_mounted',
-                            'generation': None, 'space_state': 'Unavailable'})
+            volume = {'path': target, 'state': 'Unavailable', 'reason': 'not_uniquely_mounted',
+                      'generation': None, 'space_state': 'Unavailable'}
+            if target == '/media/sd' and not found:
+                volume.update(refused_card(ctx))
+            volumes.append(volume)
             continue
         item = dict(found[0])
         item['generation'] = f"{boot_id}:{item['mount_id']}:{item['device_id']}" if boot_id else None
