@@ -457,7 +457,9 @@ def storage(ctx):
                             'runtime_pm': storage_mode(read(path.parent / 'y2_runtime_pm', limit=4096)),
                             'runtime_status': read(path.parent / 'power/runtime_status'),
                             'tuning': read(path.parent / 'y2_tune_diag', limit=4096)})
+    from .internal_media import setup_status
     return {'volumes': volumes, 'blocks': blocks, 'controllers': controllers,
+            'internal_setup': setup_status(ctx),
             'media': {'last_operation': ctx.json('/run/y2/media.json', None),
                       'lifecycle': ctx.json('/run/y2/media-lifecycle.json', None)},
             'bus_parameters': ctx.read('/sys/kernel/debug/mmc0/ios'),

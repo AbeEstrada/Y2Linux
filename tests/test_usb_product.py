@@ -299,6 +299,35 @@ class MediaViews(unittest.TestCase):
         self.assertEqual(media_views(self.ctx),[])
 
 
+    def test_old_storage_is_read_only_and_only_while_the_setup_waits(self):
+        """STORAGE-SETUP case 3: the stock storage can be copied off, never written."""
+        from types import SimpleNamespace
+        self.ctx.path(self.mount).write_text('5 1 179:2 / /run/y2/old-storage ro - vfat /dev/mmcblk0p8 ro')
+        self.ctx.path('/run/y2/old-storage').mkdir(parents=True)
+        state={'state':'Waiting'}
+        with patch('y2_platform.internal_media.partition',return_value=SimpleNamespace(name='mmcblk0p8')), \
+             patch('y2_platform.internal_media.setup_status',side_effect=lambda ctx: dict(state)):
+            views=media_views(self.ctx)
+            self.assertEqual([(v['path'],v['name'],v['access']) for v in views],
+                             [('/run/y2/old-storage','Old Storage','ro')])
+            self.assertIn('storage "/run/y2/old-storage" "Old Storage" "ro"', config(views))
+            state['state']='Running'                       # Set Up Now: it leaves the computer first
+            self.assertEqual(media_views(self.ctx),[])
+            self.assertIn('storage "/run/y2/old-storage" "Old Storage" "rw,notmounted"', config([]))
+
+    def test_with_internal_storage_there_is_no_separate_firmware_drive(self):
+        """#39: the copy goes into Internal Storage's Firmware folder instead of Y2DATA."""
+        self.ctx.path(self.mount).write_text('5 1 179:2 / /media/internal rw - ext4 /dev/mmcblk0p8 rw\n'
+                                             '7 1 179:7 / /data rw - ext4 /dev/mmcblk0p7 rw')
+        with patch('y2_platform.internal_media.ready',return_value=False):
+            self.assertIn('/data/firmware/inbox',[v['path'] for v in media_views(self.ctx)])
+        with patch('y2_platform.internal_media.ready',return_value=True):
+            views=[v['path'] for v in media_views(self.ctx)]
+            self.assertNotIn('/data/firmware/inbox',views)
+            self.assertIn('/media/internal/music',views)
+            self.assertTrue(self.ctx.path('/media/internal/music/Firmware/README.txt').exists())
+
+
 class PhysicalHarness(unittest.TestCase):
     def setUp(self):
         spec=importlib.util.spec_from_file_location('usb_qualify',ROOT/'tools/usb/qualify.py')

@@ -95,8 +95,12 @@ def main():
     media.add_argument('--json', action='store_true')
     media.add_argument('--confirm-cid', help='format only: the CID shown by `media status`; formats exactly that card')
     internal = sub.add_parser('internal-media')
-    internal.add_argument('action', choices=['status', 'mount', 'unmount', 'provision'])
-    internal.add_argument('--confirm-serial', help='provision only: the stock FAT serial from `status`; that filesystem is replaced')
+    internal.add_argument('action', choices=['status', 'mount', 'unmount', 'provision', 'setup'])
+    internal.add_argument('--confirm-serial', help='provision/setup: the stock FAT serial from `status`; that filesystem is replaced')
+    internal.add_argument('--automatic', action='store_true',
+                          help='setup only: decide by itself at start (keeps a few files, waits for a large library)')
+    internal.add_argument('--confirm-shown', action='store_true',
+                          help='setup only: the listener confirmed the old storage this boot reported as waiting')
     internal.add_argument('--no-migrate', action='store_true', help='provision only: leave /data/music untouched')
     bench = sub.add_parser('bench-storage')
     bench.add_argument('--volume', choices=['/data', '/media/sd', '/media/internal'], default='/data')
@@ -309,6 +313,12 @@ def main():
             result = internal_media.status(ctx)
         elif args.action == 'provision':
             result = internal_media.provision(ctx, args.confirm_serial, not args.no_migrate)
+        elif args.action == 'setup':
+            serial = args.confirm_serial
+            if args.confirm_shown:
+                shown = internal_media.setup_status(ctx)
+                serial = shown.get('serial') if shown.get('state') == 'Waiting' else None
+            result = internal_media.setup(ctx, args.automatic, serial)
         else:
             result = getattr(internal_media, args.action)(ctx)
     elif args.command == 'bench-storage':
@@ -330,6 +340,7 @@ def main():
     failed = (args.command == 'health' and result['state'] == 'FAILED' or
               args.command == 'internal-media' and (
                   args.action in ('mount', 'provision') and result['state'] != 'Ready' or
+                  args.action == 'setup' and result['state'] in ('Failed', 'Unavailable') or
                   args.action == 'unmount' and result['state'] == 'Failed') or
               args.command == 'media' and (result['state'] in ('Failed', 'Degraded') or
                                           args.action in ('mount', 'format', 'grow') and result['state'] != 'Ready') or

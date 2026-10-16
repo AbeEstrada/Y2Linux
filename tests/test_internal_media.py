@@ -14,9 +14,10 @@ from y2_platform.observe import storage
 
 STOCK_SERIAL = '3F93-07E6'
 MOUNT_LINE = '9 1 179:8 / /media/internal rw - ext4 /dev/mmcblk0p8 rw'
+OLD_LINE = '12 1 179:8 / /run/y2/old-storage ro - vfat /dev/mmcblk0p8 ro'
 
 
-class InternalMedia(unittest.TestCase):
+class Fixture(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -28,6 +29,7 @@ class InternalMedia(unittest.TestCase):
         self.fs = {'TYPE': 'vfat', 'UUID': STOCK_SERIAL}
         self.calls = []
         self.fsck_ok = True
+        self.fat_check = {'ok': True, 'reason': None, 'output': ''}
         self.mkfs_ok = True
 
         def runner(argv, **kwargs):
@@ -43,11 +45,16 @@ class InternalMedia(unittest.TestCase):
                     return {'ok': False, 'reason': 'command_failed', 'output': None}
                 self.fs = {'TYPE': 'ext4', 'LABEL': argv[argv.index('-L') + 1], 'UUID': argv[argv.index('-U') + 1]}
                 return ok
+            if argv[0] == 'fsck.fat':
+                return dict(self.fat_check)
             if argv[0] == 'mount':
-                self.put('/proc/self/mountinfo', MOUNT_LINE)
+                self.mount_line(OLD_LINE if argv[2] == 'vfat' else MOUNT_LINE, True)
                 return ok
             if argv[0] == 'umount':
-                self.put('/proc/self/mountinfo', '')
+                if argv[1] == im.OLD:
+                    self.mount_line(OLD_LINE, False)
+                else:
+                    self.put('/proc/self/mountinfo', '')
                 return ok
             return ok
         self.ctx.runner = runner
@@ -74,12 +81,26 @@ class InternalMedia(unittest.TestCase):
         dev_link.parent.mkdir(parents=True, exist_ok=True)
         dev_link.symlink_to(part)
 
+    def mount_line(self, line, present):
+        lines = [l for l in self.ctx.read('/proc/self/mountinfo', limit=65536).splitlines() if l and l != line] \
+            if self.ctx.path('/proc/self/mountinfo').exists() else []
+        if present:
+            lines.append(line)
+        self.put('/proc/self/mountinfo', '\n'.join(lines))
+
     def provisioned(self):
         self.fs = {'TYPE': 'ext4', 'LABEL': im.LABEL, 'UUID': im.UUID}
 
     def names(self):
         return [c[0] for c in self.calls]
 
+    def music(self, files):
+        for name, data in files.items():
+            self.put('/data/music/' + name, data)
+        self.ctx.path('/media/internal').mkdir(parents=True, exist_ok=True)
+
+
+class InternalMedia(Fixture):
     # ---- identity -------------------------------------------------------------------------
 
     def test_partition_needs_the_exact_geometry_on_the_internal_controller_only(self):
@@ -162,11 +183,6 @@ class InternalMedia(unittest.TestCase):
         self.assertEqual(storage(self.ctx)['volumes'][3]['reason'], 'filesystem_identity_invalid')
 
     # ---- provisioning ---------------------------------------------------------------------
-
-    def music(self, files):
-        for name, data in files.items():
-            self.put('/data/music/' + name, data)
-        self.ctx.path('/media/internal').mkdir(parents=True, exist_ok=True)
 
     def test_provision_needs_the_stock_serial_and_replaces_nothing_else(self):
         for fs, confirm, reason in (({'TYPE': 'vfat', 'UUID': STOCK_SERIAL}, None, 'confirmation_does_not_match_stock_filesystem'),
@@ -276,3 +292,186 @@ class InternalMedia(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class Setup(Fixture):
+    """STORAGE-SETUP: the stock FAT becomes Y2Media by itself where that is safe."""
+
+    def setUp(self):
+        super().setUp()
+        self.put('/sys/class/power_supply/BAT0/status', 'Discharging')
+        self.put('/sys/class/power_supply/BAT0/voltage_now', '3995068')
+        self.ctx.path('/media/internal').mkdir(parents=True)
+        self.ctx.path('/data').mkdir(exist_ok=True)
+        self.ctx.path('/run/reborn-splash').mkdir(parents=True)
+        self.phases = []
+        real = im.splash
+        def splash(ctx, step):
+            real(ctx, step)
+            self.phases.append(step)
+        patcher = patch.object(im, 'splash', splash)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def old(self, files):
+        """Files on the stock storage (seen through its read-only mount)."""
+        for name, data in files.items():
+            self.put(im.OLD + '/' + name, data)
+
+    def test_stock_leftovers_only_set_up_at_once_with_the_pinned_layout(self):
+        self.old({'Android/data/com.android.providers.media/albumthumbs/1': b'x' * 10,
+                  'DCIM/.thumbnails/t.jpg': b't', '.android_secure/x': b'', 'Music/.nomedia': b''})
+        self.ctx.path(im.OLD + '/Ringtones').mkdir()
+        result = im.setup(self.ctx, automatic=True)
+        self.assertEqual((result['state'], result['kept']), ('Done', 0))
+        mkfs = next(c for c in self.calls if c[0] == 'mkfs.ext4')
+        self.assertEqual(mkfs, im.MKFS + ['/dev/mmcblk0p8'])
+        self.assertIn('-O', mkfs)
+        self.assertEqual(mkfs[mkfs.index('-O') + 1].split(','),
+                         ['none', 'has_journal', 'ext_attr', 'resize_inode', 'dir_index', 'orphan_file',
+                          'filetype', 'extent', '64bit', 'flex_bg', 'metadata_csum_seed', 'sparse_super',
+                          'large_file', 'huge_file', 'dir_nlink', 'extra_isize', 'metadata_csum'])
+        self.assertTrue(im.ready(self.ctx))
+        self.assertFalse(self.ctx.path(im.SETUP).exists())
+        self.assertFalse(self.ctx.path('/media/internal/music/' + im.KEPT).exists())
+        self.assertEqual(self.phases[0], 0)
+        self.assertEqual(self.phases[-1], 100)
+        self.assertEqual(self.ctx.read('/run/reborn-splash/phase'), 'media_setup_100')
+        # Next start: nothing to do.
+        self.calls.clear()
+        self.assertEqual(im.setup(self.ctx, automatic=True)['state'], 'NotNeeded')
+        self.assertNotIn('mkfs.ext4', self.names())
+
+    def test_a_few_files_are_kept_in_old_player_files_with_hashes_and_times(self):
+        self.old({'Themes/neon/skin.json': b'{"a":1}', 'Music/Song.mp3': b'M' * 5000,
+                  'Android/data/com.android.providers.media/albumthumbs/9': b'cache'})
+        os.utime(self.ctx.path(im.OLD + '/Music/Song.mp3'), ns=(1, 1_600_000_000_000_000_000))
+        self.music({'legacy.flac': b'L' * 10})
+        result = im.setup(self.ctx, automatic=True)
+        self.assertEqual((result['state'], result['kept']), ('Done', 2))
+        kept = self.ctx.path('/media/internal/music/' + im.KEPT)
+        self.assertEqual((kept / 'Themes/neon/skin.json').read_bytes(), b'{"a":1}')
+        self.assertEqual((kept / 'Music/Song.mp3').read_bytes(), b'M' * 5000)
+        self.assertEqual((kept / 'Music/Song.mp3').stat().st_mtime_ns, 1_600_000_000_000_000_000)
+        self.assertFalse((kept / 'Android').exists())
+        self.assertEqual(self.ctx.path('/media/internal/music/legacy.flac').read_bytes(), b'L' * 10)
+        self.assertFalse(self.ctx.path(im.KEPT_STAGING).exists())
+        self.assertFalse(self.ctx.path(im.SETUP).exists())
+        order = self.names()
+        self.assertLess(order.index('fsck.fat'), order.index('mkfs.ext4'))
+        self.assertEqual(im.setup_status(self.ctx), {'state': 'Done', 'reason': None, 'kept': 2})
+
+    def test_a_large_library_waits_for_the_listener_and_nothing_is_written(self):
+        self.old({'Music/a.flac': b'A' * 2000, 'Music/b.flac': b'B' * 3000})
+        with patch.object(im, 'KEEP_LIMIT', 1000):
+            result = im.setup(self.ctx, automatic=True)
+        self.assertEqual((result['state'], result['reason'], result['files'], result['bytes'], result['serial']),
+                         ('Waiting', 'old_storage_has_files', 2, 5000, STOCK_SERIAL))
+        self.assertNotIn('mkfs.ext4', self.names())
+        self.assertFalse(self.ctx.path(im.SETUP).exists())
+        self.assertIn(OLD_LINE, self.ctx.read('/proc/self/mountinfo'))          # Old Storage stays readable
+        mount = next(c for c in self.calls if c[0] == 'mount')
+        self.assertTrue(mount[4].startswith('ro,'))
+        # Set Up Now: only with the old storage's serial; then it is erased, nothing kept.
+        self.assertEqual(im.setup(self.ctx, confirm_serial='AAAA-BBBB')['reason'],
+                         'confirmation_does_not_match_stock_filesystem')
+        self.assertNotIn('mkfs.ext4', self.names())
+        with patch.object(im, 'KEEP_LIMIT', 1000):
+            result = im.setup(self.ctx, confirm_serial=STOCK_SERIAL)
+        self.assertEqual((result['state'], result['kept']), ('Done', 0))
+        self.assertNotIn(OLD_LINE, self.ctx.read('/proc/self/mountinfo'))
+
+    def test_y2data_must_keep_its_reserve(self):
+        self.old({'Music/a.flac': b'A' * 2000})
+        with patch.object(im, 'DATA_RESERVE', 1 << 62):
+            self.assertEqual(im.setup(self.ctx, automatic=True)['state'], 'Waiting')
+        self.assertNotIn('mkfs.ext4', self.names())
+
+    def test_an_unreadable_old_storage_is_never_set_up_automatically(self):
+        self.fat_check = {'ok': False, 'reason': 'command_failed', 'output': '/Music/x.mp3\n  File size is 9 bytes'}
+        result = im.setup(self.ctx, automatic=True)
+        self.assertEqual((result['state'], result['reason']), ('Waiting', 'old_storage_check_failed'))
+        self.assertNotIn('mkfs.ext4', self.names())
+        # A card pulled once (dirty bit only) is fine (#44 rules).
+        self.fat_check = {'ok': False, 'reason': 'command_failed', 'output':
+                          'Dirty bit is set. Fs was not properly unmounted and some data may be corrupt.\n'
+                          ' Automatically removing dirty bit.\nLeaving filesystem unchanged.'}
+        self.assertEqual(im.setup(self.ctx, automatic=True)['state'], 'Done')
+
+    def test_it_waits_for_a_confirmed_update_charge_or_enough_battery(self):
+        self.put('/data/updates/state.json', json.dumps({'schema': 2, 'state': 'PendingHealth'}))
+        self.assertEqual(im.setup(self.ctx, automatic=True)['reason'], 'update_in_progress')
+        self.ctx.path('/data/updates/state.json').unlink()
+        self.put('/sys/class/power_supply/BAT0/voltage_now', '3600000')
+        self.assertEqual(im.setup(self.ctx, automatic=True)['reason'], 'battery_low')
+        self.ctx.path('/sys/class/power_supply/BAT0/voltage_now').unlink()
+        self.assertEqual(im.setup(self.ctx, automatic=True)['reason'], 'battery_unknown')
+        self.assertFalse(any(c[0] in ('mkfs.ext4', 'fsck.fat', 'mount') for c in self.calls))
+        self.put('/sys/class/power_supply/BAT0/status', 'Charging')
+        self.assertEqual(im.setup(self.ctx, automatic=True)['state'], 'Done')
+
+    def test_anything_but_the_stock_fat_is_left_alone(self):
+        for fs, reason in (({'TYPE': 'ext4', 'LABEL': 'Y2DATA', 'UUID': 'x'}, 'not_stock_storage'),
+                           ({}, 'not_stock_storage')):
+            self.fs, self.calls = fs, []
+            self.assertEqual(im.setup(self.ctx, automatic=True)['reason'], reason, fs)
+            self.assertNotIn('mkfs.ext4', self.names())
+
+    def resume_from(self, phase, fs, staged=None):
+        im.save(self.ctx, {'schema': 1, 'device': '/dev/mmcblk0p8', 'start': im.START, 'size': im.SIZE,
+                           'serial': STOCK_SERIAL, 'phase': phase, 'files': len(staged or {}),
+                           'bytes': sum(len(v) for v in (staged or {}).values())})
+        for name, data in (staged or {}).items():
+            self.put(im.KEPT_STAGING + '/' + name, data)
+        self.fs = fs
+        return im.setup(self.ctx, automatic=True)
+
+    def test_power_lost_while_formatting_formats_again_only_with_the_record(self):
+        result = self.resume_from('formatting', {}, {'Music/a.mp3': b'A' * 10})   # p8 unreadable now
+        self.assertEqual((result['state'], result['kept']), ('Done', 1))
+        self.assertEqual(self.ctx.path('/media/internal/music/%s/Music/a.mp3' % im.KEPT).read_bytes(), b'A' * 10)
+        # Without a record an unreadable p8 is only reported.
+        self.calls.clear()
+        self.fs = {}
+        self.assertEqual(im.setup(self.ctx, automatic=True)['reason'], 'not_stock_storage')
+        self.assertNotIn('mkfs.ext4', self.names())
+
+    def test_power_lost_after_formatting_or_while_moving_resumes_without_formatting(self):
+        self.provisioned()
+        result = self.resume_from('formatting', dict(self.fs), {'a.mp3': b'A'})
+        self.assertEqual(result['state'], 'Done')
+        self.assertNotIn('mkfs.ext4', self.names())
+        self.put('/proc/self/mountinfo', '')
+        result = self.resume_from('migrating', dict(self.fs), {'b.mp3': b'B'})
+        self.assertEqual(result['state'], 'Done')
+        self.assertNotIn('mkfs.ext4', self.names())
+        self.assertTrue(self.ctx.path('/media/internal/music/%s/b.mp3' % im.KEPT).exists())
+
+    def test_power_lost_while_copying_redoes_the_copy_from_the_unchanged_old_storage(self):
+        self.old({'Music/a.mp3': b'A' * 100})
+        self.put(im.KEPT_STAGING + '/Music/a.mp3.part', b'AA')                       # interrupted copy
+        result = self.resume_from('staging', {'TYPE': 'vfat', 'UUID': STOCK_SERIAL})
+        self.assertEqual(result['state'], 'Done')
+        self.assertEqual(self.ctx.path('/media/internal/music/%s/Music/a.mp3' % im.KEPT).read_bytes(), b'A' * 100)
+        self.assertFalse(list(self.ctx.path('/media/internal/music').rglob('*.part')))
+
+    def test_a_record_for_another_partition_or_a_changed_old_storage_stops(self):
+        im.save(self.ctx, {'schema': 1, 'device': '/dev/mmcblk0p9', 'start': im.START, 'size': im.SIZE,
+                           'serial': STOCK_SERIAL, 'phase': 'formatting'})
+        self.assertEqual(im.setup(self.ctx, automatic=True)['reason'], 'setup_record_mismatch')
+        result = self.resume_from('formatting', {'TYPE': 'vfat', 'UUID': 'AAAA-BBBB'})
+        self.assertEqual(result['reason'], 'old_storage_changed')
+        self.ctx.path(im.SETUP).write_text('{broken')
+        self.assertEqual(im.setup(self.ctx, automatic=True)['reason'], 'setup_record_unreadable')
+        self.assertNotIn('mkfs.ext4', self.names())
+
+    def test_leftover_rules(self):
+        for path in ('Android/data/com.android.providers.media/albumthumbs/1', 'DCIM/.thumbnails/a.jpg',
+                     '.android_secure/x', 'Music/.nomedia', 'System Volume Information/IndexerVolumeGuid',
+                     'Music/._Song.mp3', '.DS_Store', 'Pictures/Thumbs.db'):
+            self.assertTrue(im.leftover(path), path)
+        for path in ('Music/Song.mp3', 'LOST.DIR/0001', 'Themes/x/skin.json', 'Android/data/com.app/files/a',
+                     'Android/data/com.android.providers.media/other'):
+            self.assertFalse(im.leftover(path), path)
+        self.assertEqual([im.decide([], 0), im.decide([('a', 10)], 10 ** 9), im.decide([('a', 10 ** 9)], 10 ** 10)],
+                         [1, 2, 3])

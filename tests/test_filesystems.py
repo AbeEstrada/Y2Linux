@@ -11,6 +11,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools/platform'))
 from y2_platform.media import fat_unclean_only  # noqa: E402
+from y2_platform import internal_media  # noqa: E402
 
 
 class Filesystems(unittest.TestCase):
@@ -91,6 +92,29 @@ class Filesystems(unittest.TestCase):
                                     env={**os.environ, 'LC_ALL': 'C'}, timeout=30)
             self.assertNotEqual(broken.returncode, 0)
             self.assertFalse(fat_unclean_only(broken.stdout), broken.stdout)
+
+    @unittest.skipUnless(shutil.which('mkfs.ext4') and shutil.which('dumpe2fs'), 'native ext4 tools required')
+    def test_y2media_layout_is_pinned_to_the_first_players(self):
+        """STORAGE-SETUP: every player's Y2Media equals the owner's (made 2026-10-10), whatever
+        e2fsprogs defaults are: features, inodes, blocks, reserve, label and UUID."""
+        with tempfile.TemporaryDirectory() as directory:
+            image = Path(directory) / 'p8.img'
+            with image.open('xb') as stream:
+                stream.truncate(int(internal_media.SIZE) * 512)          # sparse, p8's exact size
+            made = self.run_tool(*internal_media.MKFS, str(image))
+            self.assertEqual(made.returncode, 0, made.stderr)
+            header = dict(line.split(':', 1) for line in
+                          self.run_tool('dumpe2fs', '-h', str(image)).stdout.splitlines() if ':' in line)
+            field = lambda name: header[name].strip()
+            self.assertEqual(field('Filesystem features').split(),
+                             ['has_journal', 'ext_attr', 'resize_inode', 'dir_index', 'orphan_file', 'filetype',
+                              'extent', '64bit', 'flex_bg', 'metadata_csum_seed', 'sparse_super', 'large_file',
+                              'huge_file', 'dir_nlink', 'extra_isize', 'metadata_csum'])
+            self.assertEqual((field('Inode count'), field('Block count'), field('Reserved block count'),
+                              field('Block size'), field('Inode size')),
+                             ('358336', '1432576', '0', '4096', '256'))
+            self.assertEqual((field('Filesystem volume name'), field('Filesystem UUID')),
+                             (internal_media.LABEL, internal_media.UUID))
 
     @unittest.skipUnless(shutil.which('mkfs.exfat') and shutil.which('fsck.exfat'),
                          'native exFAT tools required')

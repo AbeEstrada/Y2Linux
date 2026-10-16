@@ -194,6 +194,36 @@ class RadioFirmware(unittest.TestCase):
         (sd / 'system.img').unlink()
         self.assertEqual(radiofw.scan(ctx)['state'], 'Missing')
 
+    def test_with_internal_storage_the_copy_goes_into_its_firmware_folder(self):
+        """#39: Internal Storage has room for any system.img; the folder goes away afterwards."""
+        calls = []
+        ctx = self.ctx(calls)
+        (ctx.path('/run/y2/mtp-roots.json')).write_text(json.dumps({'roots': []}))   # no computer connected
+        ctx.path('/media/internal/music').mkdir(parents=True)
+        with patch('y2_platform.internal_media.ready', return_value=True):
+            self.assertEqual(radiofw.state(ctx)['location'], 'internal')
+            radiofw.scan(ctx)
+            folder = ctx.path(radiofw.INTERNAL_INBOX)
+            self.assertIn('folder named Firmware on the SD card', (folder / 'README.txt').read_text())
+            self.assertFalse(ctx.path(radiofw.INBOX).exists())         # no Y2DATA drive folder
+            listed = list(radiofw.candidates(ctx))
+            self.assertEqual(listed[:3], [folder / 'system.img', ctx.path('/data/firmware/inbox/system.img'),
+                                          ctx.path('/media/sd/Firmware/system.img')])
+            source = folder / 'system.img'
+            source.write_bytes(sparse(self.image().read_bytes()))
+            old = time.time() - 60
+            os.utime(source, (old, old))
+            radiofw.scan(ctx)
+            self.assertEqual(radiofw.scan(ctx)['state'], 'Ready')
+            self.assertFalse(folder.exists())                          # note and folder removed
+            self.assertTrue(radiofw.installed(ctx))
+
+    def test_a_copy_refused_for_space_says_so(self):
+        ctx = self.ctx([])
+        self.assertNotIn('reason', radiofw.state(ctx))
+        ctx.path('/run/y2/mtp-events.json').write_text(json.dumps({'schema': 1, 'active': False, 'error': 28}))
+        self.assertEqual((radiofw.state(ctx)['state'], radiofw.state(ctx)['reason']), ('Missing', 'no_space'))
+
     @unittest.skipUnless(STOCK.is_file(), 'owner stock package not present')
     def test_the_real_stock_system_image(self):
         patch.stopall()

@@ -7,7 +7,8 @@ Each player keeps the reviewed files on Y2DATA (`/data/firmware/mt6582`, which
 * on a player that ran an older image, the recovery copies them from the old
   root before it writes the new one (recovery.sh);
 * otherwise the owner copies `system.img` from the Innioasis Y2 firmware
-  package into the `Firmware` folder over USB; this module reads the Android
+  package into the `Firmware` folder over USB (on Internal Storage, or the
+  Firmware drive on Y2DATA while there is no Internal Storage); this module reads the Android
   sparse ext4 image itself, checks the five files against the reviewed
   SHA-256 values, derives the two board defaults like
   tools/connectivity/provision.py, installs them, deletes the copy and starts
@@ -50,9 +51,16 @@ INBOX = '/data/firmware/inbox'
 STATE = '/run/y2/radio-firmware.json'
 FOLDER = 'Firmware'
 SOURCE = 'system.img'
+# With Internal Storage the copy goes there (#39: Y2DATA has room for the
+# zip's 518 MB image, never for an unpacked 860 MB one).
+INTERNAL_INBOX = '/media/internal/music/' + FOLDER
+SD_INBOX = '/media/sd/' + FOLDER
+ENOSPC = 28
 README = ('Wi-Fi and Bluetooth need the radio firmware from the Innioasis Y2 firmware package.\n'
-          'Copy (do not move) the file system.img from that package into this folder. The player\n'
-          'checks it, keeps the five small radio files and deletes the copy.\n')
+          'Copy (do not move) the file system.img from that package into this folder (about\n'
+          '520 MB). The player checks it, keeps the five small radio files and deletes the copy.\n'
+          'A larger system.img (about 860 MB) is an unpacked copy: if there is not enough space\n'
+          'here, put it into a folder named Firmware on the SD card instead.\n')
 
 
 def digest(data):
@@ -369,11 +377,21 @@ def roots(ctx):
     return [ctx.path(r) for r in value.get('roots', []) if isinstance(r, str) and r.startswith('/')]
 
 
+def internal(ctx):
+    from .internal_media import ready
+    return ready(ctx)
+
+
 def inbox(ctx):
-    """The Firmware storage's folder, created with its note when needed."""
-    folder = ctx.path(INBOX)
-    folder.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    folder.mkdir(mode=0o700, exist_ok=True)
+    """Where the copy goes, created with its note when needed: the Firmware
+    folder on Internal Storage, else the Firmware drive's folder on Y2DATA."""
+    if internal(ctx):
+        folder = ctx.path(INTERNAL_INBOX)
+        folder.mkdir(mode=0o755, exist_ok=True)
+    else:
+        folder = ctx.path(INBOX)
+        folder.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        folder.mkdir(mode=0o700, exist_ok=True)
     note = folder / 'README.txt'
     if not note.exists():
         note.write_text(README)
@@ -381,12 +399,28 @@ def inbox(ctx):
 
 
 def candidates(ctx):
-    """Where an owner's copy may be: the Firmware storage, or a Firmware
-    folder on Internal Storage or the SD card."""
-    yield ctx.path(INBOX) / SOURCE
-    for root in roots(ctx):
-        if root != ctx.path(INBOX):
-            yield root / FOLDER / SOURCE
+    """Where an owner's copy may be: the Firmware drive, or a Firmware folder
+    on Internal Storage or the SD card (also while no computer is connected)."""
+    seen = set()
+    places = [ctx.path(INBOX), ctx.path(SD_INBOX)]
+    if internal(ctx):
+        places.insert(0, ctx.path(INTERNAL_INBOX))
+    places += [root / FOLDER for root in roots(ctx) if root != ctx.path(INBOX)]
+    for folder in places:
+        if folder not in seen:
+            seen.add(folder)
+            yield folder / SOURCE
+
+
+def tidy(ctx):
+    """After the install: the Internal Storage Firmware folder goes away again
+    (only its note; anything the owner put there stays)."""
+    folder = ctx.path(INTERNAL_INBOX)
+    try:
+        (folder / 'README.txt').unlink()
+        folder.rmdir()
+    except OSError:
+        pass
 
 
 def state(ctx):
@@ -395,7 +429,13 @@ def state(ctx):
         return {'state': 'Ready'}
     if value.get('state') in ('Installing', 'Failed'):
         return {k: value.get(k) for k in ('state', 'reason')}
-    return {'state': 'Missing', 'folder': FOLDER, 'file': SOURCE}
+    missing = {'state': 'Missing', 'folder': FOLDER, 'file': SOURCE,
+               'location': 'internal' if internal(ctx) else 'drive'}
+    # The responder refuses a copy that does not fit before writing anything
+    # (mtp-safe space()), so nothing is left behind; only say why (#39).
+    if (ctx.json('/run/y2/mtp-events.json', {}) or {}).get('error') == ENOSPC:
+        missing['reason'] = 'no_space'
+    return missing
 
 
 def scan(ctx, start_radios=True):
@@ -434,6 +474,7 @@ def scan(ctx, start_radios=True):
             source.unlink()
         except OSError:
             pass
+        tidy(ctx)
         atomic_json(ctx.path(STATE), {'schema': 1, 'state': 'Ready', 'installed_from': 'system.img'}, mode=0o644)
         if start_radios:
             start(ctx)

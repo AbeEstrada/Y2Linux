@@ -211,12 +211,15 @@ int main(int argc,char **argv) {
         rcs = set(re.findall(r'milestone=(\w+)', (overlay / 'etc/init.d/rcS').read_text()))
         gate = set(re.findall(r'\bmilestone ([a-z][a-z_]*)', (overlay / 'usr/libexec/y2/boot-gate').read_text()))
         self.assertEqual((rcs | gate) - tokens, set(), 'a shell producer reports a milestone the splash does not know')
+        media = set(re.findall(r"'(media_setup\w*)'",
+                               (ROOT / 'tools/platform/y2_platform/internal_media.py').read_text()))
+        self.assertEqual(media - tokens, set(), 'the storage setup reports a milestone the splash does not know')
         main = (REBORN / 'app/reborn/src/main.rs').read_text()
         reported = set(re.findall(r'startup_phase\(&log, process_started, "(\w+)"\)', main))
         self.assertEqual(reported - tokens, set(), 'Reborn reports a milestone the splash does not know')
         self.assertIn('boot_milestone("ready")', main)
         # Every milestone the table promises has a producer; nothing is a dead entry.
-        produced = (stages | rcs | gate | reported | {'start', 'ready'}) - {'initramfs'}
+        produced = (stages | rcs | gate | media | reported | {'start', 'ready'}) - {'initramfs'}
         self.assertEqual(tokens - produced, set(), 'table entries nobody reports')
 
     def test_progress_never_regresses_and_ignores_unknown_names(self):

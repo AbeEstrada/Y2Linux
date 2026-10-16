@@ -53,11 +53,28 @@ def media_views(ctx):
             result.append({'path': path, 'name': label, 'mount_id': mount['mount_id'],
                            'device_id': mount['device_id'], 'uuid': volume.get('uuid'),
                            'filesystem': mount['filesystem'], 'access': 'ro' if 'ro' in mount['options'] or 'ro' in mount['super_options'] else 'rw'})
+    # STORAGE-SETUP case 3: the stock storage, read-only, until the listener sets up Internal
+    # Storage, so the old files can be copied off first.
+    from . import internal_media
+    old = next((m for m in mounts if m['path'] == internal_media.OLD), None)
+    entry = internal_media.partition(ctx)
+    if (old and entry and old['source'] == '/dev/' + entry.name and old['filesystem'] == 'vfat'
+            and internal_media.setup_status(ctx).get('state') == 'Waiting'):
+        result.append({'path': internal_media.OLD, 'name': NAMES[internal_media.OLD],
+                       'mount_id': old['mount_id'], 'device_id': old['device_id'], 'uuid': None,
+                       'filesystem': 'vfat', 'access': 'ro'})
     # RELEASE-49: while the radio firmware is missing, one empty folder of
-    # Y2DATA is shown as "Firmware" for the owner's system.img copy.
+    # Y2DATA is shown as "Firmware" for the owner's system.img copy. With
+    # Internal Storage the copy goes into its Firmware folder instead (#39:
+    # Y2DATA is too small for an unpacked image).
     from .radiofw import INBOX, inbox, present
     data = next((m for m in mounts if m['path'] == '/data'), None)
-    if data and 'ro' not in data['options'] and not present(ctx):
+    if not present(ctx) and internal_media.ready(ctx):
+        try:
+            inbox(ctx)              # Internal Storage → Firmware, before the computer lists it
+        except OSError:
+            pass
+    elif data and 'ro' not in data['options'] and not present(ctx):
         try:
             inbox(ctx)
             result.append({'path': INBOX, 'name': NAMES[INBOX], 'mount_id': data['mount_id'],
@@ -69,7 +86,7 @@ def media_views(ctx):
 
 
 NAMES = {'/media/internal/music': 'Internal Storage', '/media/sd': 'SD Card',
-         '/data/firmware/inbox': 'Firmware'}
+         '/data/firmware/inbox': 'Firmware', '/run/y2/old-storage': 'Old Storage'}
 
 
 def identity(view):
@@ -128,6 +145,33 @@ def request_mode(ctx, mode):
     return {'state': 'Queued', 'mode': mode, 'apply': 'when_disconnected'}
 
 
+def wake_service(ctx):
+    """Ask the readiness service to re-read the media views now."""
+    pid = ctx.integer('/run/y2/readiness.pid')
+    if pid and pid > 1 and ctx.root == Path('/'):
+        cmdline = ctx.read('/proc/%s/cmdline' % pid) or ''
+        if 'service-daemon' in cmdline and 'y2-platform' in cmdline:
+            try:
+                os.kill(pid, signal.SIGUSR1)
+            except ProcessLookupError:
+                return False
+    return True
+
+
+def release_view(ctx, path, timeout=5.0):
+    """Wait until the responder has dropped `path` (its view already left
+    media_views); True when it is not pinned (also when no responder runs)."""
+    if not wake_service(ctx):
+        return False
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        roots = (ctx.json('/run/y2/mtp-roots.json', {}) or {}).get('roots')
+        if not isinstance(roots, list) or path not in roots:
+            return True
+        time.sleep(.05)
+    return False
+
+
 def release_sd(ctx, mount_id, explicit=False):
     """Drop responder root pins before a device-side eject; never force umount.
 
@@ -141,14 +185,8 @@ def release_sd(ctx, mount_id, explicit=False):
     if not explicit and current.get('cable') != 'not attached':
         return False
     atomic_json(ctx.path('/run/y2/usb-release-sd.json'), {'mount_id': mount_id})
-    pid = ctx.integer('/run/y2/readiness.pid')
-    if pid and pid > 1 and ctx.root == Path('/'):
-        cmdline = ctx.read('/proc/%s/cmdline' % pid) or ''
-        if 'service-daemon' in cmdline and 'y2-platform' in cmdline:
-            try:
-                os.kill(pid, signal.SIGUSR1)
-            except ProcessLookupError:
-                return False
+    if not wake_service(ctx):
+        return False
     deadline = time.monotonic() + 2
     while time.monotonic() < deadline:
         current = status(ctx)
@@ -354,6 +392,8 @@ class USBService:
             # recurring blkid process, storage read, or polling wakeup.
             from .radiofw import present
             signature = (present(self.ctx), self.ctx.read('/proc/self/mountinfo'),
+                         self.ctx.read('/run/y2/internal-media-setup.json'),
+                         self.ctx.read('/run/y2/internal-media.json'),
                          self.ctx.read('/run/y2/media-mount.json'),
                          self.ctx.read('/run/y2/usb-release-sd.json'),
                          [(p.name, read(p / 'dev'), read(p / 'device/cid'))
