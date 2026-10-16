@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 7.5, Baseline 66 — 2026-10-16 (latest, published)
+## Y2Linux 1.0 Beta 7.6, Baseline 67 — 2026-10-16 (latest, published)
+
+Release `1.0.0-beta.7.6` (Reborn `1.0.0-beta.7.6`), tag `baseline-67`, Linux `58de7d8`, Reborn `36e6994`. The update download
+and check draw at the full frame rate (were ≤ 29 fps) with a Download · Check · Install step tracker. Details:
+[Beta 7.6 report](validation/Y2-LINUX-1.0-BETA-7.6.md).
+
+## Y2Linux 1.0 Beta 7.5, Baseline 66 — 2026-10-16 (published)
 
 Release `1.0.0-beta.7.5` (Reborn `1.0.0-beta.7.5`), tag `baseline-66`, Linux `2ec56d2`, Reborn `0291d69`. Larger status bar
 with the screen's name beside the back arrow, a Home header, larger messages; Theme is now Settings → Skin. Details:

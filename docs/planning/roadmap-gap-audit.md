@@ -8460,3 +8460,19 @@ since BETA-7.4 (7.3 fps sample, 7.4 temperatures); nothing here depends on new h
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.7.5 / Reborn 1.0.0-beta.7.5** (Baseline 66, sequence 6050) as a public beta
 at the owner's request; next evidence boundary: the device look at the new bar.
+
+## BETA-7.6 (Baseline 67) smooth update screens: milestone gap audit — 2026-10-16
+
+**Boundary:** owner reported low fps on the update download screen and asked for the release. Reborn only; no hardware,
+kernel, update-format or memory-model change (the platform's download is unchanged, nice 10). Real-hardware evidence
+unchanged since BETA-7.4.
+
+| Area | State for Beta 7.6 | Evidence / gap |
+| --- | --- | --- |
+| Update screens | BUILT, device fps owed | Cause found in code (calm rate ≤ 29 fps); host tests; seen on the update after 7.6. |
+| Status bar / Skin (7.5) | BUILT, device look owed | Previews. |
+| Now Playing heat (7.4) | BUILT, device check owed | 598 MHz expected. |
+| FM radio | NOT STARTED | Beta 8. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.7.6 / Reborn 1.0.0-beta.7.6** (Baseline 67, sequence 6100) as a public beta
+at the owner's request; next evidence boundary: frame rate during the next OTA download.
