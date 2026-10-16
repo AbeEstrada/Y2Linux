@@ -5,7 +5,8 @@ public beta: the UI v4 redesign, one-step updates, motion): ready-made images on
 installed once with SP Flash Tool, then updated over Wi-Fi by the player itself
 ([recovery and updates](RECOVERY-AND-UPDATES.md)). No image carries MediaTek's radio firmware: each
 player takes it from its owner's Innioasis package ([INSTALL](INSTALL.md)). What works, what does not
-and the latest hardware results: [current platform state](CURRENT_PLATFORM_STATE.md); the beta's
+and the latest hardware results: [current platform state](CURRENT_PLATFORM_STATE.md); Last.fm
+scrobbling and why it is safe: [Last.fm scrobbling](LASTFM.md); the beta's
 evidence and open gaps: [1.0 Beta 7.7 report](validation/Y2-LINUX-1.0-BETA-7.7.md),
 [1.0 Beta 7.6 report](validation/Y2-LINUX-1.0-BETA-7.6.md),
 [1.0 Beta 7.5 report](validation/Y2-LINUX-1.0-BETA-7.5.md),

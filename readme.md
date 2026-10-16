@@ -35,9 +35,9 @@ factory partitions untouched.
 Observed on the maintainer's device (candidates up to 49; 49 was installed over Wi-Fi from its
 public release, and its Firmware-drive install was tested on the device):
 
-- **Over-the-air updates:** Settings → About & Updates checks once a day on Wi-Fi (or on demand),
-  downloads a signed release (showing progress, speed and time left) and, with **Restart and
-  Install**, restarts into a Y2 recovery image
+- **Over-the-air updates:** Settings → About & Updates checks once a day on Wi-Fi (or on demand);
+  **Update Now** downloads the signed release (Download · Check · Install, with progress, speed
+  and time left; Cancel during the download) and restarts into a Y2 recovery image
   that backs up, installs and verifies kernel, rescue and system, then restarts into the new
   version (about a minute; the old version is restored on any failure). It makes room on its own
   by removing old logs; music and settings are never touched. The release images include the Y2
@@ -52,7 +52,9 @@ public release, and its Firmware-drive install was tested on the device):
 - **Skins:** Settings → Skin switches between Reborn's own look and 16 shipped
   skins that restyle every screen (Classic, Nano Glass, Walkman, Terminal, Winamp, Paper,
   Big Type, Cassette, Neon Night, Zune, Bunny Bow, five Mini colours). A status-bar clock
-  follows the zone chosen under Settings → Display → Time Zone. More can be added by copying a
+  follows the time zone, found automatically over Wi-Fi or chosen under Settings → Display →
+  Time Zone; short messages (a computer connected, files copying, problems) appear in the
+  status bar. More can be added by copying a
   skin folder into `Skins` on the player over MTP (an existing `Themes` folder still works). Authoring guide:
   [Reborn skins](https://github.com/SchulzCode/Y2Reborn/blob/main/docs/skins.md).
 - Albums in **Cover Flow** (perspective covers with reflections, the cover flies into the
@@ -68,8 +70,17 @@ public release, and its Firmware-drive install was tested on the device):
   256 kbit/s) and steps down by itself on a weak link.
 - Wi-Fi (2.4 GHz) and **internet radio** (Home → Radio): the radio-browser.info directory
   (popular, by country, by genre, search), favorites and your own `.m3u`/`.pls` lists.
+- **Last.fm scrobbling** (new in Beta 7.7, first device check pending): Settings → Last.fm →
+  scan a QR code with your phone and allow Y2Reborn. A song counts after half of it or 4 minutes
+  of real listening; plays are kept on the player while offline and sent when Wi-Fi is back;
+  Now Playing on your profile; an optional Rockbox-style `.scrobbler.log` works without an
+  account. The player never sees your password with the QR sign-in, keeps only Last.fm's session
+  key in its private storage, and talks to Last.fm over verified HTTPS only. How it works and why
+  it is safe: **[Last.fm scrobbling](docs/LASTFM.md)**.
+- **Sound and playback:** a five-band equalizer with presets (Bass Boost, Vocal, Treble Boost),
+  Normalize Volume (ReplayGain), gapless playback, crossfade (up to 12 s), shuffle and repeat.
 - Search across artists, albums and songs with live results, and a full-screen keyboard (driven by
-  the buttons) for search and Wi-Fi passwords. Radio has station logos, Station Info and each
+  the buttons) for search, Wi-Fi passwords and the Last.fm password sign-in. Radio has station logos, Station Info and each
   country's top 10 on top of an A–Z list.
 - Playlists (.m3u/.m3u8 from Internal Storage and the SD card, also from a computer) made and
   changed on the player, with a Favorites playlist and a heart; pause and play continue at once.

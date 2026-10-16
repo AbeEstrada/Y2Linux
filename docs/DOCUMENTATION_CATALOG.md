@@ -342,6 +342,7 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [Y2Linux 1.0 Beta 7.5 (Baseline 66)](validation/Y2-LINUX-1.0-BETA-7.5.md) | Larger status bar, Home header, Skin in Settings |
 | [Y2Linux 1.0 Beta 7.6 (Baseline 67)](validation/Y2-LINUX-1.0-BETA-7.6.md) | Smooth update screens, step tracker |
 | [Y2Linux 1.0 Beta 7.7 (Baseline 70)](validation/Y2-LINUX-1.0-BETA-7.7.md) | Current entry: Last.fm scrobbling |
+| [Last.fm scrobbling](LASTFM.md) | User guide: set-up, what counts, offline, privacy and security |
 | [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |
 | [POWER-FINAL-32 — deep idle during screen-off playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) | Sealed candidate report (in 33) |
 | [POWER-FINAL-31 — folder-first artwork and metadata formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) | Sealed candidate report (in 33) |
