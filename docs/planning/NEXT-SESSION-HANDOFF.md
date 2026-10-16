@@ -38,7 +38,7 @@
 >   `out/deep-sleep-final/evidence/20261016/internal-storage-backup-before-stock-test/internal-music.tar`, copy on
 >   `/media/sd/.y2-backup-20261016/`). pstore still holds the 7.9 oops record.
 > - **Open owner decisions:** automatic restart right after an update when the storage setup waits (recommended, not
->   built); restore the skins; close GitHub issue #44 too (#39 was closed 2026-10-17 with an explanation). Cleanup idea: the
+>   built); restore the skins; GitHub #39 and #44 were closed 2026-10-17 with explanations. Cleanup idea: the
 >   eMMC write guard refuses ext4's WRITE_ZEROES inside p8 (`mmc_erase: group start error -30` at start, harmless).
 >   FM radio stays on `beta8-fm` (device test owed; rebase onto main and use a sequence above 6300).
 > - **Release mechanics:** next free label 74, sequence above 6300; workspace `out/build`, `out/release-72`,
