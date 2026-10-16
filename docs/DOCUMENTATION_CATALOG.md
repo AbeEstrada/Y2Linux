@@ -347,6 +347,8 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [Y2Linux 1.0 Beta 7.10 (Baseline 73)](validation/Y2-LINUX-1.0-BETA-7.10.md) | Current entry: USB file operations (crash fix, move and copy on the player) |
 | [Internal Storage setup plan](planning/INTERNAL-STORAGE-SETUP-PLAN.md) | Automatic Internal Storage: cases, safety, layout |
 | [Last.fm scrobbling](LASTFM.md) | User guide: set-up, what counts, offline, privacy and security |
+| [Storage](STORAGE.md) | User guide: the layout, the first-start setup of Internal Storage, old files, SD cards, USB copying and speed, going back to stock |
+| [Faster uploads: receive DMA plan](planning/USB-RX-DMA-MODE1-PLAN.md) | Multi-packet (mode 1) receive DMA: evidence, design, tests (next work) |
 | [POWER-FINAL-33 — Reborn skins (themes)](validation/Y2-PLATFORM-V1-POWER-FINAL-33.md) | Installed candidate report |
 | [POWER-FINAL-32 — deep idle during screen-off playback](validation/Y2-PLATFORM-V1-POWER-FINAL-32.md) | Sealed candidate report (in 33) |
 | [POWER-FINAL-31 — folder-first artwork and metadata formats](validation/Y2-PLATFORM-V1-POWER-FINAL-31.md) | Sealed candidate report (in 33) |

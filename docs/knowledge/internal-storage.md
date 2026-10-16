@@ -26,6 +26,13 @@ protected/NVRAM partitions and the hidden tail remain unwritable.
   mount, `/data/music` before that (an unprovisioned device keeps working).
 * Factory reset does not erase Y2Media music; delete files over MTP.
 
+User guide: [Storage](../STORAGE.md).
+
+**Device result (Beta 7.9, owner's player, 2026-10-17):** p8 restored to the stock FAT from the 2026-10-10 backup; on the
+first restart after the confirmed update the setup ran in ≈16 s (case 2), Y2MEDIA identical to the original (label, UUID,
+start/size, features, 358 336 inodes, 1 432 576 blocks), 509 files in `Old Player Files` hash-identical, 3 leftovers
+dropped; on the update's health boot it reported `Pending`/`update_in_progress`.
+
 ## Automatic setup (Beta 7.9)
 
 `S02y2-media` runs `y2-platform internal-media setup --automatic` before USB and Reborn. It acts only on the stock
@@ -66,3 +73,11 @@ Nothing formats or deletes automatically. The file-level backup of the stock par
 * Format and grow are explicit owner operations; a card with a foreign or undersized filesystem is only reported.
 * An ext4 card is not readable by a PC when pulled out; MTP is the transfer path. exFAT remains mountable.
 * No endurance measurement of ext4 on this eMMC; no physical power-loss test of Y2Media yet.
+* No physical power cut during the automatic setup yet (resume is host-tested at every phase); case 3 (large old library,
+  Old Storage, Set Up Now) is host-tested only.
+* ext4's background inode-table initialisation asks the eMMC for WRITE_ZEROES inside p8 at start; the eMMC write guard
+  refuses erase-class commands (`mmc_erase: group start error -30`, one I/O error line). Harmless (unused inodes are
+  tracked by the group descriptors), but log noise to clean up (allow zeroing inside p8, or format without lazy init).
+* Going back to stock leaves p8 as ext4, which stock Android cannot read; it has to format it (untested).
+* MTP keeps 96 MiB and 128 inodes free per storage (`tools/usb/mtp-safe.c`); uploads are PIO-bound at ≈9–10 MB/s
+  ([receive DMA plan](../planning/USB-RX-DMA-MODE1-PLAN.md)).

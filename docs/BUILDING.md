@@ -3,7 +3,7 @@
 This builds the kernel, the Buildroot root filesystem with the Y2Reborn player,
 and a **first-install package** that you flash with SP Flash Tool
 ([INSTALL.md](INSTALL.md)). These are the same commands that produced
-1.0 Beta 7.6 (Baseline 67) on the maintainer's machine (an Arch-based Linux, x86_64). They have
+1.0 Beta 7.10 (Baseline 73) on the maintainer's machine (an Arch-based Linux, x86_64). They have
 not yet been run on a second machine. If a step fails, please open an issue with
 the log.
 
@@ -122,7 +122,7 @@ and only the `.scrobbler.log` file works.
 python3 tools/build/run.py --output out/y2-build -- sh /project/tools/production/tests.sh
 ```
 
-This runs the platform test suite inside the locked environment (1.0 Beta 7.6: 743
+This runs the platform test suite inside the locked environment (1.0 Beta 7.10: 766
 cases, about 30 s). For a quick check while working, run the same test modules on the host in
 about 45 s (needs `clang`, `pyelftools` and `qemu-arm`; Arch: `python-pyelftools qemu-user`):
 
@@ -179,11 +179,11 @@ Continue with [INSTALL.md](INSTALL.md).
 player before `publish`.
 
 ```sh
-python3 tools/production/release.py bump --version 1.0.0-beta.7.6 --sequence 6100   # identity in both repositories
+python3 tools/production/release.py bump --version 1.0.0-beta.7.10 --sequence 6300  # identity in both repositories
 # review, run the checks, commit Y2Linux and Y2Reborn
-python3 tools/production/release.py build --label 67               # ≈2 min
+python3 tools/production/release.py build --label 73               # ≈2 min
 # write the report and docs, commit them (only docs/ and readme.md may change after the build)
-python3 tools/production/release.py publish --label 67 --title "Y2Linux 1.0 Beta 7.6" \
+python3 tools/production/release.py publish --label 73 --title "Y2Linux 1.0 Beta 7.10" \
     --notes notes.md --yes
 ```
 

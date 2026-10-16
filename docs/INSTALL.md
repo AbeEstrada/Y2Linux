@@ -36,11 +36,13 @@ never touched (they stay in the NVRAM partition).
 | ANDROID (`/system`) | Y2Linux system (no radio firmware) | replaced by each update |
 | USRDATA (`/data`) | Y2Linux data: settings, library, logs, the radio firmware | **kept** |
 | RECOVERY | the Y2 recovery image, which installs updates ([why](RECOVERY-AND-UPDATES.md)) | replaced by each update |
-| FAT (internal music storage) | untouched | untouched |
+| FAT (the player's own storage) | becomes **Internal Storage** at the first start; your files on it are kept or wait for you ([Storage](STORAGE.md)) | kept |
 | Preloader, LK, NVRAM, calibration, PROTECT, SECCFG, tables | **never written** | never written |
 
-Stock Android and its user data are erased. The internal FAT music storage is left as it is
-(see [Music](#music)). Copy off anything you want to keep first.
+Stock Android and its user data are erased. The player's own storage is not flashed: at the
+first start Y2Linux turns it into Internal Storage, keeping up to about 400 MB of your files in
+`Old Player Files` and leaving a larger library untouched until you decide
+([Storage](STORAGE.md)). Copying anything you want to keep to a computer first is still wise.
 
 ## Install from the release
 
@@ -135,7 +137,7 @@ cat /etc/y2linux/versions.json
 
 ### Internal Storage
 
-Every player has the same layout: system (`Y2ROOT`), settings and library (`Y2DATA`) and
+The full explanation for users is [Storage](STORAGE.md). Every player has the same layout: system (`Y2ROOT`), settings and library (`Y2DATA`) and
 **Internal Storage** (`Y2MEDIA`, 5.4 GiB ext4, `/media/internal`). Internal Storage replaces the
 stock player's own storage partition. Since Beta 7.9 the player sets it up by itself at start
 (also on players updated from an earlier beta, at the first restart after the update):
@@ -182,6 +184,10 @@ everything, then tick only BOOTIMG → `boot.img`, RECOVERY → `recovery.img`, 
 `system.img`, USRDATA → `userdata.img`. This restores factory Android (not your old personal
 data) and erases Y2Linux and its data. Never tick PRELOADER, UBOOT/LK, MBR/EBR, NVRAM, PROTECT
 or SECCFG.
+
+It does not restore the old FAT format of the player's storage (the stock package has no image
+for it, and stock Android cannot read Internal Storage): **copy your music to a computer first**;
+stock Android then has to format that storage ([Storage](STORAGE.md#going-back-to-stock)).
 
 **This full restore has not yet been tested by the project.** The partitions it writes are the
 same ones the install wrote, and the bootloaders are never changed. The detailed procedure and

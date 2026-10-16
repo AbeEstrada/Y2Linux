@@ -1,6 +1,54 @@
-# Next-session handoff — Y2Linux 1.0 Beta 7.6 (latest entry first; started 2026-10-09 as the deep-sleep continuation)
+# Next-session handoff — Y2Linux 1.0 Beta 7.10 (latest entry first; started 2026-10-09 as the deep-sleep continuation)
 
-> **START HERE (2026-10-17, latest): Y2LINUX 1.0 BETA 7.10 (BASELINE 73) — USB FILE OPERATIONS.** Release
+> **START HERE (2026-10-17, for the next session): FASTER UPLOADS — MULTI-PACKET (MODE 1) RECEIVE DMA.** Owner: "i would
+> like to do multi packet and fix the kernel instead" and continue in a fresh session. Plan
+> [USB-RX-DMA-MODE1-PLAN](USB-RX-DMA-MODE1-PLAN.md), audit row USB-RX-DMA (commit `39cb314`). **Plan written, not yet
+> approved in detail, nothing built.**
+>
+> - **Released state:** Y2Linux 1.0 Beta 7.10 (Baseline 73, sequence 6300, tag `baseline-73`, Linux `72a565d` + docs, Reborn
+>   `511dbf0` + docs) is GitHub latest and **installed on the owner's player** (confirmed 2026-10-17 00:40). 7.10 = musb
+>   zero-length-packet oops fix (`da0917d`, `kernel/patches/0065-y2-musb-pio-progress.patch`) + MoveObject/CopyObject
+>   (`4c0a54d`, `buildroot/package/y2-mtp/0004-y2-mtp-move-and-copy-objects.patch`, `y2_copy_file` in `tools/usb/mtp-safe.c`).
+>   `tools/usb/mtp-file-ops.c` (libmtp) passed all 26 steps on the player. 7.9's automatic Internal Storage passed on the
+>   player (509 kept files hash-identical). User guide for storage: `docs/STORAGE.md`.
+> - **Measured (owner's player, 7.10, `tools/usb/mtpbench.c`, libusb, SHA-256):** download 37.7 MB/s (TX DMA), upload
+>   8.7–10.3 MB/s on Internal Storage and SD. `/sys/devices/platform/11200000.usb/status`: `dma_rx_programs=0`,
+>   `pio_rx_bytes>0` → every received packet is PIO. Upload CPU: the musb IRQ (213) core is 96–100 % busy at ≈21–24 k
+>   IRQ/s whichever core it runs on (live affinity test on CPU3, restored to `f`); ≈45 µs CPU per 512-byte packet = the
+>   ceiling. Storage write ceilings (candidate 11): eMMC 30 MiB/s, SD 26 MiB/s. Double-buffered FIFOs and
+>   `ioread32_rep` are already in place.
+> - **Why RX DMA is off:** `kernel/platform/usb.c` `y2_dma_is_compatible()` keeps bulk-OUT unmapped unless sysfs `rx_dma=1`
+>   (mode 0: two IRQs per packet, CPU-FIX02 storm guard, a lost ACKed packet after an IN completion within µs; FIX03
+>   corrected the guard). Upstream mode 1 lives in `rxstate()` (patched overlay
+>   `.cache/overlays/647766a6…`, ≈lines 547–820) only for `short_not_ok` (mass storage): MTP needs short-packet/ZLP
+>   termination (abort channel, read moved bytes, PIO the short packet, give back the exact length).
+> - **First steps:** (1) REA on the stock kernel `out/rea/fm-kernel.elf` (local, not in git): how MediaTek's musb driver
+>   programmed RX DMA on this controller (mode, RXCSR/DMAREQ sequence, short-packet handling, errata). (2) Read
+>   `drivers/usb/musb/musbhsdma.c` (+ overlay 0055) and `musb_g_rx()` for the DMA-busy/short-packet interrupt path.
+>   (3) Implement mode 1 behind `rx_dma=2`, **default off**, keeping the receive event ring/counters; zero-fuzz overlay
+>   patch + manifest hash (see how 0065 was regenerated with `diff -u` from `.cache/sources/linux-6.18`).
+>   (4) Release with the switch off, owner installs, live A/B `echo 2 > /sys/devices/platform/11200000.usb/rx_dma`
+>   (a runtime write the owner must authorise), run the device tests of the plan, then default on in a later release.
+> - **Measuring:** `cc -O2 -Wall -o /tmp/mtpbench tools/usb/mtpbench.c -lusb-1.0 -lcrypto && /tmp/mtpbench -s 0xffff0001 up
+>   64 x.bin` (SD `0xffff0002`; the `clean` command in its usage text does not exist — it deletes its own files). Functional
+>   suite: `cc -O2 -Wall -o /tmp/ops tools/usb/mtp-file-ops.c -lmtp && /tmp/ops`. **The owner uses KDE Dolphin:** `kiod6`
+>   holds the MTP interface while Dolphin has the player open — ask the owner, then end `kiod6` (it restarts on demand).
+> - **Player state:** Internal Storage = `Old Player Files` (509 old stock files, the owner may delete them over USB now);
+>   the owner's 138 skin files from the old Internal Storage are NOT restored yet (backup
+>   `out/deep-sleep-final/evidence/20261016/internal-storage-backup-before-stock-test/internal-music.tar`, copy on
+>   `/media/sd/.y2-backup-20261016/`). pstore still holds the 7.9 oops record.
+> - **Open owner decisions:** automatic restart right after an update when the storage setup waits (recommended, not
+>   built); restore the skins; close GitHub issue #44 too (#39 was closed 2026-10-17 with an explanation). Cleanup idea: the
+>   eMMC write guard refuses ext4's WRITE_ZEROES inside p8 (`mmc_erase: group start error -30` at start, harmless).
+>   FM radio stays on `beta8-fm` (device test owed; rebase onto main and use a sequence above 6300).
+> - **Release mechanics:** next free label 74, sequence above 6300; workspace `out/build`, `out/release-72`,
+>   `out/release-73`; `release.py bump/build/publish` with GIT_AUTHOR_*/GIT_COMMITTER_* env (Luca, no attribution).
+> - **Paste-ready prompt:** "Continue with faster USB uploads: read docs/planning/NEXT-SESSION-HANDOFF.md (START HERE),
+>   AGENTS.md and docs/planning/USB-RX-DMA-MODE1-PLAN.md. Start with the REA analysis of how the stock MediaTek kernel
+>   drives musb receive DMA, then implement multi-packet (mode 1) receive DMA behind the rx_dma=2 switch, default off.
+>   Do not publish or write to the player without asking me."
+>
+> Previous entry: **START HERE (2026-10-17, latest): Y2LINUX 1.0 BETA 7.10 (BASELINE 73) — USB FILE OPERATIONS.** Release
 > `1.0.0-beta.7.10`, sequence 6300, Linux `72a565d` (code `da0917d` musb ZLP fix, `4c0a54d` MoveObject/CopyObject + tool), Reborn
 > `511dbf0`, report `docs/validation/Y2-LINUX-1.0-BETA-7.10.md`, audit BETA-7.10. 7.9's automatic Internal Storage PASSED on the
 > owner's player (509 kept files hash-identical). Next: owner installs 7.10, then run

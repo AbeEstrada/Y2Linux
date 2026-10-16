@@ -6,7 +6,8 @@ installed once with SP Flash Tool, then updated over Wi-Fi by the player itself
 ([recovery and updates](RECOVERY-AND-UPDATES.md)). No image carries MediaTek's radio firmware: each
 player takes it from its owner's Innioasis package ([INSTALL](INSTALL.md)). What works, what does not
 and the latest hardware results: [current platform state](CURRENT_PLATFORM_STATE.md); Last.fm
-scrobbling and why it is safe: [Last.fm scrobbling](LASTFM.md); the beta's
+scrobbling and why it is safe: [Last.fm scrobbling](LASTFM.md); Internal Storage, the SD card and
+USB copying: [Storage](STORAGE.md); the beta's
 evidence and open gaps: [1.0 Beta 7.10 report](validation/Y2-LINUX-1.0-BETA-7.10.md),
 [1.0 Beta 7.9 report](validation/Y2-LINUX-1.0-BETA-7.9.md),
 [1.0 Beta 7.8 report](validation/Y2-LINUX-1.0-BETA-7.8.md),

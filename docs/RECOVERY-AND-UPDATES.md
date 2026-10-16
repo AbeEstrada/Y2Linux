@@ -99,6 +99,10 @@ the player turn off and wait for the charger, with the request still set.
 Your music (internal storage and SD card), your settings and library, the radio firmware on the
 data partition, the bootloaders, NVRAM (calibration and MAC addresses) and the partition tables.
 
+One thing follows an update once: on a player that still has the stock Innioasis storage, the
+first restart after an update to Beta 7.9 or later turns it into Internal Storage, keeping your
+files on it ([Storage](STORAGE.md)). It never runs during the update's own health check.
+
 ## Undo
 
 The normal system does not need RECOVERY; only updates do. To put Android's recovery back, flash

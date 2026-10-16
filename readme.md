@@ -86,8 +86,8 @@ public release, and its Firmware-drive install was tested on the device):
   changed on the player, with a Favorites playlist and a heart; pause and play continue at once.
 - USB: MTP (internal storage and SD card) with copy, move, rename and delete from Windows, macOS
   (MTP apps) and Linux, and SSH/SFTP over USB Ethernet for developers.
-- **Internal Storage** (5.4 GB) on every player: the stock player's own storage is set up by
-  itself at the first start; files that were on it are kept in *Old Player Files* (up to about
+- **Internal Storage** (5.4 GB) on every player ([how storage works](docs/STORAGE.md)): the stock
+  player's own storage is set up by itself at the first start; files that were on it are kept in *Old Player Files* (up to about
   400 MB) or, for a larger old library, shown read-only as *Old Storage* until you choose
   Settings → Storage → Set Up Internal Storage.
 - microSD card for music (`/media/sd`): FAT32, exFAT or ext4. Each card is checked read-only
@@ -126,6 +126,10 @@ public release, and its Firmware-drive install was tested on the device):
   wired-headphone detection: the jack is used whenever no Bluetooth headphones are connected.
 - **Install:** the full path from stock has been run on the maintainer's player only. A kernel that
   hangs before its rescue system runs can only be fixed with SP Flash Tool.
+- **Copying to the player over USB** runs at about 9–10 MB/s (from the player: about 38 MB/s);
+  faster uploads (receive DMA) are being worked on.
+- **Going back to stock** does not restore the player's old storage format: copy your music off
+  first; stock Android then has to format that storage. Not yet tested ([Storage](docs/STORAGE.md)).
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
