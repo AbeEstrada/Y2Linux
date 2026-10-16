@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 7.6, Baseline 67 — 2026-10-16 (latest, published)
+## Y2Linux 1.0 Beta 7.7, Baseline 70 — 2026-10-16 (latest, published)
+
+Release `1.0.0-beta.7.7` (Reborn `1.0.0-beta.7.7`), tag `baseline-70`, Linux `bcb7815`, Reborn `f117586`. Last.fm
+scrobbling: sign-in by QR code, offline queue, Now Playing, optional `.scrobbler.log`. Details:
+[Beta 7.7 report](validation/Y2-LINUX-1.0-BETA-7.7.md).
+
+## Y2Linux 1.0 Beta 7.6, Baseline 67 — 2026-10-16 (published)
 
 Release `1.0.0-beta.7.6` (Reborn `1.0.0-beta.7.6`), tag `baseline-67`, Linux `58de7d8`, Reborn `36e6994`. The update download
 and check draw at the full frame rate (were ≤ 29 fps) with a Download · Check · Install step tracker. Details:

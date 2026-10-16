@@ -8510,3 +8510,19 @@ plumbing). Host evidence only; no image built, nothing installed.
 
 **Gate decision:** ready for a test build once the owner's key file exists; a release from `main` follows the device check
 and the owner's word. FM stays on `beta8-fm`.
+
+## BETA-7.7 (Baseline 70) Last.fm scrobbling: milestone gap audit — 2026-10-16
+
+**Boundary:** owner: "i want to install with ota so publish this". A public release is a milestone boundary. Reborn feature
+plus release plumbing for the app key; no hardware, kernel, update-format or memory-model change. Real-hardware evidence
+unchanged since BETA-7.6; FM radio stays on `beta8-fm`.
+
+| Area | State for Beta 7.7 | Evidence / gap |
+| --- | --- | --- |
+| Last.fm scrobbling | BUILT, device check owed | 509 Reborn tests, key pair confirmed by Last.fm, key in image root 0600. |
+| Secrets | BUILT | Session only on Y2DATA; privacy check refuses session/queue/log in images. |
+| Update screens (7.6) | BUILT, device fps owed | Seen on this update's download. |
+| FM radio | ON BRANCH | Device test owed (BETA-8-FM rows). |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.7.7 / Reborn 1.0.0-beta.7.7** (Baseline 70, sequence 6150) as a public beta
+at the owner's request; next evidence boundary: the owner's OTA install, QR sign-in and first real scrobble.

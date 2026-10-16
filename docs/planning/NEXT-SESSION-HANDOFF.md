@@ -1,6 +1,12 @@
 # Next-session handoff — Y2Linux 1.0 Beta 7.6 (latest entry first; started 2026-10-09 as the deep-sleep continuation)
 
-> **START HERE (2026-10-16, latest): LAST.FM SCROBBLING ON `main` — PHASES 1–3 BUILT, KEY + DEVICE TEST OWED.** Owner: ship
+> **START HERE (2026-10-16, latest): Y2LINUX 1.0 BETA 7.7 (BASELINE 70) PUBLISHED — LAST.FM SCROBBLING.** Release
+> `1.0.0-beta.7.7`, sequence 6150, Linux `bcb7815`, Reborn `f117586`, report `docs/validation/Y2-LINUX-1.0-BETA-7.7.md`, audit
+> BETA-7.7. Device checks owed after the owner's OTA install: QR sign-in, a real scrobble and Now Playing, an offline play
+> sent after sleep and Wi-Fi; 7.6 update fps on this download. Next free label 71, sequence above 6150 (FM on `beta8-fm`
+> must rebase and use a sequence above the newest published one). Key file: `~/.local/share/y2linux/lastfm-api.json`.
+>
+> Previous entry: **(2026-10-16) LAST.FM SCROBBLING ON `main` — PHASES 1–3 BUILT, KEY + DEVICE TEST OWED.** Owner: ship
 > scrobbling separately from FM; FM stays on branch `beta8-fm` (implemented there, device test owed — see that branch's
 > handoff). Plan/security: [LASTFM-SCROBBLE-PLAN](LASTFM-SCROBBLE-PLAN.md), audits LASTFM. Reborn `main` 60bea96 (rules,
 > queue, `.scrobbler.log`, Last.fm client, Settings → Last.fm with QR sign-in), Y2Linux adfb5c9 (key file into images,
