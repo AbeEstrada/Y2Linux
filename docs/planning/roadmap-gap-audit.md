@@ -8429,3 +8429,18 @@ Supersedes Beta 7.1's lock decision (owner).
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.7.3 / Reborn 1.0.0-beta.7.3** (Baseline 64, sequence 5950) as a public beta
 at the owner's request; next evidence boundary: OTA install, then the 7.2 frame-rate sample.
+
+## BETA-7.4 (Baseline 65) status-bar messages, cooler wave: milestone gap audit — 2026-10-16
+
+**Boundary:** owner chose message placement C ("c") and the wave change; a release is a milestone boundary. Reborn only; no
+hardware or memory-model change. Thermal note recorded: no regression under the same conditions; the wave's CPU lease removed.
+
+| Area | State for Beta 7.4 | Evidence / gap |
+| --- | --- | --- |
+| Messages | BUILT, device look owed | Rendered A/B/C; host tests. |
+| Now Playing heat | BUILT, device check owed | 598 MHz expected while the wave plays; temperature over ten minutes on battery. |
+| Motion fps | MEASURED (7.3) | 62 fps median while moving, 0 missed; Songs list sample owed. |
+| FM radio | NOT STARTED | Beta 8. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.7.4 / Reborn 1.0.0-beta.7.4** (Baseline 65, sequence 6000) as a public beta;
+next evidence boundary: the Now Playing clock/temperature check on battery.

@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 7.3, Baseline 64 — 2026-10-16 (latest, published)
+## Y2Linux 1.0 Beta 7.4, Baseline 65 — 2026-10-16 (latest, published)
+
+Release `1.0.0-beta.7.4` (Reborn `1.0.0-beta.7.4`), tag `baseline-65`, Linux `d909231`, Reborn `8c0f8c4`. Messages as a slim
+pill in the status bar with an icon; the playing wave no longer holds the CPU lease. Motion measured on 7.3: 62 fps median
+while moving, 64–65 fps wave, 0 missed frames. Details: [Beta 7.4 report](validation/Y2-LINUX-1.0-BETA-7.4.md).
+
+## Y2Linux 1.0 Beta 7.3, Baseline 64 — 2026-10-16 (published)
 
 Release `1.0.0-beta.7.3` (Reborn `1.0.0-beta.7.3`), tag `baseline-64`, Linux `cbab171`, Reborn `7175c76`. A computer
 connecting shows a message and a USB symbol in the status bar instead of a screen that covered the player.
