@@ -8476,3 +8476,21 @@ unchanged since BETA-7.4.
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.7.6 / Reborn 1.0.0-beta.7.6** (Baseline 67, sequence 6100) as a public beta
 at the owner's request; next evidence boundary: frame rate during the next OTA download.
+
+## LASTFM scrobbling: milestone gap audit — 2026-10-16
+
+**Boundary:** owner: Last.fm scrobbling from the player, on `main`, released separately from FM (FM stays on `beta8-fm`).
+No new hardware subsystem: a Reborn feature on the existing Wi-Fi/curl path; the only Y2Linux changes are release
+plumbing for the app key file and its privacy check. Plan, decisions and security: [LASTFM-SCROBBLE-PLAN](LASTFM-SCROBBLE-PLAN.md).
+Real-hardware evidence unchanged since BETA-7.6 (device on 1.0.0-beta.7.6).
+
+| Area | State | Evidence / gap |
+| --- | --- | --- |
+| Scrobble rules, queue, log | NOT STARTED → phase 1 | Playback events (TrackStarted/Boundary/Ended/Position) and tags exist in Reborn. |
+| Last.fm client | NOT STARTED | curl HTTPS proven by internet radio; no MD5 yet. |
+| Sign-in UI | NOT STARTED | Keyboard exists; QR encoder missing. |
+| App API account | OWED (owner) | Key file outside git, see plan. |
+| FM radio | ON BRANCH `beta8-fm` | Device test owed (BETA-8-FM rows). |
+
+**Gate decision:** phase 1 READY (host only); live Last.fm runs wait for the owner's API account; a release waits for
+the owner's device check and word.
