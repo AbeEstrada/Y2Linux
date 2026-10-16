@@ -491,6 +491,42 @@ class UpdateTests(unittest.TestCase):
             with self.assertRaises(ValueError): base_url(url)
         self.assertEqual(base_url('https://example.com/release/manifest.json'),'https://example.com/release/')
 
+    def test_cancel_stops_a_running_download_and_offers_the_release_again(self):
+        # Beta 7.1: Reborn's Cancel sends SIGTERM to `update stage`. The
+        # download stops, its partial files go and the page shows the release
+        # as available, exactly as after the check.
+        import signal
+        from y2_platform.common import Context
+        from y2_platform import update
+        source = self.root/'package'
+        (self.base/'pending').rename(source)
+        volume = {'path':'/data','state':'Ready','generation':'boot:1:179:7'}
+        def runner(argv, **kw):
+            result = subprocess.run([*self.prefix,str(self.executable),*argv[1:]],
+                env=os.environ|{'Y2_TEST_ROOT':str(self.root)},capture_output=True,timeout=30)
+            return {'ok':result.returncode==0,'output':result.stdout.decode(),'reason':None if result.returncode==0 else 'command_failed'}
+        ctx=Context(self.root,runner)
+        copy = update.copy_stream
+        def interrupted(*args, **kwargs):
+            # Cancel pressed mid-download (the manifest is read before).
+            if signal.getsignal(signal.SIGTERM) is update._cancel:
+                os.kill(os.getpid(), signal.SIGTERM)
+            return copy(*args, **kwargs)
+        before = signal.getsignal(signal.SIGTERM)
+        with patch('y2_platform.transfer.storage',return_value={'volumes':[volume]}), \
+                patch('y2_platform.update.copy_stream', side_effect=interrupted):
+            with self.assertRaisesRegex(ValueError,'download_cancelled'):
+                update.stage(ctx,source)
+        self.assertEqual(signal.getsignal(signal.SIGTERM), before)
+        self.assertEqual(list(self.base.glob('.incoming-*')), [])
+        self.assertFalse((self.base/'pending').exists())
+        self.assertFalse((self.base/'state.json').exists())
+        offered=json.loads((self.base/'download.json').read_text())
+        self.assertEqual((offered['state'],offered['sequence']),('Checked',1))
+        # Nothing was changed: the same download works afterwards.
+        with patch('y2_platform.transfer.storage',return_value={'volumes':[volume]}):
+            self.assertEqual(update.stage(ctx,source)['state'],'Queued')
+
     def test_space_cleanup_stale_package_and_cancel_free_the_data_volume(self):
         # OTA-46: disposable data goes before the download is refused; music,
         # settings, live logs and the rollback copies stay.

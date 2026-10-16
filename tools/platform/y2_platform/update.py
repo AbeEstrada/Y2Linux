@@ -15,6 +15,7 @@ import collections
 import os
 from pathlib import Path
 import shutil
+import signal
 import stat
 import time
 import urllib.error
@@ -269,6 +270,14 @@ class Progress:
         self.publish(phase, force=True)
 
 
+class Cancelled(ValueError):
+    """The owner stopped a running download (Reborn sends SIGTERM)."""
+
+
+def _cancel(signum, frame):
+    raise Cancelled('download_cancelled')
+
+
 def stage(ctx, source=None, url=None, check_only=False):
     if bool(source) == bool(url):
         raise ValueError('exactly_one_local_package_or_HTTPS_manifest_required')
@@ -280,6 +289,8 @@ def stage(ctx, source=None, url=None, check_only=False):
     token = '.incoming-' + uuid.uuid4().hex
     incoming = root / token
     live = None
+    summary = None
+    terminate = signal.getsignal(signal.SIGTERM)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if status(ctx)['state'] not in TERMINAL:
@@ -353,13 +364,16 @@ def stage(ctx, source=None, url=None, check_only=False):
             return {'state': 'UpToDate', 'release_version': installed}
         payloads = manifest['payloads']
         total = sum(item['bytes'] for item in payloads.values())
+        summary = {'schema': 1, 'state': 'Checked', 'release_version': manifest['release_version'],
+                   'sequence': manifest['sequence'], 'download_bytes': total,
+                   'notes': manifest.get('notes', ''), 'reborn_version': manifest.get('reborn_version', '')}
         if check_only:
             remove_package(incoming)
-            summary = {'schema': 1, 'state': 'Checked', 'release_version': manifest['release_version'],
-                       'sequence': manifest['sequence'], 'download_bytes': total,
-                       'notes': manifest.get('notes', ''), 'reborn_version': manifest.get('reborn_version', '')}
             atomic_json(root/'download.json', summary)
             return manifest
+        # Until the package is committed below, SIGTERM (Reborn's Cancel)
+        # stops the download and leaves the release offered as before.
+        signal.signal(signal.SIGTERM, _cancel)
         # Root payload plus its backup during installation; refuse early, not in recovery.
         cleaned += make_room(ctx, fd, total + payloads['rootfs']['raw_bytes'] // 4)
         # Music and the screen come first: download and check yield the CPU.
@@ -388,6 +402,8 @@ def stage(ctx, source=None, url=None, check_only=False):
         live.finish('verify')
         if data_volume(ctx)['generation'] != volume['generation']:
             raise ValueError('update_data_generation_changed')
+        # The commit point: from here the package is queued, never half-cancelled.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
         remove_package(root/'pending')
         incoming.rename(root/'pending')
         parent = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
@@ -402,6 +418,13 @@ def stage(ctx, source=None, url=None, check_only=False):
                     'backup_budget': 'recovery captures the compressed previous root and BOOTIMG before any write',
                     'reserve_bytes': RESERVE, 'cleaned_bytes': cleaned}, durable=True)
         return result
+    except Cancelled:
+        with contextlib.suppress(OSError, ValueError):
+            remove_package(incoming)
+        atomic_json(root/'download.json', summary, durable=True)
+        if live is not None:
+            live.finish('failed')
+        raise
     except (OSError, ValueError, TimeoutError) as error:
         record = {'schema': 1, 'state': 'Failed', 'failure': str(error)}
         if isinstance(error, NoSpace):
@@ -413,6 +436,8 @@ def stage(ctx, source=None, url=None, check_only=False):
             live.finish('failed')
         raise
     finally:
+        with contextlib.suppress(TypeError, ValueError):
+            signal.signal(signal.SIGTERM, terminate if terminate is not None else signal.SIG_DFL)
         os.close(fd)
 
 
