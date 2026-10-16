@@ -27,10 +27,26 @@ Owner (2026-10-16): more animation to make the UI feel polished and responsive, 
 Host evidence: 487 Reborn tests (new: motion springs, wave while playing / flat when paused, focus glide, slide with one focus
 target, long jumps), strict Clippy, fmt; mid-animation captures compared by eye. Device frame rate not yet measured.
 
+## Device frame rate (measured on Beta 7.3, 2026-10-16)
+
+Sampled with the cable in (Beta 7.3 removed the covering computer screen) by polling `rebornctl metrics` and `status`
+every 0.5 s for 4 minutes while the owner navigated (archive `out/deep-sleep-final/evidence/20261016/157-beta73-fps-sample`,
+`fps2.jsonl`, sampler `fps-sampler.py`):
+
+| Situation | Result |
+| --- | --- |
+| Motion (113 busy half-seconds: focus glide, slides, menus, playlists) | median **62 fps**, up to 66 (the panel's ≈64 Hz); frames vsync-paced at ≈14.7 ms; **0 missed frames** |
+| Now Playing while playing (wave), 22 s | steady **64–65 fps**, every half-second |
+| Continuous wheel on Home, 6 s | steady **64 fps** (≈8 ms CPU per frame) |
+| At rest (Home, Now Playing paused) | **0 fps**: nothing is redrawn |
+| Isolated calm-rate frames on Home | up to 23 ms CPU, at most a few per second, never during motion |
+
+Not yet sampled: smooth scrolling in the Songs list (the owner's path did not pass it); battery while Now Playing plays with
+the screen on.
+
 ## Device checks owed (after the owner's over-the-air install)
 
-1. Frame rate with the control-socket sampler (`metrics`, `graphics_frames` per second): list scrolling, focus glide,
-   screen slides and Now Playing while playing should hold ≈60 fps; at rest no frames.
+1. Frame rate: measured (above); the Songs list scroll is still to be sampled.
 2. The wave travels while playing and lies flat on pause; fast wheel scrolling stays immediate.
 3. Battery: Now Playing visible while playing redraws continuously; check the CPU lease ends when the screen is off.
 4. Still open: Beta 7.1 checks (USB screen, update answer, automatic time zone), Beta 7 checks.
