@@ -8542,3 +8542,22 @@ sign-in, first real scrobble on last.fm; Now Playing lost after a pause; Last.fm
 
 **Gate decision:** READY for **Y2Linux 1.0.0-beta.7.8 / Reborn 1.0.0-beta.7.8** (Baseline 71, sequence 6200) as a public beta
 at the owner's request; next evidence boundary: Now Playing after a pause and the offline test on the owner's player.
+
+## STORAGE-SETUP (Beta 7.9 candidate) automatic Internal Storage: milestone gap audit — 2026-10-16
+
+**Boundary:** owner: automatic Internal Storage for every player ("i want everybody to have the exact same storage
+layout"), plus issues #39 and #44. Materially changes storage for every user (erases the stock FAT p8 in cases 1–2 or on
+request), so this audit precedes any implementation. Plan: [INTERNAL-STORAGE-SETUP-PLAN](INTERNAL-STORAGE-SETUP-PLAN.md).
+
+| Area | State | Real-hardware evidence / gap |
+| --- | --- | --- |
+| Y2MEDIA layout | PROVEN on one player | Owner's p8 read 2026-10-16: ext4, Y2MEDIA, UUID …0103, start 3742720, 11 460 608 sectors, created by `provision` 2026-10-10. Pinned `mkfs.ext4` reproduces its features/inodes/blocks on the host. |
+| Stock p8 contents | ONE SAMPLE | Backup 20261010/93: 541 files, 31 MB (Themes, test files, empty Android folders); dirty bit only. Other users' contents unknown (case 3 covers large libraries). |
+| Y2DATA headroom | MEASURED | Owner 644 MB free (54 MB staged update); fresh image 197 214 free 4 KiB blocks; reporter 585.8 MB. |
+| Firmware image sizes | MEASURED | Innioasis v3.2.0 `system.img` sparse 518 MB (two copies); reporter's raw copy 859 826 928 B ≈ ANDROID partition. |
+| Update health window | SOURCE | `update.health_ack`: 180 s from first call, rollback after → setup never on a PendingHealth boot. |
+| Automatic setup, resume, Old Storage, Reborn UI | NOT BUILT | Host tests planned; device end-to-end on the owner's player after recreating the stock FAT from the backup (owner authorisation for p8 writes). |
+| #44 SD dirty bit | BUILT on main | Linux 3110f3a, Reborn b023daf; host + real dosfstools tests. |
+
+**Gate decision:** PLAN ACCEPTED FOR IMPLEMENTATION once the owner approves the plan; release only after the device
+end-to-end run (case 2 at least) and the owner's word.
