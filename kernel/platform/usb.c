@@ -224,12 +224,16 @@ void y2_musb_pio_progress(struct musb *musb, unsigned bytes, bool transmit)
  * when its request is queued (default on; harmless when never needed). */
 #define Y2_RX_RING 256
 static const char *const y2_rx_names[] = { "?", "queue", "rxstate", "late_pio", "dma_prog",
-    "pio", "irq_noreq", "dma_busy", "dma_done", "giveback", "nuke", "restart_flush" };
+    "pio", "irq_noreq", "dma_busy", "dma_done", "giveback", "nuke", "restart_flush",
+    "m1_prog", "m1_end", "m1_kick", "m1_fallback" };
 static struct y2_rx_event { u32 us; u16 event, ep, csr; u32 arg; } y2_rx_ring[Y2_RX_RING];
 static atomic_t y2_rx_head;
 static atomic64_t y2_rx_count[16];
 static bool y2_late_pio = true;
-static bool y2_rx_dma;
+/* Receive DMA: 0 off (PIO), 1 Mentor mode 0 (comparison only), 2 multi-packet
+ * mode 1 (musb_gadget.c y2_rx_mode1_start); only on endpoints in rx_dma_eps. */
+static unsigned y2_rx_dma;
+static unsigned y2_rx_dma_eps = 0xfffe;
 void y2_musb_rx_event(unsigned event, unsigned ep, unsigned csr, unsigned arg);
 void y2_musb_rx_event(unsigned event, unsigned ep, unsigned csr, unsigned arg)
 {
@@ -240,6 +244,11 @@ void y2_musb_rx_event(unsigned event, unsigned ep, unsigned csr, unsigned arg)
 }
 bool y2_musb_late_pio(void);
 bool y2_musb_late_pio(void) { return READ_ONCE(y2_late_pio); }
+bool y2_musb_rx_mode1(unsigned ep);
+bool y2_musb_rx_mode1(unsigned ep)
+{
+    return READ_ONCE(y2_rx_dma) == 2 && (READ_ONCE(y2_rx_dma_eps) & BIT(ep));
+}
 
 static int __init y2_usb_dma_option(char *value)
 {
@@ -255,7 +264,9 @@ __setup("y2.usb_dma=", y2_usb_dma_option);
  * the next host packet followed an IN completion within microseconds. The CPU
  * read of the FIFO has the same one-interrupt-per-packet cost and no such
  * race, so OUT requests stay unmapped (PIO) unless this is switched on at run
- * time to compare. IN (device-to-host) transfers keep DMA either way. */
+ * time: rx_dma=1 mode 0 to compare, rx_dma=2 multi-packet mode 1 (one DMA
+ * program and completion per request; the CPU only reads the closing short
+ * packet). IN (device-to-host) transfers keep DMA either way. */
 static int y2_dma_is_compatible(struct dma_channel *channel, u16 packet, void *buffer, u32 length);
 /* Observe the upstream allocator/programmer without changing its decisions.
  * Bytes below are accepted DMA programming, NOT USB delivery or TCP goodput.
@@ -265,6 +276,7 @@ static struct dma_controller y2_dma_original;
 static struct {
     struct dma_channel *channel;
     bool transmit;
+    u8 epnum;
 } y2_dma_channels[8];
 static atomic64_t y2_dma_allocations, y2_dma_alloc_failures, y2_dma_releases;
 static atomic64_t y2_dma_programs[2], y2_dma_programmed_bytes[2];
@@ -284,6 +296,7 @@ static struct dma_channel *y2_dma_alloc(struct dma_controller *controller,
         if (!y2_dma_channels[i].channel) {
             y2_dma_channels[i].channel = channel;
             y2_dma_channels[i].transmit = !!transmit;
+            y2_dma_channels[i].epnum = ep->epnum;
             break;
         }
     }
@@ -377,10 +390,10 @@ static void y2_musb_dma_exit(struct dma_controller *dma)
 static int y2_dma_is_compatible(struct dma_channel *channel, u16 packet, void *buffer, u32 length)
 {
     unsigned int i;
-    if (READ_ONCE(y2_rx_dma)) return true;
     for (i = 0; i < ARRAY_SIZE(y2_dma_channels); i++)
         if (y2_dma_channels[i].channel == channel)
-            return y2_dma_channels[i].transmit;
+            return y2_dma_channels[i].transmit || (READ_ONCE(y2_rx_dma) &&
+                (READ_ONCE(y2_rx_dma_eps) & BIT(y2_dma_channels[i].epnum)));
     return true;
 }
 #endif
@@ -1370,7 +1383,8 @@ static ssize_t rxdiag_show(struct device *dev, struct device_attribute *attr, ch
 {
     unsigned i, head = (unsigned)atomic_read(&y2_rx_head);
     ssize_t n = 0;
-    n += sysfs_emit_at(buf, n, "late_pio=%u rx_dma=%u", READ_ONCE(y2_late_pio), READ_ONCE(y2_rx_dma));
+    n += sysfs_emit_at(buf, n, "late_pio=%u rx_dma=%u rx_dma_eps=%x", READ_ONCE(y2_late_pio),
+        READ_ONCE(y2_rx_dma), READ_ONCE(y2_rx_dma_eps));
     for (i = 1; i < ARRAY_SIZE(y2_rx_names); i++)
         n += sysfs_emit_at(buf, n, " %s=%lld", y2_rx_names[i], atomic64_read(&y2_rx_count[i]));
     n += sysfs_emit_at(buf, n, "\n");
@@ -1400,13 +1414,24 @@ static ssize_t rx_dma_show(struct device *dev, struct device_attribute *attr, ch
 static ssize_t rx_dma_store(struct device *dev, struct device_attribute *attr,
                             const char *buf, size_t count)
 {
-    bool value;
-    if (kstrtobool(buf, &value)) return -EINVAL;
+    unsigned value;
+    if (kstrtouint(buf, 0, &value) || value > 2) return -EINVAL;
     /* Applies to requests queued afterwards; a request already mapped finishes as is. */
     WRITE_ONCE(y2_rx_dma, value);
     return count;
 }
 static DEVICE_ATTR_RW(rx_dma);
+static ssize_t rx_dma_eps_show(struct device *dev, struct device_attribute *attr, char *buf)
+{ return sysfs_emit(buf, "%#x\n", READ_ONCE(y2_rx_dma_eps)); }
+static ssize_t rx_dma_eps_store(struct device *dev, struct device_attribute *attr,
+                                const char *buf, size_t count)
+{
+    unsigned value;
+    if (kstrtouint(buf, 0, &value) || value > 0xffff) return -EINVAL;
+    WRITE_ONCE(y2_rx_dma_eps, value);
+    return count;
+}
+static DEVICE_ATTR_RW(rx_dma_eps);
 /* POWER-FINAL-13 PHY save-current switch and counters (callbacks below). */
 static bool y2_phy_savecurrent_enabled = true;
 static unsigned y2_phy_saves, y2_phy_restores, y2_phy_mismatches, y2_phy_skips;
@@ -1427,7 +1452,8 @@ static ssize_t phy_savecurrent_store(struct device *dev, struct device_attribute
 }
 static DEVICE_ATTR_RW(phy_savecurrent);
 static struct attribute *y2_usb_attrs[] = { &dev_attr_status.attr, &dev_attr_rxdiag.attr,
-    &dev_attr_rx_late_pio.attr, &dev_attr_rx_dma.attr, &dev_attr_phy_savecurrent.attr, NULL };
+    &dev_attr_rx_late_pio.attr, &dev_attr_rx_dma.attr, &dev_attr_rx_dma_eps.attr,
+    &dev_attr_phy_savecurrent.attr, NULL };
 ATTRIBUTE_GROUPS(y2_usb);
 static int y2_role_set(struct usb_role_switch *sw, enum usb_role role)
 {

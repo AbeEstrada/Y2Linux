@@ -238,7 +238,7 @@
       "path": "drivers/usb/musb/musbhsdma.c",
       "patch": "0055-musb-abort-bus-error.patch",
       "base_sha256": "45ee5dacef39ff755e5bd9b8c4f895b534f5a28014b0ecd7b4f06d527097fc40",
-      "result_sha256": "0c528a1f125168273b333857f6583a625b7712fef1f9447151ec0291e0bcff85"
+      "result_sha256": "d4b0a653c76cc6f03394442ac9d8c5d28b0ec3ece01f3e290b4042105b43b0c1"
     },
     {
       "path": "drivers/cpufreq/cpufreq-dt.c",
@@ -280,7 +280,7 @@
       "path": "drivers/usb/musb/musb_gadget.c",
       "patch": "0065-y2-musb-pio-progress.patch",
       "base_sha256": "c0948905903b9e2998408d01adefbb69195bd493f165c209b350e019760a97a4",
-      "result_sha256": "647766a69d9933c32b97bb121c8a452b87c4be250f2568a56ebc95cd6f7d9664"
+      "result_sha256": "187591a20f16c4fbf5425bb14206ddac1cb26f4582a061f36f942e735a884aeb"
     },
     {
       "path": "drivers/base/regmap/regcache.c",
