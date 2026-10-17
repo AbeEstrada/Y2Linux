@@ -61,7 +61,7 @@
  		csr |= MUSB_TXCSR_TXPKTRDY;
  		csr &= ~MUSB_TXCSR_P_UNDERRUN;
  		musb_writew(epio, MUSB_TXCSR, csr);
-@@ -513,10 +544,162 @@
+@@ -513,10 +544,164 @@
  
  /* ------------------------------------------------------------ */
  
@@ -139,60 +139,55 @@
 +}
 +
 +/* Endpoint interrupt while a mode-1 transfer is busy. Returns true when the
-+ * request was given back. Context as for musb_g_rx(). */
++ * request was given back. Context as for musb_g_rx().
++ *
++ * RXCOUNT falls while the engine unloads a full packet (seen on the Y2: a
++ * single sample mid-unload looked like a short packet and cut a file in
++ * two), so a short or zero-length packet is only believed when two samples
++ * a few microseconds apart agree and the engine has stopped on a whole
++ * packet. */
 +static bool y2_rx_mode1_end(struct musb *musb, struct musb_ep *musb_ep,
 +			    struct musb_request *req)
 +{
 +	struct usb_request *request = &req->request;
 +	struct dma_channel *channel = musb_ep->dma;
 +	void __iomem *epio = musb_ep->hw_ep->regs;
-+	u16 packet = musb_ep->packet_sz, csr = 0, count = 0;
-+	u32 moved = 0, again, programmed = 0, left = 0;
++	u16 packet = musb_ep->packet_sz, csr = 0, count = 0, count2;
++	u32 moved = 0, moved2, programmed = 0, left = 0;
 +	int i, status = 0;
 +
-+	/* Full packets ahead of the short one are the engine's: wait (one
-+	 * packet's unload at most) until the FIFO presents a short or
-+	 * zero-length packet; a finished channel has a completion pending. */
-+	for (i = 0; i < 20; i++) {
-+		csr = musb_readw(epio, MUSB_RXCSR);
-+		if (!(csr & MUSB_RXCSR_RXPKTRDY))
-+			break;
-+		count = musb_readw(epio, MUSB_RXCOUNT);
-+		if (count < packet)
-+			break;
-+		if (y2_hsdma_moved(channel, &programmed, &left) >= programmed)
-+			break;
-+		udelay(1);
-+	}
-+	if (!(csr & MUSB_RXCSR_RXPKTRDY) || count >= packet) {
-+		Y2_RXEV(Y2_RX_BUSY, req->epnum, csr, count | i << 16);
-+		return false;
-+	}
-+
-+	/* Wait for the last whole packet to reach memory. */
 +	for (i = 0; i < 50; i++) {
++		csr = musb_readw(epio, MUSB_RXCSR);
++		count = musb_readw(epio, MUSB_RXCOUNT);
 +		moved = y2_hsdma_moved(channel, &programmed, &left);
-+		again = y2_hsdma_moved(channel, &programmed, &left);
-+		if (moved == again && !(moved % packet))
-+			break;
-+		udelay(1);
++		udelay(2);
++		/* Nothing for the CPU, or the channel finished: its pending
++		 * completion gives the request back and rxstate() goes on. */
++		if (!(musb_readw(epio, MUSB_RXCSR) & MUSB_RXCSR_RXPKTRDY) ||
++		    !(csr & MUSB_RXCSR_RXPKTRDY))
++			goto busy;
++		moved2 = y2_hsdma_moved(channel, &programmed, &left);
++		if (moved2 >= programmed)
++			goto busy;
++		count2 = musb_readw(epio, MUSB_RXCOUNT);
++		/* A full packet is the engine's to take. */
++		if (count >= packet && count2 >= packet)
++			goto busy;
++		if (count2 == count && moved2 == moved && count < packet &&
++		    !(moved % packet))
++			goto short_packet;
++		if (count2 != count || moved2 != moved)
++			Y2_RXEV(Y2_RX_BUSY, req->epnum, csr, count | 0x40000000);
 +	}
-+	/* The transfer completed at the same moment: its pending completion
-+	 * interrupt gives the request back, rxstate() then reads this packet. */
-+	if (moved >= programmed) {
-+		Y2_RXEV(Y2_RX_BUSY, req->epnum, csr, count | 0x80000000);
-+		return false;
-+	}
-+	/* Never seen: a packet split between memory and FIFO. Fail the
-+	 * request rather than hand back data whose order is unknown. */
-+	if (moved % packet) {
-+		Y2_RXEV(Y2_RX_M1_FALLBACK, req->epnum, csr, moved | 0x80000000);
-+		status = -EIO;
-+	} else if (moved + left != programmed) {
++busy:
++	Y2_RXEV(Y2_RX_BUSY, req->epnum, csr, count | i << 16);
++	return false;
++
++short_packet:
++	if (moved + left != programmed)
 +		/* Address and count registers disagree: recorded for the
 +		 * device tests, the address is what upstream trusts. */
 +		Y2_RXEV(Y2_RX_M1_FALLBACK, req->epnum, csr, left | 0x40000000);
-+	}
 +
 +	/* No completion is pending: the channel stopped short of its length. */
 +	musb->dma_controller->channel_abort(channel);
@@ -201,8 +196,15 @@
 +	unmap_dma_buffer(req, musb);
 +
 +	csr = musb_readw(epio, MUSB_RXCSR);
++	count2 = musb_readw(epio, MUSB_RXCOUNT);
++	if (!(csr & MUSB_RXCSR_RXPKTRDY) || count2 != count) {
++		/* Never expected once both samples agreed: fail the request
++		 * rather than hand back data whose end is unknown. */
++		Y2_RXEV(Y2_RX_M1_FALLBACK, req->epnum, csr, count2 | 0x80000000);
++		status = -EIO;
++	}
 +	count = min_t(u32, count, request->length - request->actual);
-+	if (count) {
++	if (count && !status) {
 +		musb_read_fifo(musb_ep->hw_ep, count,
 +			       (u8 *)(request->buf + request->actual));
 +		request->actual += count;
@@ -225,7 +227,7 @@
  {
  	const u8		epnum = req->epnum;
  	struct usb_request	*request = &req->request;
-@@ -541,6 +724,8 @@
+@@ -541,6 +726,8 @@
  						musb_ep->end_point.name);
  		return;
  	}
@@ -234,7 +236,7 @@
  
  	/* We shouldn't get here while DMA is active, but we do... */
  	if (dma_channel_status(musb_ep->dma) == MUSB_DMA_STATUS_BUSY) {
-@@ -599,6 +784,25 @@
+@@ -599,6 +786,25 @@
  			if (!is_buffer_mapped(req))
  				goto buffer_aint_mapped;
  
@@ -260,7 +262,7 @@
  			if (musb_dma_inventra(musb)) {
  				struct dma_controller	*c;
  				struct dma_channel	*channel;
-@@ -723,6 +927,9 @@
+@@ -723,6 +929,9 @@
  					return;
  			}
  
@@ -270,7 +272,7 @@
  			len = request->length - request->actual;
  			musb_dbg(musb, "%s OUT/RX pio fifo %d/%d, maxpacket %d",
  					musb_ep->end_point.name,
-@@ -767,6 +974,10 @@
+@@ -767,6 +976,10 @@
  			musb_read_fifo(musb_ep->hw_ep, fifo_count, (u8 *)
  					(request->buf + request->actual));
  			request->actual += fifo_count;
@@ -281,7 +283,7 @@
  
  			/* REVISIT if we left anything in the fifo, flush
  			 * it and report -EOVERFLOW
-@@ -807,8 +1018,10 @@
+@@ -807,8 +1020,10 @@
  	musb_ep_select(mbase, epnum);
  
  	req = next_request(musb_ep);
@@ -293,7 +295,7 @@
  
  	trace_musb_req_rx(req);
  	request = &req->request;
-@@ -841,9 +1054,21 @@
+@@ -841,9 +1056,21 @@
  	}
  
  	if (dma_channel_status(dma) == MUSB_DMA_STATUS_BUSY) {
@@ -315,7 +317,7 @@
  		return;
  	}
  
-@@ -855,6 +1080,7 @@
+@@ -855,6 +1082,7 @@
  			MUSB_RXCSR_P_WZC_BITS | csr);
  
  		request->actual += musb_ep->dma->actual_len;
@@ -323,7 +325,7 @@
  
  #if defined(CONFIG_USB_INVENTRA_DMA) || defined(CONFIG_USB_TUSB_OMAP_DMA) || \
  	defined(CONFIG_USB_UX500_DMA)
-@@ -881,6 +1107,14 @@
+@@ -881,6 +1109,14 @@
  			return;
  		}
  #endif
@@ -338,7 +340,7 @@
  		musb_g_giveback(musb_ep, request, 0);
  		/*
  		 * In the giveback function the MUSB lock is
-@@ -900,8 +1134,11 @@
+@@ -900,8 +1136,11 @@
  	defined(CONFIG_USB_UX500_DMA)
  exit:
  #endif
@@ -351,7 +353,7 @@
  }
  
  /* ------------------------------------------------------------ */
-@@ -1171,17 +1408,36 @@
+@@ -1171,17 +1410,36 @@
  		txstate(musb, req);
  	} else {
  		csr = musb_readw(epio, MUSB_RXCSR);
