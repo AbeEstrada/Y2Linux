@@ -53,15 +53,26 @@ static int read_container(unsigned char *header, unsigned char **payload, size_t
     uint32_t length = get32(buffer);
     size_t total = got;
     size_t need = length == 0xffffffffu ? 0 : length;
+    /* A read that filled its buffer did not see the end of the transfer. */
+    int full = (unsigned)got == chunk;
     if (need > total) {
         buffer = realloc(buffer, need);
         while (total < need) {
-            int part = 0;
-            r = libusb_bulk_transfer(dev, ep_in, buffer + total, need - total > chunk ? chunk : need - total, &part, timeout);
+            int part = 0, ask = need - total > chunk ? chunk : need - total;
+            r = libusb_bulk_transfer(dev, ep_in, buffer + total, ask, &part, timeout);
             if (r) { fprintf(stderr, "bulk in failed: %s\n", libusb_error_name(r)); free(buffer); return -1; }
             total += part;
+            full = part == ask;
             if (part % 512) break;
         }
+    }
+    /* A container that ends on a packet boundary is closed by a zero-length
+     * packet; when the last read was filled exactly, that packet is still
+     * queued and would be taken for the next container. */
+    if (full && total % 512 == 0) {
+        unsigned char zlp[512]; int part = 0;
+        r = libusb_bulk_transfer(dev, ep_in, zlp, sizeof zlp, &part, 1000);
+        if (r || part) { fprintf(stderr, "closing zero-length packet missing: %s (%d)\n", libusb_error_name(r), part); free(buffer); return -1; }
     }
     if (payload) {
         size_t have = total > 12 ? total - 12 : 0;
