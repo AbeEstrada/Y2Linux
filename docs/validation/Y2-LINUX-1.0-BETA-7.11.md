@@ -1,6 +1,6 @@
 # Y2Linux 1.0 Beta 7.11 (Baseline 74)
 
-Status: **READY TO PUBLISH as GitHub release `baseline-74`** (2026-10-17). Release `1.0.0-beta.7.11`, Reborn
+Status: **PUBLISHED as GitHub release `baseline-74`** (2026-10-17). Release `1.0.0-beta.7.11`, Reborn
 `1.0.0-beta.7.11`, kernel `6.18.56-y2linux-1.0.0-beta.7.11`, update sequence 6352, Linux `9c3e4f1`, Reborn `814cd14`.
 Built with `tools/production/release.py` in 101 s on top of Baseline 73: container suite
 **766 OK**, all seal checks PASS, no MediaTek firmware in any image. Milestone audit BETA-7.11 and the
