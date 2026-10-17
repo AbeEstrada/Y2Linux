@@ -190,6 +190,7 @@ int main(void) {
 #include <assert.h>
 #include <stdint.h>
 #define __iomem
+#define IS_ENABLED(option) 0
 typedef uint8_t u8;typedef uint16_t u16;
 enum { MUSB_DMA_STATUS_BUSY=1,MUSB_DMA_STATUS_FREE=2,MUSB_DMA_STATUS_BUS_ABORT=3 };
 enum { MUSB_TXCSR=1,MUSB_RXCSR=2,MUSB_HSDMA_CONTROL=3 };
@@ -249,7 +250,7 @@ typedef long long atomic64_t; typedef int atomic_t;
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
 static unsigned int y2_usb_progress;
 struct dma_channel { int id; };
-struct musb_hw_ep { int id; };
+struct musb_hw_ep { int id; u8 epnum; };
 struct dma_controller {
  struct dma_channel *(*channel_alloc)(struct dma_controller *,struct musb_hw_ep *,u8);
  void (*channel_release)(struct dma_channel *);
