@@ -8,7 +8,7 @@
 +extern void y2_musb_pio_progress(struct musb *, unsigned, bool);
 +extern void y2_musb_rx_event(unsigned, unsigned, unsigned, unsigned);
 +extern bool y2_musb_late_pio(void);
-+extern bool y2_musb_rx_mode1(unsigned);
++extern unsigned y2_musb_rx_mode(unsigned);
 +extern u32 y2_hsdma_moved(struct dma_channel *, u32 *, u32 *);
 +enum { Y2_RX_QUEUE = 1, Y2_RX_STATE, Y2_RX_LATE_PIO, Y2_RX_DMA, Y2_RX_PIO, Y2_RX_NOREQ,
 +       Y2_RX_BUSY, Y2_RX_DMADONE, Y2_RX_GIVEBACK, Y2_RX_NUKE, Y2_RX_RESTART_FLUSH,
@@ -236,18 +236,23 @@
  
  	/* We shouldn't get here while DMA is active, but we do... */
  	if (dma_channel_status(musb_ep->dma) == MUSB_DMA_STATUS_BUSY) {
-@@ -599,6 +786,25 @@
+@@ -599,6 +786,30 @@
  			if (!is_buffer_mapped(req))
  				goto buffer_aint_mapped;
  
 +#if IS_ENABLED(CONFIG_Y2_PLATFORM)
 +			/* Multi-packet receive also takes a packet that was already
-+			 * waiting; whatever it cannot start goes to the CPU. */
-+			if (musb_dma_inventra(musb) && !request->short_not_ok &&
-+			    y2_musb_rx_mode1(epnum)) {
-+				if (y2_rx_mode1_start(musb, musb_ep, req, csr, fifo_count))
++			 * waiting; whatever it cannot start goes to the CPU. A
++			 * request mapped before receive DMA was switched off goes
++			 * to the CPU as well, never to mode 0. */
++			if (musb_dma_inventra(musb) && !request->short_not_ok) {
++				unsigned mode = y2_musb_rx_mode(epnum);
++
++				if (mode == 2 &&
++				    y2_rx_mode1_start(musb, musb_ep, req, csr, fifo_count))
 +					return;
-+				goto y2_late_pio;
++				if (mode != 1)
++					goto y2_late_pio;
 +			}
 +			/* A packet that was ACKed before this request existed is already
 +			 * in the FIFO. Take that single packet with the CPU: it never
@@ -262,7 +267,7 @@
  			if (musb_dma_inventra(musb)) {
  				struct dma_controller	*c;
  				struct dma_channel	*channel;
-@@ -723,6 +929,9 @@
+@@ -723,6 +934,9 @@
  					return;
  			}
  
@@ -272,7 +277,7 @@
  			len = request->length - request->actual;
  			musb_dbg(musb, "%s OUT/RX pio fifo %d/%d, maxpacket %d",
  					musb_ep->end_point.name,
-@@ -767,6 +976,10 @@
+@@ -767,6 +981,10 @@
  			musb_read_fifo(musb_ep->hw_ep, fifo_count, (u8 *)
  					(request->buf + request->actual));
  			request->actual += fifo_count;
@@ -283,7 +288,7 @@
  
  			/* REVISIT if we left anything in the fifo, flush
  			 * it and report -EOVERFLOW
-@@ -807,8 +1020,10 @@
+@@ -807,8 +1025,10 @@
  	musb_ep_select(mbase, epnum);
  
  	req = next_request(musb_ep);
@@ -295,7 +300,7 @@
  
  	trace_musb_req_rx(req);
  	request = &req->request;
-@@ -841,9 +1056,21 @@
+@@ -841,9 +1061,21 @@
  	}
  
  	if (dma_channel_status(dma) == MUSB_DMA_STATUS_BUSY) {
@@ -317,7 +322,7 @@
  		return;
  	}
  
-@@ -855,6 +1082,7 @@
+@@ -855,6 +1087,7 @@
  			MUSB_RXCSR_P_WZC_BITS | csr);
  
  		request->actual += musb_ep->dma->actual_len;
@@ -325,7 +330,7 @@
  
  #if defined(CONFIG_USB_INVENTRA_DMA) || defined(CONFIG_USB_TUSB_OMAP_DMA) || \
  	defined(CONFIG_USB_UX500_DMA)
-@@ -881,6 +1109,14 @@
+@@ -881,6 +1114,14 @@
  			return;
  		}
  #endif
@@ -340,7 +345,7 @@
  		musb_g_giveback(musb_ep, request, 0);
  		/*
  		 * In the giveback function the MUSB lock is
-@@ -900,8 +1136,11 @@
+@@ -900,8 +1141,11 @@
  	defined(CONFIG_USB_UX500_DMA)
  exit:
  #endif
@@ -353,7 +358,7 @@
  }
  
  /* ------------------------------------------------------------ */
-@@ -1171,17 +1410,36 @@
+@@ -1171,17 +1415,36 @@
  		txstate(musb, req);
  	} else {
  		csr = musb_readw(epio, MUSB_RXCSR);

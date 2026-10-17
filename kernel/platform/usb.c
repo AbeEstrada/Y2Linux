@@ -244,10 +244,10 @@ void y2_musb_rx_event(unsigned event, unsigned ep, unsigned csr, unsigned arg)
 }
 bool y2_musb_late_pio(void);
 bool y2_musb_late_pio(void) { return READ_ONCE(y2_late_pio); }
-bool y2_musb_rx_mode1(unsigned ep);
-bool y2_musb_rx_mode1(unsigned ep)
+unsigned y2_musb_rx_mode(unsigned ep);
+unsigned y2_musb_rx_mode(unsigned ep)
 {
-    return READ_ONCE(y2_rx_dma) == 2 && (READ_ONCE(y2_rx_dma_eps) & BIT(ep));
+    return (READ_ONCE(y2_rx_dma_eps) & BIT(ep)) ? READ_ONCE(y2_rx_dma) : 0;
 }
 
 static int __init y2_usb_dma_option(char *value)
