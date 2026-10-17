@@ -1,6 +1,12 @@
 # Current Y2Linux platform state
 
-## Y2Linux 1.0 Beta 7.10, Baseline 73 — 2026-10-17 (latest, published)
+## Y2Linux 1.0 Beta 7.11, Baseline 74 — 2026-10-17 (latest, published)
+
+Release `1.0.0-beta.7.11`, tag `baseline-74`, Linux `9c3e4f1`, Reborn `814cd14`. Copies to the player about three times
+faster: multi-packet receive DMA for USB (Internal Storage 29.6 MB/s instead of ≈10, SD 23.3 MB/s), measured with every
+byte hashed on the owner's player; Dolphin copies confirmed. Details: [Beta 7.11 report](validation/Y2-LINUX-1.0-BETA-7.11.md).
+
+## Y2Linux 1.0 Beta 7.10, Baseline 73 — 2026-10-17 (published)
 
 Release `1.0.0-beta.7.10`, tag `baseline-73`, Linux `72a565d`, Reborn `511dbf0`. USB file operations: the musb crash on
 packet-aligned MTP transfers (zero-length packet, Beta 7.9 oops) is fixed; moving and copying on the player (MoveObject,

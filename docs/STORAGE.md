@@ -95,8 +95,8 @@ on macOS (for example OpenMTP).
   overwrites a file of the same name.
 - The player keeps about **100 MB free** on each storage; a copy that would not leave that much is
   refused before anything is written (the computer shows an error, nothing is left behind).
-- Speed: **about 38 MB/s** from the player to the computer, **about 9–10 MB/s** to the player.
-  Faster copies to the player are being worked on.
+- Speed: **about 38 MB/s** from the player to the computer; to the player **about 25–30 MB/s** on
+  Internal Storage and **about 23 MB/s** on the SD card (since 7.11; before: 9–10 MB/s).
 - New songs show up in the library by themselves a moment after the copy.
 - Only one program on the computer can use the player at a time (on Linux, close the file
   manager before using another MTP tool).

@@ -6,22 +6,22 @@ Linux 6.18 and a Buildroot userspace for the **Innioasis Y2** music player
 Android system on the internal eMMC and leaves the bootloaders, calibration and
 factory partitions untouched.
 
-> **Status: Y2Linux 1.0 Beta 7.10 (Baseline 73, 2026-10-17), public beta.** It runs every day
+> **Status: Y2Linux 1.0 Beta 7.11 (Baseline 74, 2026-10-17), public beta.** It runs every day
 > on the maintainer's Y2. Install it once from the ready-made images of the
 > [GitHub releases](https://github.com/SchulzCode/Y2Linux/releases) with SP Flash Tool
 > ([INSTALL](docs/INSTALL.md)); after that the player updates itself over Wi-Fi. Only one
 > hardware revision has been tested (see [Supported hardware](#supported-hardware)). Read
 > [Known issues](#known-issues) before you flash: battery life in sleep is not yet stock-like.
 
-| | 1.0 Beta 7.10 (Baseline 73) |
+| | 1.0 Beta 7.11 (Baseline 74) |
 | --- | --- |
 | Git tag (both repositories) | `baseline-70` (previous: `baseline-67`); the GitHub release carries the first-install images, the signed over-the-air update and the GPL sources |
-| Release / kernel | `1.0.0-beta.7.10` / `6.18.56-y2linux-1.0.0-beta.7.10` (Linux 6.18 long-term line) |
+| Release / kernel | `1.0.0-beta.7.11` / `6.18.56-y2linux-1.0.0-beta.7.11` (Linux 6.18 long-term line) |
 | Root filesystem | `2026.08-platform-v1.98` (Buildroot 2026.08) |
-| Player | Y2Reborn 1.0.0-beta.7.10 (Rust 1.99) with the UI v4 design, Cover Flow, Genres, a clock, 16 skins and Last.fm scrobbling |
+| Player | Y2Reborn 1.0.0-beta.7.11 (Rust 1.99) with the UI v4 design, Cover Flow, Genres, a clock, 16 skins and Last.fm scrobbling |
 | Bluetooth codecs | SBC, AAC (fdk-aac-free) and LDAC |
 | Main components | GCC 15.3 / glibc 2.44, Mesa 26.2.4, FFmpeg 9.0.2, BlueZ 5.87, OpenSSL 4.0.3, Python 3.15.0 |
-| Images built from | Y2Linux `72a565d`, Y2Reborn `511dbf0` ([Beta 7.10 report](docs/validation/Y2-LINUX-1.0-BETA-7.10.md)) |
+| Images built from | Y2Linux `9c3e4f1`, Y2Reborn `814cd14` ([Beta 7.11 report](docs/validation/Y2-LINUX-1.0-BETA-7.11.md)) |
 
 ## Getting started
 
@@ -85,7 +85,8 @@ public release, and its Firmware-drive install was tested on the device):
 - Playlists (.m3u/.m3u8 from Internal Storage and the SD card, also from a computer) made and
   changed on the player, with a Favorites playlist and a heart; pause and play continue at once.
 - USB: MTP (internal storage and SD card) with copy, move, rename and delete from Windows, macOS
-  (MTP apps) and Linux, and SSH/SFTP over USB Ethernet for developers.
+  (MTP apps) and Linux, about 30 MB/s to the player and 38 MB/s from it, and SSH/SFTP over USB
+  Ethernet for developers.
 - **Internal Storage** (5.4 GB) on every player ([how storage works](docs/STORAGE.md)): the stock
   player's own storage is set up by itself at the first start; files that were on it are kept in *Old Player Files* (up to about
   400 MB) or, for a larger old library, shown read-only as *Old Storage* until you choose
@@ -126,14 +127,14 @@ public release, and its Firmware-drive install was tested on the device):
   wired-headphone detection: the jack is used whenever no Bluetooth headphones are connected.
 - **Install:** the full path from stock has been run on the maintainer's player only. A kernel that
   hangs before its rescue system runs can only be fixed with SP Flash Tool.
-- **Copying to the player over USB** runs at about 9–10 MB/s (from the player: about 38 MB/s);
-  faster uploads (receive DMA) are being worked on.
+- **Copying to the player over USB** became about three times faster in Beta 7.11 (receive DMA);
+  pulling the cable during a copy and sleep with it on are not yet tested on this path.
 - **Going back to stock** does not restore the player's old storage format: copy your music off
   first; stock Android then has to format that storage. Not yet tested ([Storage](docs/STORAGE.md)).
 
 The full list, with evidence and next steps, is in the
 [current platform state](docs/CURRENT_PLATFORM_STATE.md) and the
-reports for 1.0 Beta [7.10](docs/validation/Y2-LINUX-1.0-BETA-7.10.md), [7.9](docs/validation/Y2-LINUX-1.0-BETA-7.9.md), [7.8](docs/validation/Y2-LINUX-1.0-BETA-7.8.md), [7.7](docs/validation/Y2-LINUX-1.0-BETA-7.7.md), [7.6](docs/validation/Y2-LINUX-1.0-BETA-7.6.md), [7.5](docs/validation/Y2-LINUX-1.0-BETA-7.5.md), [7.4](docs/validation/Y2-LINUX-1.0-BETA-7.4.md), [7.3](docs/validation/Y2-LINUX-1.0-BETA-7.3.md), [7.2](docs/validation/Y2-LINUX-1.0-BETA-7.2.md), [7.1](docs/validation/Y2-LINUX-1.0-BETA-7.1.md), [7](docs/validation/Y2-LINUX-1.0-BETA-7.md), [6.3](docs/validation/Y2-LINUX-1.0-BETA-6.3.md), [6.2](docs/validation/Y2-LINUX-1.0-BETA-6.2.md), [6.1](docs/validation/Y2-LINUX-1.0-BETA-6.1.md), [6](docs/validation/Y2-LINUX-1.0-BETA-6.md), [5.1](docs/validation/Y2-LINUX-1.0-BETA-5.1.md), [5](docs/validation/Y2-LINUX-1.0-BETA-5.md), [4.1](docs/validation/Y2-LINUX-1.0-BETA-4.1.md), [4](docs/validation/Y2-LINUX-1.0-BETA-4.md), [3](docs/validation/Y2-LINUX-1.0-BETA-3.md), [2](docs/validation/Y2-LINUX-1.0-BETA-2.md) and
+reports for 1.0 Beta [7.11](docs/validation/Y2-LINUX-1.0-BETA-7.11.md), [7.10](docs/validation/Y2-LINUX-1.0-BETA-7.10.md), [7.9](docs/validation/Y2-LINUX-1.0-BETA-7.9.md), [7.8](docs/validation/Y2-LINUX-1.0-BETA-7.8.md), [7.7](docs/validation/Y2-LINUX-1.0-BETA-7.7.md), [7.6](docs/validation/Y2-LINUX-1.0-BETA-7.6.md), [7.5](docs/validation/Y2-LINUX-1.0-BETA-7.5.md), [7.4](docs/validation/Y2-LINUX-1.0-BETA-7.4.md), [7.3](docs/validation/Y2-LINUX-1.0-BETA-7.3.md), [7.2](docs/validation/Y2-LINUX-1.0-BETA-7.2.md), [7.1](docs/validation/Y2-LINUX-1.0-BETA-7.1.md), [7](docs/validation/Y2-LINUX-1.0-BETA-7.md), [6.3](docs/validation/Y2-LINUX-1.0-BETA-6.3.md), [6.2](docs/validation/Y2-LINUX-1.0-BETA-6.2.md), [6.1](docs/validation/Y2-LINUX-1.0-BETA-6.1.md), [6](docs/validation/Y2-LINUX-1.0-BETA-6.md), [5.1](docs/validation/Y2-LINUX-1.0-BETA-5.1.md), [5](docs/validation/Y2-LINUX-1.0-BETA-5.md), [4.1](docs/validation/Y2-LINUX-1.0-BETA-4.1.md), [4](docs/validation/Y2-LINUX-1.0-BETA-4.md), [3](docs/validation/Y2-LINUX-1.0-BETA-3.md), [2](docs/validation/Y2-LINUX-1.0-BETA-2.md) and
 [1](docs/validation/Y2-LINUX-1.0-BETA-1.md),
 [49](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-49.md) (firmware-free images, flash package, codecs),
 [48](docs/validation/Y2-PLATFORM-V1-POWER-FINAL-48.md) (download screen),

@@ -344,7 +344,8 @@ Indexed pages: **315**. Explicit scope notices: **228**.
 | [Y2Linux 1.0 Beta 7.7 (Baseline 70)](validation/Y2-LINUX-1.0-BETA-7.7.md) | Last.fm scrobbling |
 | [Y2Linux 1.0 Beta 7.8 (Baseline 71)](validation/Y2-LINUX-1.0-BETA-7.8.md) | Last.fm fixes (Now Playing after a pause, log) |
 | [Y2Linux 1.0 Beta 7.9 (Baseline 72)](validation/Y2-LINUX-1.0-BETA-7.9.md) | Internal Storage for every player, radio firmware space (#39), pulled SD cards (#44) |
-| [Y2Linux 1.0 Beta 7.10 (Baseline 73)](validation/Y2-LINUX-1.0-BETA-7.10.md) | Current entry: USB file operations (crash fix, move and copy on the player) |
+| [Y2Linux 1.0 Beta 7.10 (Baseline 73)](validation/Y2-LINUX-1.0-BETA-7.10.md) | USB file operations (crash fix, move and copy on the player) |
+| [Y2Linux 1.0 Beta 7.11 (Baseline 74)](validation/Y2-LINUX-1.0-BETA-7.11.md) | Current entry: faster copies to the player (multi-packet receive DMA) |
 | [Internal Storage setup plan](planning/INTERNAL-STORAGE-SETUP-PLAN.md) | Automatic Internal Storage: cases, safety, layout |
 | [Last.fm scrobbling](LASTFM.md) | User guide: set-up, what counts, offline, privacy and security |
 | [Storage](STORAGE.md) | User guide: the layout, the first-start setup of Internal Storage, old files, SD cards, USB copying and speed, going back to stock |

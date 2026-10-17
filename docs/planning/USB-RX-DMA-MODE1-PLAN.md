@@ -1,6 +1,6 @@
 # Faster uploads over USB: multi-packet receive DMA — plan (2026-10-17)
 
-**Status: BUILT, ON BY DEFAULT in test build 1.0 Beta 7.11 (sequence 6352) on the owner's player; not published.**
+**Status: RELEASED, on by default, in [Y2Linux 1.0 Beta 7.11](../validation/Y2-LINUX-1.0-BETA-7.11.md) (Baseline 74, sequence 6352).**
 Owner: "i would like to do multi packet and fix the kernel". Audit row USB-RX-DMA in
 [roadmap-gap-audit](roadmap-gap-audit.md). Results: [below](#results-2026-10-17).
 

@@ -8623,3 +8623,18 @@ owner approved the test install and then "on by default"):**
 | Owner checks | OWED | Cable pulled mid-upload, sleep/wake with it on, Dolphin and Windows Explorer copies. |
 
 **Gate decision:** default on in the test build on the owner's player; release (label 74) after the owner checks.
+
+## BETA-7.11 (Baseline 74) faster uploads: milestone gap audit — 2026-10-17
+
+**Boundary:** owner: "Dolphin copies work, publish it as beta 7.11". Kernel USB receive path change (USB-RX-DMA above)
+and a public release. Real-hardware evidence: test builds 6350–6352 on the owner's player.
+
+| Area | State for Beta 7.11 | Evidence / gap |
+| --- | --- | --- |
+| Multi-packet receive DMA | DEVICE-CONFIRMED, default on | 29.6 MB/s Internal, 23.3 MB/s SD, every byte hashed; libmtp suite 26/26; off switch PIO only. |
+| Dolphin | OWNER-CONFIRMED | Owner: "Dolphin copies work". |
+| Cable pull, sleep/wake, Windows Explorer | OWED | Not run with this path; `rx_dma=0` restores Beta 7.10 behaviour. |
+| FM radio | ON BRANCH | Device test owed. |
+
+**Gate decision:** READY for **Y2Linux 1.0.0-beta.7.11 / Reborn 1.0.0-beta.7.11** (Baseline 74, sequence 6352) at the
+owner's word (given).

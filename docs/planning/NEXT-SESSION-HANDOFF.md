@@ -1,6 +1,14 @@
-# Next-session handoff — Y2Linux 1.0 Beta 7.11 test build (latest entry first; started 2026-10-09 as the deep-sleep continuation)
+# Next-session handoff — Y2Linux 1.0 Beta 7.11 (latest entry first; started 2026-10-09 as the deep-sleep continuation)
 
-> **START HERE (2026-10-17 evening): FAST UPLOADS WORK — MULTI-PACKET RECEIVE DMA ON BY DEFAULT IN TEST BUILD 7.11
+> **START HERE (2026-10-17, latest): Y2LINUX 1.0 BETA 7.11 (BASELINE 74) PUBLISHED — FASTER COPIES TO THE PLAYER.**
+> Owner: "Dolphin copies work, publish it as beta 7.11". Release `1.0.0-beta.7.11`, sequence 6352, Linux `9c3e4f1`
+> (+ docs), Reborn `814cd14`, report `docs/validation/Y2-LINUX-1.0-BETA-7.11.md`, audit BETA-7.11. The owner's player
+> already runs exactly this build (installed locally as the 6352 test build). Uploads 29.6 MB/s Internal, 23.3 MB/s SD.
+> Still owed (owner): cable pulled mid-copy, sleep/wake, Windows Explorer. Next free label 75, sequence above 6352.
+> Workspace `out/build`, `out/release-73`, `out/release-74`. Open from before: automatic restart after an update when
+> the storage setup waits; restore the skins backup; FM radio on `beta8-fm` (rebase, sequence above 6352).
+>
+> Previous entry: **START HERE (2026-10-17 evening): FAST UPLOADS WORK — MULTI-PACKET RECEIVE DMA ON BY DEFAULT IN TEST BUILD 7.11
 > (SEQUENCE 6352), INSTALLED ON THE OWNER'S PLAYER, NOT PUBLISHED.** Plan + results:
 > [USB-RX-DMA-MODE1-PLAN](USB-RX-DMA-MODE1-PLAN.md#results-2026-10-17); audit row USB-RX-DMA (update section).
 >
