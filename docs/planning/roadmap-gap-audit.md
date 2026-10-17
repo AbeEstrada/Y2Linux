@@ -8608,3 +8608,18 @@ receive DMA once lost data. Plan: [USB-RX-DMA-MODE1-PLAN](USB-RX-DMA-MODE1-PLAN.
 | Mode-1 RX DMA | NOT BUILT | Stock MTK reference (REA) owed; device integrity tests owed. |
 
 **Gate decision:** plan for owner review; implementation only after approval; default on only after the device tests.
+
+**Update 2026-10-17 (same day, owner: "please investigate and look if you can get the fast usb upload working";
+owner approved the test install and then "on by default"):**
+
+| Area | State | Real-hardware evidence / gap |
+| --- | --- | --- |
+| Stock reference (REA) | DONE | `fm-kernel.elf` (Linux 3.4.67) `rxstate`: mode 1 only for `short_not_ok`, AUTOCLEAR → DMAENAB → DMAMODE pulse, else mode 0 per packet; pause/resume/residue are stubs. No vendor MTP mode-1 path to copy. |
+| Mode-1 RX DMA | BUILT, ON BY DEFAULT in test build 7.11 seq 6352 (not published) | Linux `1f86b4f`, `b49afaa`, `049df5c`, `10ec3eb`; installed over SSH (local signed OTA). |
+| Throughput | MEASURED | 1 GiB Internal 29.6 MB/s (was ~10), 512 MiB SD 23.3 MB/s, ECM 10–14 MB/s (6–8); ≈1 450 musb IRQ/s (was ≈22 000), CPU ≈80 % idle. |
+| Integrity | PASS | SHA-256 on every byte: 20 boundary sizes × 2 storages, 100 random sizes, libmtp suite 26/26 (twice), 1.5 GB soak, 300 MB ECM; 0 kicks, 0 fallbacks, 0 DMA errors. |
+| Defect found | FIXED | RXCOUNT falls while the engine unloads a packet; one sample looked short and cut a 64 MiB upload (seq 6350). Two agreeing samples now required. |
+| Off switch | PASS | `rx_dma=0`: `dma_rx_programs` unchanged over 240 MB (mapped requests go to PIO, not mode 0). |
+| Owner checks | OWED | Cable pulled mid-upload, sleep/wake with it on, Dolphin and Windows Explorer copies. |
+
+**Gate decision:** default on in the test build on the owner's player; release (label 74) after the owner checks.

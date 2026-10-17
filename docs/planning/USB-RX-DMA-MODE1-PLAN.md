@@ -1,7 +1,8 @@
 # Faster uploads over USB: multi-packet receive DMA — plan (2026-10-17)
 
-**Status: PLAN, owner review.** Owner: "i would like to do multi packet and fix the kernel". Nothing built. Audit row
-USB-RX-DMA in [roadmap-gap-audit](roadmap-gap-audit.md).
+**Status: BUILT, ON BY DEFAULT in test build 1.0 Beta 7.11 (sequence 6352) on the owner's player; not published.**
+Owner: "i would like to do multi packet and fix the kernel". Audit row USB-RX-DMA in
+[roadmap-gap-audit](roadmap-gap-audit.md). Results: [below](#results-2026-10-17).
 
 ## Evidence (owner's player, Beta 7.10, 2026-10-17, `mtpbench`, libusb direct, SHA-256 verified)
 
@@ -73,3 +74,52 @@ Expected result: uploads near the storage limit (≈20–30 MB/s), CPU mostly id
 3. Release with the switch off; owner installs; live A/B with `rx_dma=2` (a runtime write the owner authorises).
 4. Fix what the tests find; repeat 3.
 5. Default on in the following release; audit row and report updated.
+
+## Results (2026-10-17)
+
+**Stock reference (REA, `out/rea/fm-kernel.elf`, Linux 3.4.67):** MediaTek's `rxstate` is upstream's. Mode 1 only when
+`short_not_ok` and the first packet is full (RXCSR AUTOCLEAR, then DMAENAB, then a DMAMODE set/clear pulse), otherwise
+one mode-0 program per packet; `dma_channel_pause/resume/check_residue` are stubs. Stock MTP uploads therefore never
+used mode 1, and the short-packet ending below is our own.
+
+**Implementation** (`kernel/patches/0065-y2-musb-pio-progress.patch`, `0055-musb-abort-bus-error.patch`,
+`kernel/platform/usb.c`):
+
+- `y2_rx_mode1_start()` (from `rxstate`, also for a packet already waiting when the request is queued): full first
+  packet → one mode-1 program of the request's whole packets (≤ 1 MiB); the upstream AUTOCLEAR/DMAENAB/DMAMODE sequence,
+  left in request mode 1. If neither the address nor the count register nor RXPKTRDY moves within 20 µs, DMAMODE is
+  pulsed again (twice), then the channel is stopped and the packet goes to PIO (`m1_kick`, `m1_fallback`).
+- `y2_rx_mode1_end()` (endpoint interrupt while the channel is busy): a short or zero-length packet is believed only
+  when RXCOUNT and the DMA progress (`y2_hsdma_moved()`, address register) agree in two samples 2 µs apart on a whole
+  packet; then the channel is stopped, the buffer unmapped, the short packet read by the CPU and the request given
+  back. A finished channel is left to its pending completion; a count that moves after the stop fails the request
+  (`-EIO`), never silently.
+- `musb_g_rx`: a mode-1 completion below the request length continues the same request.
+- sysfs: `rx_dma` 0 PIO / 1 mode 0 (comparison) / 2 multi-packet (**default**); `rx_dma_eps` endpoint mask (default
+  all OUT endpoints); `rxdiag` counters `m1_prog`, `m1_end`, `m1_kick`, `m1_fallback`. A request mapped while DMA
+  was on goes to PIO after `rx_dma=0`, never to mode 0.
+
+**Defect found on the device:** RXCOUNT counts down while the engine unloads a full packet. The first build (sequence
+6350) took one such sample for a short packet and ended a 64 MiB upload after 9.6 MB (`m1_end=1` with no short packet
+on the wire; uMTP lost the container). Fixed by the two-sample rule; a moving count is now seen and ignored.
+
+**Measurements (owner's player, `tools/usb/mtpbench.c`, every byte SHA-256 verified):**
+
+| | PIO (7.10 / 7.11 switch off) | Multi-packet DMA |
+| --- | --- | --- |
+| Internal Storage, 1 GiB | ≈10 MB/s | 29.6 MB/s |
+| Internal Storage, 256 MiB | ≈10 MB/s | 25.7–27.2 MB/s |
+| SD card, 512 MiB | ≈9 MB/s | 23.3 MB/s |
+| ECM (100 MB through SSH) | 6.1–8.1 MB/s | 9.9–13.9 MB/s |
+| musb interrupts during upload | ≈22 000/s, one core 96–100 % | ≈1 450/s, CPU ≈80 % idle |
+
+Integrity: boundary sizes 0, 1, 499, 500, 501, 511, 512, 1012, 1024, 65523–65536, 131060/1, 200000, 1048564/5/77,
+3145716 on both storages; 100 random sizes; `tools/usb/mtp-file-ops.c` 26/26 (with the switch on and with the default
+build); 1 GiB + 512 MiB soak; 300 MB over ECM; host abort mid-upload recovers exactly like PIO. Counters always
+balance (`m1_prog` = `dma_done` + `m1_end`), no kick, no fallback, no DMA bus error, storm-guard burst ≤ 22.
+
+`mtpbench` itself lost the closing zero-length packet of a download that fills its last 1 MiB read (fails in PIO too);
+fixed in the tool.
+
+**Still owed (owner):** cable pulled mid-upload, sleep and wake with it on, copies from Dolphin and Windows Explorer.
+

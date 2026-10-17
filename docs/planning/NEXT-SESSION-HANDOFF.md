@@ -1,6 +1,32 @@
-# Next-session handoff — Y2Linux 1.0 Beta 7.10 (latest entry first; started 2026-10-09 as the deep-sleep continuation)
+# Next-session handoff — Y2Linux 1.0 Beta 7.11 test build (latest entry first; started 2026-10-09 as the deep-sleep continuation)
 
-> **START HERE (2026-10-17, for the next session): FASTER UPLOADS — MULTI-PACKET (MODE 1) RECEIVE DMA.** Owner: "i would
+> **START HERE (2026-10-17 evening): FAST UPLOADS WORK — MULTI-PACKET RECEIVE DMA ON BY DEFAULT IN TEST BUILD 7.11
+> (SEQUENCE 6352), INSTALLED ON THE OWNER'S PLAYER, NOT PUBLISHED.** Plan + results:
+> [USB-RX-DMA-MODE1-PLAN](USB-RX-DMA-MODE1-PLAN.md#results-2026-10-17); audit row USB-RX-DMA (update section).
+>
+> - **Result:** uploads 1 GiB Internal 29.6 MB/s (was ≈10), SD 23.3 MB/s, ECM 10–14 MB/s; ≈1 450 musb IRQ/s instead of
+>   ≈22 000; every byte hashed, libmtp suite 26/26, boundary/random sizes on both storages, no fallback or DMA error.
+> - **Code:** Linux `1f86b4f` (mode 1 behind `rx_dma=2`), `b49afaa` (two-sample short-packet rule: RXCOUNT falls while
+>   the engine unloads a packet; one sample cut an upload in build 6350), `049df5c` (off = PIO, never mode 0),
+>   `10ec3eb` (default on), `64af1b2` (mtpbench ZLP fix), `8942946` (host test stubs). Identity commits `8aa868c`,
+>   `7b9941f`, `9c3e4f1` (1.0.0-beta.7.11, sequences 6350 → 6351 → 6352); Reborn `814cd14` (identity only).
+> - **Build/install:** `out/release-74` = sequence 6352 (built with `release.py build --label 74`, nothing pushed or
+>   tagged). Installed by `scp out/release-74/ota/*` → `/data/ota-74`, `y2-platform update stage --package /data/ota-74`,
+>   `y2-platform update apply` (restart, recovery installs, ≈75 s). The player was in `PendingHealth 6352` right after.
+> - **Switches** (`/sys/devices/platform/11200000.usb/`): `rx_dma` 0 PIO / 1 mode 0 / 2 multi-packet (default),
+>   `rx_dma_eps` (default `0xfffe`; MTP OUT = ep1, ECM = ep3), `rxdiag` counters `m1_prog/m1_end/m1_kick/m1_fallback`
+>   (healthy: `m1_prog` = `dma_done` + `m1_end`, kick and fallback 0).
+> - **Owed by the owner before release:** cable pulled mid-upload; sleep and wake with it on (sleep only unplugged);
+>   Dolphin copies (end `kiod6` before mtpbench runs); Windows Explorer if available. Then: release notes + report
+>   `docs/validation/Y2-LINUX-1.0-BETA-7.11.md`, readme/state/catalog, `release.py publish --label 74` (needs a fresh
+>   build if anything changes; next free label after that 75, sequence above 6352).
+> - **Test tooling notes:** the Bash tool does not word-split variables, use a wrapper script for ssh options. A
+>   device-side guard must use `/proc/uptime`, not `date` (the clock steps after boot and fired a wall-clock guard twice).
+>   `mtpbench storages` can segfault on junk after a desynced session; restart the player to recover MTP.
+> - **Still open from before:** automatic restart after an update when the storage setup waits; restore the owner's
+>   skins backup; FM radio on `beta8-fm`.
+>
+> Previous entry: **START HERE (2026-10-17, for the next session): FASTER UPLOADS — MULTI-PACKET (MODE 1) RECEIVE DMA.** Owner: "i would
 > like to do multi packet and fix the kernel instead" and continue in a fresh session. Plan
 > [USB-RX-DMA-MODE1-PLAN](USB-RX-DMA-MODE1-PLAN.md), audit row USB-RX-DMA (commit `39cb314`). **Plan written, not yet
 > approved in detail, nothing built.**
