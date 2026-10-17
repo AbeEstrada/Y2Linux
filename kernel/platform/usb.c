@@ -231,8 +231,9 @@ static atomic_t y2_rx_head;
 static atomic64_t y2_rx_count[16];
 static bool y2_late_pio = true;
 /* Receive DMA: 0 off (PIO), 1 Mentor mode 0 (comparison only), 2 multi-packet
- * mode 1 (musb_gadget.c y2_rx_mode1_start); only on endpoints in rx_dma_eps. */
-static unsigned y2_rx_dma;
+ * mode 1 (musb_gadget.c y2_rx_mode1_start); only on endpoints in rx_dma_eps.
+ * Default 2 since 1.0 Beta 7.11 (uploads ~10 -> ~30 MB/s, measured 2026-10-17). */
+static unsigned y2_rx_dma = 2;
 static unsigned y2_rx_dma_eps = 0xfffe;
 void y2_musb_rx_event(unsigned event, unsigned ep, unsigned csr, unsigned arg);
 void y2_musb_rx_event(unsigned event, unsigned ep, unsigned csr, unsigned arg)
@@ -263,10 +264,10 @@ __setup("y2.usb_dma=", y2_usb_dma_option);
  * and, on this controller, lost a packet that the host had already ACKed when
  * the next host packet followed an IN completion within microseconds. The CPU
  * read of the FIFO has the same one-interrupt-per-packet cost and no such
- * race, so OUT requests stay unmapped (PIO) unless this is switched on at run
- * time: rx_dma=1 mode 0 to compare, rx_dma=2 multi-packet mode 1 (one DMA
- * program and completion per request; the CPU only reads the closing short
- * packet). IN (device-to-host) transfers keep DMA either way. */
+ * race, so mode 0 is only a run-time comparison (rx_dma=1). The default is
+ * rx_dma=2, multi-packet mode 1: one DMA program and completion per request,
+ * the CPU only reads the closing short packet. rx_dma=0 maps no OUT request
+ * (PIO). IN (device-to-host) transfers keep DMA either way. */
 static int y2_dma_is_compatible(struct dma_channel *channel, u16 packet, void *buffer, u32 length);
 /* Observe the upstream allocator/programmer without changing its decisions.
  * Bytes below are accepted DMA programming, NOT USB delivery or TCP goodput.
